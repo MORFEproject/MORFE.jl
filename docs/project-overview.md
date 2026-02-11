@@ -12,7 +12,7 @@ MORFE3.0 is the next generation of the **Model Order Reduction for Finite Elemen
 
 ## 🧱 Background
 
-- **MORFE2.0** relies on an old Fortran FEM implementation, which is difficult to maintain and extend.
+- **MORFE2.0** is based on an old Fortran FEM implementation, which is difficult to maintain and extend.
 - **Goal**: Retain the proven concepts of MORFE2.0 while rebuilding the codebase from scratch in **Julia**, following modern software engineering guidelines.
 
 ---
@@ -48,7 +48,7 @@ MORFE3.0 must interface with a FEM engine to extract mass, stiffness, and force 
 |----------------------------|-----------------------------------------------------------------------|
 | **Gridap.jl**              | [Gridap](https://github.com/gridap/Gridap.jl) – modern, native Julia  |
 | **Ferrite.jl**             | [Ferrite](https://ferrite-fem.github.io/Ferrite.jl/stable/) – lightweight, Julia-only |
-| **Decoupled MORFE2.0 FEM** | Existing Fortran code wrapped in Julia – “EZ” to achieve, but legacy  |
+| **MORFE2.0 FEM** | Existing in Julia – we must decouple it from MORFE2.0  |
 
 **Requirement**: The **DPIM (Direct Parametrisation of Invariant Manifolds)** algorithm **must be FEM‑agnostic**. It should work with any sufficiently capable FEM backend that provides the necessary operators.
 
@@ -79,7 +79,7 @@ MORFE3.0 must interface with a FEM engine to extract mass, stiffness, and force 
 
 2. **Post‑processing of outputs**  
    - Coefficient matrices → **`FILE_FUNCTIONS`**  
-   - The `FILE_FUNCTIONS` interface shall be available in **Julia**, **Python**, and **MATLAB** to maximise usability.
+   - The `FILE_FUNCTIONS` must be in **Julia**, **Python**, and **MATLAB** to maximise usability.
 
 ---
 
@@ -89,7 +89,7 @@ MORFE3.0 must interface with a FEM engine to extract mass, stiffness, and force 
 - Compute the **residue (force)** of the invariance equation in the **time domain**, **over each orbit**.
 
 ### External validation (outside MORFE3.0)
-- Compare against **Full Order Model (FOM)** solutions:
+- Compare against **Full Order Model (FOM)** displacement solutions:
   - **HBFEM** (existing, keep alive)
   - Time integration or other solvers.
 
