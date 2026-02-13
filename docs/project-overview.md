@@ -111,6 +111,9 @@ These are not mandatory for the first release but are highly desirable for futur
   - [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl) – for forward‑mode AD.
   - [Zygote.jl](https://github.com/FluxML/Zygote.jl) – for reverse‑mode AD.
 
+### 4. Multi-Physics capabilities
+- The FE allows easy definition of different physics foer different domains of the mesh.
+
 ---
 
 ## 📌 Next Steps / Task Assignment
