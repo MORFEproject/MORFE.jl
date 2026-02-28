@@ -10,23 +10,23 @@ The module builds on the `Polynomials` module which defines the polynomial type 
 
 ## Mathematical Background
 
-Consider a complex polynomial in variables \(\mathbf{z} = (z_1,\dots,z_n)\) and their complex conjugates \(\mathbf{z}^\star\). Because the system is real, the variables satisfy \(\overline{z_k} = z_k^\star\). By introducing real and imaginary parts
+Consider a complex polynomial in variables $\mathbf{z} = (z_1,\dots,z_n)$ and their complex conjugates $\mathbf{z}^\star$. Because the system is real, the variables satisfy $\overline{z_k} = z_k^\star$. By introducing real and imaginary parts
 
-\[
+$$
 z_k = x_k + \mathrm{i}y_k,\qquad z_k^\star = x_k - \mathrm{i}y_k,
-\]
+$$
 
-any monomial \(\mathbf{z}^{\boldsymbol{\alpha}}(\mathbf{z}^\star)^{\boldsymbol{\beta}}\) expands into a sum of real monomials \(\mathbf{x}^{\boldsymbol{\gamma}}\mathbf{y}^{\boldsymbol{\delta}}\). Using the binomial theorem twice:
+any monomial $\mathbf{z}^{\boldsymbol{\alpha}}(\mathbf{z}^\star)^{\boldsymbol{\beta}}$ expands into a sum of real monomials $\mathbf{x}^{\boldsymbol{\gamma}}\mathbf{y}^{\boldsymbol{\delta}}$. Using the binomial theorem twice:
 
-\[
+$$
 z_k^{\alpha_k}(z_k^\star)^{\beta_k}
  = \sum_{m_k=0}^{\alpha_k}\binom{\alpha_k}{m_k}x_k^{\alpha_k-m_k}(\mathrm{i}y_k)^{m_k}
    \sum_{n_k=0}^{\beta_k}\binom{\beta_k}{n_k}x_k^{\beta_k-n_k}(-\mathrm{i}y_k)^{n_k}.
-\]
+$$
 
-Multiplying over all \(k\) yields the general formula (see Eq.~(4) in the reference):
+Multiplying over all $k$ yields the general formula (see Eq.~(4) in the reference):
 
-\[
+$$
 \mathbf{z}^{\boldsymbol{\alpha}}(\mathbf{z}^\star)^{\boldsymbol{\beta}}
  = \sum_{\substack{\mathbf{0}\le\mathbf{m}\le\boldsymbol{\alpha}\\
                     \mathbf{0}\le\mathbf{n}\le\boldsymbol{\beta}}}
@@ -34,20 +34,20 @@ Multiplying over all \(k\) yields the general formula (see Eq.~(4) in the refere
    \mathrm{i}^{|\mathbf{m}|-|\mathbf{n}|}
    \mathbf{x}^{\boldsymbol{\alpha}+\boldsymbol{\beta}-\mathbf{m}-\mathbf{n}}
    \mathbf{y}^{\mathbf{m}+\mathbf{n}}.
-\]
+$$
 
-Realification collects coefficients of like monomials \(\mathbf{x}^{\boldsymbol{\gamma}}\mathbf{y}^{\boldsymbol{\delta}}\) by summing over all \(\boldsymbol{\alpha},\boldsymbol{\beta},\mathbf{m}\) satisfying
-\(\boldsymbol{\gamma} = \boldsymbol{\alpha}+\boldsymbol{\beta}-\mathbf{m}-\mathbf{n}\) and \(\boldsymbol{\delta} = \mathbf{m}+\mathbf{n}\), with \(\mathbf{n} = \boldsymbol{\delta}-\mathbf{m}\) and appropriate bounds. This leads to the coefficient transformation rule.
+Realification collects coefficients of like monomials $\mathbf{x}^{\boldsymbol{\gamma}}\mathbf{y}^{\boldsymbol{\delta}}$ by summing over all $\boldsymbol{\alpha},\boldsymbol{\beta},\mathbf{m}$ satisfying
+$\boldsymbol{\gamma} = \boldsymbol{\alpha}+\boldsymbol{\beta}-\mathbf{m}-\mathbf{n}$ and $\boldsymbol{\delta} = \mathbf{m}+\mathbf{n}$, with $\mathbf{n} = \boldsymbol{\delta}-\mathbf{m}$ and appropriate bounds. This leads to the coefficient transformation rule.
 
-The module also handles **unpaired real variables** (variables without a conjugate counterpart). A conjugation map `conj_map` of length \(N\) encodes the pairing:
-- `conj_map[i] = j` means variable \(i\) is the conjugate of variable \(j\);
-- if variable \(i\) is real, `conj_map[i] = i`.
+The module also handles **unpaired real variables** (variables without a conjugate counterpart). A conjugation map `conj_map` of length $N$ encodes the pairing:
+- `conj_map[i] = j` means variable $i$ is the conjugate of variable $j$;
+- if variable $i$ is real, `conj_map[i] = i`.
 
 Internally, variables are reordered to a canonical order:
-\[
+$$
 (z_1,\dots,z_n,\ \bar{z}_1,\dots,\bar{z}_n,\ w_1,\dots,w_m)
-\]
-with \(n\) conjugate pairs and \(m\) real variables. This simplifies the realification algorithm.
+$$
+with $n$ conjugate pairs and $m$ real variables. This simplifies the realification algorithm.
 
 ## Module Overview
 
@@ -64,15 +64,15 @@ All functions work with any polynomial type implementing the `AbstractPolynomial
 Transforms a complex‑valued polynomial (in variables that may be conjugate pairs) into a polynomial in real variables.
 
 **Arguments**  
-- `poly`: input polynomial in \(N\) variables \(z_1,\dots,z_N\).  
-- `conj_map`: vector of length \(N\) describing conjugacy: `conj_map[i] = j` means variable \(i\) is the conjugate of variable \(j\); for a real variable, `conj_map[i] = i`.
+- `poly`: input polynomial in $N$ variables $z_1,\dots,z_N$.  
+- `conj_map`: vector of length $N$ describing conjugacy: `conj_map[i] = j` means variable $i$ is the conjugate of variable $j$; for a real variable, `conj_map[i] = i`.
 
 **Returns**  
 A new polynomial in real variables  
-\[
+$$
 x_1,\dots,x_n,\ y_1,\dots,y_n,\ w_1,\dots,w_m
-\]
-where \(n\) is the number of conjugate pairs and \(m\) the number of real variables. The transformation follows the mathematical derivation above. The returned polynomial has the same concrete type (sparse or dense) as the input.
+$$
+where $n$ is the number of conjugate pairs and $m$ the number of real variables. The transformation follows the mathematical derivation above. The returned polynomial has the same concrete type (sparse or dense) as the input.
 
 **Algorithm outline**  
 1. Reorder variables to canonical form using `_reorder_canonical`.  
@@ -81,22 +81,22 @@ where \(n\) is the number of conjugate pairs and \(m\) the number of real variab
 
 ### `compose_linear(poly::AbstractPolynomial, M::Matrix{TA}, p::Int) where TA -> AbstractPolynomial`
 
-Composes a polynomial with a linear map: replaces each original variable \(x_i\) by \(\sum_{j=1}^p M[i,j]\,y_j\), where \(y_1,\dots,y_p\) are new variables.
+Composes a polynomial with a linear map: replaces each original variable $x_i$ by $\sum_{j=1}^p M[i,j]\,y_j$, where $y_1,\dots,y_p$ are new variables.
 
 **Arguments**  
-- `poly`: polynomial in \(n\) variables.  
-- `M`: \(n \times p\) matrix (element type `TA`).  
+- `poly`: polynomial in $n$ variables.  
+- `M`: $n \times p$ matrix (element type `TA`).  
 - `p`: number of new variables (must equal `size(M,2)`).
 
 **Returns**  
-A new polynomial in the variables \(y_1,\dots,y_p\). The coefficient type is appropriately promoted. The returned polynomial has the same concrete type as the input.
+A new polynomial in the variables $y_1,\dots,y_p$. The coefficient type is appropriately promoted. The returned polynomial has the same concrete type as the input.
 
 **Algorithm**  
-- Build a dictionary of terms, each keyed by an exponent vector of length \(n+p\) (first \(n\) entries for original variables, last \(p\) for new variables).  
-- Iterate over each original variable index \(i\) (from 1 to \(n\)):
-  - For every term with exponent \(e\) in that variable, generate all compositions of \(e\) into \(p\) non‑negative parts (using `_compositions`).  
-  - For each composition \(\mathbf{k} = (k_1,\dots,k_p)\), compute the multinomial coefficient \(\frac{e!}{k_1!\cdots k_p!}\) and the product \(\prod_{j=1}^p M[i,j]^{k_j}\).  
-  - Multiply the term's coefficient by this factor and update the exponent vector (remove the \(i\)-th entry and add \(\mathbf{k}\) to the new‑variable part).  
+- Build a dictionary of terms, each keyed by an exponent vector of length $n+p$ (first $n$ entries for original variables, last $p$ for new variables).  
+- Iterate over each original variable index $i$ (from 1 to $n$):
+  - For every term with exponent $e$ in that variable, generate all compositions of $e$ into $p$ non‑negative parts (using `_compositions`).  
+  - For each composition $\mathbf{k} = (k_1,\dots,k_p)$, compute the multinomial coefficient $\frac{e!}{k_1!\cdots k_p!}$ and the product $\prod_{j=1}^p M[i,j]^{k_j}$.  
+  - Multiply the term's coefficient by this factor and update the exponent vector (remove the $i$-th entry and add $\mathbf{k}$ to the new‑variable part).  
 - After processing all variables, construct the final polynomial from the resulting dictionary.
 
 ### `realify_via_linear(poly::AbstractPolynomial, conj_map::Vector{Int}) -> AbstractPolynomial`
@@ -111,14 +111,14 @@ A real‑valued polynomial in the same variables as returned by `realify`, with 
 
 **Algorithm**  
 - Reorder variables to canonical form (same as `realify`).  
-- Build a linear transformation matrix \(M\) of size \((2n+m) \times (2n+m)\) that expresses the complex variables in terms of real and imaginary parts:
-  \[
+- Build a linear transformation matrix $M$ of size $(2n+m) \times (2n+m)$ that expresses the complex variables in terms of real and imaginary parts:
+  $$
   \begin{aligned}
   z_i &= x_i + \mathrm{i} y_i,\\
   \bar{z}_i &= x_i - \mathrm{i} y_i,\\
   w_i &= w_i.
   \end{aligned}
-  \]
+  $$
 - Apply `compose_linear(canonical_poly, M, N_new)`.
 
 This function demonstrates how `compose_linear` can be used to implement realification.
@@ -126,9 +126,9 @@ This function demonstrates how `compose_linear` can be used to implement realifi
 ## Internal Helper Functions (Brief)
 
 - **`_exponents_to_dict(poly)`**: converts any polynomial to a dictionary mapping exponent vectors to coefficients.
-- **`_reorder_canonical(poly, conj_map)`**: reorders variables according to the conjugation map, grouping conjugate pairs together. Returns the canonical polynomial, the number of pairs \(n\), and the number of real variables \(m\).
+- **`_reorder_canonical(poly, conj_map)`**: reorders variables according to the conjugation map, grouping conjugate pairs together. Returns the canonical polynomial, the number of pairs $n$, and the number of real variables $m$.
 - **`_realify_term(exp_vec, coeff, n, m)`**: expands a single term of a canonical polynomial into a dictionary of real monomials.
-- **`_multinomial(e, k)`**: computes \(\frac{e!}{k_1! \cdots k_p!}\) where `sum(k) == e`.
+- **`_multinomial(e, k)`**: computes $\frac{e!}{k_1! \cdots k_p!}$ where `sum(k) == e`.
 - **`_compositions(e, p)`**: generates all compositions of the integer `e` into `p` non‑negative parts (used in `compose_linear`).
 
 ## Usage Examples
