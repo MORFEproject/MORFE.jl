@@ -1,9 +1,7 @@
 using Test
 using Random
+include(joinpath(@__DIR__, "../../src/Realification.jl"))
 
-include(joinpath(@__DIR__, "..", "..", "src", "Polynomials.jl"))
-include(joinpath(@__DIR__, "..", "..", "src", "realification", "Realification.jl"))
-using .Polynomials
 using .Realification
 
 # ---------- Helper functions for testing ----------
@@ -13,28 +11,74 @@ using .Realification
     construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) -> DensePolynomial
 
 Construct a polynomial of the specified type from a dictionary.
-The number of variables is inferred from the first key (or 0 if empty).
+Uses the default monomial order `Grlex`.
 """
 function construct_polynomial(::Type{SparsePolynomial}, dict::Dict{Vector{Int}, T}) where T
-    nvars = isempty(dict) ? 0 : length(first(keys(dict)))
-    return Realification.polynomial_from_dict(dict, nvars, SparsePolynomial)
+    if isempty(dict)
+        mset = MultiindexSet(Matrix{Int}(undef, 0, 0), Grlex())
+        return SparsePolynomial(T[], Int[], mset)
+    else
+        exps = collect(keys(dict))
+        mset = MultiindexSet(exps, Grlex())
+        # Build a mapping from exponent (as tuple) to column index
+        exp_to_idx = Dict{Tuple{Vararg{Int}}, Int}()
+        for (j, col) in enumerate(eachcol(mset.exponents))
+            exp_to_idx[Tuple(col)] = j
+        end
+        idxs = [exp_to_idx[Tuple(exp)] for exp in exps]
+        coeffs = [dict[exp] for exp in exps]
+        perm = sortperm(idxs)
+        return SparsePolynomial(coeffs[perm], idxs[perm], mset)
+    end
 end
 
 function construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) where T
-    nvars = isempty(dict) ? 0 : length(first(keys(dict)))
-    return Realification.polynomial_from_dict(dict, nvars, DensePolynomial)
+    if isempty(dict)
+        mset = MultiindexSet(Matrix{Int}(undef, 0, 0), Grlex())
+        return DensePolynomial(T[], mset)
+    else
+        exps = collect(keys(dict))
+        mset = MultiindexSet(exps, Grlex())
+        exp_to_idx = Dict{Tuple{Vararg{Int}}, Int}()
+        for (j, col) in enumerate(eachcol(mset.exponents))
+            exp_to_idx[Tuple(col)] = j
+        end
+
+        # Obtain a sample value to determine the correct zero element
+        sample_val = first(values(dict))
+        # Create an array of independent zero elements (scalar or vector)
+        coeffs = [zero(sample_val) for _ in 1:length(mset)]
+
+        for (exp, val) in dict
+            coeffs[exp_to_idx[Tuple(exp)]] = val
+        end
+        return DensePolynomial(coeffs, mset)
+    end
 end
 
 """
-    polynomial_to_dict(poly::AbstractPolynomial) -> Dict{Vector{Int}, eltype(poly)}
+    polynomial_to_dict(poly::DensePolynomial) -> Dict{Vector{Int}, eltype(poly)}
+    polynomial_to_dict(poly::SparsePolynomial) -> Dict{Vector{Int}, eltype(poly)}
 
-Convert any polynomial back to a dictionary mapping exponent vectors to coefficients.
+Convert any polynomial back to a dictionary mapping exponent vectors to non‑zero coefficients.
 """
-function polynomial_to_dict(poly::AbstractPolynomial)
+function polynomial_to_dict(poly::DensePolynomial)
     d = Dict{Vector{Int}, eltype(poly)}()
-    for i in 1:length(poly)
-        exp = exponents(poly)[:, i]
-        d[exp] = coeffs(poly)[i]
+    exps = multiindex_set(poly).exponents
+    cs = coeffs(poly)
+    for j in 1:size(exps, 2)
+        d[exps[:, j]] = cs[j]
+    end
+    return d
+end
+
+function polynomial_to_dict(poly::SparsePolynomial)
+    d = Dict{Vector{Int}, eltype(poly)}()
+    exps = multiindex_set(poly).exponents
+    idxs = indices(poly)
+    cs = coeffs(poly)
+    for (i, idx) in enumerate(idxs)
+        d[exps[:, idx]] = cs[i]
     end
     return d
 end
@@ -47,11 +91,8 @@ Evaluate a polynomial at the given variable values.
 function evaluate(poly::AbstractPolynomial, vals::Vector{<:Number})
     @assert nvars(poly) == length(vals)
     T = eltype(poly)
-    # If T is Any (e.g., from an empty coefficient vector), use ComplexF64 as fallback.
     result = T == Any ? zero(ComplexF64) : zero(T)
-    for i in 1:length(poly)
-        coeff = coeffs(poly)[i]
-        exp = exponents(poly)[:, i]
+    for (exp, coeff) in _each_term(poly)
         term = coeff
         for (j, e) in enumerate(exp)
             term *= vals[j]^e
@@ -64,21 +105,21 @@ end
 # ---------- Tests for internal helpers (type‑agnostic) ----------
 
 @testset "multinomial" begin
-    @test Realification._multinomial(0, [0]) == 1
-    @test Realification._multinomial(5, [5]) == 1
-    @test Realification._multinomial(5, [0,5]) == 1
-    @test Realification._multinomial(5, [1,4]) == 5
-    @test Realification._multinomial(5, [2,3]) == 10
-    @test Realification._multinomial(5, [1,1,3]) == 20
-    @test Realification._multinomial(6, [2,2,2]) == 90
+    @test _multinomial(0, [0]) == 1
+    @test _multinomial(5, [5]) == 1
+    @test _multinomial(5, [0,5]) == 1
+    @test _multinomial(5, [1,4]) == 5
+    @test _multinomial(5, [2,3]) == 10
+    @test _multinomial(5, [1,1,3]) == 20
+    @test _multinomial(6, [2,2,2]) == 90
 end
 
 @testset "compositions" begin
-    comps = collect(Realification._compositions(2, 2))
+    comps = collect(_compositions(2, 2))
     @test length(comps) == 3
     @test Set(comps) == Set([[0,2], [1,1], [2,0]])
 
-    comps3 = collect(Realification._compositions(3, 3))
+    comps3 = collect(_compositions(3, 3))
     @test length(comps3) == 10
     for k in comps3
         @test length(k) == 3
@@ -147,9 +188,15 @@ end
         end
 
         @testset "vector output" begin
-            f = Dict([2,0] => [1.0, 0.0], [1,1] => [0.0, 1.0])
-            M = [1 2; 3 4]
+            # f(x,y) = (1,0) x^2 + (0,1) xy
+            f = Dict([2,0] => [1.0, 0.0], [1,1] => [0.0, 1.0])#, [0,2] => [0.0, 0.0])
+            M = [1 2; 
+                 3 4]
             p = 2
+            # x = z + 2w
+            # y = 3z + 4w
+            # f(z,w) = (1,0) (z^2 + 4zw + 4w^2) + (0,1) (3z^2 + 10zw + 8w^2) 
+            #        = (1,3) z^2 + (4,10) zw + (4,8) w^2
             poly = construct_polynomial(PolyType, f)
             result = compose_linear(poly, M, p)
             result_dict = polynomial_to_dict(result)
@@ -166,7 +213,6 @@ end
             result = compose_linear(poly, M, p)
             result_dict = polynomial_to_dict(result)
             @test result_dict[[0,0]] ≈ 5.0
-            # Other terms should be zero (or filtered out)
             for (k, v) in result_dict
                 if k != [0,0]
                     @test v ≈ 0.0
@@ -182,7 +228,6 @@ end
             result = compose_linear(poly, M, p)
             result_dict = polynomial_to_dict(result)
             @test result_dict[[2,0,0]] ≈ 1.0
-            # Other terms should be zero
             for (k, v) in result_dict
                 if k != [2,0,0]
                     @test v ≈ 0.0
@@ -191,14 +236,12 @@ end
         end
 
         @testset "binomial expansion" begin
-            # Polynomial: x^5 (one variable)
             f = Dict([5] => 1.0)
             poly = construct_polynomial(PolyType, f)
-            M = [1 1]   # 1×2 matrix: x = y₁ + y₂
+            M = [1 1]
             p = 2
             result = compose_linear(poly, M, p)
             result_dict = polynomial_to_dict(result)
-            # (y₁ + y₂)⁵ should expand to sum_{k=0..5} C(5,k) y₁^k y₂^(5-k)
             for k in 0:5
                 @test result_dict[[k, 5-k]] ≈ binomial(5, k)
             end
@@ -211,25 +254,24 @@ end
 @testset "realify" begin
     @testset "for $PolyType" for PolyType in [SparsePolynomial, DensePolynomial]
         @testset "reorder_canonical - empty" begin
-            # Empty polynomial: 3 variables, no terms
+            mset = MultiindexSet(zeros(Int, 3, 0), Grlex())
             if PolyType == SparsePolynomial
-                poly = SparsePolynomial(Float64[], zeros(Int, 3, 0))
+                poly = SparsePolynomial(Float64[], Int[], mset)
             else
-                basis = MonomialBasis(zeros(Int, 3, 0))
-                poly = DensePolynomial(Float64[], basis)
+                poly = DensePolynomial(Float64[], mset)
             end
             conj_map = [2, 1, 3]
-            canonical, n, m = Realification._reorder_canonical(poly, conj_map)
+            canonical, n, m = _reorder_canonical(poly, conj_map)
             @test nvars(canonical) == 3
-            @test n == 1      # one conjugate pair
-            @test m == 1      # one real variable
+            @test n == 1
+            @test m == 1
         end
 
         @testset "reorder_canonical - single pair" begin
             f = Dict([1,1] => 1.0)
             poly = construct_polynomial(PolyType, f)
             conj_map = [2, 1]
-            newpoly, n, m = Realification._reorder_canonical(poly, conj_map)
+            newpoly, n, m = _reorder_canonical(poly, conj_map)
             @test length(newpoly) == 1
             @test n == 1
             @test m == 0
@@ -241,7 +283,7 @@ end
             f = Dict([2,1,1,0,0] => 2.0)
             poly = construct_polynomial(PolyType, f)
             conj_map = [3, 2, 1, 5, 4]
-            newpoly, n, m = Realification._reorder_canonical(poly, conj_map)
+            newpoly, n, m = _reorder_canonical(poly, conj_map)
             @test n == 2
             @test m == 1
             d = polynomial_to_dict(newpoly)
@@ -253,7 +295,7 @@ end
             exp_vec = [1, 1]
             coeff = 2.0 + 3.0im
             n = 1; m = 0
-            result = Realification._realify_term(exp_vec, coeff, n, m)
+            result = _realify_term(exp_vec, coeff, n, m)
             @test result[[2,0]] ≈ coeff
             @test result[[0,2]] ≈ coeff
         end
@@ -262,7 +304,7 @@ end
             exp_vec = [2, 0]
             coeff = 1.0 + 0.0im
             n = 1; m = 0
-            result = Realification._realify_term(exp_vec, coeff, n, m)
+            result = _realify_term(exp_vec, coeff, n, m)
             @test result[[2,0]] ≈ 1.0 + 0.0im
             @test result[[0,2]] ≈ -1.0 + 0.0im
             @test result[[1,1]] ≈ 0.0 + 2.0im
@@ -272,30 +314,31 @@ end
             exp_vec = [1, 1, 2]
             coeff = 2.0 + 0.0im
             n = 1; m = 1
-            result = Realification._realify_term(exp_vec, coeff, n, m)
+            result = _realify_term(exp_vec, coeff, n, m)
             @test result[[2,0,2]] ≈ 2.0 + 0.0im
             @test result[[0,2,2]] ≈ 2.0 + 0.0im
         end
 
         @testset "realify - simple example from docs" begin
+            # f(z,z*,w) = (2 + im) zz* + (1 - im) z^2 + 3
+            # z = x + im * y,   z* = x + im * y,    w = w*
+            # f(x,y,w) = (2 + im) (x^2 +y^2) + (1 - im) (x^2 + 2*im xy - y^2) + 3
+            #          = 3 + 3 x^2 + (2 + 2*im) xy + (1 + 2*im) y^2
             f = Dict([1,1,0] => 2.0+1.0im, [2,0,0] => 1.0-1.0im, [0,0,0] => 3.0+0.0im)
             poly = construct_polynomial(PolyType, f)
             conj_map = [2, 1, 3]
             result = realify(poly, conj_map)
             @test result isa PolyType
             result_dict = polynomial_to_dict(result)
-            # Expected realified terms:
-            # From (2+1i)*(z*z̄)      : [2,0,0] = 2+1i , [0,2,0] = 2+1i
-            # From (1-1i)*z^2         : [2,0,0] = 1-1i , [1,1,0] = 2+2i , [0,2,0] = -1+1i
-            # From constant 3          : [0,0,0] = 3
-            # Summed:
-            @test result_dict[[2,0,0]] ≈ (2.0+1.0im) + (1.0-1.0im)  # 3.0 + 0.0im
-            @test result_dict[[1,1,0]] ≈ (1.0-1.0im)*2im             # 2.0 + 2.0im
-            @test result_dict[[0,2,0]] ≈ (2.0+1.0im) + (-1.0+1.0im) # 1.0 + 2.0im
+            @test result_dict[[2,0,0]] ≈ (2.0+1.0im) + (1.0-1.0im)
+            @test result_dict[[1,1,0]] ≈ (1.0-1.0im)*2im
+            @test result_dict[[0,2,0]] ≈ (2.0+1.0im) + (-1.0+1.0im)
             @test result_dict[[0,0,0]] ≈ 3.0 + 0.0im
         end
 
         @testset "realify - evaluation consistency" begin
+            using .Realification: _each_term
+
             Random.seed!(42)
             for _ in 1:5
                 n = 2
@@ -313,7 +356,7 @@ end
 
                 conj_map = [2, 1, 4, 3, 5]
 
-                poly_canon, n_pairs, m_real = Realification._reorder_canonical(construct_polynomial(PolyType, poly_orig), conj_map)
+                poly_canon, n_pairs, m_real = _reorder_canonical(construct_polynomial(PolyType, poly_orig), conj_map)
                 poly_real = realify(construct_polynomial(PolyType, poly_orig), conj_map)
 
                 x = randn(n_pairs)
@@ -382,7 +425,6 @@ end
                 @test res_direct isa PolyType
                 @test res_linear isa PolyType
 
-                # Evaluate at random real points
                 x = randn(n)
                 y = randn(n)
                 w = randn(m)
@@ -401,17 +443,16 @@ end
 
 @testset "DensePolynomial specific" begin
     @testset "basis sharing" begin
-        # Two polynomials with the same monomials should have equal basis exponents
         f1 = Dict([1,0] => 1.0, [0,1] => 2.0)
         f2 = Dict([1,0] => 3.0, [0,1] => 4.0)
         p1 = construct_polynomial(DensePolynomial, f1)
         p2 = construct_polynomial(DensePolynomial, f2)
-        @test p1.basis.exponents == p2.basis.exponents
+        @test multiindex_set(p1).exponents == multiindex_set(p2).exponents
     end
 
     @testset "empty polynomial" begin
-        basis = MonomialBasis(zeros(Int, 3, 0))
-        poly = DensePolynomial(Float64[], basis)
+        mset = MultiindexSet(zeros(Int, 3, 0), Grlex())
+        poly = DensePolynomial(Float64[], mset)
         @test length(poly) == 0
         @test nvars(poly) == 3
         @test polynomial_to_dict(poly) == Dict{Vector{Int}, Float64}()
