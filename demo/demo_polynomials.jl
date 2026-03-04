@@ -10,7 +10,7 @@ println("Zero polynomial initialised")
 # 2. Set two non‑zero coefficients (in place)
 poly.coeffs[find_term(poly, [1,1,0])] = (1.0, 2.0im)
 poly.coeffs[find_term(poly, [0,0,2])] = (3.0+4.0im, 5.0)
-println("\nPolynomial after in‑place modification (non‑zero terms only):")
+println("\nPolynomial after in‑place modification:")
 for (idx, exp) in enumerate(eachcol(poly.multiindex_set.exponents))
     println("  idx = $idx :\texponent = $exp, \tcoefficient = ", poly.coeffs[idx])
 end

@@ -245,34 +245,13 @@ import Base: zero
 # ---------- Zero polynomial constructors ----------
 
 """
-    zero(::Type{DensePolynomial{T,O}}, nvars::Int) where {T,O}
-    zero(::Type{SparsePolynomial{T,O}}, nvars::Int) where {T,O}
-
-Construct a zero polynomial of the given type with `nvars` variables
-and an empty multiindex set.
-"""
-function Base.zero(::Type{DensePolynomial{T,O}}, nvars::Int) where {T,O}
-    empty_set = MultiindexSet(zeros(Int, nvars, 0), O())
-    return DensePolynomial(T[], empty_set)
-end
-
-function Base.zero(::Type{SparsePolynomial{T,O}}, nvars::Int) where {T,O}
-    empty_set = MultiindexSet(zeros(Int, nvars, 0), O())
-    return SparsePolynomial(T[], Int[], empty_set)
-end
-
-"""
-    zero(::Type{DensePolynomial{T,O}}, set::MultiindexSet{O}) where {T,O}
-    zero(::Type{SparsePolynomial{T,O}}, set::MultiindexSet{O}) where {T,O}
+    zero(::Type{DensePolynomial{T}}, set::MultiindexSet{O}) where {T,O}
 
 Construct a zero polynomial in the given monomial basis `set`.
 For dense polynomials, this returns a vector of zeros of length `size(set.exponents,2)`.
-For sparse polynomials, it returns an empty polynomial (no terms) because the
+For sparse polynomials, it should return an empty polynomial (no terms) because the
 sparse representation omits zero coefficients.
 """
-
-# Define zero for tuples of numeric types
-Base.zero(::Type{NTuple{N,T}}) where {N,T} = ntuple(_ -> zero(T), N)
 
 function Base.zero(::Type{DensePolynomial{T}}, set::MultiindexSet{O}) where {T,O}
     coeffs = fill(zero(T), size(set.exponents, 2))

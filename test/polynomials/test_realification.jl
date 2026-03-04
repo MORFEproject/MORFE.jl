@@ -118,7 +118,7 @@ end
             M = [1 0; 0 1]
             p = 2
             poly = construct_polynomial(PolyType, f)
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             @test result isa PolyType
             result_dict = polynomial_to_dict(result)
             expected = Dict([1,0] => 1.0, [0,1] => 2.0)
@@ -130,19 +130,10 @@ end
             M = [1 2; 3 4]
             p = 2
             poly = construct_polynomial(PolyType, f)
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
             expected = Dict([2,0] => 18.0, [1,1] => 62.0, [0,2] => 52.0)
             @test result_dict == expected
-        end
-
-        @testset "zero polynomial" begin
-            poly = zero(PolyType, 3)
-            M = rand(3, 2)
-            result = compose_linear(poly, M, 2)
-            result_dict = polynomial_to_dict(result)
-            @test length(result_dict) == 1
-            @test result_dict[[0,0]] ≈ 0.0
         end
 
         @testset "constant" begin
@@ -150,7 +141,7 @@ end
             M = [1 2; 3 4]
             p = 2
             poly = construct_polynomial(PolyType, f)
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
             expected = Dict([0,0] => 7.0)
             @test result_dict == expected
@@ -161,7 +152,7 @@ end
             M = [1 0; 0 1; 1 1]
             p = 2
             poly = construct_polynomial(PolyType, f)
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
             expected = Dict([3,0] => 1.0, [2,1] => 4.0, [1,2] => 3.0, [0,3] => 1.0)
             @test result_dict == expected
@@ -178,7 +169,7 @@ end
             # f(z,w) = (1,0) (z^2 + 4zw + 4w^2) + (0,1) (3z^2 + 10zw + 8w^2) 
             #        = (1,3) z^2 + (4,10) zw + (4,8) w^2
             poly = construct_polynomial(PolyType, f)
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
             @test result_dict[[2,0]] ≈ [1.0, 3.0]
             @test result_dict[[1,1]] ≈ [4.0, 10.0]
@@ -190,7 +181,7 @@ end
             M = zeros(2, 2)
             p = 2
             poly = construct_polynomial(PolyType, f)
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
             @test result_dict[[0,0]] ≈ 5.0
             for (k, v) in result_dict
@@ -205,7 +196,7 @@ end
             M = [1 0 0; 0 1 0]
             p = 3
             poly = construct_polynomial(PolyType, f)
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
             @test result_dict[[2,0,0]] ≈ 1.0
             for (k, v) in result_dict
@@ -220,7 +211,7 @@ end
             poly = construct_polynomial(PolyType, f)
             M = [1 1]
             p = 2
-            result = compose_linear(poly, M, p)
+            result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
             for k in 0:5
                 @test result_dict[[k, 5-k]] ≈ binomial(5, k)
@@ -274,8 +265,8 @@ end
         @testset "realify_term - z*zbar" begin
             exp_vec = [1, 1]
             coeff = 2.0 + 3.0im
-            n = 1; m = 0
-            result = _realify_term(exp_vec, coeff, n, m)
+            n = 1
+            result = _realify_term(exp_vec, coeff, n)
             @test result[[2,0]] ≈ coeff
             @test result[[0,2]] ≈ coeff
         end
@@ -283,8 +274,8 @@ end
         @testset "realify_term - z^2" begin
             exp_vec = [2, 0]
             coeff = 1.0 + 0.0im
-            n = 1; m = 0
-            result = _realify_term(exp_vec, coeff, n, m)
+            n = 1
+            result = _realify_term(exp_vec, coeff, n)
             @test result[[2,0]] ≈ 1.0 + 0.0im
             @test result[[0,2]] ≈ -1.0 + 0.0im
             @test result[[1,1]] ≈ 0.0 + 2.0im
@@ -293,8 +284,8 @@ end
         @testset "realify_term - with real variable" begin
             exp_vec = [1, 1, 2]
             coeff = 2.0 + 0.0im
-            n = 1; m = 1
-            result = _realify_term(exp_vec, coeff, n, m)
+            n = 1
+            result = _realify_term(exp_vec, coeff, n)
             @test result[[2,0,2]] ≈ 2.0 + 0.0im
             @test result[[0,2,2]] ≈ 2.0 + 0.0im
         end
@@ -317,7 +308,6 @@ end
         end
 
         @testset "realify - evaluation consistency" begin
-            using .Realification: _each_term
 
             Random.seed!(42)
             for _ in 1:5
@@ -364,13 +354,6 @@ end
             @test result_dict[[2,0]] ≈ 1.0
             @test result_dict[[1,1]] ≈ 2.0
             @test result_dict[[0,2]] ≈ 3.0
-        end
-
-        @testset "realify - zero polynomial" begin
-            poly = zero(PolyType, 3)
-            result = realify(poly, [2, 1, 3])
-            result_dict = polynomial_to_dict(result)
-            @test length(result_dict) >= 0
         end
     end
 end
