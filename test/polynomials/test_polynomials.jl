@@ -4,7 +4,6 @@ using Test
 include(joinpath(@__DIR__, "../../src/Polynomials.jl"))    # adjust path as needed
 
 using .Polynomials
-using .Polynomials: all_multiindices_up_to
 
 # ----------------------------
 # Helper: check that two polynomials are approximately equal (for floats)

@@ -83,25 +83,6 @@ function polynomial_to_dict(poly::SparsePolynomial)
     return d
 end
 
-"""
-    evaluate(poly::AbstractPolynomial, vals::Vector{<:Number})
-
-Evaluate a polynomial at the given variable values.
-"""
-function evaluate(poly::AbstractPolynomial, vals::Vector{<:Number})
-    @assert nvars(poly) == length(vals)
-    T = eltype(poly)
-    result = T == Any ? zero(ComplexF64) : zero(T)
-    for (exp, coeff) in _each_term(poly)
-        term = coeff
-        for (j, e) in enumerate(exp)
-            term *= vals[j]^e
-        end
-        result += term
-    end
-    return result
-end
-
 # ---------- Tests for internal helpers (type‑agnostic) ----------
 
 @testset "multinomial" begin
@@ -156,9 +137,8 @@ end
         end
 
         @testset "zero polynomial" begin
-            f = Dict([0,0,0] => 0.0)
+            poly = zero(PolyType, 3)
             M = rand(3, 2)
-            poly = construct_polynomial(PolyType, f)
             result = compose_linear(poly, M, 2)
             result_dict = polynomial_to_dict(result)
             @test length(result_dict) == 1
@@ -387,8 +367,7 @@ end
         end
 
         @testset "realify - zero polynomial" begin
-            f = Dict([0,0,0] => 0.0+0.0im)
-            poly = construct_polynomial(PolyType, f)
+            poly = zero(PolyType, 3)
             result = realify(poly, [2, 1, 3])
             result_dict = polynomial_to_dict(result)
             @test length(result_dict) >= 0

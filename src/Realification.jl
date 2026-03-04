@@ -7,62 +7,10 @@ using .Polynomials: SparsePolynomial, DensePolynomial, AbstractPolynomial,
                     MultiindexSet, Grlex, coeffs, indices, multiindex_set, nvars
 
 export realify, compose_linear, realify_via_linear
-export SparsePolynomial, DensePolynomial, AbstractPolynomial,
+export SparsePolynomial, DensePolynomial, AbstractPolynomial, evaluate, extract_component,
+       all_multiindices_up_to, find_term,
        MultiindexSet, Grlex, coeffs, indices, multiindex_set, nvars
 export _multinomial, _compositions, _reorder_canonical, _realify_term
-
-# ------------------------------------------------------------
-#  Helpers for iterating over terms and constructing similar polynomials
-# ------------------------------------------------------------
-
-"""
-    _each_term(poly::AbstractPolynomial)
-
-Return a generator that yields `(exponent_vector, coefficient)` for every
-non‑zero term of `poly`. For dense polynomials, zero coefficients are skipped.
-"""
-function _each_term(poly::DensePolynomial)
-    exps = multiindex_set(poly).exponents
-    coeffs_vec = coeffs(poly)
-    return ((view(exps, :, j), coeffs_vec[j]) for j in 1:size(exps,2) if !iszero(coeffs_vec[j]))
-end
-
-function _each_term(poly::SparsePolynomial)
-    exps = multiindex_set(poly).exponents
-    coeffs_vec = coeffs(poly)
-    idxs = indices(poly)
-    return ((view(exps, :, idxs[i]), coeffs_vec[i]) for i in 1:length(poly))
-end
-
-"""
-    _similar_poly(dict::Dict{Vector{Int}, C}, poly::AbstractPolynomial, nvars::Int)
-
-Construct a new polynomial of the same concrete type and monomial order as `poly`
-from the dictionary `dict` (exponents → coefficients).  The new polynomial will
-have `nvars` variables (the length of exponent vectors in `dict` must match
-`nvars`; if `dict` is empty an empty set with the correct number of rows is created).
-"""
-function _similar_poly(dict::Dict{Vector{Int}, C}, poly::AbstractPolynomial, nvars::Int) where C
-    # Extract the monomial order from the original polynomial's multiindex_set
-    O = typeof(multiindex_set(poly)).parameters[1]
-
-    if isempty(dict)
-        # Create an empty multiindex_set with the correct number of rows
-        exponents = Matrix{Int}(undef, nvars, 0)
-        mset = MultiindexSet(exponents, O())
-    else
-        # All exponent vectors must have length nvars (checked by MultiindexSet constructor)
-        mset = MultiindexSet(collect(keys(dict)), O())
-    end
-
-    if poly isa DensePolynomial
-        return DensePolynomial(dict, mset)
-    elseif poly isa SparsePolynomial
-        return SparsePolynomial(dict, mset)
-    else
-        error("_similar_poly: unsupported polynomial type $(typeof(poly))")
-    end
-end
 
 # ------------------------------------------------------------
 #  Internal functions
@@ -71,7 +19,7 @@ end
 function _exponents_to_dict(poly::AbstractPolynomial)
     coeff_type = eltype(coeffs(poly))
     d = Dict{Vector{Int}, coeff_type}()
-    for (exp, coeff) in _each_term(poly)
+    for (exp, coeff) in each_term(poly)
         d[exp] = get(d, exp, zero(coeff_type)) + coeff
     end
     return d
@@ -129,7 +77,7 @@ function _reorder_canonical(poly::AbstractPolynomial, conj_map::Vector{Int})
 
     coeff_type = eltype(coeffs(poly))
     new_dict = Dict{Vector{Int}, coeff_type}()
-    for (old_exp, coeff) in _each_term(poly)
+    for (old_exp, coeff) in each_term(poly)
         new_exp = zeros(Int, N)
         for oldidx in 1:N
             new_exp[old2new[oldidx]] = old_exp[oldidx]
@@ -137,7 +85,7 @@ function _reorder_canonical(poly::AbstractPolynomial, conj_map::Vector{Int})
         new_dict[new_exp] = get(new_dict, new_exp, zero(coeff_type)) + coeff
     end
 
-    return _similar_poly(new_dict, poly, N), n, m
+    return similar_poly(new_dict, poly, N), n, m
 end
 
 """
@@ -149,8 +97,7 @@ of a polynomial in the canonical form (z, z̄, w) into a sum of real monomials.
 Returns a dictionary of new exponent vectors (in the real variables) and their
 coefficients.
 """
-#function _realify_term(exp_vec::Vector{Int}, coeff::Number, n::Int, m::Int)
-function _realify_term(exp_vec::AbstractVector{Int}, coeff::Number, n::Int, m::Int)
+function _realify_term(exp_vec::AbstractVector{Int}, coeff::T, n::Int) where T
     α = exp_vec[1:n]
     β = exp_vec[n+1:2n]
     γ = exp_vec[2n+1:end]
@@ -254,15 +201,15 @@ function realify(poly::AbstractPolynomial, conj_map::Vector{Int})::AbstractPolyn
 
     coeff_type = eltype(coeffs(poly))
     result_dict = Dict{Vector{Int}, coeff_type}()
-    for (exp_vec, coeff) in _each_term(canonical_poly)
-        term_dict = _realify_term(exp_vec, coeff, n, m)
+    for (exp_vec, coeff) in each_term(canonical_poly)
+        term_dict = _realify_term(exp_vec, coeff, n)
         for (exp, val) in term_dict
             result_dict[exp] = get(result_dict, exp, zero(coeff_type)) + val
         end
     end
 
     N_total = 2n + m
-    return _similar_poly(result_dict, poly, N_total)
+    return similar_poly(result_dict, poly, N_total)
 end
 
 """
@@ -295,7 +242,7 @@ function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}, p::Int) where T
     end
 
     current_dict = Dict{Vector{Int}, typeof(coeff_vec[1])}()
-    for (a, coeff) in _each_term(poly)
+    for (a, coeff) in each_term(poly)
         key = vcat(a, zeros(Int, p))
         current_dict[key] = get(current_dict, key, coeff_is_vector ? zeros(T, length(coeff)) : zero(T)) + coeff
     end
@@ -337,10 +284,10 @@ function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}, p::Int) where T
     # If the result has no terms, make it an explicit zero polynomial
     if isempty(current_dict)
         zero_dict = Dict(zeros(Int, p) => zero(T))
-        return _similar_poly(zero_dict, poly, p)
+        return similar_poly(zero_dict, poly, p)
     end
 
-    return _similar_poly(current_dict, poly, p)
+    return similar_poly(current_dict, poly, p)
 end
 
 """
