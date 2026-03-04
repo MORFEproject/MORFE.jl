@@ -101,6 +101,11 @@ end
 # Construct from dict and existing multiindex_set
 function DensePolynomial(dict::Dict{Vector{Int}, T}, multiindex_set::MultiindexSet{O}) where {T,O}
     n_coeffs = size(multiindex_set.exponents, 2)
+    # Verify that all dict keys are present in the set
+    for exp in keys(dict)
+        isnothing(find_in_set(multiindex_set, exp)) && 
+            error("dict contains exponent $exp not in the given multiindex_set")
+    end
     if isempty(dict)
         # If the dictionary is empty, we cannot obtain a sample value.
         # For scalar T, zeros(T, n_coeffs) works; for vector T it will error.
