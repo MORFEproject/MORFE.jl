@@ -49,3 +49,19 @@ For each solver, we will measure:
   - Scalability with matrix size and number of requested eigenvalues
 - **Robustness:** Ability to handle singular $B$ without factorisation breakdown, and to converge for difficult spectra (clustered eigenvalues, ill‑conditioned matrices).
 - **Ease of use:** Quality of documentation, simplicity of calling from Julia, flexibility in setting options (shift, target real part, etc.).
+
+
+
+
+Notes:
+- largest real (sorting occurring at the interaction/Hessenberg level) with Arnoldi works for non-singular B
+- when B is singular, largest real encounters inversion issue B^-1 A
+- regularization strategies are not robust, removing the singularity a priori is too expensive
+- invert shift is the typical strategy of Arnoldi to resolve the singularity, although it can be used only together with largest magnitude 
+- Largest magnitude is quite fast, independent on code language (Matlabb, Python, Julia)
+- One can think of simply using invert shift and reorder according to largest real a posteriori. This however does not work well as extremely sensitive on the chosen complex shift value
+- Cayley transform can be used to map the largest magnitude with shift to a largest real. Results show that to be used efficiently, accuracy is compromised. It cannot get too close to imag=0 due to ill-conditioning issues anyway
+- the combination of largest magnitude (as solver) and cayley (as screening of solutions close to the imagianry axis) is the best solution found for Arnoldi. However, not robust as desired
+- suggestion is to go away from Arnoldi algorithms and try something different. SLEPC seems the most interesting option on the paper
+
+A-sigmaB   sigma close to 0
