@@ -3,13 +3,17 @@ module Polynomials
 include("Multiindices.jl")
 using .Multiindices
 
+include("ArrayAlgebra.jl")
+using .ArrayAlgebra
+
 export MultiindexSet, Grlex, Lex, Grevlex, MonomialOrder, find_in_set
 
 export AbstractPolynomial, SparsePolynomial, DensePolynomial,
        polynomial_from_dict, polynomial_from_pairs,
-       coeffs, indices, multiindex_set, nvars,
+       coeffs, indices, multiindex_set, nvars, all_multiindices_up_to,
        coefficient, has_term, find_term, find_in_multiindex_set,
-       convert_dense_to_sparse, convert_sparse_to_dense
+       convert_dense_to_sparse, convert_sparse_to_dense,
+       zero, evaluate, extract_component, each_term, similar_poly
 
 # ---------- Abstract type ----------
 abstract type AbstractPolynomial{T} end
@@ -26,7 +30,7 @@ Sparse representation using a shared monomial multiindex_set.
 - `indices::Vector{Int}`: corresponding column indices in `multiindex_set`.
 - `multiindex_set::MultiindexSet{O}`: reference to the monomial set.
 """
-struct SparsePolynomial{T,O<:MonomialOrder} <: AbstractPolynomial{T}
+mutable struct SparsePolynomial{T,O<:MonomialOrder} <: AbstractPolynomial{T}
     coeffs::Vector{T}
     indices::Vector{Int}
     multiindex_set::MultiindexSet{O}
@@ -73,7 +77,7 @@ Dense representation: coefficients aligned with the full multiindex_set.
 - `coeffs::Vector{T}`: length = number of multiindex_set monomials.
 - `multiindex_set::MultiindexSet{O}`: reference to the monomial set.
 """
-struct DensePolynomial{T,O<:MonomialOrder} <: AbstractPolynomial{T}
+mutable struct DensePolynomial{T,O<:MonomialOrder} <: AbstractPolynomial{T}
     coeffs::Vector{T}
     multiindex_set::MultiindexSet{O}
     function DensePolynomial{T,O}(coeffs::Vector{T}, multiindex_set::MultiindexSet{O}) where {T,O}
@@ -180,6 +184,7 @@ Return the position in the polynomial's storage (index in `coeffs`) of the term 
 or `nothing` if not present.
 """
 find_term(p::DensePolynomial, exp::Vector{Int}) = find_in_multiindex_set(p, exp)
+
 function find_term(p::SparsePolynomial, exp::Vector{Int})
     idx = find_in_multiindex_set(p, exp)
     isnothing(idx) && return nothing
@@ -240,44 +245,18 @@ import Base: zero
 # ---------- Zero polynomial constructors ----------
 
 """
-    zero(p::DensePolynomial)
-
-Return a zero polynomial of the same concrete type, element type, order,
-and number of variables as `p`, but with an empty multiindex set
-(i.e., no terms). For a zero polynomial in the same monomial basis as `p`,
-use `zero(typeof(p), multiindex_set(p))`.
-"""
-function zero(p::DensePolynomial{T,O}) where {T,O}
-    n = nvars(p)
-    empty_set = MultiindexSet(zeros(Int, n, 0), O())
-    return DensePolynomial(T[], empty_set)
-end
-
-"""
-    zero(p::SparsePolynomial)
-
-Return a zero polynomial of the same concrete type, element type, order,
-and number of variables as `p`, but with an empty multiindex set.
-"""
-function zero(p::SparsePolynomial{T,O}) where {T,O}
-    n = nvars(p)
-    empty_set = MultiindexSet(zeros(Int, n, 0), O())
-    return SparsePolynomial(T[], Int[], empty_set)
-end
-
-"""
     zero(::Type{DensePolynomial{T,O}}, nvars::Int) where {T,O}
     zero(::Type{SparsePolynomial{T,O}}, nvars::Int) where {T,O}
 
 Construct a zero polynomial of the given type with `nvars` variables
 and an empty multiindex set.
 """
-function zero(::Type{DensePolynomial{T,O}}, nvars::Int) where {T,O}
+function Base.zero(::Type{DensePolynomial{T,O}}, nvars::Int) where {T,O}
     empty_set = MultiindexSet(zeros(Int, nvars, 0), O())
     return DensePolynomial(T[], empty_set)
 end
 
-function zero(::Type{SparsePolynomial{T,O}}, nvars::Int) where {T,O}
+function Base.zero(::Type{SparsePolynomial{T,O}}, nvars::Int) where {T,O}
     empty_set = MultiindexSet(zeros(Int, nvars, 0), O())
     return SparsePolynomial(T[], Int[], empty_set)
 end
@@ -291,12 +270,119 @@ For dense polynomials, this returns a vector of zeros of length `size(set.expone
 For sparse polynomials, it returns an empty polynomial (no terms) because the
 sparse representation omits zero coefficients.
 """
-function zero(::Type{DensePolynomial{T,O}}, set::MultiindexSet{O}) where {T,O}
-    return DensePolynomial(zeros(T, size(set.exponents,2)), set)
+
+# Define zero for tuples of numeric types
+Base.zero(::Type{NTuple{N,T}}) where {N,T} = ntuple(_ -> zero(T), N)
+
+function Base.zero(::Type{DensePolynomial{T}}, set::MultiindexSet{O}) where {T,O}
+    coeffs = fill(zero(T), size(set.exponents, 2))
+    return DensePolynomial(coeffs, set)
 end
 
-function zero(::Type{SparsePolynomial{T,O}}, set::MultiindexSet{O}) where {T,O}
-    return SparsePolynomial(T[], Int[], set)
+# ---------- Evaluate polynomial ----------
+
+"""
+    evaluate(poly::AbstractPolynomial, vals::Vector{<:Number})
+
+Evaluate a polynomial at the given variable values.
+"""
+function evaluate(poly::AbstractPolynomial, vals::Vector{<:Number})
+    @assert nvars(poly) == length(vals)
+    T = eltype(poly)
+    result = T == Any ? zero(ComplexF64) : zero(T)
+    for (exp, coeff) in each_term(poly)
+        term = coeff
+        for (j, e) in enumerate(exp)
+            term *= vals[j]^e
+        end
+        result += term
+    end
+    return result
+end
+
+"""
+    evaluate(poly::DensePolynomial{T,O}, vals::Vector{<:Number}, idx::Int) where {T,O}
+
+Evaluate the polynomial at `vals` and return the `idx`-th component of each coefficient.
+Assumes the polynomial's coefficients are vectors and that `idx` selects one component.
+"""
+function evaluate(poly::DensePolynomial{NTuple{N,T},O}, vals::Vector{<:Number}, idx::Int) where {N,T,O}
+    @assert nvars(poly) == length(vals)
+    result = zero(T)   # scalar of the component type (e.g., Float64)
+    # Iterate over all monomials (columns of the exponent matrix)
+    for (col, exp) in enumerate(eachcol(poly.multiindex_set.exponents))
+        coeff = poly.coeffs[col][idx]   # extract the desired component
+        term = coeff
+        for (j, e) in enumerate(exp)
+            term *= vals[j]^e
+        end
+        result += term
+    end
+    return result
+end
+
+"""
+    extract_component(poly::DensePolynomial{NTuple{L,T},O}, idx::Int) where {L,T,O}
+
+Return a new polynomial whose coefficients are the `idx`-th component of the original
+tuple coefficients.
+"""
+function extract_component(poly::DensePolynomial{NTuple{L,T},O}, idx::Int) where {L,T,O}
+    new_coeffs = [c[idx] for c in poly.coeffs]
+    return DensePolynomial(new_coeffs, poly.multiindex_set)
+end
+
+# ------------------------------------------------------------
+#  Helpers for iterating over terms and constructing similar polynomials
+# ------------------------------------------------------------
+
+"""
+    each_term(poly::AbstractPolynomial)
+
+Return a generator that yields `(exponent_vector, coefficient)` for every
+non‑zero term of `poly`. For dense polynomials, zero coefficients are skipped.
+"""
+function each_term(poly::DensePolynomial)
+    exps = multiindex_set(poly).exponents
+    coeffs_vec = coeffs(poly)
+    return ((view(exps, :, j), coeffs_vec[j]) for j in 1:size(exps,2) if !iszero(coeffs_vec[j]))
+end
+
+function each_term(poly::SparsePolynomial)
+    exps = multiindex_set(poly).exponents
+    coeffs_vec = coeffs(poly)
+    idxs = indices(poly)
+    return ((view(exps, :, idxs[i]), coeffs_vec[i]) for i in 1:length(poly))
+end
+
+"""
+    similar_poly(dict::Dict{Vector{Int}, C}, poly::AbstractPolynomial, nvars::Int)
+
+Construct a new polynomial of the same concrete type and monomial order as `poly`
+from the dictionary `dict` (exponents → coefficients).  The new polynomial will
+have `nvars` variables (the length of exponent vectors in `dict` must match
+`nvars`; if `dict` is empty an empty set with the correct number of rows is created).
+"""
+function similar_poly(dict::Dict{Vector{Int}, C}, poly::AbstractPolynomial, nvars::Int) where C
+    # Extract the monomial order from the original polynomial's multiindex_set
+    O = typeof(multiindex_set(poly)).parameters[1]
+
+    if isempty(dict)
+        # Create an empty multiindex_set with the correct number of rows
+        exponents = Matrix{Int}(undef, nvars, 0)
+        mset = MultiindexSet(exponents, O())
+    else
+        # All exponent vectors must have length nvars (checked by MultiindexSet constructor)
+        mset = MultiindexSet(collect(keys(dict)), O())
+    end
+
+    if poly isa DensePolynomial
+        return DensePolynomial(dict, mset)
+    elseif poly isa SparsePolynomial
+        return SparsePolynomial(dict, mset)
+    else
+        error("similar_poly: unsupported polynomial type $(typeof(poly))")
+    end
 end
 
 end # module
