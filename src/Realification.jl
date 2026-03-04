@@ -3,7 +3,7 @@ module Realification
 include(joinpath(@__DIR__, "./Polynomials.jl"))
 
 using .Polynomials
-using .Polynomials: SparsePolynomial, DensePolynomial, AbstractPolynomial,
+using .Polynomials: SparsePolynomial, DensePolynomial, AbstractPolynomial, each_term
                     MultiindexSet, Grlex, coeffs, indices, multiindex_set, nvars
 
 export realify, compose_linear, realify_via_linear
@@ -89,7 +89,7 @@ function _reorder_canonical(poly::AbstractPolynomial, conj_map::Vector{Int})
 end
 
 """
-    _realify_term(exp_vec::Vector{Int}, coeff::Number, n::Int, m::Int)
+    _realify_term(exp_vec::Vector{Int}, coeff::Number, n::Int)
         -> Dict{Vector{Int}, Number}
 
 Transform a single term (exponent vector `exp_vec` and coefficient `coeff`)
@@ -318,7 +318,7 @@ function realify_via_linear(poly::AbstractPolynomial, conj_map::Vector{Int})::Ab
         M[2n + i, 2n + i] = 1
     end
 
-    return compose_linear(canonical_poly, M, N_new)
+    return compose_linear(canonical_poly, M)
 end
 
 end # module

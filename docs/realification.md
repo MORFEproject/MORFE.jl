@@ -18,20 +18,20 @@ All functions preserve the concrete polynomial type (`SparsePolynomial` or `Dens
 
 Given variables grouped as $(z_1,\dots,z_n,\bar z_1,\dots,\bar z_n,w_1,\dots,w_m)$ after canonical reordering, each monomial
 
-\[
+$$
 z_1^{\alpha_1}\cdots z_n^{\alpha_n}\;\bar z_1^{\beta_1}\cdots\bar z_n^{\beta_n}\;w_1^{\gamma_1}\cdots w_m^{\gamma_m}
-\]
+$$
 
 is expanded using the binomial theorem for each pair $(z_k,\bar z_k)$:
 
-\[
+$$
 z_k^{\alpha_k}\bar z_k^{\beta_k}
 = \sum_{m_k=0}^{\alpha_k}\sum_{n_k=0}^{\beta_k}
    \binom{\alpha_k}{m_k}\binom{\beta_k}{n_k}
    i^{\,m_k-n_k}\,
    x_k^{\alpha_k+\beta_k-m_k-n_k}\,
    y_k^{m_k+n_k}.
-\]
+$$
 
 Multiplying over all $k$ yields a sum of real monomials $x^{\gamma_x}y^{\gamma_y}w^{\gamma_w}$. Coefficients are accumulated from all combinations $(\mathbf m,\mathbf n)$ satisfying
 $\gamma_x = \alpha+\beta-\mathbf m-\mathbf n$ and $\gamma_y = \mathbf m+\mathbf n$.
