@@ -228,10 +228,11 @@ Compose a multivariate polynomial with a linear map.
 A new polynomial in the variables `y₁, …, y_p`. The returned polynomial has
 the same concrete type (sparse or dense) as the input `poly`.
 """
-function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}, p::Int) where TA
+function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA
     n = nvars(poly)
     @assert size(M, 1) == n "First dimension of M must match number of variables"
-    @assert size(M, 2) == p "Second dimension of M must equal p"
+    
+    p = size(M, 2)
 
     coeff_vec = coeffs(poly)
     coeff_is_vector = coeff_vec isa Vector{<:AbstractVector}
