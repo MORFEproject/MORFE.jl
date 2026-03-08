@@ -1,221 +1,195 @@
-# Polynomials.jl Documentation
+# Polynomials Module Documentation
 
-This module provides two representations of multivariate polynomials: **sparse** (store only non‑zero coefficients) and **dense** (store all coefficients aligned with a fixed monomial set). Both representations share a common `MultiindexSet` object that defines the monomial basis and its ordering.
+The `Polynomials` module provides a flexible and efficient representation for multivariate polynomials. It is built around a dense storage scheme where coefficients are stored in a fixed order defined by a **multiindex set** – a collection of exponent vectors sorted according to a chosen monomial order.
 
-The module is part of a larger project and depends on the `Multiindices` submodule, which defines the `MultiindexSet` type and monomial orders.
+## Key Concepts
 
-## Exported Names
+- **MultiindexSet** – a container for exponent vectors, typically sorted by a monomial order (e.g., `Grlex`, `Lex`, `Grevlex`). It serves as the fixed basis for a dense polynomial.
+- **DensePolynomial** – a mutable structure holding a coefficient vector aligned with the columns of a multiindex set. Zero coefficients are stored explicitly, making term lookup by exponent O(log n) if the set is sorted.
+- **MonomialOrder** – an abstract type with concrete subtypes `Grlex`, `Lex`, `Grevlex`. The order determines how exponent vectors are sorted in the multiindex set.
 
-- Types: `AbstractPolynomial`, `SparsePolynomial`, `DensePolynomial`
-- Constructors: `polynomial_from_dict`, `polynomial_from_pairs`
-- Accessors: `coeffs`, `indices`, `multiindex_set`, `nvars`
-- Queries: `coefficient`, `has_term`, `find_term`, `find_in_multiindex_set`
-- Conversions: `convert_dense_to_sparse`, `convert_sparse_to_dense`
+## Main Types
 
----
+### `AbstractPolynomial{T}`
+An abstract supertype for all polynomial implementations. Currently the only concrete subtype is `DensePolynomial`.
 
-## Dependencies
-
-The module automatically includes the `Multiindices` module:
-
-```julia
-include("Multiindices.jl")
-using .Multiindices
-```
-
-All monomial orders (`O<:MonomialOrder`) and the `MultiindexSet` type are re‑exported or available through this dependency.
-
----
-
-## Abstract Type: `AbstractPolynomial{T}`
-
-All polynomial types inherit from `AbstractPolynomial{T}`, where `T` is the coefficient type (e.g., `Float64`, `Rational{Int}`).  
-Common methods:
-
-- `Base.eltype(::AbstractPolynomial{T}) = T`
-- All concrete types must provide `multiindex_set(p)`.
-
----
-
-## Concrete Types
-
-### `SparsePolynomial{T,O}`
-
-**Fields:**
-
-- `coeffs::Vector{T}` – non‑zero coefficients
-- `indices::Vector{Int}` – column indices in `multiindex_set.exponents` corresponding to each coefficient
-- `multiindex_set::MultiindexSet{O}` – shared monomial set
-
-**Invariants:**
-
-- `length(coeffs) == length(indices)`
-- Every index in `indices` is a valid column index of `multiindex_set.exponents`
-
-### `DensePolynomial{T,O}`
-
-**Fields:**
-
-- `coeffs::Vector{T}` – coefficients for **all** monomials in the set, in the same order as the columns of `multiindex_set.exponents`
-- `multiindex_set::MultiindexSet{O}` – shared monomial set
-
-**Invariants:**
-
-- `length(coeffs) == size(multiindex_set.exponents, 2)`
-
----
+### `DensePolynomial{T,O<:MonomialOrder} <: AbstractPolynomial{T}`
+- `coeffs::Vector{T}` – coefficients, one per monomial in the multiindex set.
+- `multiindex_set::MultiindexSet{O}` – the reference set of exponent vectors (columns = monomials).
 
 ## Constructors
 
-### 1. Direct construction from existing data
-
+### From a dictionary
 ```julia
-SparsePolynomial(coeffs::Vector{T}, indices::Vector{Int}, multiindex_set::MultiindexSet{O})
-DensePolynomial(coeffs::Vector{T}, multiindex_set::MultiindexSet{O})
-```
-
-These constructors are **type‑stable** (they infer the monomial order `O` from the supplied `multiindex_set`). They perform basic sanity checks (length matching, indices in range).
-
-### 2. From a dictionary of exponents → coefficients
-
-```julia
-SparsePolynomial(dict::Dict{Vector{Int}, T}, ::Type{O})
 DensePolynomial(dict::Dict{Vector{Int}, T}, ::Type{O})
 ```
-
-A new `MultiindexSet{O}` is built from the exponents present in the dictionary.  
-The exponents are sorted according to the order `O`; the polynomial coefficients are aligned accordingly.
+Builds a polynomial from a dictionary mapping exponent vectors to coefficients. The multiindex set is created automatically using the order `O`.
 
 ```julia
-SparsePolynomial(dict::Dict{Vector{Int}, T}, multiindex_set::MultiindexSet{O})
+p = DensePolynomial(Dict([1,0] => 2.0, [0,1] => -3.0), Grlex)
+```
+
+### From a dictionary and an existing multiindex set
+```julia
 DensePolynomial(dict::Dict{Vector{Int}, T}, multiindex_set::MultiindexSet{O})
 ```
+Checks that all dictionary keys belong to the set and fills the coefficient vector accordingly.
 
-Reuse an existing `multiindex_set`. All exponents in `dict` must be present in the set (otherwise an error is thrown). Coefficients for monomials not appearing in `dict` are treated as zero.
-
-### 3. From a vector of pairs (convenience)
-
-`polynomial_from_pairs` provides a convenient way to build a polynomial using `Pair`s:
+### From pairs (vector of `Pair{Vector{Int},T}`)
+```julia
+polynomial_from_pairs(::Type{DensePolynomial{T,O}}, pairs)
+```
+A convenience function that converts a vector of pairs into a dictionary and then constructs the polynomial.
 
 ```julia
-polynomial_from_pairs(::Type{DensePolynomial{T,O}}, pairs::Vector{Pair{Vector{Int},T}})
-polynomial_from_pairs(::Type{SparsePolynomial{T,O}}, pairs::Vector{Pair{Vector{Int},T}})
+pairs = [Vector{Int}([2,0]) => 1.5, [0,1] => -0.5]
+p = polynomial_from_pairs(DensePolynomial{Float64,Grlex}, pairs)
 ```
 
-Example:
+### Zero polynomial
+```julia
+zero(DensePolynomial{T}, set::MultiindexSet{O})
+zero(DensePolynomial{T,O}, set::MultiindexSet{O})
+```
+Returns a polynomial with all coefficients zero for the given multiindex set.
 
 ```julia
-p = polynomial_from_pairs(DensePolynomial{Float64, LexOrder}, [ [1,0] => 2.5, [0,1] => -1.0 ])
+mset = MultiindexSet([[0,0],[1,0],[0,1]], Grlex)
+z = zero(DensePolynomial{Float64}, mset)   # zero polynomial with 3 terms
 ```
 
----
+## Basic Accessors
 
-## Accessor Functions
+- `coeffs(p)` – the coefficient vector.
+- `multiindex_set(p)` – the underlying multiindex set.
+- `nvars(p)` – number of variables (length of each exponent vector).
+- `length(p)` – number of monomials in the basis (size of the coefficient vector).
+- `eltype(p)` – element type of the coefficients.
 
-| Function               | Returns                                                                 |
-|------------------------|-------------------------------------------------------------------------|
-| `coeffs(p)`            | Coefficient vector (dense: full length; sparse: non‑zero coefficients)  |
-| `indices(p)`           | (Only for `SparsePolynomial`) column indices of non‑zero terms          |
-| `multiindex_set(p)`    | The underlying `MultiindexSet` object                                    |
-| `nvars(p)`             | Number of variables (size of each exponent vector)                      |
-| `length(p)`            | Number of **stored** coefficients (for dense: total monomials; for sparse: non‑zeros) |
-| `eltype(p)`            | Coefficient type `T`                                                     |
+## Term Lookup and Coefficient Access
 
----
-
-## Term Queries
-
-All functions below work on both sparse and dense polynomials.
-
-### `find_in_multiindex_set(p::AbstractPolynomial, exp::Vector{Int}) -> Union{Int,Nothing}`
-
-Return the column index of the exponent vector `exp` in the polynomial’s `multiindex_set`, or `nothing` if the exponent is not part of the monomial set. (This function does **not** check whether the coefficient is non‑zero.)
-
-### `has_term(p::AbstractPolynomial, exp::Vector{Int}) -> Bool`
-
-Return `true` if the polynomial contains a term with the given exponent and (for sparse) the coefficient is stored as non‑zero; for dense it only checks that the exponent exists in the monomial set (coefficient may be zero).
-
-### `coefficient(p::AbstractPolynomial, exp::Vector{Int}) -> T`
-
-Return the coefficient associated with `exp`. If the exponent is not in the monomial set, or (for sparse) the term is not stored, return `zero(T)`.
-
-### `find_term(p::AbstractPolynomial, exp::Vector{Int}) -> Union{Int,Nothing}`
-
-Return the **storage index** of the term in the polynomial’s `coeffs` array:
-
-- For `DensePolynomial`: the column index in the `multiindex_set` (or `nothing` if the exponent is not in the set).
-- For `SparsePolynomial`: the position in `p.indices` (i.e., the index into `p.coeffs`) or `nothing` if the term is not present.
-
----
-
-## Conversions Between Representations
-
-### `convert_sparse_to_dense(p::SparsePolynomial) -> DensePolynomial`
-
-Create a dense polynomial that shares the same `multiindex_set`. Zero coefficients are filled explicitly.
-
-### `convert_dense_to_sparse(p::DensePolynomial; tol=0) -> SparsePolynomial`
-
-Create a sparse polynomial by dropping coefficients whose absolute value ≤ `tol`. The same `multiindex_set` is reused.
-
----
-
-## Convenience Function: `polynomial_from_dict`
-
-This function is simply an alias for the dictionary constructors, provided for consistency with the `polynomial_from_pairs` interface.
+- `find_in_multiindex_set(p, exp)` – returns the column index of `exp` in the multiindex set, or `nothing`.
+- `has_term(p, exp)` – checks whether a term with exponent `exp` exists (even if coefficient is zero? Actually it checks presence in the set, not whether coefficient is non‑zero – the current implementation uses `find_in_multiindex_set`, so it returns `true` if the exponent is in the basis, regardless of coefficient value. This may be intended.)
+- `coefficient(p, exp)` – returns the coefficient for `exp` (zero if the exponent is not in the basis).
+- `find_term(p, exp)` – same as `find_in_multiindex_set` (returns index or nothing).
 
 ```julia
-polynomial_from_dict(::Type{DensePolynomial}, args...; kwargs...)
-polynomial_from_dict(::Type{SparsePolynomial}, args...; kwargs...)
+p = DensePolynomial(Dict([2,0]=>3, [0,1]=>5), Grlex)
+coefficient(p, [2,0])   # 3
+has_term(p, [1,1])      # false (exponent not in basis)
+find_term(p, [0,1])     # returns the column index (e.g., 3)
 ```
 
-It forwards all arguments to the corresponding `DensePolynomial`/`SparsePolynomial` dictionary constructor.
+## Evaluation
 
----
+### Scalar evaluation
+```julia
+evaluate(poly::AbstractPolynomial, vals::Vector{<:Number})
+```
+Evaluates the polynomial at the given variable values. The result type is deduced from the coefficients.
 
-## Examples
+```julia
+p = DensePolynomial(Dict([2,0]=>2, [0,1]=>-3), Grlex)
+evaluate(p, [1.5, 2.0])   # 2*(1.5^2) + (-3)*(2.0) = 2*2.25 -6 = 4.5-6 = -1.5
+```
 
-### Building a sparse polynomial from a dictionary
+### Component evaluation (for tuple coefficients)
+If coefficients are tuples (e.g., for vector‑valued polynomials), `evaluate(poly, vals, idx)` evaluates only the `idx`‑th component.
+
+```julia
+dict = Dict([1,0]=>(1.0,2.0), [0,1]=>(3.0,4.0))
+p = DensePolynomial(dict, Grlex)
+evaluate(p, [2.0, 3.0], 1)   # 1.0*2.0 + 3.0*3.0 = 2+9 = 11
+evaluate(p, [2.0, 3.0], 2)   # 2.0*2.0 + 4.0*3.0 = 4+12 = 16
+```
+
+### Extracting a component polynomial
+```julia
+extract_component(poly::DensePolynomial{NTuple{L,T},O}, idx::Int)
+```
+Returns a new polynomial (with scalar coefficients) containing the `idx`‑th component of each tuple coefficient.
+
+```julia
+p = DensePolynomial(Dict([1,0]=>(1.0,2.0), [0,1]=>(3.0,4.0)), Grlex)
+p1 = extract_component(p, 1)   # polynomial with coefficients 1.0 and 3.0
+```
+
+## Iterating Over Non‑Zero Terms
+
+The function `each_term(poly)` returns a generator that yields `(exponent_vector, coefficient)` for every term with a non‑zero coefficient. Zero coefficients are skipped automatically.
+
+```julia
+p = DensePolynomial(Dict([2,0]=>0, [0,1]=>5), Grlex)   # first term has zero coefficient
+for (exp, coeff) in each_term(p)
+    println("exp = $exp, coeff = $coeff")
+end
+# Output: exp = [0,1], coeff = 5
+```
+
+## Constructing a Similar Polynomial
+
+```julia
+similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial, nvars::Int)
+```
+Creates a new polynomial of the same concrete type and monomial order as `poly`, using the coefficients from `dict`. The new polynomial will have `nvars` variables. If `dict` is empty, an empty multiindex set with the correct number of rows is created.
+
+```julia
+p1 = DensePolynomial(Dict([1,0]=>2.0, [0,1]=>-1.0), Grlex)
+dict2 = Dict([2,0]=>0.5, [1,1]=>1.2)
+p2 = similar_poly(dict2, p1, 2)   # p2 is a DensePolynomial{Float64,Grlex} with exponents [2,0] and [1,1]
+```
+
+## Dependencies
+
+The module relies on two internal submodules:
+- `Multiindices` – provides `MultiindexSet` and the monomial order types.
+- `ArrayAlgebra` – (likely provides additional array utilities, but not used directly in the shown code).
+
+## Complete Example
 
 ```julia
 using .Polynomials
-dict = Dict([1,0] => 2.0, [0,1] => -3.0, [2,0] => 1.5)
-p_sparse = SparsePolynomial(dict, LexOrder)
 
-coeffs(p_sparse)       # [2.0, -3.0, 1.5]  (order depends on LexOrder)
-indices(p_sparse)      # [1, 2, 3] if those are the positions of [1,0], [0,1], [2,0]
-nvars(p_sparse)        # 2
+# Create a polynomial in two variables with Grlex order
+coeff_dict = Dict(
+    [2,0] => 3.0,
+    [1,1] => -2.5,
+    [0,2] => 1.0
+)
+p = DensePolynomial(coeff_dict, Grlex)
+
+# Access information
+println("Variables: ", nvars(p))
+println("Monomial basis: ")
+for exp in eachcol(multiindex_set(p).exponents)
+    println("  ", exp)
+end
+
+# Evaluate at (x,y) = (2,3)
+val = evaluate(p, [2.0, 3.0])
+println("p(2,3) = ", val)
+
+# Get coefficient of x*y
+c = coefficient(p, [1,1])
+println("Coefficient of x*y: ", c)
+
+# Iterate over non‑zero terms
+for (exp, coeff) in each_term(p)
+    println("Term: x^$(exp[1]) y^$(exp[2])  coeff=$coeff")
+end
 ```
 
-### Building a dense polynomial with an existing multiindex set
+## Notes
+
+- The dense representation is most efficient when the polynomial uses a large fraction of the monomials in the chosen basis. For very sparse polynomials, a sparse representation might be more appropriate.
+- The module exports `MultiindexSet`, `Grlex`, `Lex`, `Grevlex`, and the main polynomial types and functions.
+- All constructors and functions are designed to be type‑stable and generic.
 
 ```julia
-# Suppose we already have a multiindex set (e.g., from another polynomial)
-ms = multiindex_set(p_sparse)
-
-# Create a new polynomial using the same set, but with different coefficients
-dict2 = Dict([1,0] => 5.0, [2,0] => -1.0)
-p_dense = DensePolynomial(dict2, ms)   # [0,1] term will be zero automatically
+# You can also create a zero polynomial from an existing multiindex set
+mset = MultiindexSet([[0,0],[1,0],[0,1]], Grevlex)
+z = zero(DensePolynomial{Float64}, mset)
 ```
 
-### Querying terms
-
-```julia
-coefficient(p_dense, [0,1])   # 0.0 (because not in dict2)
-has_term(p_sparse, [2,0])     # true
-find_term(p_sparse, [0,1])    # 2 (if [0,1] is the second term in the sparse storage)
-```
-
-### Conversion
-
-```julia
-p_dense_from_sparse = convert_sparse_to_dense(p_sparse)
-p_sparse_from_dense = convert_dense_to_sparse(p_dense; tol=1e-10)
-```
-
-### Using `polynomial_from_pairs`
-
-```julia
-pairs = [ [1,0] => 2.0, [0,1] => -3.0, [2,0] => 1.5 ]
-p = polynomial_from_pairs(SparsePolynomial{Float64, GrlexOrder}, pairs)
+For more details, refer to the source code and the documentation of the `Multiindices` submodule.
 ```
