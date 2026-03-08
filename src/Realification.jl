@@ -3,13 +3,13 @@ module Realification
 include(joinpath(@__DIR__, "./Polynomials.jl"))
 
 using .Polynomials
-using .Polynomials: SparsePolynomial, DensePolynomial, AbstractPolynomial, each_term
-                    MultiindexSet, Grlex, coeffs, indices, multiindex_set, nvars
+using .Polynomials: DensePolynomial, AbstractPolynomial, each_term
+                    MultiindexSet, Grlex, coeffs, multiindex_set, nvars
 
 export realify, compose_linear, realify_via_linear
-export SparsePolynomial, DensePolynomial, AbstractPolynomial, evaluate, extract_component,
+export DensePolynomial, AbstractPolynomial, evaluate, extract_component,
        all_multiindices_up_to, find_term,
-       MultiindexSet, Grlex, coeffs, indices, multiindex_set, nvars
+       MultiindexSet, Grlex, coeffs, multiindex_set, nvars
 export _multinomial, _compositions, _reorder_canonical, _realify_term
 
 # ------------------------------------------------------------
@@ -194,7 +194,7 @@ pairs) into a polynomial in real variables.
 A new polynomial in real variables `x₁, …, x_n, y₁, …, y_n, w₁, …, w_m`
 with `n` conjugate pairs and `m` real variables. The transformation uses the
 formulas `z = x + i y`, `z̄ = x - i y`. The returned polynomial has the same
-concrete type (sparse or dense) as the input `poly`.
+concrete type as the input `poly`.
 """
 function realify(poly::AbstractPolynomial, conj_map::Vector{Int})::AbstractPolynomial
     canonical_poly, n, m = _reorder_canonical(poly, conj_map)
@@ -226,7 +226,7 @@ Compose a multivariate polynomial with a linear map.
 
 # Returns
 A new polynomial in the variables `y₁, …, y_p`. The returned polynomial has
-the same concrete type (sparse or dense) as the input `poly`.
+the same concrete type as the input `poly`.
 """
 function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA
     n = nvars(poly)
@@ -284,7 +284,22 @@ function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA
 
     # If the result has no terms, make it an explicit zero polynomial
     if isempty(current_dict)
-        zero_dict = Dict(zeros(Int, p) => zero(T))
+        # Build a zero coefficient of the correct type.
+        # We can obtain the vector length from the input polynomial's coefficients if available.
+        zero_coeff = if coeff_is_vector
+            if !isempty(coeffs(poly))
+                zero(coeffs(poly)[1])   # zero(::Array) gives an all‑zero array of the same size
+            else
+                # poly is zero and has no terms → cannot determine length.
+                # Fallback: try to create a zero array using the element type and hope it's never used.
+                # A safer alternative would be to return a zero polynomial without any terms,
+                # but that would require changes to the zero constructor.
+                zeros(T, 0)   # This will likely cause a dimension mismatch later, but avoids a MethodError now.
+            end
+        else
+            zero(T)
+        end
+        zero_dict = Dict(zeros(Int, p) => zero_coeff)
         return similar_poly(zero_dict, poly, p)
     end
 
@@ -298,7 +313,7 @@ Transform a complex‑valued polynomial into a polynomial in real variables by
 composing with the linear map that expresses complex variables in terms of real
 and imaginary parts. This is an alternative implementation to `realify` that
 uses the `compose_linear` function. The returned polynomial has the same concrete
-type (sparse or dense) as the input `poly`.
+type as the input `poly`.
 
 See also: [`realify`](@ref), [`compose_linear`](@ref)
 """

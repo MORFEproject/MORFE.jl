@@ -7,30 +7,11 @@ using .Realification
 # ---------- Helper functions for testing ----------
 
 """
-    construct_polynomial(::Type{SparsePolynomial}, dict::Dict{Vector{Int}, T}) -> SparsePolynomial
     construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) -> DensePolynomial
 
 Construct a polynomial of the specified type from a dictionary.
 Uses the default monomial order `Grlex`.
 """
-function construct_polynomial(::Type{SparsePolynomial}, dict::Dict{Vector{Int}, T}) where T
-    if isempty(dict)
-        mset = MultiindexSet(Matrix{Int}(undef, 0, 0), Grlex())
-        return SparsePolynomial(T[], Int[], mset)
-    else
-        exps = collect(keys(dict))
-        mset = MultiindexSet(exps, Grlex())
-        # Build a mapping from exponent (as tuple) to column index
-        exp_to_idx = Dict{Tuple{Vararg{Int}}, Int}()
-        for (j, col) in enumerate(eachcol(mset.exponents))
-            exp_to_idx[Tuple(col)] = j
-        end
-        idxs = [exp_to_idx[Tuple(exp)] for exp in exps]
-        coeffs = [dict[exp] for exp in exps]
-        perm = sortperm(idxs)
-        return SparsePolynomial(coeffs[perm], idxs[perm], mset)
-    end
-end
 
 function construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) where T
     if isempty(dict)
@@ -58,7 +39,6 @@ end
 
 """
     polynomial_to_dict(poly::DensePolynomial) -> Dict{Vector{Int}, eltype(poly)}
-    polynomial_to_dict(poly::SparsePolynomial) -> Dict{Vector{Int}, eltype(poly)}
 
 Convert any polynomial back to a dictionary mapping exponent vectors to non‑zero coefficients.
 """
@@ -68,17 +48,6 @@ function polynomial_to_dict(poly::DensePolynomial)
     cs = coeffs(poly)
     for j in 1:size(exps, 2)
         d[exps[:, j]] = cs[j]
-    end
-    return d
-end
-
-function polynomial_to_dict(poly::SparsePolynomial)
-    d = Dict{Vector{Int}, eltype(poly)}()
-    exps = multiindex_set(poly).exponents
-    idxs = indices(poly)
-    cs = coeffs(poly)
-    for (i, idx) in enumerate(idxs)
-        d[exps[:, idx]] = cs[i]
     end
     return d
 end
@@ -109,10 +78,10 @@ end
     end
 end
 
-# ---------- Tests for compose_linear on both sparse and dense ----------
+# ---------- Tests for compose_linear on both all implemented polynomial types ----------
 
 @testset "compose_linear" begin
-    @testset "for $PolyType" for PolyType in [SparsePolynomial, DensePolynomial]
+    @testset "for $PolyType" for PolyType in [DensePolynomial]
         @testset "linear identity" begin
             f = Dict([1,0] => 1.0, [0,1] => 2.0)
             M = [1 0; 0 1]
@@ -161,8 +130,10 @@ end
         @testset "vector output" begin
             # f(x,y) = (1,0) x^2 + (0,1) xy
             f = Dict([2,0] => [1.0, 0.0], [1,1] => [0.0, 1.0])#, [0,2] => [0.0, 0.0])
+            
             M = [1 2; 
                  3 4]
+
             p = 2
             # x = z + 2w
             # y = 3z + 4w
@@ -220,16 +191,14 @@ end
     end
 end
 
-# ---------- Tests for realify on both sparse and dense ----------
+# ---------- Tests for realify on all implemented polynomial types ----------
 
 @testset "realify" begin
-    @testset "for $PolyType" for PolyType in [SparsePolynomial, DensePolynomial]
+    @testset "for $PolyType" for PolyType in [DensePolynomial]
         @testset "reorder_canonical - empty" begin
             mset = MultiindexSet(zeros(Int, 3, 0), Grlex())
-            if PolyType == SparsePolynomial
-                poly = SparsePolynomial(Float64[], Int[], mset)
-            else
-                poly = DensePolynomial(Float64[], mset)
+            if PolyType == DensePolynomial
+                poly = zero(DensePolynomial{Float64}, mset)
             end
             conj_map = [2, 1, 3]
             canonical, n, m = _reorder_canonical(poly, conj_map)
@@ -358,10 +327,10 @@ end
     end
 end
 
-# ---------- Tests for realify_via_linear on both sparse and dense ----------
+# ---------- Tests for realify_via_linear on all implemented polynomial types ----------
 
 @testset "realify_via_linear" begin
-    @testset "for $PolyType" for PolyType in [SparsePolynomial, DensePolynomial]
+    @testset "for $PolyType" for PolyType in [DensePolynomial]
         @testset "equivalence with realify" begin
             Random.seed!(123)
             for _ in 1:5
