@@ -1,6 +1,12 @@
 module FEM
 
-export AbstractFEMBackend
+include("FEMInterface.jl")
+
+include("GridapFEM.jl")
+
+include("ByHandFEM.jl")
+
+export AbstractFEM, GridapFEM, ByHandFEM
 
 export assemble_mass_matrix!, assemble_stiffness_matrix!, assemble_load_vector!, assemble_system!, 
     mass_matrix, stiffness_matrix, load_vector, 
@@ -8,10 +14,4 @@ export assemble_mass_matrix!, assemble_stiffness_matrix!, assemble_load_vector!,
     ndofs, 
     field_from_vector, visualize
 
-include("FEMInterface.jl")
-
-include("Gridap.jl")
-
-include("ByHand.jl")
-
-end
+end #module

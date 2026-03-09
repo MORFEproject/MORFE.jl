@@ -1,9 +1,9 @@
 abstract type AbstractFEM end
 
-function assemble_system(fem::AbstractFEM)
-    assemble_mass_matrix(fem)
-    assemble_stiffness_matrix(fem)
-    assemble_load_vector(fem)
+function assemble_system!(fem::AbstractFEM)
+    assemble_mass_matrix!(fem)
+    assemble_stiffness_matrix!(fem)
+    assemble_load_vector!(fem)
 end
 
 function assemble_mass_matrix!(fem::AbstractFEM)
@@ -30,11 +30,11 @@ function load_vector(fem::AbstractFEM)
     error("load_vector not implemented for $(typeof(fem))")
 end
 
-function evaluate_quadratic_nonlinearity(fem::AbstractFEM)
+function evaluate_quadratic_nonlinearity(fem::AbstractFEM, Ψ₁,Ψ₂)
     error("evaluate_quadratic_nonlinearity not implemented for $(typeof(fem))")
 end
 
-function evaluate_cubic_nonlinearity(fem::AbstractFEM)
+function evaluate_cubic_nonlinearity(fem::AbstractFEM, Ψ₁,Ψ₂,Ψ₃)
     error("evaluate_cubic_nonlinearity not implemented for $(typeof(fem))")
 end
 
