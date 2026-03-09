@@ -76,11 +76,11 @@ function assemble_mass_matrix!(fem::GridapFEM)
 end
 
 function assemble_stiffness_matrix!(fem::GridapFEM)
-    fem.M = assemble_matrix((u,v)->fem.stiffness_form(u,v), fem.U, fem.V)
+    fem.K = assemble_matrix((u,v)->fem.stiffness_form(u,v), fem.U, fem.V)
 end
 
 function assemble_load_vector!(fem::GridapFEM)
-    fem.M = assemble_vector(v->fem.load_form(v), fem.U, fem.V)
+    fem.f = assemble_vector(v->fem.load_form(v), fem.U, fem.V)
 end
 
 function mass_matrix(fem::GridapFEM)
@@ -105,22 +105,22 @@ function load_vector(fem::GridapFEM)
 end
 
 function evaluate_quadratic_nonlinearity(fem::GridapFEM, Ψ₁,Ψ₂)
-    Ψ1r  = FEFunction(V,real(Ψ₁))
-    Ψ1i  = FEFunction(V,imag(Ψ₁))
-    Ψ2r  = FEFunction(V,real(Ψ₂))
-    Ψ2i  = FEFunction(V,imag(Ψ₂))
+    Ψ1r  = FEFunction(fem.V,real(Ψ₁))
+    Ψ1i  = FEFunction(fem.V,imag(Ψ₁))
+    Ψ2r  = FEFunction(fem.V,real(Ψ₂))
+    Ψ2i  = FEFunction(fem.V,imag(Ψ₂))
     resR = assemble_vector(v -> (fem.quadratic_form(Ψ1r,Ψ2r,v)-fem.quadratic_form(Ψ1i,Ψ2i,v)), fem.V)
     resI = assemble_vector(v -> (fem.quadratic_form(Ψ1r,Ψ2i,v)+fem.quadratic_form(Ψ1i,Ψ2r,v)), fem.V)
     return (resR .+ im*resI)
 end
 
 function evaluate_cubic_nonlinearity(fem::GridapFEM, Ψ₁,Ψ₂,Ψ₃)
-    Ψ1r  = FEFunction(V,real(Ψ₁))
-    Ψ1i  = FEFunction(V,imag(Ψ₁))
-    Ψ2r  = FEFunction(V,real(Ψ₂))
-    Ψ2i  = FEFunction(V,imag(Ψ₂))
-    Ψ3r  = FEFunction(V,real(Ψ₃))
-    Ψ3i  = FEFunction(V,imag(Ψ₃))
+    Ψ1r  = FEFunction(fem.V,real(Ψ₁))
+    Ψ1i  = FEFunction(fem.V,imag(Ψ₁))
+    Ψ2r  = FEFunction(fem.V,real(Ψ₂))
+    Ψ2i  = FEFunction(fem.V,imag(Ψ₂))
+    Ψ3r  = FEFunction(fem.V,real(Ψ₃))
+    Ψ3i  = FEFunction(fem.V,imag(Ψ₃))
     resR = assemble_vector(v -> (fem.cubic_form(Ψ1r,Ψ2r,Ψ3r,v) - fem.cubic_form(Ψ1r,Ψ2i,Ψ3i,v) - fem.cubic_form(Ψ1i,Ψ2r,Ψ3i,v) - fem.cubic_form(Ψ1i,Ψ2i,Ψ3r,v)), fem.V)
     resI = assemble_vector(v -> (fem.cubic_form(Ψ1i,Ψ2r,Ψ3r,v) + fem.cubic_form(Ψ1r,Ψ2i,Ψ3r,v) + fem.cubic_form(Ψ1r,Ψ2r,Ψ3i,v) - fem.cubic_form(Ψ1i,Ψ2i,Ψ3i,v)), fem.V)
     return (resR .+ im*resI)
