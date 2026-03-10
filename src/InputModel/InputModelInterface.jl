@@ -4,16 +4,16 @@ InputModelAbstract expects first order ODE-System:
 =#
 abstract type InputModelAbstract end
 
-function get_a_matrix(fem::InputModelAbstract)
-    error("get_a_matrix not implemented for $(typeof(fem))")
+function a_matrix(fem::InputModelAbstract)
+    error("a_matrix not implemented for $(typeof(fem))")
 end
 
-function get_b_matrix(fem::InputModelAbstract)
-    error("get_b_matrix not implemented for $(typeof(fem))")
+function b_matrix(fem::InputModelAbstract)
+    error("b_matrix not implemented for $(typeof(fem))")
 end
 
-function get_f_vector(fem::InputModelAbstract)
-    error("get_f_vector not implemented for $(typeof(fem))")
+function f_vector(fem::InputModelAbstract)
+    error("f_vector not implemented for $(typeof(fem))")
 end
 
 function evaluate_nonlinearity(fem::InputModelAbstract, Ψ...)
@@ -56,14 +56,14 @@ function assemble_load_vector!(fem::InputModelAbstractSecondOrder)
     error("assemble_load_vector! not implemented for $(typeof(fem))")
 end
 
-function get_a_matrix(fem::InputModelAbstractSecondOrder)
+function a_matrix(fem::InputModelAbstractSecondOrder)
     error("For $(typeof(fem)) use structure of second order system!")
 end
 
-function get_b_matrix(fem::InputModelAbstractSecondOrder)
+function b_matrix(fem::InputModelAbstractSecondOrder)
     error("For $(typeof(fem)) use structure of second order system!")
 end
 
-function get_f_vector(fem::InputModelAbstractSecondOrder)
+function f_vector(fem::InputModelAbstractSecondOrder)
     error("For $(typeof(fem)) use structure of second order system!")
 end

@@ -78,6 +78,11 @@ function model_from_gmsh!(gmsh_file::String)
     return model
 end
 
+function assemble!(fem::InputModelGridapMechanical)
+    assemble_mass_matrix!(fem)
+    assemble_stiffness_matrix!(fem)
+end
+
 function assemble_mass_matrix!(fem::InputModelGridapMechanical)
     fem.M = assemble_matrix((u,v)->fem.mass_form(u,v), fem.U, fem.V)
 end
@@ -87,7 +92,7 @@ function assemble_stiffness_matrix!(fem::InputModelGridapMechanical)
 end
 
 function assemble_load_vector!(fem::InputModelGridapMechanical)
-    fem.f = assemble_vector(v->fem.load_form(v), fem.U, fem.V)
+    fem.F = assemble_vector(v->fem.load_form(v), fem.U, fem.V)
 end
 
 function mass_matrix(fem::InputModelGridapMechanical)
