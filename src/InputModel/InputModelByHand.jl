@@ -15,7 +15,7 @@ mutable struct InputModelByHand <: InputModelAbstractSecondOrder
     # FEM Storage
     M
     K
-    f
+    F
 end
 
 function InputModelByHand(info_file::String, mesh_file::String)
@@ -82,10 +82,10 @@ function stiffness_matrix(fem::InputModelByHand)
 end
 
 function load_vector(fem::InputModelByHand)
-     if isnothing(fem.f)
+     if isnothing(fem.F)
         assemble_system!(fem)
     end
-    return fem.f
+    return fem.F
 end
 
 function ndofs(fem::InputModelByHand)
