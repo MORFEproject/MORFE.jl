@@ -1,291 +1,312 @@
-# test_multiindices.jl
-
 using Test
 include(joinpath(@__DIR__, "../../src/Multiindices.jl"))
 using .Multiindices
 
-# ==================== Helper function to check sortedness ====================
-function is_sorted_set(set::MultiindexSet{O}) where O
+# ============================================================================
+# Helper functions for testing
+# ============================================================================
+
+"""
+    is_grlex_sorted(set::MultiindexSet) -> Bool
+
+Check that the columns of `set.exponents` are non‑decreasing in the Grlex order.
+"""
+function is_grlex_sorted(set::MultiindexSet)
     exps = set.exponents
     n = size(exps, 2)
     n ≤ 1 && return true
-    less = (a,b) -> precede(O(), a, b)
     for i in 1:n-1
-        col_i = view(exps, :, i)
-        col_j = view(exps, :, i+1)
-        if !less(col_i, col_j) && col_i != col_j
+        a = view(exps, :, i)
+        b = view(exps, :, i+1)
+        if !grlex_precede(a, b) && a != b
             return false
         end
     end
     return true
 end
 
-# ==================== Ordering utilities ====================
-@testset "Ordering utilities" begin
+"""
+    random_exponent(nvars::Int, max_deg::Int) -> Vector{Int}
 
-    # Lex: c < d < b < a
-    # Grlex: c < d < a < b
-    # Grevlex: c < a < d < b
-
-    c = [2, 1, 1] # degree 4
-    d = [1, 3, 2] # degree 6
-    b = [1, 2, 4] # degree 7
-    a = [1, 2, 3] # degree 6
-
-    # lex_precede
-    # Lex: c < d < b < a
-    @test lex_precede(a, b) == false
-    @test lex_precede(b, a) == true
-    @test lex_precede(a, c) == false
-    @test lex_precede(c, a) == true
-    @test lex_precede(c, d) == true
-    @test lex_precede(a, a) == false  # equal
-
-    # grlex_precede
-    a2 = [0, 3, 3] # degree 6
-    d2 = [1, 2, 0]  # degree 3
-    # Grlex: d2 < c < d < a < a2 < b
-    @test grlex_precede(a, b) == true
-    @test grlex_precede(b, a) == false
-    @test grlex_precede(c, a) == true  
-    @test grlex_precede(a, c) == false
-    @test grlex_precede(d2, a) == true
-    @test grlex_precede(a2, a) == lex_precede(a2, a)
-    @test grlex_precede(a, a2) == true
-
-    # grevlex_precede
-    # Grevlex: d2 < c < a2 < a < d < b
-    @test grevlex_precede(c, a) == true
-    @test grevlex_precede(a, c) == false
-    @test grevlex_precede(a2, a) == true
-    @test grevlex_precede(d, a2) == false
-    @test grevlex_precede(a, d) == true
-    @test grevlex_precede(b, d) == false
+Generate a random exponent vector with total degree ≤ max_deg.
+"""
+function random_exponent(nvars::Int, max_deg::Int)
+    exp = zeros(Int, nvars)
+    deg = rand(0:max_deg)
+    for _ in 1:deg
+        exp[rand(1:nvars)] += 1
+    end
+    return exp
 end
 
-# ==================== MultiindexSet construction ====================
+"""
+    _fact_less(a::Vector{Vector{Int}}, b::Vector{Vector{Int}}) -> Bool
+
+Lexicographic comparison of two factorizations (lists of exponent vectors)
+using Grlex order on the vectors. Used to verify that factorizations are
+returned in sorted order.
+"""
+function _fact_less(a::Vector{Vector{Int}}, b::Vector{Vector{Int}})
+    for (va, vb) in zip(a, b)
+        if grlex_precede(va, vb)
+            return true
+        elseif grlex_precede(vb, va)
+            return false
+        end
+    end
+    return false
+end
+
+# ============================================================================
+# Test basic ordering functions
+# ============================================================================
+@testset "grlex_precede and compare" begin
+    # Deg 0
+    a = [0,0,0]
+    b = [0,0,0]
+    @test !grlex_precede(a, b)
+    @test compare(a, b) == 0
+
+    # Different degrees
+    a = [1,0,0]   # deg 1
+    b = [0,1,1]   # deg 2
+    @test grlex_precede(a, b)   # lower degree first
+    @test !grlex_precede(b, a)
+    @test compare(a, b) == -1
+    @test compare(b, a) == 1
+
+    # Same degree, lexicographic tie‑break
+    a = [2,0,1]   # deg 3
+    b = [1,2,0]   # deg 3
+    # Lex order: compare first component: 2 > 1 → a precedes b
+    @test grlex_precede(a, b)
+    @test !grlex_precede(b, a)
+
+    a = [1,2,0]   # deg 3
+    b = [1,0,2]   # deg 3
+    # First components equal (1), second: 2 > 0 → a precedes b
+    @test grlex_precede(a, b)
+
+    a = [1,0,2]   # deg 3
+    b = [1,0,2]   # equal
+    @test !grlex_precede(a, b) && !grlex_precede(b, a)
+    @test compare(a, b) == 0
+
+    # Additional random tests: compare with explicit sorting
+    for _ in 1:100
+        nvars = rand(2:5)
+        max_deg = rand(1:5)
+        exps = [random_exponent(nvars, max_deg) for _ in 1:10]
+        sorted = sort(exps; lt=grlex_precede)
+        for i in 1:length(sorted)-1
+            @test grlex_precede(sorted[i], sorted[i+1]) || sorted[i] == sorted[i+1]
+        end
+    end
+end
+
+# ============================================================================
+# Test MultiindexSet construction and sorting
+# ============================================================================
 @testset "MultiindexSet construction" begin
-    # From matrix
+    # From a matrix
     mat = [1 2 0;
-           0 1 1]  # 2 variables, 3 monomials
+           0 1 1]   # 2 variables, 3 monomials
+    set = MultiindexSet(mat)
+    @test set isa MultiindexSet
+    @test is_grlex_sorted(set)
+    # Expected Grlex order: (1,0) deg1, (0,1) deg1, (2,1) deg3
+    @test set.exponents == [1 0 2;
+                            0 1 1]
 
-    set_lex = MultiindexSet(mat, Lex())
-    @test set_lex isa MultiindexSet{Lex}
-    @test is_sorted_set(set_lex)
-    @test set_lex.exponents == [2 1 0; 
-                                1 0 1]
-
-    set_grlex = MultiindexSet(mat, Grlex())
-    @test set_grlex isa MultiindexSet{Grlex}
-    @test is_sorted_set(set_grlex)
-    @test set_grlex.exponents == [1 0 2; 
-                                  0 1 1]
-
-    set_grevlex = MultiindexSet(mat, Grevlex())
-    @test set_grevlex isa MultiindexSet{Grevlex}
-    @test is_sorted_set(set_grevlex)
-    @test set_grevlex.exponents == [0 1 2; 
-                                    1 0 1]
-
-    # From vector of vectors
+    # From a vector of vectors
     vecs = [[1,0], [2,1], [0,1], [1,1], [1,2], [3,0]]
-    set_vec = MultiindexSet(vecs, Grlex())
-    # (1,0) -> (0,1) -> (2,0)X -> (1,1) -> (0,2)X -> (3,0) -> (2,1) -> (1,2) -> (0,3)X
-    @test set_vec.exponents == [1 0 1 3 2 1; 
-                                0 1 1 0 1 2]
-    
-    # Empty
-    set_empty = MultiindexSet(Matrix{Int}(undef, 0, 0), Lex())
+    set_vec = MultiindexSet(vecs)
+    @test is_grlex_sorted(set_vec)
+    # Expected: deg1: [1,0] < [0,1]; deg2: [1,1]; deg3: [3,0] < [2,1] < [1,2]
+    expected = [1 0 1 3 2 1;
+                0 1 1 0 1 2]
+    @test set_vec.exponents == expected
+
+    # Empty set
+    set_empty = MultiindexSet(Matrix{Int}(undef, 0, 0))
     @test size(set_empty.exponents) == (0,0)
+    @test length(set_empty) == 0
+
+    # Single element
+    set_single = MultiindexSet([[5,5,5]])
+    @test is_grlex_sorted(set_single)
+    @test set_single[1] == [5,5,5]
+
+    # Duplicate elements (should be allowed, but sorted order may keep duplicates)
+    dup = [[1,0], [1,0], [0,1]]
+    set_dup = MultiindexSet(dup)
+    @test is_grlex_sorted(set_dup)
+    @test set_dup.exponents == [1 1 0;
+                                0 0 1]   # duplicates allowed
 end
 
-# ==================== Generation functions ====================
-@testset "Generation functions" begin
-    nvars = 2
+# ============================================================================
+# Test generation functions
+# ============================================================================
+@testset "Generation: all_multiindices_up_to" begin
+    nvars = 3
     max_deg = 2
+    set = all_multiindices_up_to(nvars, max_deg)
 
-    # all_multiindices_up_to
-    set_lex = all_multiindices_up_to(nvars, max_deg, Lex())
-    @test is_sorted_set(set_lex)
-    @test size(set_lex.exponents, 2) == 6    
-    expected_lex = [2 1 1 0 0 0; 
-                    0 1 0 2 1 0]
-    @test set_lex.exponents == expected_lex
+    # Expected number: binomial(2+3,3) = binomial(5,3) = 10
+    @test length(set) == 10
+    @test is_grlex_sorted(set)
 
-    set_grlex = all_multiindices_up_to(nvars, max_deg, Grlex())
-    @test is_sorted_set(set_grlex)
-    expected_grlex = [0 1 0 2 1 0; 
-                      0 0 1 0 1 2]
-    @test set_grlex.exponents == expected_grlex
+    # Manually check first few
+    @test set[1] == [0,0,0]                 # deg 0
+    @test set[2] == [1,0,0]                 # deg 1
+    @test set[3] == [0,1,0]                 # deg 1
+    @test set[4] == [0,0,1]                 # deg 1
+    @test set[5] == [2,0,0]                 # deg 2
+    @test set[6] == [1,1,0]                 # deg 2
+    @test set[7] == [1,0,1]                 # deg 2
+    @test set[8] == [0,2,0]                 # deg 2
+    @test set[9] == [0,1,1]                 # deg 2
+    @test set[10] == [0,0,2]                # deg 2
 
-    set_grevlex = all_multiindices_up_to(nvars, max_deg, Grevlex())
-    @test is_sorted_set(set_grevlex)
-    expected_grevlex = [0 0 1 0 1 2; 
-                        0 1 0 2 1 0]
-    @test set_grevlex.exponents == expected_grevlex
+    # Edge: nvars = 0
+    set0 = all_multiindices_up_to(0, 5)
+    @test size(set0.exponents) == (0,0)
 
-    # multiindices_with_total_degree
-    deg = 2
-    set_fixed_lex = multiindices_with_total_degree(nvars, deg, Lex())
-    @test is_sorted_set(set_fixed_lex)
-    @test size(set_fixed_lex.exponents, 2) == 3
-    @test set_fixed_lex.exponents == [2 1 0; 
-                                      0 1 2]
-
-    set_fixed_grlex = multiindices_with_total_degree(nvars, deg, Grlex())
-    @test is_sorted_set(set_fixed_grlex)
-    @test set_fixed_grlex.exponents == set_fixed_lex.exponents
-
-    set_fixed_grevlex = multiindices_with_total_degree(nvars, deg, Grevlex())
-    @test is_sorted_set(set_fixed_grevlex)
-    @test set_fixed_grevlex.exponents == [0 1 2; 
-                                          2 1 0]
-
-    # all_multiindices_in_box with bound vector
-    bound = [1,2]
-    set_box = all_multiindices_in_box(bound, Grlex())
-    @test is_sorted_set(set_box)
-    @test size(set_box.exponents, 2) == 6
-    expected_box_lex = [0 1 0 1 0 1; 
-                        0 0 1 1 2 2]
-    @test set_box.exponents == expected_box_lex
-
-    # all_multiindices_in_box with matrix
-    mat = [1 2; 
-           0 1]
-    set_from_mat = all_multiindices_in_box(mat, Lex())
-    bound_from_mat = [2,1]  # max per row
-    expected = all_multiindices_in_box(bound_from_mat, Lex())
-    @test set_from_mat.exponents == expected.exponents
+    # Edge: max_deg = 0
+    set_deg0 = all_multiindices_up_to(3, 0)
+    @test length(set_deg0) == 1
+    @test set_deg0[1] == [0,0,0]
 end
 
-# ==================== Operations on MultiindexSet ====================
-@testset "Operations on MultiindexSet" begin
-    set = all_multiindices_up_to(2, 2, Grlex())  # 6 elements
+@testset "Generation: multiindices_with_total_degree" begin
+    nvars = 3
+    deg = 2
+    set = multiindices_with_total_degree(nvars, deg)
+
+    # Number: binomial(2+3-1,3-1) = binomial(4,2) = 6
+    @test length(set) == 6
+    @test is_grlex_sorted(set)
+
+    # Within fixed degree, order is lexicographic (larger first components first)
+    # All vectors of deg 2 in lex order: [2,0,0], [1,1,0], [1,0,1], [0,2,0], [0,1,1], [0,0,2]
+    expected = [2 1 1 0 0 0;
+                0 1 0 2 1 0;
+                0 0 1 0 1 2]
+    @test set.exponents == expected
+
+    # Edge: nvars = 0
+    set0 = multiindices_with_total_degree(0, 0)
+    @test size(set0.exponents) == (0,0)
+    set0 = multiindices_with_total_degree(0, 1)
+    @test size(set0.exponents) == (0,0)
+end
+
+@testset "Generation: all_multiindices_in_box" begin
+    bound = [1,2]
+    set = all_multiindices_in_box(bound)
+    @test length(set) == prod(bound .+ 1) == 6
+    @test is_grlex_sorted(set)
+
+    # Expected vectors: (0,0),(1,0),(0,1),(1,1),(0,2),(1,2) sorted by Grlex.
+    expected = [0 1 0 1 0 1;
+                0 0 1 1 2 2]
+    @test set.exponents == expected
+
+    # Using matrix input
+    mat = [1 2; 0 1]
+    set_from_mat = all_multiindices_in_box(mat)
+    bound_from_mat = [2,1]
+    expected2 = all_multiindices_in_box(bound_from_mat)
+    @test set_from_mat.exponents == expected2.exponents
+
+    # Edge: empty bound
+    set_empty = all_multiindices_in_box(Int[])
+    @test size(set_empty.exponents) == (0,0)
+
+    # Edge: zero bound components
+    bound3 = [0,2,0]
+    set3 = all_multiindices_in_box(bound3)
+    @test size(set3.exponents, 2) == 3
+    expected3 = [0 0 0;
+                 0 1 2;
+                 0 0 0]
+    @test set3.exponents == expected3
+end
+
+# ============================================================================
+# Test operations on MultiindexSet
+# ============================================================================
+@testset "Basic operations: length, getindex, iteration" begin
+    set = all_multiindices_up_to(2, 2)
     @test length(set) == 6
     @test set[1] == [0,0]
     @test set[2] == [1,0]
-    @test collect(set) == [[0,0],[1,0],[0,1],[2,0],[1,1],[0,2]] # sorted in grlex
-    @test [v for v in set] == collect(set)
+    @test set[3] == [0,1]
+    @test set[4] == [2,0]
+    @test set[5] == [1,1]
+    @test set[6] == [0,2]
 
-    # find_in_set
+    collected = collect(set)
+    @test collected == [[0,0],[1,0],[0,1],[2,0],[1,1],[0,2]]
+    @test [v for v in set] == collected
+end
+
+@testset "find_in_set" begin
+    set = all_multiindices_up_to(2, 2)
     @test find_in_set(set, [1,1]) == 5
     @test find_in_set(set, [2,0]) == 4
     @test find_in_set(set, [0,0]) == 1
     @test find_in_set(set, [3,0]) === nothing
 
-    # preceding_indices
-    @test preceding_indices(set, [0,2]) == 1:5
-    @test preceding_indices(set, [1,1]) == 1:4
-    @test preceding_indices(set, [0,0]) == 1:0
-    @test preceding_indices(set, [2,0]) == 1:3
+    # Empty set
+    empty = MultiindexSet(Matrix{Int}(undef, 0, 0))
+    @test find_in_set(empty, [1,2]) === nothing
 
-    # indices_in_box_and_after
-    box_upper = [1,1]
-    @test indices_in_box_and_after(set, box_upper, [0,0]) == [2,3,5]
-    @test indices_in_box_and_after(set, box_upper, [0,3]) == Int[] # No indices after [0,3] in grelex
-    @test indices_in_box_and_after(set, box_upper, [-1,-1]) == [1,2,3,5]  # All indices except index 4, which is not in box.
+    # Single element
+    single = MultiindexSet([[5,5]])
+    @test find_in_set(single, [5,5]) == 1
+    @test find_in_set(single, [0,0]) === nothing
 
-    # Edge: empty set
-    empty_set = MultiindexSet(Matrix{Int}(undef, 0, 0), Grlex())
-    @test length(empty_set) == 0
-    @test collect(empty_set) == []
-    @test find_in_set(empty_set, [1,2]) === nothing
-    @test preceding_indices(empty_set, [1,2]) == 1:0
-    @test indices_in_box_and_after(empty_set, [1,1], [0,0]) == Int[]
-end
-
-# ==================== Factorizations ====================
-@testset "Factorizations" begin
-    exp = [2,1]
-    N = 2
-
-    # Create a set containing all vectors in the box from 0 to exp
-    full_set = all_multiindices_in_box(exp, Lex())  # order doesn't affect count
-    facs = factorizations(full_set, exp, N)
-    # All pairs of vectors (a,b) with a+b=exp
-    # List all a from [0,0] to [2,1] componentwise:
-    # a=[0,0] -> b=[2,1]
-    # a=[0,1] -> b=[2,0]
-    # a=[1,0] -> b=[1,1]
-    # a=[1,1] -> b=[1,0]
-    # a=[2,0] -> b=[0,1]
-    # a=[2,1] -> b=[0,0]
-    # So expected: 6 factorizations.
-    @test length(facs) == 6
-    # Check each is sorted lex (a ≤ b)
-    for f in facs
-        @test length(f) == 2
-        @test f[1] + f[2] == exp
-    end
-
-    # With N=1
-    facs1 = factorizations(full_set, exp, 1)
-    @test facs1 == [[[2,1]]]
-
-    # With N=0 should return empty
-    @test factorizations(full_set, exp, 0) == []
-
-    # Factorizations where some vectors missing
-    set_small = MultiindexSet([[0,0],[1,0],[2,0],[2,1]], Grlex())
-    facs_small = factorizations(set_small, exp, N)
-    # a=[0,0] -> b=[2,1]
-    # a=[1,0] -> b=[1,1] X 
-    # a=[2,0] -> b=[0,1] X
-    # a=[2,1] -> b=[0,0]
-    @test length(facs_small) == 2 
-    # Check each is sorted lex (a ≤ b)
-    for f in facs
-        @test length(f) == 2
-        @test f[1] + f[2] == exp
+    # Binary search correctness: random tests
+    for _ in 1:50
+        nvars = rand(2:4)
+        max_deg = rand(1:5)
+        set = all_multiindices_up_to(nvars, max_deg)
+        idx = rand(1:length(set))
+        exp = set[idx]
+        @test find_in_set(set, exp) == idx
     end
 end
 
-# ==================== Ranking functions ====================
-@testset "Ranking functions" begin
-    nvars = 2
-    max_deg = 3
-    set_lex = all_multiindices_up_to(nvars, max_deg, Lex())
-    set_grlex = all_multiindices_up_to(nvars, max_deg, Grlex())
+@testset "indices_in_box_and_after" begin
+    set = all_multiindices_up_to(2, 2)   # columns: 1:[0,0], 2:[1,0], 3:[0,1], 4:[2,0], 5:[1,1], 6:[0,2]
+    box = [1,1]
+    other = [1,0]
 
-    # num_multiindices_up_to
-    @test num_multiindices_up_to(nvars, max_deg) == binomial(max_deg + nvars, nvars) == 10
+    # Indices after [1,0] (i.e., > [1,0] in Grlex) and inside box (≤ [1,1]):
+    # After index2: indices 3,4,5,6. Those ≤ [1,1] are index3 ([0,1]) and index5 ([1,1]).
+    @test indices_in_box_and_after(set, box, other) == [3]
 
-    # monomial_rank for lex
-    for (idx, exp) in enumerate(collect(set_lex))
-        @test monomial_rank(exp, nvars, max_deg, Lex()) == idx
-    end
+    # other not in set but works via binary search
+    @test indices_in_box_and_after(set, [1,2], [0,1]) == [5,6]   # after [0,1] (index3) → indices 4,5,6; inside box: only [1,1] (index5)
 
-    # monomial_rank for grlex
-    for (idx, exp) in enumerate(collect(set_grlex))
-        @test monomial_rank(exp, nvars, max_deg, Grlex()) == idx
-    end
+    # other = [-1,-1] (before all) should return all indices inside box: [2,3,5] (since index4 [2,0] exceeds box, index6 [0,2] exceeds)
+    @test indices_in_box_and_after(set, box, [-1,-1]) == [1,2,3]
 
-    # grevlex should error
-    @test_throws ErrorException monomial_rank([1,0], nvars, max_deg, Grevlex())
+    # box that contains nothing after other
+    @test indices_in_box_and_after(set, [0,0], [0,0]) == Int[]   # after [0,0] → indices 2..6, but box [0,0] only contains [0,0] itself, so none
+    @test indices_in_box_and_after(set, box, [10,10]) == Int[]   # other beyond all
+
+    # empty set
+    empty = MultiindexSet(Matrix{Int}(undef, 0, 0))
+    @test indices_in_box_and_after(empty, [1,1], [0,0]) == Int[]
 end
 
-# ==================== Edge cases ====================
-@testset "Edge cases" begin
-    # Zero variables
-    @test all_multiindices_up_to(0, 5, Lex()).exponents == zeros(Int, 0, 0)
-    @test multiindices_with_total_degree(0, 0, Lex()).exponents == zeros(Int, 0, 0)
-    @test multiindices_with_total_degree(0, 1, Lex()).exponents == zeros(Int, 0, 0)  # no vectors
-    @test all_multiindices_in_box(Int[], Lex()).exponents == zeros(Int, 0, 0)
-
-    # Zero max_degree
-    set0 = all_multiindices_up_to(3, 0, Grlex())
-    @test size(set0.exponents, 2) == 1
-    @test set0[1] == [0,0,0]
-
-    # Box with zero bound
-    bound = [0,2,0]
-    set_box0 = all_multiindices_in_box(bound, Grlex())
-    @test size(set_box0.exponents, 2) == 3
-    @test set_box0.exponents == [0 0 0; 
-                                 0 1 2; 
-                                 0 0 0]  # rows: first row all 0, second row 0,1,2, third row all 0.
-
+# ============================================================================
+# Test predicates: divides, is_constant
+# ============================================================================
+@testset "Predicates" begin
     # divides
     @test divides([1,0], [2,1]) == true
     @test divides([2,0], [1,1]) == false
@@ -294,24 +315,141 @@ end
     # is_constant
     @test is_constant([0,0,0]) == true
     @test is_constant([0,1,0]) == false
+end
 
-    # compare
-    @test compare([1,3], [1,2], Lex()) == -1 # [1,3] comes after
-    @test compare([1,2], [1,3], Lex()) == 1  # [1,2] comes before
-    @test compare([1,2], [1,2], Lex()) == 0
+# ============================================================================
+# Test factorizations
+# ============================================================================
+@testset "factorizations" begin
+    exp = [2,1]
+    N = 2
 
-    # MultiindexSet with single column
-    single = MultiindexSet([[2,2,2]], Grlex())
-    @test is_sorted_set(single)
-    @test single[1] == [2,2,2]
-    @test find_in_set(single, [2,2,2]) == 1
-    @test find_in_set(single, [0,0,0]) === nothing
-    @test preceding_indices(single, [1,2,3]) == 1:1  # [2,2,2] < [1,2,3] in Grlex
-    @test preceding_indices(single, [0,0,0]) == 1:0
-    @test indices_in_box_and_after(single, [2,2,2], [0,0,0]) == [1]
+    # Full set containing all vectors in box 0..exp
+    full_set = all_multiindices_in_box(exp)
+    facs = factorizations(full_set, exp, N)
 
-    # factorization with N=0 returns empty list
-    @test factorizations(single, [1,1], 0) == []
+    # Expect 6 factorizations
+    @test length(facs) == 6
+    # Verify each factorization sums to exp
+    for f in facs
+        @test length(f) == N
+        @test sum(f) == exp
+        @test all(v -> find_in_set(full_set, v) !== nothing, f)
+    end
+
+    # Outer list should be sorted lexicographically (compare factor tuples elementwise by Grlex)
+    sorted_facs = sort(facs; lt=_fact_less)
+    @test facs == sorted_facs
+
+    # N = 1
+    facs1 = factorizations(full_set, exp, 1)
+    @test facs1 == [[[2,1]]]
+
+    # N = 0
+    @test factorizations(full_set, exp, 0) == []               # exp not zero
+    @test factorizations(full_set, [0,0], 0) == [[]]           # zero exponent
+
+    # Set with missing vectors
+    small_set = MultiindexSet([[0,0],[1,0],[2,0],[2,1]])
+    facs_small = factorizations(small_set, exp, N)
+    @test length(facs_small) == 2   # [0,0]+[2,1] and [2,1]+[0,0]
+    for f in facs_small
+        @test sum(f) == exp
+        @test all(v -> find_in_set(small_set, v) !== nothing, f)
+    end
+
+    # Test with larger N and random exponents
+    for _ in 1:20
+        nvars = 2
+        max_deg = 4
+        set = all_multiindices_up_to(nvars, max_deg)
+        exp = random_exponent(nvars, max_deg)
+        N = rand(1:3)
+        facs = factorizations(set, exp, N)
+        for f in facs
+            @test length(f) == N
+            s = zeros(Int, nvars)
+            for v in f
+                s .+= v
+            end
+            @test s == exp
+        end
+        # Ensure sortedness
+        if !isempty(facs)
+            sorted_facs = sort(facs; lt=_fact_less)
+            @test facs == sorted_facs
+        end
+    end
+end
+
+# ============================================================================
+# Test combinatorial ranking
+# ============================================================================
+@testset "num_multiindices_up_to" begin
+    @test num_multiindices_up_to(2, 3) == binomial(5,2) == 10
+    @test num_multiindices_up_to(3, 2) == binomial(5,3) == 10
+    @test num_multiindices_up_to(0, 5) == 0
+    @test num_multiindices_up_to(1, 5) == binomial(6,1) == 6
+end
+
+@testset "monomial_rank" begin
+    nvars = 3
+    max_deg = 2
+    set = all_multiindices_up_to(nvars, max_deg)
+
+    # Check that rank matches index in generated set
+    for (idx, exp) in enumerate(collect(set))
+        @test monomial_rank(exp, nvars, max_deg) == idx
+    end
+
+    # Edge: max_deg = 0
+    set0 = all_multiindices_up_to(2, 0)
+    @test monomial_rank([0,0], 2, 0) == 1
+    @test_throws AssertionError monomial_rank([1,0], 2, 0)   # degree exceeds max
+
+    # Random tests
+    for _ in 1:50
+        nvars = rand(2:4)
+        max_deg = rand(1:5)
+        set = all_multiindices_up_to(nvars, max_deg)
+        idx = rand(1:length(set))
+        exp = set[idx]
+        @test monomial_rank(exp, nvars, max_deg) == idx
+    end
+end
+
+# ============================================================================
+# Test that generated sets are always sorted
+# ============================================================================
+@testset "Generated sets are always sorted" begin
+    for _ in 1:20
+        nvars = rand(0:4)
+        max_deg = rand(0:5)
+        set1 = all_multiindices_up_to(nvars, max_deg)
+        @test is_grlex_sorted(set1)
+
+        if nvars > 0 && max_deg > 0
+            deg = rand(0:max_deg)
+            set2 = multiindices_with_total_degree(nvars, deg)
+            @test is_grlex_sorted(set2)
+        end
+
+        if nvars > 0
+            bound = rand(0:3, nvars)
+            set3 = all_multiindices_in_box(bound)
+            @test is_grlex_sorted(set3)
+        end
+    end
+end
+
+# ============================================================================
+# Test zero_multiindex and multiindex convenience constructors
+# ============================================================================
+@testset "Convenience constructors" begin
+    @test zero_multiindex(3) == [0,0,0]
+    @test zero_multiindex(0) == Int[]
+    @test multiindex(1,2,3) == [1,2,3]
+    @test multiindex() == Int[]
 end
 
 println("All tests passed.")

@@ -15,11 +15,11 @@ Uses the default monomial order `Grlex`.
 
 function construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) where T
     if isempty(dict)
-        mset = MultiindexSet(Matrix{Int}(undef, 0, 0), Grlex())
+        mset = MultiindexSet(Matrix{Int}(undef, 0, 0))
         return DensePolynomial(T[], mset)
     else
         exps = collect(keys(dict))
-        mset = MultiindexSet(exps, Grlex())
+        mset = MultiindexSet(exps)
         exp_to_idx = Dict{Tuple{Vararg{Int}}, Int}()
         for (j, col) in enumerate(eachcol(mset.exponents))
             exp_to_idx[Tuple(col)] = j
@@ -196,7 +196,7 @@ end
 @testset "realify" begin
     @testset "for $PolyType" for PolyType in [DensePolynomial]
         @testset "reorder_canonical - empty" begin
-            mset = MultiindexSet(zeros(Int, 3, 0), Grlex())
+            mset = MultiindexSet(zeros(Int, 3, 0))
             if PolyType == DensePolynomial
                 poly = zero(DensePolynomial{Float64}, mset)
             end
@@ -382,7 +382,7 @@ end
     end
 
     @testset "empty polynomial" begin
-        mset = MultiindexSet(zeros(Int, 3, 0), Grlex())
+        mset = MultiindexSet(zeros(Int, 3, 0))
         poly = DensePolynomial(Float64[], mset)
         @test length(poly) == 0
         @test nvars(poly) == 3
