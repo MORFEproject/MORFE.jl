@@ -6,9 +6,9 @@ using SparseArrays: SparseMatrixCSC
 #=
 InputModelByHand implements an ODE system of second order:
     M d_t² U  +  C d_t U + KU  +  F_nl(U) = F(t) 
-with the nonlinearity up to order 3.
+with the nonlinearity up to order 3. C has to be calculated by modal damping, and F(t) as linearcombination of eigenmodes.
 =#
-mutable struct InputModelByHand <: InputModelAbstract
+mutable struct InputModelByHand <: InputModelAbstractSecondOrder
     mesh::Grid
     U::Field
     dim
@@ -35,7 +35,7 @@ function InputModelByHand(info_file::String, mesh_file::String)
   )
 end
 
-function assemble_system!(fem::InputModelByHand)
+function assemble!(fem::InputModelByHand)
     colptr, rowval = Morfe_2_0.assembler_dummy_MK(fem.mesh, fem.U)
     val = zeros(Float64,length(rowval))
     fem.K = SparseMatrixCSC(fem.U.neq, fem.U.neq, colptr, rowval, val)
