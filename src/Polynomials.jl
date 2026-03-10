@@ -6,7 +6,7 @@ using .Multiindices
 include("ArrayAlgebra.jl")
 using .ArrayAlgebra
 
-export MultiindexSet, Grlex, Lex, Grevlex, MonomialOrder, find_in_set
+export MultiindexSet, find_in_set, indices_in_box_and_after
 
 export AbstractPolynomial, DensePolynomial,
        polynomial_from_dict, polynomial_from_pairs,
@@ -15,7 +15,6 @@ export AbstractPolynomial, DensePolynomial,
        zero, evaluate, extract_component, each_term, similar_poly
 
 # ---------- Abstract type ---------- 
-# Can be expanded to include other polyonomials types
 abstract type AbstractPolynomial{T} end
 
 Base.eltype(::Type{<:AbstractPolynomial{T}}) where T = T
@@ -23,30 +22,30 @@ Base.eltype(p::AbstractPolynomial{T}) where T = T
 
 # ---------- DensePolynomial ----------
 """
-    DensePolynomial{T,O<:MonomialOrder} <: AbstractPolynomial{T}
+    DensePolynomial{T} <: AbstractPolynomial{T}
 
 Dense representation: coefficients aligned with the full multiindex_set.
 - `coeffs::Vector{T}`: length = number of multiindex_set monomials.
-- `multiindex_set::MultiindexSet{O}`: reference to the monomial set.
+- `multiindex_set::MultiindexSet`: reference to the monomial set (always Grlex‑ordered).
 """
-mutable struct DensePolynomial{T,O<:MonomialOrder} <: AbstractPolynomial{T}
+mutable struct DensePolynomial{T} <: AbstractPolynomial{T}
     coeffs::Vector{T}
-    multiindex_set::MultiindexSet{O}
-    function DensePolynomial{T,O}(coeffs::Vector{T}, multiindex_set::MultiindexSet{O}) where {T,O}
+    multiindex_set::MultiindexSet
+    function DensePolynomial{T}(coeffs::Vector{T}, multiindex_set::MultiindexSet) where T
         @assert length(coeffs) == size(multiindex_set.exponents,2) "coeffs length must match multiindex_set size"
-        new{T,O}(coeffs, multiindex_set)
+        new{T}(coeffs, multiindex_set)
     end
 end
 
-function DensePolynomial(coeffs::Vector{T}, multiindex_set::MultiindexSet{O}) where {T,O}
-    DensePolynomial{T,O}(coeffs, multiindex_set)
+function DensePolynomial(coeffs::Vector{T}, multiindex_set::MultiindexSet) where T
+    DensePolynomial{T}(coeffs, multiindex_set)
 end
 
-# Construct from dict and order type (creates new multiindex_set)
-function DensePolynomial(dict::Dict{Vector{Int}, T}, ::Type{O}) where {T,O<:MonomialOrder}
-    isempty(dict) && return DensePolynomial(T[], MultiindexSet(Matrix{Int}(undef, 0, 0), O()))
+# Construct from dictionary (keys are exponent vectors)
+function DensePolynomial(dict::Dict{Vector{Int}, T}) where T
+    isempty(dict) && return DensePolynomial(T[], MultiindexSet(Matrix{Int}(undef, 0, 0)))
     exps = collect(keys(dict))
-    multiindex_set = MultiindexSet(exps, O())
+    multiindex_set = MultiindexSet(exps)          # automatically sorted in Grlex
     coeffs = zeros(T, size(multiindex_set.exponents,2))
     for (j, exp) in enumerate(eachcol(multiindex_set.exponents))
         coeffs[j] = get(dict, exp, zero(T))
@@ -54,14 +53,14 @@ function DensePolynomial(dict::Dict{Vector{Int}, T}, ::Type{O}) where {T,O<:Mono
     return DensePolynomial(coeffs, multiindex_set)
 end
 
-function DensePolynomial(dict::Dict{Vector{Int}, T}, multiindex_set::MultiindexSet{O}) where {T,O}
+# Construct from dictionary and a pre‑existing MultiindexSet
+function DensePolynomial(dict::Dict{Vector{Int}, T}, multiindex_set::MultiindexSet) where T
     n_coeffs = size(multiindex_set.exponents, 2)
     # Verify that all dict keys are present in the set (optional, can be omitted for speed)
     for exp in keys(dict)
         isnothing(find_in_set(multiindex_set, exp)) && 
             error("dict contains exponent $exp not in the given multiindex_set")
     end
-    # Build coefficient vector directly from the dictionary, using zero(T) for missing entries
     coeffs = [get(dict, exp, zero(T)) for exp in eachcol(multiindex_set.exponents)]
     return DensePolynomial(coeffs, multiindex_set)
 end
@@ -111,14 +110,14 @@ find_term(p::DensePolynomial, exp::Vector{Int}) = find_in_multiindex_set(p, exp)
 
 # ---------- polynomial_from_pairs (alternative input) ----------
 """
-    polynomial_from_pairs(::Type{DensePolynomial{T,O}}, pairs::Vector{Pair{Vector{Int},T}}) where {T,O}
+    polynomial_from_pairs(::Type{DensePolynomial{T}}, pairs::Vector{Pair{Vector{Int},T}}) where T
 
 Construct a polynomial from a vector of (exponent => coefficient) pairs.
 Useful for building polynomials programmatically.
 """
-function polynomial_from_pairs(::Type{DensePolynomial{T,O}}, pairs::Vector{Pair{Vector{Int},T}}) where {T,O<:MonomialOrder}
+function polynomial_from_pairs(::Type{DensePolynomial{T}}, pairs::Vector{Pair{Vector{Int},T}}) where T
     dict = Dict(pairs)
-    return DensePolynomial(dict, O)
+    return DensePolynomial(dict)
 end
 
 import Base: zero
@@ -126,18 +125,12 @@ import Base: zero
 # ---------- Zero polynomial constructors ----------
 
 """
-    zero(::Type{DensePolynomial{T}}, set::MultiindexSet{O}) where {T,O}
+    zero(::Type{DensePolynomial{T}}, set::MultiindexSet) where T
 
 Construct a zero polynomial in the given monomial basis `set`.
 For dense polynomials, this returns a vector of zeros of length `size(set.exponents,2)`.
 """
-
-function Base.zero(::Type{DensePolynomial{T}}, set::MultiindexSet{O}) where {T,O}
-    coeffs = fill(zero(T), size(set.exponents, 2))
-    return DensePolynomial(coeffs, set)
-end
-
-function Base.zero(::Type{DensePolynomial{T,O}}, set::MultiindexSet{O}) where {T,O}
+function Base.zero(::Type{DensePolynomial{T}}, set::MultiindexSet) where T
     coeffs = fill(zero(T), size(set.exponents, 2))
     return DensePolynomial(coeffs, set)
 end
@@ -166,12 +159,12 @@ function evaluate(poly::AbstractPolynomial, vals::Vector{<:Number})
 end
 
 """
-    evaluate(poly::DensePolynomial{T,O}, vals::Vector{<:Number}, idx::Int) where {T,O}
+    evaluate(poly::DensePolynomial{NTuple{N,T}}, vals::Vector{<:Number}, idx::Int) where {N,T}
 
 Evaluate the polynomial at `vals` and return the `idx`-th component of each coefficient.
 Assumes the polynomial's coefficients are vectors and that `idx` selects one component.
 """
-function evaluate(poly::DensePolynomial{NTuple{N,T},O}, vals::Vector{<:Number}, idx::Int) where {N,T,O}
+function evaluate(poly::DensePolynomial{NTuple{N,T}}, vals::Vector{<:Number}, idx::Int) where {N,T}
     @assert nvars(poly) == length(vals)
     result = zero(T)
     for (exp, coeff_tuple) in each_term(poly)   # each_term already skips zero coefficients
@@ -186,12 +179,12 @@ function evaluate(poly::DensePolynomial{NTuple{N,T},O}, vals::Vector{<:Number}, 
 end
 
 """
-    extract_component(poly::DensePolynomial{NTuple{L,T},O}, idx::Int) where {L,T,O}
+    extract_component(poly::DensePolynomial{NTuple{L,T}}, idx::Int) where {L,T}
 
 Return a new polynomial whose coefficients are the `idx`-th component of the original
 tuple coefficients.
 """
-function extract_component(poly::DensePolynomial{NTuple{L,T},O}, idx::Int) where {L,T,O}
+function extract_component(poly::DensePolynomial{NTuple{L,T}}, idx::Int) where {L,T}
     new_coeffs = [c[idx] for c in poly.coeffs]
     return DensePolynomial(new_coeffs, poly.multiindex_set)
 end
@@ -213,23 +206,23 @@ function each_term(poly::DensePolynomial)
 end
 
 """
-    similar_poly(dict::Dict{Vector{Int}, C}, poly::AbstractPolynomial, nvars::Int)
+    similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{T}, nvars::Int) where {T,C}
 
-Construct a new polynomial of the same concrete type and monomial order as `poly`
-from the dictionary `dict` (exponents → coefficients).  The new polynomial will
-have `nvars` variables (the length of exponent vectors in `dict` must match
-`nvars`; if `dict` is empty an empty set with the correct number of rows is created).
+Construct a new polynomial of the same concrete type as `poly` from the dictionary
+`dict` (exponents → coefficients).  The new polynomial will have `nvars` variables
+(the length of exponent vectors in `dict` must match `nvars`; if `dict` is empty an
+empty set with the correct number of rows is created).
 """
-function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{T,O}, nvars::Int) where {T,C,O}
+function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{T}, nvars::Int) where {T,C}
     # Early return for empty dictionary: create an empty multiindex set and zero coefficients.
     if isempty(dict)
         exponents = Matrix{Int}(undef, nvars, 0)
-        mset = MultiindexSet(exponents, O())
-        return DensePolynomial{T,O}(T[], mset)
+        mset = MultiindexSet(exponents)
+        return DensePolynomial{T}(T[], mset)
     end
 
     # Non‑empty dictionary: build the multiindex set from its keys.
-    mset = MultiindexSet(collect(keys(dict)), O())
+    mset = MultiindexSet(collect(keys(dict)))
 
     # Determine a zero value of the correct type for missing coefficients.
     if T <: AbstractArray
@@ -242,7 +235,7 @@ function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{T,O}, nv
 
     # Build the coefficient vector, filling missing entries with zero_val.
     coeffs = [haskey(dict, exp) ? convert(T, dict[exp]) : zero_val for exp in eachcol(mset.exponents)]
-    return DensePolynomial{T,O}(coeffs, mset)
+    return DensePolynomial{T}(coeffs, mset)
 end
 
 end # module
