@@ -3,7 +3,13 @@ using Gridap
 using GridapGmsh
 using WriteVTK
 
-mutable struct GridapFEM <: AbstractFEM
+#=
+InputModelGridapMechanical implements an ODE system of second order:
+    M d_t² U  +  C d_t U + KU  +  F_nl(U) = F(t) 
+with the nonlinearity up to order 3.
+=#
+
+mutable struct InputModelGridapMechanical <: InputModelAbstract
     model        # Gridap FEModel
     # FEM Storage
     V  # TestFESpace
@@ -15,10 +21,11 @@ mutable struct GridapFEM <: AbstractFEM
     cubic_form::Function 
     M
     K
-    f
+    C
+    F
 end
 
-function GridapFEM(mesh_strategy::String, mesh_file::String)
+function InputModelGridapMechanical(mesh_strategy::String, mesh_file::String)
     #TODO implement different strategies / forms ...
     if mesh_strategy == "gmsh"
         model = model_from_gmsh!(mesh_file)
@@ -57,54 +64,88 @@ function GridapFEM(mesh_strategy::String, mesh_file::String)
                                 sym(∇(u2)'⋅∇(v)) ⊙ (σ_nln(E_nl(u1,u3))) + 
                                 sym(∇(u3)'⋅∇(v)) ⊙ (σ_nln(E_nl(u1,u2))))dΩ
 
-    return GridapFEM(
+    return InputModelGridapMechanical(
         model,
         V,
         U,
         m, a, l, g_quad, h_cube, 
-        nothing, nothing, nothing)
+        nothing, nothing, nothing, nothing)
 end
 
-# helper Function for GridapFEM
+# helper Function for InputModelGridapMechanical
 function model_from_gmsh!(gmsh_file::String)
     model = GmshDiscreteModel(gmsh_file)
     return model
 end
 
-function assemble_mass_matrix!(fem::GridapFEM)
+function assemble_mass_matrix!(fem::InputModelGridapMechanical)
     fem.M = assemble_matrix((u,v)->fem.mass_form(u,v), fem.U, fem.V)
 end
 
-function assemble_stiffness_matrix!(fem::GridapFEM)
+function assemble_stiffness_matrix!(fem::InputModelGridapMechanical)
     fem.K = assemble_matrix((u,v)->fem.stiffness_form(u,v), fem.U, fem.V)
 end
 
-function assemble_load_vector!(fem::GridapFEM)
+function assemble_load_vector!(fem::InputModelGridapMechanical)
     fem.f = assemble_vector(v->fem.load_form(v), fem.U, fem.V)
 end
 
-function mass_matrix(fem::GridapFEM)
+function get_a_matrix(fem::InputModelGridapMechanical)
+    # TODO
+    error("get_a_matrix not yet implemented for $(typeof(fem))")
+end
+
+function get_b_matrix(fem::InputModelGridapMechanical)
+    # TODO
+    error("get_b_matrix not yet implemented for $(typeof(fem))")
+end
+
+function get_f_vector(fem::InputModelGridapMechanical)
+    # TODO
+    error("get_f_vector not yet implemented for $(typeof(fem))")
+end
+
+function mass_matrix(fem::InputModelGridapMechanical)
      if isnothing(fem.M)
-        assemble_mass_matrix!(fem)
+        error("Mass matrix not assembled")
     end
     return fem.M
 end
 
-function stiffness_matrix(fem::GridapFEM)
+function stiffness_matrix(fem::InputModelGridapMechanical)
      if isnothing(fem.K)
-        assemble_stiffness_matrix!(fem)
+        error("Stiffness matrix not assembled")
     end
     return fem.K
 end
 
-function load_vector(fem::GridapFEM)
-     if isnothing(fem.f)
-        assemble_load_vector!(fem)
+function damping_matrix(fem::InputModelGridapMechanical)
+     if isnothing(fem.C)
+        error("Damping matrix not assembled")
     end
-    return fem.f
+    return fem.C
 end
 
-function evaluate_quadratic_nonlinearity(fem::GridapFEM, Ψ₁,Ψ₂)
+function load_vector(fem::InputModelGridapMechanical)
+     if isnothing(fem.F)
+        error("Load vector not assembled")
+    end
+    return fem.F
+end
+
+function evaluate_nonlinearity(fem::InputModelGridapMechanical, Ψ...)
+    if length(Ψ)==2
+        Ψ₁, Ψ₂ = Ψ
+        return evaluate_quadratic_nonlinearity(fem, Ψ₁, Ψ₂)
+    elseif length(Ψ)==3
+        Ψ₁, Ψ₂, Ψ₃ = Ψ
+        return evaluate_cubic_nonlinearity(fem, Ψ₁, Ψ₂, Ψ₃)
+    else
+        error("evaluate_nonlinearity not defined for $(typeof(fem)) at order $(length(Ψ))")
+    end
+end
+
+function evaluate_quadratic_nonlinearity(fem::InputModelGridapMechanical, Ψ₁,Ψ₂)
     Ψ1r  = FEFunction(fem.V,real(Ψ₁))
     Ψ1i  = FEFunction(fem.V,imag(Ψ₁))
     Ψ2r  = FEFunction(fem.V,real(Ψ₂))
@@ -114,7 +155,7 @@ function evaluate_quadratic_nonlinearity(fem::GridapFEM, Ψ₁,Ψ₂)
     return (resR .+ im*resI)
 end
 
-function evaluate_cubic_nonlinearity(fem::GridapFEM, Ψ₁,Ψ₂,Ψ₃)
+function evaluate_cubic_nonlinearity(fem::InputModelGridapMechanical, Ψ₁,Ψ₂,Ψ₃)
     Ψ1r  = FEFunction(fem.V,real(Ψ₁))
     Ψ1i  = FEFunction(fem.V,imag(Ψ₁))
     Ψ2r  = FEFunction(fem.V,real(Ψ₂))
@@ -126,14 +167,14 @@ function evaluate_cubic_nonlinearity(fem::GridapFEM, Ψ₁,Ψ₂,Ψ₃)
     return (resR .+ im*resI)
 end
 
-function ndofs(fem::GridapFEM)
+function ndofs(fem::InputModelGridapMechanical)
     return num_free_dofs(fem.U)
 end
 
-function field_from_vector(fem::GridapFEM, u)
+function field_from_vector(fem::InputModelGridapMechanical, u)
     return FEFunction(V,u)
 end
 
-function visualize(fem::GridapFEM, u; kwargs...)
+function visualize(fem::InputModelGridapMechanical, u; kwargs...)
     error("visualize not implemented for $(typeof(fem))")
 end
