@@ -9,7 +9,7 @@ InputModelGridapMechanical implements an ODE system of second order:
 with the nonlinearity up to order 3.
 =#
 
-mutable struct InputModelGridapMechanical <: InputModelAbstract
+mutable struct InputModelGridapMechanical <: InputModelAbstractSecondOrder
     model        # Gridap FEModel
     # FEM Storage
     V  # TestFESpace
@@ -88,21 +88,6 @@ end
 
 function assemble_load_vector!(fem::InputModelGridapMechanical)
     fem.f = assemble_vector(v->fem.load_form(v), fem.U, fem.V)
-end
-
-function get_a_matrix(fem::InputModelGridapMechanical)
-    # TODO
-    error("get_a_matrix not yet implemented for $(typeof(fem))")
-end
-
-function get_b_matrix(fem::InputModelGridapMechanical)
-    # TODO
-    error("get_b_matrix not yet implemented for $(typeof(fem))")
-end
-
-function get_f_vector(fem::InputModelGridapMechanical)
-    # TODO
-    error("get_f_vector not yet implemented for $(typeof(fem))")
 end
 
 function mass_matrix(fem::InputModelGridapMechanical)

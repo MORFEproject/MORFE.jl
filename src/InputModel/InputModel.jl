@@ -6,7 +6,7 @@ include("InputModelGridapMechanical.jl")
 
 include("InputModelByHand.jl")
 
-export InputModelAbstract, InputModelGridapMechanical, InputModelByHand
+export InputModelAbstract, InputModelAbstractSecondOrder, InputModelGridapMechanical, InputModelByHand
 
 export assemble!, 
     get_a_matrix, get_b_matrix, get_f_vector,
