@@ -1,6 +1,7 @@
 using Test
 include(joinpath(@__DIR__, "../../src/Multiindices.jl"))
 using .Multiindices
+using .Multiindices: grlex_precede
 
 # ============================================================================
 # Helper functions for testing
@@ -40,40 +41,39 @@ function random_exponent(nvars::Int, max_deg::Int)
 end
 
 """
-    _fact_less(a::Vector{Vector{Int}}, b::Vector{Vector{Int}}) -> Bool
+    factorization_less(a::Matrix{Int}, b::Matrix{Int}) -> Bool
 
-Lexicographic comparison of two factorizations (lists of exponent vectors)
-using Grlex order on the vectors. Used to verify that factorizations are
-returned in sorted order.
+Lexicographic comparison of two factorizations (matrices where columns are factors)
+using Grlex order on the factor vectors. Returns `true` if `a` comes before `b`.
 """
-function _fact_less(a::Vector{Vector{Int}}, b::Vector{Vector{Int}})
-    for (va, vb) in zip(a, b)
-        if grlex_precede(va, vb)
+function factorization_less(a::Matrix{Int}, b::Matrix{Int})
+    @assert size(a) == size(b)
+    for j in 1:size(a, 2)
+        col_a = view(a, :, j)
+        col_b = view(b, :, j)
+        if grlex_precede(col_a, col_b)
             return true
-        elseif grlex_precede(vb, va)
+        elseif grlex_precede(col_b, col_a)
             return false
         end
     end
-    return false
+    return false  # equal
 end
 
 # ============================================================================
 # Test basic ordering functions
 # ============================================================================
-@testset "grlex_precede and compare" begin
+@testset "grlex_precede" begin
     # Deg 0
     a = [0,0,0]
     b = [0,0,0]
     @test !grlex_precede(a, b)
-    @test compare(a, b) == 0
 
     # Different degrees
     a = [1,0,0]   # deg 1
     b = [0,1,1]   # deg 2
     @test grlex_precede(a, b)   # lower degree first
     @test !grlex_precede(b, a)
-    @test compare(a, b) == -1
-    @test compare(b, a) == 1
 
     # Same degree, lexicographic tie‑break
     a = [2,0,1]   # deg 3
@@ -90,7 +90,6 @@ end
     a = [1,0,2]   # deg 3
     b = [1,0,2]   # equal
     @test !grlex_precede(a, b) && !grlex_precede(b, a)
-    @test compare(a, b) == 0
 
     # Additional random tests: compare with explicit sorting
     for _ in 1:100
@@ -213,13 +212,6 @@ end
                 0 0 1 1 2 2]
     @test set.exponents == expected
 
-    # Using matrix input
-    mat = [1 2; 0 1]
-    set_from_mat = all_multiindices_in_box(mat)
-    bound_from_mat = [2,1]
-    expected2 = all_multiindices_in_box(bound_from_mat)
-    @test set_from_mat.exponents == expected2.exponents
-
     # Edge: empty bound
     set_empty = all_multiindices_in_box(Int[])
     @test size(set_empty.exponents) == (0,0)
@@ -279,28 +271,29 @@ end
     end
 end
 
-@testset "indices_in_box_and_after" begin
-    set = all_multiindices_up_to(2, 2)   # columns: 1:[0,0], 2:[1,0], 3:[0,1], 4:[2,0], 5:[1,1], 6:[0,2]
-    box = [1,1]
-    other = [1,0]
+@testset "indices_in_box_with_bounded_degree" begin
+    set = all_multiindices_up_to(2, 3)   # all with total degree ≤ 3
+    # indices: 1:[0,0] deg0, 2:[1,0] deg1, 3:[0,1] deg1, 4:[2,0] deg2, 5:[1,1] deg2,
+    #          6:[0,2] deg2, 7:[3,0] deg3, 8:[2,1] deg3, 9:[1,2] deg3, 10:[0,3] deg3
 
-    # Indices after [1,0] (i.e., > [1,0] in Grlex) and inside box (≤ [1,1]):
-    # After index2: indices 3,4,5,6. Those ≤ [1,1] are index3 ([0,1]) and index5 ([1,1]).
-    @test indices_in_box_and_after(set, box, other) == [3]
+    box = [2,2]
+    # Find indices with 1 ≤ total degree ≤ 2 and within box
+    result = indices_in_box_with_bounded_degree(set, box, 1, 3)   # total_deg_upper = 3 → degree <3
+    @test result == [2,3,4,5,6]   # indices 2..6 have degree 1 or 2, all inside box
 
-    # other not in set but works via binary search
-    @test indices_in_box_and_after(set, [1,2], [0,1]) == [5,6]   # after [0,1] (index3) → indices 4,5,6; inside box: only [1,1] (index5)
+    # degree_lower_bound = 2, total_deg_upper = 3 → degree exactly 2
+    result2 = indices_in_box_with_bounded_degree(set, box, 2, 3)
+    @test result2 == [4,5,6]   # indices 4,5,6 have degree 2, all inside box
 
-    # other = [-1,-1] (before all) should return all indices inside box: [2,3,5] (since index4 [2,0] exceeds box, index6 [0,2] exceeds)
-    @test indices_in_box_and_after(set, box, [-1,-1]) == [1,2,3]
+    # box that excludes some
+    box_small = [1,1]
+    result3 = indices_in_box_with_bounded_degree(set, box_small, 0, 3)   # all degrees <3
+    # Inside [1,1]: [0,0](1), [1,0](2), [0,1](3), [1,1](5) → indices 1,2,3,5
+    @test result3 == [1,2,3,5]
 
-    # box that contains nothing after other
-    @test indices_in_box_and_after(set, [0,0], [0,0]) == Int[]   # after [0,0] → indices 2..6, but box [0,0] only contains [0,0] itself, so none
-    @test indices_in_box_and_after(set, box, [10,10]) == Int[]   # other beyond all
-
-    # empty set
+    # Empty set – must use empty box because set has zero variables
     empty = MultiindexSet(Matrix{Int}(undef, 0, 0))
-    @test indices_in_box_and_after(empty, [1,1], [0,0]) == Int[]
+    @test indices_in_box_with_bounded_degree(empty, Int[], 0, 3) == Int[]
 end
 
 # ============================================================================
@@ -330,32 +323,41 @@ end
 
     # Expect 6 factorizations
     @test length(facs) == 6
-    # Verify each factorization sums to exp
+    # Verify each factorization sums to exp and all factors belong to set
     for f in facs
-        @test length(f) == N
-        @test sum(f) == exp
-        @test all(v -> find_in_set(full_set, v) !== nothing, f)
+        @test size(f) == (2, N)
+        s = zeros(Int, 2)
+        for j in 1:N
+            s .+= view(f, :, j)
+        end
+        @test s == exp
+        @test all(j -> find_in_set(full_set, f[:, j]) !== nothing, 1:N)
     end
 
-    # Outer list should be sorted lexicographically (compare factor tuples elementwise by Grlex)
-    sorted_facs = sort(facs; lt=_fact_less)
+    # Outer list should be sorted lexicographically
+    sorted_facs = sort(facs; lt=factorization_less)
     @test facs == sorted_facs
 
     # N = 1
     facs1 = factorizations(full_set, exp, 1)
-    @test facs1 == [[[2,1]]]
+    @test length(facs1) == 1
+    @test facs1[1] == reshape([2,1], 2, 1)
 
     # N = 0
     @test factorizations(full_set, exp, 0) == []               # exp not zero
-    @test factorizations(full_set, [0,0], 0) == [[]]           # zero exponent
+    @test factorizations(full_set, [0,0], 0) == [zeros(Int, 2, 0)]  # zero exponent
 
     # Set with missing vectors
     small_set = MultiindexSet([[0,0],[1,0],[2,0],[2,1]])
     facs_small = factorizations(small_set, exp, N)
     @test length(facs_small) == 2   # [0,0]+[2,1] and [2,1]+[0,0]
     for f in facs_small
-        @test sum(f) == exp
-        @test all(v -> find_in_set(small_set, v) !== nothing, f)
+        s = zeros(Int, 2)
+        for j in 1:N
+            s .+= view(f, :, j)
+        end
+        @test s == exp
+        @test all(j -> find_in_set(small_set, f[:, j]) !== nothing, 1:N)
     end
 
     # Test with larger N and random exponents
@@ -367,16 +369,16 @@ end
         N = rand(1:3)
         facs = factorizations(set, exp, N)
         for f in facs
-            @test length(f) == N
+            @test size(f) == (nvars, N)
             s = zeros(Int, nvars)
-            for v in f
-                s .+= v
+            for j in 1:N
+                s .+= view(f, :, j)
             end
             @test s == exp
         end
         # Ensure sortedness
         if !isempty(facs)
-            sorted_facs = sort(facs; lt=_fact_less)
+            sorted_facs = sort(facs; lt=factorization_less)
             @test facs == sorted_facs
         end
     end
