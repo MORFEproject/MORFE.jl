@@ -36,19 +36,19 @@ end
         @test p_dense.coeffs == expected_dense
     end
 
-    @testset "Constructors from Dict and existing MultiindexSet" begin
+    @testset "Constructors from coefficient vector and MultiindexSet" begin
         set = all_multiindices_up_to(2, 2)
-        dict = Dict([2,0] => 5, [0,1] => -2)
-        p_dense = DensePolynomial(dict, set)
-
+        # Build coefficient vector: zeros everywhere except at [2,0] and [0,1]
+        coeffs = zeros(Int, length(set))
         idx_20 = find_in_set(set, [2,0])
         idx_01 = find_in_set(set, [0,1])
+        coeffs[idx_20] = 5
+        coeffs[idx_01] = -2
+        p_dense = DensePolynomial(coeffs, set)
+
         @test p_dense.coeffs[idx_20] == 5
         @test p_dense.coeffs[idx_01] == -2
         @test all(i -> !(i in (idx_20, idx_01)) ? p_dense.coeffs[i] == 0 : true, 1:length(set))
-
-        # Error: dict contains exponent not in set
-        @test_throws ErrorException DensePolynomial(Dict([3,0] => 1), set)
     end
 
     @testset "polynomial_from_pairs" begin
@@ -69,9 +69,9 @@ end
         @test length(p_dense_empty) == 0
         @test size(p_dense_empty.multiindex_set.exponents, 2) == 0
 
-        # From empty dict with existing set (should produce zero coefficients of correct length)
+        # From zero coefficient vector with existing set
         set = all_multiindices_up_to(2, 3)
-        p_dense = DensePolynomial(Dict{Vector{Int}, Float64}(), set)
+        p_dense = DensePolynomial(zeros(Float64, length(set)), set)
         @test length(p_dense.coeffs) == length(set)
         @test all(iszero, p_dense.coeffs)
     end
@@ -79,8 +79,13 @@ end
     # 2. Accessors
     @testset "Accessors" begin
         set = all_multiindices_up_to(2, 2)
-        dict = Dict([1,0] => 4, [0,0] => 1)
-        p_dense = DensePolynomial(dict, set)
+        # Build a polynomial on the full set with only two non-zero coefficients
+        c = zeros(Int, length(set))
+        idx_10 = find_in_set(set, [1,0])
+        idx_00 = find_in_set(set, [0,0])
+        c[idx_10] = 4
+        c[idx_00] = 1
+        p_dense = DensePolynomial(c, set)
 
         @test coeffs(p_dense) == p_dense.coeffs
         @test multiindex_set(p_dense) == set
@@ -91,11 +96,18 @@ end
     # 3. Term lookup
     @testset "Term lookup" begin
         set = all_multiindices_up_to(3, 2)
-        dict = Dict([1,0,0] => 2.5, [0,1,1] => -1.2, [0,0,0] => 7.0)
-        p_dense = DensePolynomial(dict, set)
+        # Build polynomial with coefficients on a subset of exponents, zeros elsewhere
+        coeffs = zeros(Float64, length(set))
+        idx_100 = find_in_set(set, [1,0,0])
+        idx_011 = find_in_set(set, [0,1,1])
+        idx_000 = find_in_set(set, [0,0,0])
+        coeffs[idx_100] = 2.5
+        coeffs[idx_011] = -1.2
+        coeffs[idx_000] = 7.0
+        p_dense = DensePolynomial(coeffs, set)
 
         # find_in_multiindex_set
-        @test find_in_multiindex_set(p_dense, [1,0,0]) == find_in_set(set, [1,0,0])
+        @test find_in_multiindex_set(p_dense, [1,0,0]) == idx_100
         @test isnothing(find_in_multiindex_set(p_dense, [5,0,0]))
 
         # has_term (any exponent in the set counts, even with zero coefficient)
@@ -109,7 +121,7 @@ end
         @test coefficient(p_dense, [2,0,0]) == 0.0
 
         # find_term (returns index if exponent in set, even if coefficient zero)
-        @test find_term(p_dense, [1,0,0]) == find_in_set(set, [1,0,0])
+        @test find_term(p_dense, [1,0,0]) == idx_100
         @test find_term(p_dense, [0,0,2]) == find_in_set(set, [0,0,2])  # exists in set, coefficient zero
         @test find_term(p_dense, [5,0,0]) === nothing
     end
@@ -137,9 +149,6 @@ end
     # 5. Error conditions
     @testset "Error conditions" begin
         set = all_multiindices_up_to(2, 2)
-
-        # Mismatched nvars in coefficient lookup
-        p = DensePolynomial(Dict([1,0]=>1), set)
 
         # polynomial_from_pairs with mismatched exponent lengths (should error in MultiindexSet constructor)
         @test_throws AssertionError polynomial_from_pairs(DensePolynomial{Int}, [[1,0]=>1, [1,0,0]=>2])

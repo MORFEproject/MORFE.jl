@@ -1,9 +1,10 @@
 module Realification
 
+using LinearAlgebra
 include(joinpath(@__DIR__, "./Polynomials.jl"))
 
 using .Polynomials
-using .Polynomials: DensePolynomial, AbstractPolynomial, each_term
+using .Polynomials: DensePolynomial, AbstractPolynomial, each_term,
                     MultiindexSet, coeffs, multiindex_set, nvars
 
 export realify, compose_linear, realify_via_linear
@@ -13,14 +14,19 @@ export DensePolynomial, AbstractPolynomial, evaluate, extract_component,
 export _multinomial, _compositions, _reorder_canonical, _realify_term
 
 # ------------------------------------------------------------
-#  Internal functions
+#  Internal helper functions
 # ------------------------------------------------------------
 
+"""
+    _exponents_to_dict(poly::AbstractPolynomial) -> Dict{Vector{Int}, coeff_type}
+
+Convert a polynomial to a dictionary mapping exponent vectors to coefficients.
+Zero coefficients are omitted (only terms from `each_term` are included).
+"""
 function _exponents_to_dict(poly::AbstractPolynomial)
-    coeff_type = eltype(coeffs(poly))
-    d = Dict{Vector{Int}, coeff_type}()
+    d = Dict{Vector{Int}, eltype(coeffs(poly))}()
     for (exp, coeff) in each_term(poly)
-        d[exp] = get(d, exp, zero(coeff_type)) + coeff
+        d[exp] = get(d, exp, zero(coeff)) + coeff
     end
     return d
 end
@@ -82,15 +88,15 @@ function _reorder_canonical(poly::AbstractPolynomial, conj_map::Vector{Int})
         for oldidx in 1:N
             new_exp[old2new[oldidx]] = old_exp[oldidx]
         end
-        new_dict[new_exp] = get(new_dict, new_exp, zero(coeff_type)) + coeff
+        new_dict[new_exp] = get(new_dict, new_exp, zero(coeff)) + coeff
     end
 
     return similar_poly(new_dict, poly, N), n, m
 end
 
 """
-    _realify_term(exp_vec::Vector{Int}, coeff::Number, n::Int)
-        -> Dict{Vector{Int}, Number}
+    _realify_term(exp_vec::AbstractVector{Int}, coeff::T, n::Int)
+        -> Dict{Vector{Int}, T} where T
 
 Transform a single term (exponent vector `exp_vec` and coefficient `coeff`)
 of a polynomial in the canonical form (z, z̄, w) into a sum of real monomials.
@@ -102,6 +108,7 @@ function _realify_term(exp_vec::AbstractVector{Int}, coeff::T, n::Int) where T
     β = exp_vec[n+1:2n]
     γ = exp_vec[2n+1:end]
 
+    # states: (multiplier, x, y, w)
     states = [(coeff, zeros(Int, n), zeros(Int, n), copy(γ))]
 
     for i in 1:n
@@ -112,9 +119,11 @@ function _realify_term(exp_vec::AbstractVector{Int}, coeff::T, n::Int) where T
             for mi in 0:a
                 for ni in 0:b
                     diff = mi - ni
+                    # Use cis? No, just im^diff; careful with negative diff.
                     im_factor = diff >= 0 ? im^diff : (-im)^(-diff)
                     factor = binomial(a, mi) * binomial(b, ni) * im_factor
-                    new_mult = mult * factor
+                    # Use broadcasting for multiplication: works for scalars and vectors
+                    new_mult = mult .* factor
                     new_x = copy(x)
                     new_y = copy(y)
                     new_x[i] = a + b - mi - ni
@@ -126,10 +135,10 @@ function _realify_term(exp_vec::AbstractVector{Int}, coeff::T, n::Int) where T
         states = new_states
     end
 
-    result_dict = Dict{Vector{Int}, typeof(coeff)}()
+    result_dict = Dict{Vector{Int}, T}()
     for (mult, x, y, w) in states
         new_exp = vcat(x, y, w)
-        result_dict[new_exp] = get(result_dict, new_exp, zero(coeff)) + mult
+        result_dict[new_exp] = get(result_dict, new_exp, zero(mult)) + mult
     end
     return result_dict
 end
@@ -204,7 +213,7 @@ function realify(poly::AbstractPolynomial, conj_map::Vector{Int})::AbstractPolyn
     for (exp_vec, coeff) in each_term(canonical_poly)
         term_dict = _realify_term(exp_vec, coeff, n)
         for (exp, val) in term_dict
-            result_dict[exp] = get(result_dict, exp, zero(coeff_type)) + val
+            result_dict[exp] = get(result_dict, exp, zero(val)) + val
         end
     end
 
@@ -213,7 +222,7 @@ function realify(poly::AbstractPolynomial, conj_map::Vector{Int})::AbstractPolyn
 end
 
 """
-    compose_linear(poly::AbstractPolynomial, M::Matrix{TA}, p::Int) where TA -> AbstractPolynomial
+    compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA -> AbstractPolynomial
 
 Compose a multivariate polynomial with a linear map.
 
@@ -222,7 +231,6 @@ Compose a multivariate polynomial with a linear map.
   numeric or array‑valued.)
 - `M`: an `n × p` matrix. Composition means replacing `x_i` by
   `∑_{j=1}^p M[i,j] * y_j`, where `y₁, …, y_p` are new variables.
-- `p`: number of new variables (must match the second dimension of `M`).
 
 # Returns
 A new polynomial in the variables `y₁, …, y_p`. The returned polynomial has
@@ -231,7 +239,6 @@ the same concrete type as the input `poly`.
 function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA
     n = nvars(poly)
     @assert size(M, 1) == n "First dimension of M must match number of variables"
-    
     p = size(M, 2)
 
     coeff_vec = coeffs(poly)
@@ -242,67 +249,102 @@ function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA
         T = eltype(coeff_vec)
     end
 
+    # 1. Compute maximum exponent for each original variable
+    max_deg_i = zeros(Int, n)
+    for (a, _) in each_term(poly)
+        for i in 1:n
+            max_deg_i[i] = max(max_deg_i[i], a[i])
+        end
+    end
+
+    # 2. Precompute powers of M[i,j] for each i and j up to max_deg_i[i]
+    # pow_M[i][j][d] = M[i,j]^d   for d = 1..max_deg_i[i]  (0 not stored)
+    pow_M = [ [ Vector{TA}(undef, max_deg_i[i]) for j in 1:p ] for i in 1:n ]
+    for i in 1:n
+        for j in 1:p
+            if max_deg_i[i] >= 1
+                pow = pow_M[i][j]
+                pow[1] = M[i, j]
+                for d in 2:max_deg_i[i]
+                    pow[d] = pow[d-1] * M[i, j]
+                end
+            end
+        end
+    end
+
+    # 3. Precompute expansions (∑ M[i,j] y_j)^e for each i and e
+    #    expansions[i][e] :: Dict{Vector{Int}, TA}  (e from 0 to max_deg_i[i])
+    expansions = Vector{Vector{Dict{Vector{Int}, TA}}}(undef, n)
+    for i in 1:n
+        expansions_i = Dict{Vector{Int}, TA}[]
+        for e in 0:max_deg_i[i]
+            exp_dict = Dict{Vector{Int}, TA}()
+            for k in _compositions(e, p)   # yields each composition as Vector{Int}
+                mult = _multinomial(e, k)
+                factor = mult
+                for j in 1:p
+                    kj = k[j]
+                    if kj > 0
+                        factor *= pow_M[i][j][kj]
+                    end
+                end
+                exp_dict[k] = factor
+            end
+            push!(expansions_i, exp_dict)
+        end
+        expansions[i] = expansions_i
+    end
+
+    # 4. Initialise current polynomial: each term gets p trailing zeros
     current_dict = Dict{Vector{Int}, typeof(coeff_vec[1])}()
     for (a, coeff) in each_term(poly)
         key = vcat(a, zeros(Int, p))
-        current_dict[key] = get(current_dict, key, coeff_is_vector ? zeros(T, length(coeff)) : zero(T)) + coeff
+        current_dict[key] = get(current_dict, key, zero(coeff)) + coeff
     end
 
+    # 5. Compose variable by variable
     for i in 1:n
         next_dict = Dict{Vector{Int}, typeof(coeff_vec[1])}()
+        expansions_i = expansions[i]
         for (key, coeff) in current_dict
-            e = key[1]
+            e = key[1]               # exponent of current variable
+            rest = key[2:end]         # exponents of remaining variables + y
+
             if e == 0
-                new_key = key[2:end]
-                next_dict[new_key] = get(next_dict, new_key, coeff_is_vector ? zeros(T, length(coeff)) : zero(T)) + coeff
+                # nothing to do for this variable
+                next_dict[rest] = get(next_dict, rest, zero(coeff)) + coeff
             else
-                for k in _compositions(e, p)
-                    mult = _multinomial(e, k)
-                    mfactor = one(TA)
-                    for j in 1:p
-                        if k[j] > 0
-                            mfactor *= M[i, j]^k[j]
-                        end
-                    end
-                    factor = mult * mfactor
-                    scaled_coeff = if coeff isa AbstractVector
-                        factor .* coeff
-                    else
-                        factor * coeff
-                    end
-
-                    z_part = key[end-p+1:end]
-                    new_z = z_part .+ k
-                    new_key = vcat(key[2:end-p], new_z)
-
-                    next_dict[new_key] = get(next_dict, new_key, coeff_is_vector ? zeros(T, length(scaled_coeff)) : zero(T)) + scaled_coeff
+                exp_dict = expansions_i[e+1]   # +1 because e is 0‑based index
+                for (k, factor) in exp_dict
+                    scaled_coeff = coeff .* factor   # broadcast for vector coefficients
+                    y_part = rest[end-p+1:end]        # current y‑exponents
+                    new_y = y_part .+ k                # add contributions from this variable
+                    new_rest = vcat(rest[1:end-p], new_y)
+                    next_dict[new_rest] = get(next_dict, new_rest, zero(scaled_coeff)) + scaled_coeff
                 end
             end
         end
         current_dict = next_dict
     end
 
-    # If the result has no terms, make it an explicit zero polynomial
+    # 6. Handle empty result (zero polynomial)
     if isempty(current_dict)
-        # Build a zero coefficient of the correct type.
-        # We can obtain the vector length from the input polynomial's coefficients if available.
-        zero_coeff = if coeff_is_vector
+        if coeff_is_vector
             if !isempty(coeffs(poly))
-                zero(coeffs(poly)[1])   # zero(::Array) gives an all‑zero array of the same size
+                n_comp = length(coeffs(poly)[1])
+                zero_coeff = zeros(T, n_comp)
             else
-                # poly is zero and has no terms → cannot determine length.
-                # Fallback: try to create a zero array using the element type and hope it's never used.
-                # A safer alternative would be to return a zero polynomial without any terms,
-                # but that would require changes to the zero constructor.
-                zeros(T, 0)   # This will likely cause a dimension mismatch later, but avoids a MethodError now.
+                error("Cannot determine component dimension for zero vector polynomial. " *
+                      "Provide a non‑zero polynomial or use an explicit zero constructor.")
             end
         else
-            zero(T)
+            zero_coeff = zero(T)
         end
         zero_dict = Dict(zeros(Int, p) => zero_coeff)
         return similar_poly(zero_dict, poly, p)
     end
 
+    # 7. Convert final dictionary to polynomial of same type
     return similar_poly(current_dict, poly, p)
 end
 
@@ -322,6 +364,7 @@ function realify_via_linear(poly::AbstractPolynomial, conj_map::Vector{Int})::Ab
     N_orig = 2n + m
     N_new = 2n + m   # same number of real variables
 
+    # Build transformation matrix: [z; z̄; w] = M * [x; y; w]
     M = zeros(Complex{Int}, N_orig, N_new)
     for i in 1:n
         M[i, i] = 1

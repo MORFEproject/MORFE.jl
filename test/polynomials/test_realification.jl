@@ -12,7 +12,6 @@ using .Realification
 Construct a polynomial of the specified type from a dictionary.
 Uses the default monomial order `Grlex`.
 """
-
 function construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) where T
     if isempty(dict)
         mset = MultiindexSet(Matrix{Int}(undef, 0, 0))
@@ -40,14 +39,17 @@ end
 """
     polynomial_to_dict(poly::DensePolynomial) -> Dict{Vector{Int}, eltype(poly)}
 
-Convert any polynomial back to a dictionary mapping exponent vectors to non‑zero coefficients.
+Convert any polynomial back to a dictionary mapping exponent vectors to **non‑zero** coefficients.
+Zero coefficients are omitted to match the sparsity of expected dictionaries.
 """
 function polynomial_to_dict(poly::DensePolynomial)
     d = Dict{Vector{Int}, eltype(poly)}()
     exps = multiindex_set(poly).exponents
     cs = coeffs(poly)
     for j in 1:size(exps, 2)
-        d[exps[:, j]] = cs[j]
+        if !iszero(cs[j])
+            d[exps[:, j]] = cs[j]
+        end
     end
     return d
 end
@@ -78,7 +80,7 @@ end
     end
 end
 
-# ---------- Tests for compose_linear on both all implemented polynomial types ----------
+# ---------- Tests for compose_linear on all implemented polynomial types ----------
 
 @testset "compose_linear" begin
     @testset "for $PolyType" for PolyType in [DensePolynomial]
@@ -129,7 +131,7 @@ end
 
         @testset "vector output" begin
             # f(x,y) = (1,0) x^2 + (0,1) xy
-            f = Dict([2,0] => [1.0, 0.0], [1,1] => [0.0, 1.0])#, [0,2] => [0.0, 0.0])
+            f = Dict([2,0] => [1.0, 0.0], [1,1] => [0.0, 1.0])
             
             M = [1 2; 
                  3 4]
@@ -261,7 +263,7 @@ end
 
         @testset "realify - simple example from docs" begin
             # f(z,z*,w) = (2 + im) zz* + (1 - im) z^2 + 3
-            # z = x + im * y,   z* = x + im * y,    w = w*
+            # z = x + im * y,   z* = x - im * y,    w = w
             # f(x,y,w) = (2 + im) (x^2 +y^2) + (1 - im) (x^2 + 2*im xy - y^2) + 3
             #          = 3 + 3 x^2 + (2 + 2*im) xy + (1 + 2*im) y^2
             f = Dict([1,1,0] => 2.0+1.0im, [2,0,0] => 1.0-1.0im, [0,0,0] => 3.0+0.0im)
@@ -277,7 +279,6 @@ end
         end
 
         @testset "realify - evaluation consistency" begin
-
             Random.seed!(42)
             for _ in 1:5
                 n = 2
