@@ -1,12 +1,12 @@
-# MORFE3.0 – Project Overview & Preliminary Requirements
+# MORFE.jl – Project Overview & Preliminary Requirements
 
-This document summarises the key decisions, requirements, and future directions discussed for the development of **MORFE3.0**. It serves as a living reference for contributors and stakeholders.
+This document summarises the key decisions, requirements, and future directions discussed for the development of **MORFE.jl**. It serves as a living reference for contributors and stakeholders.
 
 ---
 
 ## 🎯 Overview
 
-MORFE3.0 is the next generation of the **Model Order Reduction for Finite Elements** framework. It aims to overcome the limitations of its predecessor (MORFE2.0) by adopting modern software practices, improving modularity, and leveraging the Julia ecosystem for performance and flexibility.
+MORFE.jl is the next generation of the **Model Order Reduction for Finite Elements** framework. It aims to overcome the limitations of its predecessor (MORFE2.0) by adopting modern software practices, improving modularity, and leveraging the Julia ecosystem for performance and flexibility.
 
 ---
 
@@ -42,7 +42,7 @@ MORFE3.0 is the next generation of the **Model Order Reduction for Finite Elemen
 
 ## 🔧 FEM Backend
 
-MORFE3.0 must interface with a FEM engine to extract mass, stiffness, and force arrays. Three options are under consideration:
+MORFE.jl must interface with a FEM engine to extract mass, stiffness, and force arrays. Three options are under consideration:
 
 | Option                     | Notes                                                                 |
 |----------------------------|-----------------------------------------------------------------------|
@@ -70,7 +70,7 @@ MORFE3.0 must interface with a FEM engine to extract mass, stiffness, and force 
 
 ---
 
-## 📦 Outputs of MORFE3.0
+## 📦 Outputs of MORFE.jl
 
 1. **Reduced dynamics**  
    - Realified reduced dynamics `f(z)`  
@@ -85,10 +85,10 @@ MORFE3.0 must interface with a FEM engine to extract mass, stiffness, and force 
 
 ## ✅ Validation Strategy
 
-### Internal validation (inside MORFE3.0)
+### Internal validation (inside MORFE.jl)
 - Compute the **residue (force)** of the invariance equation in the **time domain**, **over each orbit**.
 
-### External validation (outside MORFE3.0)
+### External validation (outside MORFE.jl)
 - Compare against **Full Order Model (FOM)** displacement solutions:
   - **HBFEM** (existing, keep alive)
   - Time integration or other solvers.

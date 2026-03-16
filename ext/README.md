@@ -1,10 +1,10 @@
 # External Dependencies
 
-This directory (`ext/`) is reserved for external dependencies required by MORFE3.0. It is intended as a location where users may optionally place or link third-party libraries if needed for building or running the project.
+This directory (`ext/`) is reserved for external dependencies required by MORFE.jl It is intended as a location where users may optionally place or link third-party libraries if needed for building or running the project.
 
 ## Purpose
 
-MORFE3.0 might rely on several third-party libraries for core functionality:
+MORFE.jl might rely on several third-party libraries for core functionality:
 
 E.g.:
 - **SLEPc**: Scalable Library for Eigenvalue Problem Computations
