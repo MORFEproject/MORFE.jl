@@ -7,7 +7,7 @@ export MultiindexSet,
        divides, is_constant,
        find_in_set,
        indices_in_box_with_bounded_degree, build_exponent_index_map,
-       factorizations, monomial_rank,
+       factorisations_ordered, factorisations_unordered, monomial_rank,
        num_multiindices_up_to
 
 # ==================== Core comparison functions ====================
@@ -363,47 +363,37 @@ end
 # ==================== Factorizations ====================
 
 """
-    factorizations(set::MultiindexSet, exp::AbstractVector{Int}, N::Int) -> Vector{Matrix{Int}}
+    factorisations_ordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{NTuple{N,Int}}
 
-Return all ordered `N`-tuples of exponent vectors from `set` whose sum equals `exp`.
-Each factorization is represented as a matrix of size `(nvars, N)`, where columns are the factors.
-The outer list is sorted by graded lexicographic order (comparing factorizations lexicographically).
+Return all ordered `N`-tuples of indices (taken from `candidate_indices`) whose corresponding exponent vectors sum to `exp`.
+Each factorisation is an `NTuple{N,Int}` where the `k`-th entry is the index of the `k`-th factor.
 If no factorisation exists, an empty vector is returned.
 """
-function factorizations(set::MultiindexSet, exp::AbstractVector{Int}, N::Int)
+function factorisations_ordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
     # Quick return for N == 0
     if N == 0
-        return iszero(exp) ? [Matrix{Int}(undef, length(exp), 0)] : Matrix{Int}[]
+        return iszero(exp) ? NTuple{0,Int}[()] : NTuple{0,Int}[]
     end
 
     exps = set.exponents
-    M = size(exps, 2)
     nvars = length(exp)
     @assert size(exps, 1) == nvars "Length of exponent vector must match number of variables in the set"
 
-    results = Matrix{Int}[]
-    # Store indices of chosen factors to avoid copying vectors until final
+    results = NTuple{N,Int}[]
     current_idxs = Vector{Int}(undef, N)
     current_sum = zeros(Int, nvars)
 
     function backtrack(depth::Int)
         if depth == 0
             if current_sum == exp
-                # Build factorisation as a matrix
-                fact = Matrix{Int}(undef, nvars, N)
-                for k in 1:N
-                    @inbounds fact[:, k] = exps[:, current_idxs[k]]
-                end
-                push!(results, fact)
+                push!(results, Tuple(current_idxs))
             end
             return
         end
-        # Try every index – order matters, so always start from 1
-        for i in 1:M
+        for i in candidate_indices
             v = view(exps, :, i)
-            # Prune: any component would exceed target?
+            # Prune: adding v would exceed exp in any component
             any(>(0), v .+ current_sum .- exp) && continue
-            # Add in place
             current_sum .+= v
             current_idxs[N-depth+1] = i
             backtrack(depth - 1)
@@ -413,26 +403,74 @@ function factorizations(set::MultiindexSet, exp::AbstractVector{Int}, N::Int)
 
     backtrack(N)
 
-    isempty(results) && return Matrix{Int}[]
-
-    # Sort outer list lexicographically using Grlex
-    sort!(results; lt=_fact_less)
     return results
 end
 
-# Lexicographic comparison of two factorisations (both represented as matrices)
-function _fact_less(a::Matrix{Int}, b::Matrix{Int})
-    @assert size(a) == size(b)
-    for j in 1:size(a,2)
-        col_a = view(a, :, j)
-        col_b = view(b, :, j)
-        if grlex_precede(col_a, col_b)
-            return true
-        elseif grlex_precede(col_b, col_a)
-            return false
+"""
+    factorisations_unordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{Tuple{NTuple{N,Int}, Int}}
+
+Return all `N`-tuples of indices (taken from `candidate_indices`) with non‑decreasing indices whose corresponding exponent vectors sum to `exp`.
+For each such combination, the result includes the tuple itself and the number of distinct ordered factorisations (permutations) that can be formed from it.
+
+The number of permutations equals `N! / (m₁! m₂! … mₖ!)` where `mⱼ` are the multiplicities of each distinct index in the tuple.
+
+The input `candidate_indices` is assumed to contain unique indices; duplicate entries are removed internally.
+
+If no factorisation exists, an empty vector is returned.
+"""
+function factorisations_unordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
+    # Quick return for N == 0
+    if N == 0
+        return iszero(exp) ? [((), 1)] : Tuple{NTuple{0,Int},Int}[]
+    end
+
+    exps = set.exponents
+    nvars = length(exp)
+    @assert size(exps, 1) == nvars "Length of exponent vector must match number of variables in the set"
+
+    # Remove duplicates and sort candidate indices to allow non‑decreasing enforcement
+    sorted_candidates = sort(unique(candidate_indices))
+    L = length(sorted_candidates)
+
+    results = Vector{Tuple{NTuple{N,Int}, Int}}()
+    current_idxs = Vector{Int}(undef, N)   # indices chosen so far
+    current_sum = zeros(Int, nvars)
+
+    function backtrack(depth::Int, start_pos::Int)
+        if depth == 0
+            if current_sum == exp
+                # Compute number of permutations (_multinomial coefficient)
+                # current_idxs is already sorted non‑decreasingly
+                counts = Int[]
+                i = 1
+                while i <= N
+                    j = i
+                    while j <= N && current_idxs[j] == current_idxs[i]
+                        j += 1
+                    end
+                    push!(counts, j - i)
+                    i = j
+                end
+                perm_count = _multinomial(N, counts)
+                push!(results, (Tuple(current_idxs), perm_count))
+            end
+            return
+        end
+        for pos in start_pos:L
+            idx = sorted_candidates[pos]
+            v = view(exps, :, idx)
+            # Prune: adding v would exceed exp in any component
+            any(>(0), v .+ current_sum .- exp) && continue
+            current_sum .+= v
+            current_idxs[N-depth+1] = idx
+            backtrack(depth - 1, pos)      # allow same index again (non‑decreasing)
+            current_sum .-= v
         end
     end
-    return false  # equal
+
+    backtrack(N, 1)
+
+    return results
 end
 
 # ==================== Mathematical ranking for complete bases ====================
@@ -530,6 +568,22 @@ function build_exponent_index_map(set::MultiindexSet)
         d[Tuple(exps[:, j])] = j
     end
     return d
+end
+
+"""
+    _multinomial(e::Int, k::Vector{Int}) -> Int
+
+Multinomial coefficient: e! / (k₁! k₂! … kₚ!)  where sum(k) = e.
+Uses iterative multiplication of binomial coefficients to avoid overflow.
+"""
+function _multinomial(e::Int, k::Vector{Int})::Int
+    res = 1
+    rem = e
+    for ki in k
+        res *= binomial(rem, ki)
+        rem -= ki
+    end
+    return res
 end
 
 end # module
