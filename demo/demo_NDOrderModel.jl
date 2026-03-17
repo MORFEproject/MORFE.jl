@@ -7,32 +7,31 @@ include(joinpath(@__DIR__, "../src/FullOrderModel.jl"))
 using LinearAlgebra
 
 """
-    B_3 x''' + B_2 x'' + B_1 x' + B_0 x = N(x, x', x'')
-    Third order system
+    B_2 x'' + B_1 x' + B_0 x = N(x, x')
+    Second order system
 """
-N = 3
+N = 2
 # Define linear matrices
-B_3 = Matrix{Float64}(I, 2, 2)
 B_2 = Matrix{Float64}(I, 2, 2)
 B_1 = Matrix{Float64}(I, 2, 2)
 B_0 = Matrix{Float64}(I, 2, 2)
 
 # Define nonlinear terms
-function quad_x_xdot!(res, x, xdot)
-    @. res += x * xdot   # elementwise product
+function gyroscopic_force!(res, x, xdot)  # assymetric
+    @. res += x * xdot[end:-1:1]  # elementwise product
 end
 
-function quad_xdot_xdot!(res, xdot, xdot2)
-    @. res += xdot * xdot2 * 0.5  # elementwise product
+function fluid_drag!(res, xdot1, xdot2)  # fully symmetric
+    @. res += xdot1 * xdot2 * 0.5  # elementwise product
 end
 
-function cubic_xdot_xdot2_xddot!(res, xdot, xdot2, xddot)
-    @. res += xdot * xdot2 * xddot * 0.5  # elementwise product
+function nonlinear_damping!(res, x1, x2, xdot)  # fully symmetric
+    @. res += x1 * x2 * xdot * 0.5  # elementwise product
 end
 
-terms = (PolynomialTerm{N}(quad_x_xdot!, (0, 1); symmetry = (1, 1)),
-    PolynomialTerm{N}(quad_xdot_xdot!, (1, 1); symmetry = (1, 1)),
-    PolynomialTerm{N}(cubic_xdot_xdot2_xddot!, (1, 1, 2); symmetry = (1, 1, 2)))
+terms = (PolynomialTerm{N}(gyroscopic_force!, (0, 1); symmetry = (0, 1)),
+    PolynomialTerm{N}(fluid_drag!, (1, 1); symmetry = (0, 0)),
+    PolynomialTerm{N}(nonlinear_damping!, (0, 0, 1); symmetry = (0, 0, 0)))
 
 #Define 
 model = NDOrderModel(
