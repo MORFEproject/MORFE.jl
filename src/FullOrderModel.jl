@@ -177,6 +177,7 @@ struct NDOrderModel{T, N, NP1, N_NL, MT <: AbstractMatrix{T}} <: AbstractFullOrd
     function NDOrderModel(linear_terms::NTuple{NP1, MT},
             nonlinear_terms::NTuple{N_NL, PolynomialTerm{N}}) where {
             T, N, NP1, N_NL, MT <: AbstractMatrix{T}}
+            
         @assert NP1 == N + 1
         @assert all(size(B) == size(linear_terms[1]) for B in linear_terms)
 
