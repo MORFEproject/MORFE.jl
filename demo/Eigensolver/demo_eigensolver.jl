@@ -88,26 +88,9 @@ function load_sparse_csv(path::AbstractString)
     return sparse(I, J, V, nrows, ncols)
 end
 
-function generate_sparse_regular_pair(n::Integer; density::Float64=0.003, seed::Integer=1)
-    @assert n > 1 "n must be > 1"
-    rng = MersenneTwister(seed)
-
-    # Symmetric sparse parts plus strong diagonal dominance -> regular matrices.
-    Koff = sprand(rng, n, n, density)
-    Koff = 0.5 * (Koff + Koff')
-    Kdiag = vec(sum(abs.(Koff), dims=2)) .+ 5.0
-    K = Koff + spdiagm(0 => Kdiag)
-
-    Moff = sprand(rng, n, n, density)
-    Moff = 0.5 * (Moff + Moff')
-    Mdiag = vec(sum(abs.(Moff), dims=2)) .+ 2.0
-    M = Moff + spdiagm(0 => Mdiag)
-
-    return sparse(K), sparse(M)
-end
 
 # -------------------------------------------------------------------
-# define necessary directories, time, plot and matrix settings
+# define necessary directories, time, plot 
 
 K_path = joinpath(@__DIR__, "K.csv")
 M_path = joinpath(@__DIR__, "M.csv")
@@ -116,30 +99,12 @@ show_time = true
 enable_plot = true
 plot_file = joinpath(@__DIR__, "eigenpairs_complex_plane.png")
 
-# Matrix source: :csv or :generated
-matrix_source = :csv
-
-# Settings for generated test matrices
-generated_n = 2500
-generated_density = 0.002
-generated_seed = 1
-
 
 # -------------------------------------------------------------------
 # load matrices, setup and solve eigenproblem
 
-if matrix_source == :csv
-    K = load_sparse_csv(K_path)
-    M = load_sparse_csv(M_path)
-elseif matrix_source == :generated
-    K, M = generate_sparse_regular_pair(
-        generated_n;
-        density=generated_density,
-        seed=generated_seed,
-    )
-else
-    error("Unknown matrix_source = $(matrix_source). Use :csv or :generated")
-end
+K = load_sparse_csv(K_path)
+M = load_sparse_csv(M_path)
 
 A = -K
 B = M
@@ -148,7 +113,7 @@ n = size(A, 1)
 
 nev = min(40, n - 2)
 shift = 1e-3 +1.0im  # nothing or complex-valued shift
-whichs = :LM # :LR, :LM
+whichs = :LM # :LR, :LM, ...
 tolerance = 1e-16
 ncv = max(nev + 30, 120)
 v0 = randn(MersenneTwister(1), n)
@@ -172,7 +137,6 @@ elapsed = time() - t0
 # print results and diagnostics
 
 println("Converged: ", result.nconv)
-println("matrix_source = ", matrix_source, ", n = ", n)
 println("which = ", whichs, ", sigma = ", shift)
 
 fmt_complex(z) = @sprintf("%.5f %+.5fi", real(z), imag(z))
