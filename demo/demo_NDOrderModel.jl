@@ -29,12 +29,12 @@ function nonlinear_damping!(res, x1, x2, xdot)  # fully symmetric
     @. res += x1 * x2 * xdot * 0.5  # elementwise product
 end
 
-terms = (PolynomialTerm{N}(gyroscopic_force!, (0, 1); symmetry = (0, 1)),
-    PolynomialTerm{N}(fluid_drag!, (1, 1); symmetry = (0, 0)),
-    PolynomialTerm{N}(nonlinear_damping!, (0, 0, 1); symmetry = (0, 0, 0)))
+terms = (PolynomialTerm{N}(gyroscopic_force!, (0, 1); symmetry = (1, 2)),
+    PolynomialTerm{N}(fluid_drag!, (1, 1); symmetry = (1, 1)),
+    PolynomialTerm{N}(nonlinear_damping!, (0, 0, 1); symmetry = (1, 1, 1)))
 
 #Define 
 model = NDOrderModel(
-    (B_0, B_1, B_2, B_3),
+    (B_0, B_1, B_2),
     terms
 )
