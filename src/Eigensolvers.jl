@@ -13,7 +13,7 @@ export generalized_eigenpairs
 end
 
 """
-	generalized_eigenpairs(A, B; nev, sigma=0.0, which=:LM, tol=0.0,
+	generalized_eigenpairs(A, B; nev, sigma=nothing, which=:LM, tol=0.0,
 						   maxiter=3000, ncv=nothing, v0=nothing,
 						   ritzvec=true, sort_largest_real=false)
 
@@ -28,7 +28,7 @@ function generalized_eigenpairs(
 	A::AbstractMatrix,
 	B::AbstractMatrix;
 	nev::Integer,
-	sigma=0.0,
+	sigma=nothing,
 	which::Symbol=:LM,
 	tol::Real=0.0,
 	maxiter::Integer=3000,
@@ -42,18 +42,12 @@ function generalized_eigenpairs(
 	@assert size(B, 1) == n && size(B, 2) == n "B must be square and match A size"
 	@assert 0 < nev < n "nev must satisfy 0 < nev < size(A,1)"
 
-	Tval = promote_type(eltype(A), eltype(B), typeof(sigma))
+	Tval = isnothing(sigma) ? promote_type(eltype(A), eltype(B)) : promote_type(eltype(A), eltype(B), typeof(sigma))
 	Ac = sparse(Tval.(A))
 	Bc = sparse(Tval.(B))
-	sigc = convert(Tval, sigma)
 
 	ncv_eff = min(isnothing(ncv) ? max(Int(nev) + 30, 120) : Int(ncv), n - 1)
 	v0_eff = isnothing(v0) ? nothing : Tval.(v0)
-
-	F = lu(Ac - sigc * Bc)
-	T = LinearMap{Tval}(n, n; ismutating=false) do x
-		F \ (Bc * x)
-	end
 
 	base_eigs_kwargs = (
 		nev=Int(nev),
@@ -65,15 +59,34 @@ function generalized_eigenpairs(
 	)
 	eigs_kwargs = isnothing(v0_eff) ? base_eigs_kwargs : merge(base_eigs_kwargs, (v0=v0_eff,))
 
-	mu, vecs, nconv, niter, nmult, resid = eigs(T; eigs_kwargs...)
+	vals = Vector{Tval}()
+	vecs = Matrix{Tval}(undef, n, 0)
+	nconv = 0
+	niter = 0
+	nmult = 0
+	resid = Tval[]
 
-	tiny = eps(real(float(one(Tval))))
-	mu_safe = similar(mu)
-	for i in eachindex(mu)
-		mu_safe[i] = abs(mu[i]) < tiny ? convert(Tval, tiny) : mu[i]
+	if isnothing(sigma)
+		# No shift requested: use ARPACK generalized eigs directly, so `which`
+		# follows the package's native semantics.
+		vals, vecs, nconv, niter, nmult, resid = eigs(Ac, Bc; eigs_kwargs...)
+	else
+		sigc = convert(Tval, sigma)
+		F = lu(Ac - sigc * Bc)
+		T = LinearMap{Tval}(n, n; ismutating=false) do x
+			F \ (Bc * x)
+		end
+
+		mu, vecs, nconv, niter, nmult, resid = eigs(T; merge(eigs_kwargs, (which=:LM,))...)
+
+		tiny = eps(real(float(one(Tval))))
+		mu_safe = similar(mu)
+		for i in eachindex(mu)
+			mu_safe[i] = abs(mu[i]) < tiny ? convert(Tval, tiny) : mu[i]
+		end
+
+		vals = sigc .+ inv.(mu_safe)
 	end
-
-	vals = sigc .+ inv.(mu_safe)
 
 	if sort_largest_real
 		vals, vecs = _sort_largest_real(vals, vecs)
