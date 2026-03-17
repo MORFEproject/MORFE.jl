@@ -10,7 +10,7 @@ candidate_indices = indices_in_box_with_bounded_degree(multiindex_set, exp, 1, s
 
 k = 3   # number of terms that sum to exp
 
-result = factorisations_ordered(multiindex_set, exp, k, candidate_indices)
+result = factorisations_ordered(multiindex_set, exp, k, candidate_indices) # all permutations are different
 
 
 println("Found ", length(result), " factorisation(s):")
@@ -25,7 +25,7 @@ end
 
 println("\n==========================================================================================\n")
 
-result = factorisations_unordered(multiindex_set, exp, k, candidate_indices)
+result = factorisations_unordered(multiindex_set, exp, k, candidate_indices) # all permutations are equivalent
 
 println("Found ", length(result), " factorisation(s):")
 for (i, (idx_tuple, perm_count)) in enumerate(result)
