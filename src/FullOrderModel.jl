@@ -1,3 +1,5 @@
+using SparseArrays
+
 abstract type AbstractFullOrderModel end
 
 """
@@ -40,81 +42,69 @@ struct FullOrderModel{T} <: AbstractFullOrderModel
 end
 
 """
-    PolynomialTerm{N, Deg, F}
+    MultilinearMap{N, Deg, F}
 
 Represents a single monomial term of order Deg in the nonlinear function of an `NDOrderModel`.
 
 A term corresponds to a function of the form
 
-    f(x_(i1), … , x_(iDeg))
+    f!(res, x_(i1), … , x_(iDeg))
 
 where each `ik ∈ {0, …, N}` specifies which derivative is used 
 and the information of the i is stored in the tupel `indices`.
 Example: F(x,x^(1)) -> indices=(0,1)
 
-The tupel `symmetry` stores information, wether f is invariant und permutation of specific arguments.
-Arguments that are commutable get the same label. Labels start from 1 and go to maximal Deg
-Example: F(x,x,x^(1),x) -> symmetry=(1, 1, 2, 1)
-
 # Type parameters
 - `Deg`: maximum derivative order of the system
-- `M`: polynomial degree (number of arguments of `f`)
+- `M`: polynomial degree (number of arguments of `f!`)
 
-# Example
-A quadratic term depending on `x` and `ẋ`:
-
-    PolynomialTerm{1}(f, (0, 1), (1, 2))
-
-# Notes
-- The function `f` must have signature:
+# Important Notes
+- Each `MultilinearMap` **must implement a multilinear map**, i.e., it should be linear in each of its arguments independently.
+- The function `f!` must have signature:
   
-      f(res, x₁, x₂, ..., x_Deg)
+      f!(res, x_(i1), … , x_(iDeg))
 
   and must accumulate into `res`.
+- The `indices` tuple defines which derivatives the term depends on.
+- If one x_k appears more then once we assume it is symmetric by permutation. That means it is demanded:
+    indices = ( … , k, … , k, …)
+    f!(res, … , v1, … , v2, …) = f!(res, … , v2, … , v1, …)  
+
 """
-struct PolynomialTerm{N, Deg, F}
-    f::F
+struct MultilinearMap{N, Deg, F}
+    f!::F
     indices::NTuple{Deg, Int}
-    symmetry::NTuple{Deg, Int}
 end
 
 """
-    PolynomialTerm{N}(f, indices)
+    MultilinearMap{N}(f, indices)
 
 Create a polynomial term and validate that all derivative indices
 are within the allowed range `0:N`.
 
 # Arguments
-- `f`: in-place evaluation function
+- `f!`: in-place evaluation function
 - `indices`: tuple specifying which derivatives are used
 
 # Errors
 Throws an error if any index is outside `0:N`.
 """
-function PolynomialTerm{N}(f, indices::NTuple{Deg, Int};
-        symmetry::Union{NTuple{Deg, Int}, Nothing} = nothing) where {N, Deg}
+function MultilinearMap{N}(f!, indices::NTuple{Deg, Int}) where {N, Deg}
     @assert all(i -> 0 ≤ i < N, indices) "Index exceeds system order N=$(N)"
 
     # Check if input arguments of f matches Deg
-    ms = methods(f)
-    @assert length(ms)==1 "Function f must have exactly one method to determine number of inputs"
+    ms = methods(f!)
+    @assert length(ms)==1 "Function f! must have exactly one method to determine number of inputs"
     nargs = ms[1].nargs - 1  # subtract function itself
     @assert nargs==Deg + 1 "Function must accept $(Deg+1) arguments ('res' and $Deg inputs) instead of $nargs"
 
-    if isnothing(symmetry)
-        # Assume no symmetry
-        symmetry = ntuple(i -> i, Deg)
-    else
-        @assert length(indices)==length(symmetry) "Symmetry tuple must have the same length as indices"
-        @assert all(s -> 0 < s ≤ Deg && s isa Int, symmetry) "Symmetry labels must be positive integers"
-    end
-    return PolynomialTerm{N, Deg, typeof(f)}(f, indices, symmetry)
+    return MultilinearMap{N, Deg, typeof(f!)}(f!, indices)
 end
 
 """
     evaluate_term!(res, term, xs)
 
-Evaluate a single `PolynomialTerm` and accumulate the result into `res`.
+Evaluate a single `MultilinearMap` and accumulate the result into `res`.
 
 # Arguments
 - `res`: output vector (modified in-place)
@@ -125,10 +115,10 @@ Evaluate a single `PolynomialTerm` and accumulate the result into `res`.
 - No allocations are performed.
 - Assumes that `xs[i+1]` corresponds to derivative `x⁽i⁾`.
 """
-@inline function evaluate_term!(res, term::PolynomialTerm{N, Deg}, xs) where {N, Deg}
+@inline function evaluate_term!(res, term::MultilinearMap{N, Deg}, xs) where {N, Deg}
     inds = term.indices
     args = ntuple(i -> @inbounds(xs[inds[i] + 1]), Deg)
-    term.f(res, args...)
+    term.f!(res, args...)
 end
 
 """
@@ -149,9 +139,9 @@ where:
 # Representation
 
 - Linear terms are stored as a tuple `(B_0, …, B_N)`
-- Nonlinear terms are represented as a collection of `PolynomialTerm`s
+- Nonlinear terms are represented as a collection of `MultilinearMap`s
 
-Each `PolynomialTerm` defines:
+Each `MultilinearMap` defines:
 - which derivatives are involved
 - how they are combined via a user-provided function
 
@@ -163,7 +153,7 @@ Each `PolynomialTerm` defines:
 
 struct NDOrderModel{T, N, NP1, N_NL, MT <: AbstractMatrix{T}} <: AbstractFullOrderModel
     linear_terms::NTuple{NP1, MT}
-    nonlinear_terms::NTuple{N_NL, PolynomialTerm{N}}
+    nonlinear_terms::NTuple{N_NL, MultilinearMap{N}}
 
     """
     NDOrderModel(linear_terms, nonlinear_terms)
@@ -175,9 +165,8 @@ struct NDOrderModel{T, N, NP1, N_NL, MT <: AbstractMatrix{T}} <: AbstractFullOrd
     - Correct relationship between `N` and `NP1`
     """
     function NDOrderModel(linear_terms::NTuple{NP1, MT},
-            nonlinear_terms::NTuple{N_NL, PolynomialTerm{N}}) where {
+            nonlinear_terms::NTuple{N_NL, MultilinearMap{N}}) where {
             T, N, NP1, N_NL, MT <: AbstractMatrix{T}}
-            
         @assert NP1 == N + 1
         @assert all(size(B) == size(linear_terms[1]) for B in linear_terms)
 
@@ -188,7 +177,108 @@ end
 """
     to_first_order(model::NDOrderModel)
 
-Builds First Order Model.
+Transforms an N-th order system (NDOrderModel) 
+
+    B_N x^(N) + ... + B_1 x^(1) + B_0 x = F(x^(N-1)), ..., x^(1), x)
+
+into an equivalent first-order system
+
+    B Ẋ = A X + F̃(X)
+
+by introducing augmented state vector:
+
+     X = [x_0, x_1, ...,  x_N-1] = [x, x^(1), ..., x^(N-1)]
+
+and the (N*n x N*n)-block matrices
+
+    B = [ I   0   0   ⋯   0
+          0   I   0   ⋯   0
+          ⋮       ⋱
+          0   0   0   ⋯  B_N ]
+
+and
+
+    A = [ 0   I   0   ⋯   0
+          0   0   I   ⋯   0
+          ⋮       ⋱
+         -B₀ -B₁ -B₂ ⋯ -B_{N-1} ]
+
+where `I` is the `n × n` identity matrix.
 """
-function to_first_order(model::NDOrderModel)
+function to_first_order(model::NDOrderModel{
+        T, N, NP1, N_NL, <:SparseMatrixCSC}) where {T, N, NP1, N_NL}
+    n = size(model.linear_terms[1], 1)
+    total = N * n
+
+    B = spzeros(T, total, total)
+    A = spzeros(T, total, total)
+    Id = sparse(1:n, 1:n, ones(T, n), n, n)
+
+    # --- B matrix ---
+    for i in 1:(N - 1)
+        rows = ((i - 1) * n + 1):(i * n)
+        B[rows, rows] .= Id
+    end
+
+    # last block
+    rows = ((N - 1) * n + 1):(N * n)
+    B[rows, rows] .= model.linear_terms[end]   # B_N
+
+    # --- A matrix ---
+
+    # shift identities
+    for i in 1:(N - 1)
+        rows = ((i - 1) * n + 1):(i * n)
+        cols = (i * n + 1):((i + 1) * n)
+        A[rows, cols] .= Id
+    end
+
+    # last row: -B0 ... -B_{N-1}
+    lastrow = ((N - 1) * n + 1):(N * n)
+
+    for i in 1:N
+        cols = ((i - 1) * n + 1):(i * n)
+        A[lastrow, cols] .= -model.linear_terms[i]
+    end
+
+    return A, B
+end
+
+function to_first_order(model::NDOrderModel{
+        T, N, NP1, N_NL, <:AbstractMatrix}) where {T, N, NP1, N_NL}
+    n = size(model.linear_terms[1], 1)
+    total = N * n
+
+    B = zeros(T, total, total)
+    A = zeros(T, total, total)
+    Id = Matrix{T}(I, n, n)
+
+    # --- B matrix ---
+    for i in 1:(N - 1)
+        rows = ((i - 1) * n + 1):(i * n)
+        B[rows, rows] .= Id
+    end
+
+    # last block
+    rows = ((N - 1) * n + 1):(N * n)
+    B[rows, rows] .= model.linear_terms[end]   # B_N
+
+    # --- A matrix ---
+
+    # shift identities
+    for i in 1:(N - 1)
+        rows = ((i - 1) * n + 1):(i * n)
+        cols = (i * n + 1):((i + 1) * n)
+        A[rows, cols] .= Id
+    end
+
+    # last row: -B0 ... -B_{N-1}
+    lastrow = ((N - 1) * n + 1):(N * n)
+
+    for i in 1:N
+        cols = ((i - 1) * n + 1):(i * n)
+        A[lastrow, cols] .= -model.linear_terms[i]
+    end
+
+    return A, B
 end
