@@ -61,6 +61,7 @@ function g_quad(u1, u2, v)
              +
              sym(∇(u2)' ⋅ ∇(v)) ⊙ σ_nln(ε(u1))))dΩ
 end
+
 #Cubic nonlinear terms
 function h_cube(u1, u2, u3, v)
     1 / 3 *

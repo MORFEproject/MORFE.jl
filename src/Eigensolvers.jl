@@ -29,7 +29,7 @@ function generalized_eigenpairs(
 	B::AbstractMatrix;
 	nev::Integer,
 	sigma=nothing,
-	which::Symbol=:LM,
+	which::Symbol=:LR,
 	tol::Real=0.0,
 	maxiter::Integer=3000,
 	ncv::Union{Nothing,Integer}=nothing,

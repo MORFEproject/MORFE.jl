@@ -17,7 +17,7 @@ B_1 = Matrix{Float64}(I, 2, 2)
 B_0 = Matrix{Float64}(I, 2, 2)
 
 # Define nonlinear terms
-function gyroscopic_force!(res, x, xdot)  # assymetric
+function assymetric_force!(res, x, xdot)  # assymetric
     @. res += x * xdot[end:-1:1]  # elementwise product
 end
 
@@ -29,7 +29,7 @@ function nonlinear_damping!(res, x1, x2, xdot)  # fully symmetric
     @. res += x1 * x2 * xdot * 0.5  # elementwise product
 end
 
-terms = (PolynomialTerm{N}(gyroscopic_force!, (0, 1); symmetry = (1, 2)),
+terms = (PolynomialTerm{N}(assymetric_force!, (0, 1); symmetry = (1, 2)),
     PolynomialTerm{N}(fluid_drag!, (1, 1); symmetry = (1, 1)),
     PolynomialTerm{N}(nonlinear_damping!, (0, 0, 1); symmetry = (1, 1, 1)))
 
