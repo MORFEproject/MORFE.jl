@@ -12,9 +12,9 @@ using LinearAlgebra
 """
 N = 2
 # Define linear matrices
-B_2 = Matrix{Float64}(I, 2, 2)
-B_1 = Matrix{Float64}(I, 2, 2)
-B_0 = Matrix{Float64}(I, 2, 2)
+B_2 = Matrix{Float64}(I, 2, 2) * 2
+B_1 = Matrix{Float64}(I, 2, 2) * 0.5
+B_0 = Matrix{Float64}(I, 2, 2) * 3
 
 # Define nonlinear terms
 function assymetric_force!(res, x, xdot)  # assymetric
@@ -29,12 +29,15 @@ function nonlinear_damping!(res, x1, x2, xdot)  # fully symmetric
     @. res += x1 * x2 * xdot * 0.5  # elementwise product
 end
 
-terms = (PolynomialTerm{N}(assymetric_force!, (0, 1); symmetry = (1, 2)),
-    PolynomialTerm{N}(fluid_drag!, (1, 1); symmetry = (1, 1)),
-    PolynomialTerm{N}(nonlinear_damping!, (0, 0, 1); symmetry = (1, 1, 1)))
+terms = (MultilinearMap{N}(assymetric_force!, (0, 1)),
+    MultilinearMap{N}(fluid_drag!, (1, 1)),
+    MultilinearMap{N}(nonlinear_damping!, (0, 0, 1)))
 
 #Define 
 model = NDOrderModel(
     (B_0, B_1, B_2),
     terms
 )
+
+# generate first order matrices for eigenproblem
+A, B = to_first_order(model);
