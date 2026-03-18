@@ -7,8 +7,8 @@ export MultiindexSet,
        divides, is_constant,
        find_in_set,
        indices_in_box_with_bounded_degree, build_exponent_index_map,
-       factorisations_ordered, factorisations_unordered, monomial_rank,
-       num_multiindices_up_to
+       factorisations_assymetric, factorisations_fully_symmetric, factorisations_groupwise_symmetric,
+       monomial_rank, num_multiindices_up_to
 
 # ==================== Core comparison functions ====================
 
@@ -309,9 +309,9 @@ end
 """
     _last_index_below_degree(set::MultiindexSet, max_total_deg::Int) -> Int
 
-Return the last column index `i` in the Grlex‑sorted set
-such that the total degree of `set[i]` is strictly less than `max_total_deg`.
-If no such index exists, return `0`.
+Return the last column index `i` in the Grlex‑sorted set such that the total
+degree of `set[i]` is strictly less than `max_total_deg`. If no such index
+exists, return `0`.
 """
 function _last_index_below_degree(set::MultiindexSet, max_total_deg::Int)
     exps = set.exponents
@@ -332,16 +332,45 @@ function _last_index_below_degree(set::MultiindexSet, max_total_deg::Int)
 end
 
 """
-    indices_in_box_with_bounded_degree(set::MultiindexSet, box_upper::AbstractVector{Int}, degree_lower_bound::Int, total_deg_upper::Int) -> Vector{Int}
+    _last_index_below_degree(set::MultiindexSet, max_total_deg::Int,
+                             allowed_indices::AbstractVector{Int}) -> Int
+
+Same as the 2‑argument version, but the search is restricted to the indices
+listed in `allowed_indices` (which must be sorted in increasing order).
+The returned value is still an actual column index (or 0 if none qualifies).
+"""
+function _last_index_below_degree(set::MultiindexSet, max_total_deg::Int,
+                                  allowed_indices::AbstractVector{Int})
+    isempty(allowed_indices) && return 0
+    exps = set.exponents
+    lo, hi = 1, length(allowed_indices)
+    last = 0
+    while lo <= hi
+        mid = (lo + hi) ÷ 2
+        i = allowed_indices[mid]
+        @inbounds v_mid = view(exps, :, i)
+        if sum(v_mid) < max_total_deg
+            last = i          # store the actual index, not the position
+            lo = mid + 1
+        else
+            hi = mid - 1
+        end
+    end
+    return last
+end
+
+"""
+    indices_in_box_with_bounded_degree(set::MultiindexSet, box_upper::AbstractVector{Int},
+                                       degree_lower_bound::Int, total_deg_upper::Int) -> Vector{Int}
 
 Return the column indices of all multiindices `v` in `set` such that
-- `v ≤ box_upper` componentwise, i.e., `v[i] ≤ box_upper[i]`,
+- `v ≤ box_upper` componentwise,
 - `degree_lower_bound ≤ sum(v[i]) < total_deg_upper`.
 
-Uses the fact that `sum(v) < total_deg_upper` to
-limit the search to relevant columns, providing an early exit.
+Uses the degree bounds to limit the search to relevant columns.
 """
-function indices_in_box_with_bounded_degree(set::MultiindexSet, box_upper::AbstractVector{Int}, degree_lower_bound::Int, total_deg_upper::Int)
+function indices_in_box_with_bounded_degree(set::MultiindexSet, box_upper::AbstractVector{Int},
+                                            degree_lower_bound::Int, total_deg_upper::Int)
     @assert length(box_upper) == size(set.exponents, 1)
     exps = set.exponents
     n = size(exps, 2)
@@ -360,16 +389,53 @@ function indices_in_box_with_bounded_degree(set::MultiindexSet, box_upper::Abstr
     return result
 end
 
+"""
+    indices_in_box_with_bounded_degree(set::MultiindexSet, box_upper::AbstractVector{Int},
+                                       degree_lower_bound::Int, total_deg_upper::Int,
+                                       allowed_indices::AbstractVector{Int}) -> Vector{Int}
+
+Same as the 4‑argument version, but the search is restricted to the indices
+listed in `allowed_indices` (which must be sorted). Only those indices that
+also satisfy the componentwise bound are returned.
+"""
+function indices_in_box_with_bounded_degree(set::MultiindexSet, box_upper::AbstractVector{Int},
+                                            degree_lower_bound::Int, total_deg_upper::Int,
+                                            allowed_indices::AbstractVector{Int})
+    @assert length(box_upper) == size(set.exponents, 1)
+    exps = set.exponents
+    isempty(allowed_indices) && return Int[]
+
+    # Find the last allowed index with degree < degree_lower_bound
+    # and the last allowed index with degree < total_deg_upper.
+    last_below_lower = _last_index_below_degree(set, degree_lower_bound, allowed_indices)
+    last_below_upper = _last_index_below_degree(set, total_deg_upper, allowed_indices)
+
+    # The first allowed index with degree ≥ degree_lower_bound is the one
+    # after last_below_lower. Convert to positions in allowed_indices.
+    lo_pos = searchsortedfirst(allowed_indices, last_below_lower + 1)
+    hi_pos = searchsortedlast(allowed_indices, last_below_upper)
+
+    result = Int[]
+    @inbounds for pos in lo_pos:hi_pos
+        i = allowed_indices[pos]
+        v = view(exps, :, i)
+        if all(v .<= box_upper)
+            push!(result, i)
+        end
+    end
+    return result
+end
+
 # ==================== Factorizations ====================
 
 """
-    factorisations_ordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{NTuple{N,Int}}
+    factorisations_assymetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{NTuple{N,Int}}
 
 Return all ordered `N`-tuples of indices (taken from `candidate_indices`) whose corresponding exponent vectors sum to `exp`.
 Each factorisation is an `NTuple{N,Int}` where the `k`-th entry is the index of the `k`-th factor.
 If no factorisation exists, an empty vector is returned.
 """
-function factorisations_ordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
+function factorisations_assymetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
     # Quick return for N == 0
     if N == 0
         return iszero(exp) ? NTuple{0,Int}[()] : NTuple{0,Int}[]
@@ -407,7 +473,7 @@ function factorisations_ordered(set::MultiindexSet, exp::AbstractVector{Int}, N:
 end
 
 """
-    factorisations_unordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{Tuple{NTuple{N,Int}, Int}}
+    factorisations_fully_symmetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{Tuple{NTuple{N,Int}, Int}}
 
 Return all `N`-tuples of indices (taken from `candidate_indices`) with non‑decreasing indices whose corresponding exponent vectors sum to `exp`.
 For each such combination, the result includes the tuple itself and the number of distinct ordered factorisations (permutations) that can be formed from it.
@@ -418,7 +484,7 @@ The input `candidate_indices` is assumed to contain unique indices; duplicate en
 
 If no factorisation exists, an empty vector is returned.
 """
-function factorisations_unordered(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
+function factorisations_fully_symmetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
     # Quick return for N == 0
     if N == 0
         return iszero(exp) ? [((), 1)] : Tuple{NTuple{0,Int},Int}[]
@@ -470,6 +536,86 @@ function factorisations_unordered(set::MultiindexSet, exp::AbstractVector{Int}, 
 
     backtrack(N, 1)
 
+    return results
+end
+
+"""
+    factorisations_groupwise_symmetric(set::MultiindexSet, exp::AbstractVector{Int},
+                                        group_sizes::NTuple{M,Int},
+                                        candidate_indices::AbstractVector{Int}) where M
+
+Return factorisations of the exponent vector `exp` into `M` groups, where group `i`
+has size `group_sizes[i]` and is symmetric within itself (permutations inside a group are equivalent).
+
+The result is a vector of `(flat_indices, total_count)`:
+- `flat_indices`: concatenation of the indices for each group in group order,
+  with each group's indices sorted non‑decreasingly (canonical representation).
+- `total_count`: number of ordered factorisations (full sequences) corresponding to this combination.
+
+The algorithm recursively processes groups. For the current group of size `k` and remaining exponent `rem`,
+it enumerates all sub‑exponents `s` with `0 ≤ s ≤ rem`. For each `s`, it calls
+`factorisations_fully_symmetric(set, s, k, global_candidates)` to obtain all unordered `k`-tuples
+(indices with multiplicities) summing to `s`. Their permutation counts are multiplied into the total,
+and recursion continues with `rem - s`. When all groups are processed and `rem = 0`, the combination is recorded.
+
+Returns an empty vector if no factorisation exists.
+"""
+function factorisations_groupwise_symmetric(set::MultiindexSet, exp::AbstractVector{Int},
+                                    group_sizes::NTuple{M,Int},
+                                    candidate_indices::AbstractVector{Int}) where M
+    exps = set.exponents
+    nvars = length(exp)
+    @assert size(exps, 1) == nvars "Exponent vector length must match number of variables"
+
+    # Global list of all possible indices (sorted, unique)
+    global_candidates = sort(unique(candidate_indices))
+
+    results = Vector{Tuple{Vector{Int}, Int}}()
+
+    # Recursive function over groups
+    function recurse_groups(group_idx::Int, remaining::Vector{Int},
+                            current_flat::Vector{Int}, current_count::Int)
+        if group_idx > M
+            # All groups processed – success if nothing left
+            iszero(remaining) && push!(results, (copy(current_flat), current_count))
+            return
+        end
+
+        k = group_sizes[group_idx]
+        if k == 0
+            # Empty group: move to next without changing anything
+            recurse_groups(group_idx + 1, remaining, current_flat, current_count)
+            return
+        end
+
+        # Enumerate all possible sub‑exponents s with 0 ≤ s ≤ remaining (componentwise)
+        ranges = [0:remaining[i] for i in 1:nvars]
+        range_tuple = Tuple(ranges)  # convert to tuple for CartesianIndices
+
+        for s_idx in CartesianIndices(range_tuple)
+            s = [s_idx[i] for i in 1:nvars]   # current sub‑exponent for this group
+
+            # Get all unordered factorisations of s with exactly k indices
+            unordered = factorisations_fully_symmetric(set, s, k, global_candidates)
+
+            for (tuple, perm_count) in unordered
+                # tuple is an NTuple{k,Int} (sorted indices)
+                new_remaining = remaining .- s
+                if all(≥(0), new_remaining)
+                    # Append this group's indices to the flat list
+                    append!(current_flat, collect(tuple))
+                    recurse_groups(group_idx + 1, new_remaining,
+                                   current_flat, current_count * perm_count)
+                    # Backtrack: remove the indices we just added
+                    for _ in 1:k
+                        pop!(current_flat)
+                    end
+                end
+            end
+        end
+    end
+
+    recurse_groups(1, exp, Int[], 1)
     return results
 end
 
