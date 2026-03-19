@@ -150,37 +150,6 @@ end
 # ----------------------------------------------------------------------
 
 """
-    compute_multilinear_terms(model::FirstOrderModel, exp::AbstractVector{Int}, parametrisation::DensePolynomial,
-                              multiindex_set::MultiindexSet, candidate_indices::AbstractVector{Int})
-
-Sum the contributions of all nonlinear multilinear_terms in `model` and return the accumulated
-array.
-
-# Arguments
-- `model`: an object with a field `nonlinear_multilinear_terms` (a list of multilinear_terms).
-- `exp`: symmetry factor used in factorisation generation.
-- `parametrisation`: a `DensePolynomial` whose coefficients are matrices; these matrices represent
-       the linear and nonlinear expansion multilinear_terms.
-- `multiindex_set`: collection of available multi‑indices (used by factorisation functions).
-- `candidate_indices`: indices that may appear in factorisations.
-
-# Returns
-An array of the same size and element type as the coefficient matrices of `parametrisation`
-containing the total sum.
-"""
-function compute_multilinear_terms(model::FirstOrderModel, exp::AbstractVector{Int},
-    parametrisation::DensePolynomial, multiindex_set::MultiindexSet, candidate_indices::AbstractVector{Int})
-
-    # Use the first coefficient matrix to demultilinear_termine size and element type
-    first_coeff = parametrisation.coeffs[1]
-    result = zeros(eltype(first_coeff), size(first_coeff))
-    for multilinear_term in model.nonlinear_multilinear_terms
-        accumulate_multilinear_term!(result, multilinear_term, exp, (parametrisation,), multiindex_set, candidate_indices)
-    end
-    return result
-end
-
-"""
     compute_multilinear_terms(model::NDOrderModel{N}, exp::AbstractVector{Int}, parametrisation::NTuple{N, DensePolynomial}, 
                                 multiindex_set::MultiindexSet, candidate_indices::AbstractVector{Int})
 
@@ -206,6 +175,19 @@ function compute_multilinear_terms(model::NDOrderModel{N}, exp::AbstractVector{I
     result = zeros(eltype(first_coeff), size(first_coeff))
     for multilinear_term in model.nonlinear_multilinear_terms
         accumulate_multilinear_term!(result, multilinear_term, exp, parametrisation, multiindex_set, candidate_indices)
+    end
+    return result
+end
+
+# Compute multilinear terms for first order systems
+function compute_multilinear_terms(model::FirstOrderModel, exp::AbstractVector{Int},
+    parametrisation::DensePolynomial, multiindex_set::MultiindexSet, candidate_indices::AbstractVector{Int})
+
+    # Use the first coefficient matrix to demultilinear_termine size and element type
+    first_coeff = parametrisation.coeffs[1]
+    result = zeros(eltype(first_coeff), size(first_coeff))
+    for multilinear_term in model.nonlinear_multilinear_terms
+        accumulate_multilinear_term!(result, multilinear_term, exp, (parametrisation,), multiindex_set, candidate_indices)
     end
     return result
 end

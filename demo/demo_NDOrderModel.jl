@@ -6,17 +6,53 @@ include(joinpath(@__DIR__, "../src/FullOrderModel.jl"))
 using .FullOrderModel
 using LinearAlgebra
 
+n = 2 # dimension of system
+
 # -------------------------------------------------------------------
-# 1. NDOrderModel: second‑order system
-#    B₂ x'' + B₁ x' + B₀ x = F(x, x')
+# 1. FirstOrderModel: first‑order system
+#    B₁ ẋ + B₀ x = F(x)
 # -------------------------------------------------------------------
-N = 2
-n = 2                     # dimension of state x
 
 # Linear matrices (diagonal for simplicity)
-B₂ = 2.0 * Matrix{Float64}(I, n, n)
 B₁ = 0.5 * Matrix{Float64}(I, n, n)
 B₀ = 3.0 * Matrix{Float64}(I, n, n)
+
+function bilinear_term!(res, x1, x2)
+    @. res += x1 * x2
+end
+f_term1 = MultilinearMap(bilinear_term!)   # degree 2
+
+function trilinear_term!(res, x1, x2, x3)
+    @. res += 3.0 * x1 * x2 * x3
+end
+f_term2 = MultilinearMap(trilinear_term!)  # degree 3
+
+model_fo = FirstOrderModel((B₀, B₁), (f_term1, f_term2))
+
+A_fo, B_fo = linear_first_order_matrices(model_fo)
+println("=== FirstOrderModel ===")
+println("\nA (linear part):\n", repr("text/plain", A_fo))
+println("\nB (mass matrix):\n", repr("text/plain", B_fo))
+
+# Evaluate nonlinear terms – note the state is passed as a 1‑tuple (x,)
+x_fo = [1.0, 2.0]
+res_fo = zeros(n)
+
+for deg=1:4
+    res_fo .= 0
+    evaluate_nonlinear_terms!(res_fo, model_fo, deg, x_fo)
+    println("\nDegree $deg contribution: ", res_fo)
+end
+
+# -------------------------------------------------------------------
+# 2. NDOrderModel: second‑order system
+#    B₂ x'' + B₁ x' + B₀ x = F(x, x')
+# -------------------------------------------------------------------
+
+# Linear matrices (diagonal for simplicity)
+B₂ = 3.0 * Matrix{Float64}(I, n, n)
+B₁ = 2.0 * Matrix{Float64}(I, n, n)
+B₀ = 1.0 * Matrix{Float64}(I, n, n)
 
 # Nonlinear terms are defined as multilinear maps.
 # Each map corresponds to a monomial in the derivatives.
@@ -50,9 +86,9 @@ model_nd = NDOrderModel((B₀, B₁, B₂), nonlinear_terms)
 #   B Ẋ = A X   with X = [x; x']
 A_nd, B_nd = linear_first_order_matrices(model_nd)
 
-println("=== NDOrderModel ===")
-println("A matrix (linear part of first‑order form):\n", A_nd)
-println("\nB matrix (mass matrix of first‑order form):\n", B_nd)
+println("\n\n=== NDOrderModel ===")
+println("\nA matrix (linear part of first‑order form):\n", repr("text/plain", A_nd))
+println("\nB matrix (mass matrix of first‑order form):\n", repr("text/plain", B_nd))
 
 # Evaluate nonlinear terms for a given state and its derivative
 x = [1.0, 2.0]        # x
@@ -75,33 +111,3 @@ end
 
 
 
-# -------------------------------------------------------------------
-# 2. FirstOrderModel: first‑order system
-#    B₁ ẋ + B₀ x = F(x)
-# -------------------------------------------------------------------
-function bilinear_term!(res, x1, x2)
-    @. res += x1 * x2
-end
-f_term1 = MultilinearMap(bilinear_term!)   # degree 2
-
-function trilinear_term!(res, x1, x2, x3)
-    @. res += 3.0 * x1 * x2 * x3
-end
-f_term2 = MultilinearMap(trilinear_term!)  # degree 3
-
-model_fo = FirstOrderModel((B₀, B₁), (f_term1, f_term2))
-
-A_fo, B_fo = linear_first_order_matrices(model_fo)
-println("\n\n=== FirstOrderModel ===")
-println("A (linear part):\n", A_fo)
-println("\nB (mass matrix):\n", B_fo)
-
-# Evaluate nonlinear terms – note the state is passed as a 1‑tuple (x,)
-x_fo = [1.0, 2.0]
-res_fo = zeros(n)
-
-for deg=1:4
-    res_fo .= 0
-    evaluate_nonlinear_terms!(res_fo, model_fo, deg, x_fo)
-    println("\nDegree $deg contribution: ", res_fo)
-end
