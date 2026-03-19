@@ -1,43 +1,107 @@
 """
-Demonstration of the usage of NDOrderModel
+Demonstration of the usage of NDOrderModel and FirstOrderModel
 """
 
 include(joinpath(@__DIR__, "../src/FullOrderModel.jl"))
-
+using .FullOrderModel
 using LinearAlgebra
 
-"""
-    B_2 x'' + B_1 x' + B_0 x = N(x, x')
-    Second order system
-"""
+# -------------------------------------------------------------------
+# 1. NDOrderModel: second‑order system
+#    B₂ x'' + B₁ x' + B₀ x = F(x, x')
+# -------------------------------------------------------------------
 N = 2
-# Define linear matrices
-B_2 = Matrix{Float64}(I, 2, 2) * 2
-B_1 = Matrix{Float64}(I, 2, 2) * 0.5
-B_0 = Matrix{Float64}(I, 2, 2) * 3
+n = 2                     # dimension of state x
 
-# Define nonlinear terms
-function assymetric_force!(res, x, xdot)  # assymetric
-    @. res += x * xdot[end:-1:1]  # elementwise product
+# Linear matrices (diagonal for simplicity)
+B₂ = 2.0 * Matrix{Float64}(I, n, n)
+B₁ = 0.5 * Matrix{Float64}(I, n, n)
+B₀ = 3.0 * Matrix{Float64}(I, n, n)
+
+# Nonlinear terms are defined as multilinear maps.
+# Each map corresponds to a monomial in the derivatives.
+# The multiindex (i₀, i₁) tells how many times x (derivative 0) and x' (derivative 1) appear.
+
+# Term 1: x * x'  (asymmetric: linear in x and in x')
+function asymmetric_force!(res, x, xdot)
+    @. res += x * xdot        # elementwise product
+end
+term1 = MultilinearMap(asymmetric_force!, (1, 1))   # one x, one x'
+
+# Term 2: 0.5 * x' * x'  (symmetric quadratic in x')
+function fluid_drag!(res, xdot1, xdot2)
+    @. res += 0.5 * xdot1 * xdot2
+end
+term2 = MultilinearMap(fluid_drag!, (0, 2))         # two copies of x'
+
+# Term 3: 0.5 * x * x * x'  (cubic: two x, one x')
+function nonlinear_damping!(res, x1, x2, xdot)
+    @. res += 0.5 * x1 * x2 * xdot
+end
+term3 = MultilinearMap(nonlinear_damping!, (2, 1))  # two x, one x'
+
+# Collect all nonlinear terms
+nonlinear_terms = (term1, term2, term3)
+
+# Build the second‑order model
+model_nd = NDOrderModel((B₀, B₁, B₂), nonlinear_terms)
+
+# Generate the equivalent first‑order matrices for the linear part:
+#   B Ẋ = A X   with X = [x; x']
+A_nd, B_nd = linear_first_order_matrices(model_nd)
+
+println("=== NDOrderModel ===")
+println("A matrix (linear part of first‑order form):\n", A_nd)
+println("\nB matrix (mass matrix of first‑order form):\n", B_nd)
+
+# Evaluate nonlinear terms for a given state and its derivative
+x = [1.0, 2.0]        # x
+xdot = [0.1, -0.2]       # x'
+state_vectors = (x, xdot)   # tuple expected by evaluate_term!
+
+res_nd = zeros(n)
+
+for term in model_nd.nonlinear_terms
+    res_nd .= 0
+    println("\nContribution of $(term.f!): ", 
+        term.f!(res_nd, ntuple(_ -> x, term.multiindex[1])..., ntuple(_ -> xdot, term.multiindex[2])...))
 end
 
-function fluid_drag!(res, xdot1, xdot2)  # fully symmetric
-    @. res += xdot1 * xdot2 * 0.5  # elementwise product
+for deg=1:4
+    res_nd .= 0
+    evaluate_nonlinear_terms!(res_nd, model_nd, deg, state_vectors)   # evaluate all degree‑i terms
+    println("\nDegree $deg contribution: ", res_nd)
 end
 
-function nonlinear_damping!(res, x1, x2, xdot)  # fully symmetric
-    @. res += x1 * x2 * xdot * 0.5  # elementwise product
+
+
+# -------------------------------------------------------------------
+# 2. FirstOrderModel: first‑order system
+#    B₁ ẋ + B₀ x = F(x)
+# -------------------------------------------------------------------
+function bilinear_term!(res, x1, x2)
+    @. res += x1 * x2
 end
+f_term1 = MultilinearMap(bilinear_term!)   # degree 2
 
-terms = (MultilinearMap{N}(assymetric_force!, (1, 1)),
-    MultilinearMap{N}(fluid_drag!, (0, 2)),
-    MultilinearMap{N}(nonlinear_damping!, (2, 1)))
+function trilinear_term!(res, x1, x2, x3)
+    @. res += 3.0 * x1 * x2 * x3
+end
+f_term2 = MultilinearMap(trilinear_term!)  # degree 3
 
-#Define 
-model = NDOrderModel(
-    (B_0, B_1, B_2),
-    terms
-)
+model_fo = FirstOrderModel((B₀, B₁), (f_term1, f_term2))
 
-# generate first order matrices for eigenproblem
-A, B = to_first_order(model);
+A_fo, B_fo = linear_first_order_matrices(model_fo)
+println("\n\n=== FirstOrderModel ===")
+println("A (linear part):\n", A_fo)
+println("\nB (mass matrix):\n", B_fo)
+
+# Evaluate nonlinear terms – note the state is passed as a 1‑tuple (x,)
+x_fo = [1.0, 2.0]
+res_fo = zeros(n)
+
+for deg=1:4
+    res_fo .= 0
+    evaluate_nonlinear_terms!(res_fo, model_fo, deg, x_fo)
+    println("\nDegree $deg contribution: ", res_fo)
+end
