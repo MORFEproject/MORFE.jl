@@ -42,38 +42,33 @@ struct FullOrderModel{T} <: AbstractFullOrderModel
 end
 
 """
-    MultilinearMap{N, Deg, F}
+    MultilinearMap{N, F}
 
-Represents a single monomial term of order Deg in the nonlinear function of an `NDOrderModel`.
+Represents a single monomial term of order deg in the nonlinear function of an `NDOrderModel`.
 
-A term corresponds to a function of the form
+A term is represented using a multiindex stored in the NTupl
+    'indices' = (i_0, ..., i_{N-1})  
+where i_k is the multiplicity of the derivative x^(k). So the i_k specifies how many times the derivative x^(k) appears as an argument. 
+During evaluation the multilinear map is called as
 
-    f!(res, x_(i1), … , x_(iDeg))
-
-where each `ik ∈ {0, …, N}` specifies which derivative is used 
-and the information of the i is stored in the tupel `indices`.
-Example: F(x,x^(1)) -> indices=(0,1)
-
-# Type parameters
-- `Deg`: maximum derivative order of the system
-- `M`: polynomial degree (number of arguments of `f!`)
+    f!(res,
+       x^(0), ... repeated i₀ times,
+       x^(1), ... repeated i₁ times,
+       …
+       x^(N-1), ...repeated i_{N-1} times)
 
 # Important Notes
 - Each `MultilinearMap` **must implement a multilinear map**, i.e., it should be linear in each of its arguments independently.
-- The function `f!` must have signature:
-  
-      f!(res, x_(i1), … , x_(iDeg))
-
-  and must accumulate into `res`.
-- The `indices` tuple defines which derivatives the term depends on.
-- If one x_k appears more then once we assume it is symmetric by permutation. That means it is demanded:
-    indices = ( … , k, … , k, …)
-    f!(res, … , v1, … , v2, …) = f!(res, … , v2, … , v1, …)  
+- The function `f!` accumulates (adds) into `res`.
+- If one i_k is bigger than 2 we assume the input arguments are symmetric by permutation. For example:
+    indices = (2,...)
+    f!(res, v1, v2, ...) = f!(res, v2, v1, ...)
 
 """
-struct MultilinearMap{N, Deg, F}
+struct MultilinearMap{N, F}
     f!::F
-    indices::NTuple{Deg, Int}
+    indices::NTuple{N, Int}
+    deg::Int
 end
 
 """
@@ -85,39 +80,41 @@ are within the allowed range `0:N`.
 # Arguments
 - `f!`: in-place evaluation function
 - `indices`: tuple specifying which derivatives are used
-
-# Errors
-Throws an error if any index is outside `0:N`.
 """
-function MultilinearMap{N}(f!, indices::NTuple{Deg, Int}) where {N, Deg}
-    @assert all(i -> 0 ≤ i < N, indices) "Index exceeds system order N=$(N)"
+function MultilinearMap{N}(f!, indices::NTuple{N, Int}) where {N}
+    deg = sum(indices)
 
-    # Check if input arguments of f matches Deg
+    # Check if input arguments of f matches deg
     ms = methods(f!)
     @assert length(ms)==1 "Function f! must have exactly one method to determine number of inputs"
     nargs = ms[1].nargs - 1  # subtract function itself
-    @assert nargs==Deg + 1 "Function must accept $(Deg+1) arguments ('res' and $Deg inputs) instead of $nargs"
+    @assert nargs==deg + 1 "Function must accept $(deg+1) arguments ('res' and $deg inputs) instead of $nargs"
 
-    return MultilinearMap{N, Deg, typeof(f!)}(f!, indices)
+    return MultilinearMap{N, typeof(f!)}(f!, indices, deg)
 end
 
 """
     evaluate_term!(res, term, xs)
 
-Evaluate a single `MultilinearMap` and accumulate the result into `res`.
+Evaluate a single `MultilinearMap` and accumulate (adds) the result into `res`.
 
 # Arguments
 - `res`: output vector (modified in-place)
 - `term`: polynomial term
-- `xs`: tuple `(x, ẋ, …, x⁽ⁿ⁾)` of state derivatives
+- `xs`: tuple `(x, x^(1), …, x^(N-1))` of state derivatives
 
-# Notes
-- No allocations are performed.
-- Assumes that `xs[i+1]` corresponds to derivative `x⁽i⁾`.
 """
-@inline function evaluate_term!(res, term::MultilinearMap{N, Deg}, xs) where {N, Deg}
+@inline function evaluate_term!(res, term::MultilinearMap{N}, xs) where {N}
     inds = term.indices
-    args = ntuple(i -> @inbounds(xs[inds[i] + 1]), Deg)
+    args = ntuple(term.deg) do k
+        s = 0
+        for j in 1:N
+            s += inds[j]
+            if k ≤ s
+                return @inbounds xs[j]
+            end
+        end
+    end
     term.f!(res, args...)
 end
 
@@ -171,6 +168,20 @@ struct NDOrderModel{T, N, NP1, N_NL, MT <: AbstractMatrix{T}} <: AbstractFullOrd
         @assert all(size(B) == size(linear_terms[1]) for B in linear_terms)
 
         return new{T, N, NP1, N_NL, MT}(linear_terms, nonlinear_terms)
+    end
+end
+
+"""
+    evaluate_nonlinear_terms!(res, model, order, state_vectors)
+
+Evaluate all nonlinear terms of a given polynomial degree for an `NDOrderModel`.
+"""
+function evaluate_nonlinear_terms!(res, model::NDOrderModel{T, N, NP1, N_NL, MT},
+        order, state_vectors) where {T, N, NP1, N_NL, MT}
+    for term in model.nonlinear_terms
+        if term.deg == order
+            evaluate_term!(res, term, state_vectors)
+        end
     end
 end
 
