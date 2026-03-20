@@ -17,13 +17,13 @@ println("Number of terms: $k\n")
 
 # -----------------------------------------------------------------------------
 # 1. Asymmetric factorisations – every permutation is distinct
-result_asym = factorisations_assymetric(multiindex_set, exp, k, candidate_indices)
+result_asym = factorisations_asymmetric(multiindex_set, exp, k, candidate_indices)
 
 println("Found ", length(result_asym), " asymmetric factorisation(s):\n")
 for (i, idx_tuple) in enumerate(result_asym)
     println("  Factorization $i (indices: $idx_tuple):")
     for (j, idx) in enumerate(idx_tuple)
-        vec = multiindex_set.exponents[:, idx]
+        vec = multiindex_set.exponents[idx]
         println("    term $j: $vec")
     end
 end
@@ -38,7 +38,7 @@ println("Found ", length(result_sym), " fully symmetric factorisation(s):\n")
 for (i, (idx_tuple, perm_count)) in enumerate(result_sym)
     println("  Factorization $i: indices $idx_tuple  (yields $perm_count ordered factorisations)")
     for (j, idx) in enumerate(idx_tuple)
-        vec = multiindex_set.exponents[:, idx]
+        vec = multiindex_set.exponents[idx]
         println("    term $j: $vec")
     end
 end
@@ -70,7 +70,7 @@ for (i, (flat_indices, total_count)) in enumerate(result_group)
         group_indices = flat_indices[pos:pos+size-1]
         println("    Group $g (size $size): indices $group_indices")
         for (j, idx) in enumerate(group_indices)
-            vec = multiindex_set.exponents[:, idx]
+            vec = multiindex_set.exponents[idx]
             println("      term $(pos + j - 1): $vec")
         end
         pos += size
@@ -78,3 +78,5 @@ for (i, (flat_indices, total_count)) in enumerate(result_group)
 end
 
 println("\n" * "="^80 * "\n")
+
+println("Demo finished successfully.")

@@ -1,71 +1,87 @@
 module Polynomials
 
 using LinearAlgebra
+using StaticArrays: SVector, SArray, StaticArray
+using ..Multiindices: MultiindexSet, find_in_set, zero_multiindex #, nvars
 
-using ..Multiindices
-
-export AbstractPolynomial, DensePolynomial,
+export DensePolynomial,
        polynomial_from_dict, polynomial_from_pairs,
        coeffs, multiindex_set, nvars, all_multiindices_up_to,
        coefficient, has_term, find_term, find_in_multiindex_set,
        zero, evaluate, extract_component, each_term, similar_poly
 
-# ---------- Abstract type ----------
-abstract type AbstractPolynomial{T} end
-
-Base.eltype(::Type{<:AbstractPolynomial{T}}) where T = T
-Base.eltype(p::AbstractPolynomial{T}) where T = T
-
 # ---------- DensePolynomial ----------
 """
-    DensePolynomial{T} <: AbstractPolynomial{T}
+    DensePolynomial{C,NVAR}
 
 Dense representation: coefficients aligned with the full multiindex_set.
-- `coeffs::Vector{T}`: length = number of multiindex_set monomials.
-- `multiindex_set::MultiindexSet`: reference to the monomial set (always Grlex‑ordered).
+- `coeffs::Vector{C}`: length = number of monomials in `multiindex_set`.
+- `multiindex_set::MultiindexSet{NVAR}`: reference to the monomial set 
+    of `NVAR` variables (always Grlex‑ordered).
+- `max_exponents::SVector{NVAR,Int}`: maximum exponent for each variable 
+    across all monomials in the polynomial
 
-For scalar polynomials, `T <: Number`. For vector‑valued polynomials,
-`T <: AbstractVector` (e.g., `Vector{Float64}`).
+For scalar polynomials, `C <: Number`. For vector‑valued polynomials,
+`C` should be a static array type (e.g., `SVector{3, Float64}`).
 """
-mutable struct DensePolynomial{T} <: AbstractPolynomial{T}
-    coeffs::Vector{T}
-    multiindex_set::MultiindexSet
-    function DensePolynomial{T}(coeffs::Vector{T}, multiindex_set::MultiindexSet) where T
-        @assert length(coeffs) == size(multiindex_set.exponents, 2) "coeffs length must match multiindex_set size"
-        new{T}(coeffs, multiindex_set)
+struct DensePolynomial{C,NVAR}
+    coeffs::Vector{C}
+    multiindex_set::MultiindexSet{NVAR}
+    max_exponents::SVector{NVAR,Int}
+
+    function DensePolynomial{C}(coeffs::Vector{C}, mset::MultiindexSet{NVAR}) where {C,NVAR}
+        @assert length(coeffs) == length(mset)
+        # compute max_exponents from the multiindex set
+        max_arr = zeros(Int, NVAR)
+        for exp in mset.exponents
+            for j in 1:NVAR
+                if exp[j] > max_arr[j]
+                    max_arr[j] = exp[j]
+                end
+            end
+        end
+        new{C,NVAR}(coeffs, mset, SVector{NVAR,Int}(max_arr))
     end
 end
 
 # Convenience constructors
-DensePolynomial(coeffs::Vector{T}, mset::MultiindexSet) where T = DensePolynomial{T}(coeffs, mset)
+DensePolynomial(coeffs::Vector{C}, mset::MultiindexSet) where {C} = DensePolynomial{C}(coeffs, mset)
 
 """
-    DensePolynomial(dict::Dict{Vector{Int}, T}) where T
+    DensePolynomial(dict::Dict{Vector{Int}, C}) where C
 
 Construct a polynomial from a dictionary mapping exponent vectors to coefficients.
 The multiindex set is built from the keys and sorted in Grlex order.
+Coefficients can be numbers or static arrays.
 """
-function DensePolynomial(dict::Dict{Vector{Int}, T}) where T
-    isempty(dict) && return DensePolynomial(T[], MultiindexSet(Matrix{Int}(undef, 0, 0)))
-    exps = collect(keys(dict))
-    mset = MultiindexSet(exps)          # automatically sorted in Grlex
-    coeffs = [get(dict, exp, zero(T)) for exp in eachcol(mset.exponents)]
+function DensePolynomial(dict::Dict{Vector{Int}, C}) where {C}
+    isempty(dict) && return DensePolynomial(C[], MultiindexSet())
+    N = length(first(keys(dict)))
+    # Convert dictionary keys to SVector for efficient lookup
+    svdict = Dict{SVector{N,Int}, C}(SVector{N,Int}(k) => v for (k, v) in dict)
+    mset = MultiindexSet(collect(keys(svdict)))  # sorts in Grlex
+    coeffs = [get(svdict, exp, zero(C)) for exp in mset.exponents]
     return DensePolynomial(coeffs, mset)
 end
 
 # ---------- Accessors ----------
 coeffs(p::DensePolynomial) = p.coeffs
-multiindex_set(p::AbstractPolynomial) = p.multiindex_set
-nvars(p::AbstractPolynomial) = size(multiindex_set(p).exponents, 1)
+multiindex_set(p::DensePolynomial) = p.multiindex_set
+nvars(::DensePolynomial{<:Any, NVAR}) where NVAR = NVAR
 Base.length(p::DensePolynomial) = length(p.coeffs)
+Base.eltype(::DensePolynomial{C}) where {C} = C
 
 # ---------- Term lookup (using AbstractVector{Int}) ----------
 """
-    find_in_multiindex_set(p::AbstractPolynomial, exp::AbstractVector{Int}) -> Union{Int,Nothing}
+    find_in_multiindex_set(p::DensePolynomial, exp::SVector{NVAR,Int}) -> Union{Int,Nothing}
 
 Return the column index of `exp` in the polynomial's multiindex_set, or `nothing` if not present.
 """
-find_in_multiindex_set(p::AbstractPolynomial, exp::AbstractVector{Int}) = find_in_set(multiindex_set(p), exp)
+find_in_multiindex_set(p::DensePolynomial{<:Any, NVAR}, exp::SVector{NVAR,Int}) where {NVAR} =
+    find_in_set(multiindex_set(p), exp)
+
+find_in_multiindex_set(p::DensePolynomial{<:Any,NVAR}, exp::AbstractVector{Int}) where {NVAR} =
+    find_in_multiindex_set(p, SVector{NVAR}(exp))
 
 """
     has_term(p::DensePolynomial, exp::AbstractVector{Int}) -> Bool
@@ -95,200 +111,188 @@ find_term(p::DensePolynomial, exp::AbstractVector{Int}) = find_in_multiindex_set
 
 # ---------- polynomial_from_pairs (alternative input) ----------
 """
-    polynomial_from_pairs(::Type{DensePolynomial{T}}, pairs::Vector{Pair{Vector{Int},T}}) where T
+    polynomial_from_pairs(::Type{DensePolynomial{C}}, pairs::Vector{Pair{Vector{Int},C}}) where C
 
 Construct a polynomial from a vector of (exponent => coefficient) pairs.
 Useful for building polynomials programmatically.
 """
-function polynomial_from_pairs(::Type{DensePolynomial{T}}, pairs::Vector{Pair{Vector{Int},T}}) where T
+function polynomial_from_pairs(::Type{DensePolynomial{C}}, pairs::Vector{Pair{Vector{Int},C}}) where {C}
     dict = Dict(pairs)
     return DensePolynomial(dict)
 end
 
 # Convenience method using default type
-polynomial_from_pairs(pairs::Vector{Pair{Vector{Int},T}}) where T = DensePolynomial(Dict(pairs))
+polynomial_from_pairs(pairs::Vector{Pair{Vector{Int},C}}) where {C} = DensePolynomial(Dict(pairs))
 
 import Base: zero
 
 # ---------- Zero polynomial constructors ----------
 """
-    zero(::Type{DensePolynomial{T}}, set::MultiindexSet) where T<:Number
+    zero(::Type{DensePolynomial{C}}, set::MultiindexSet) where C
 
-Construct a zero scalar polynomial in the given monomial basis `set`.
+Construct a zero polynomial (all coefficients zero) in the given monomial basis `set`.
+Works for both scalar (`C<:Number`) and static‑array (`C<:StaticArray`) coefficient types.
 """
-function Base.zero(::Type{DensePolynomial{T}}, set::MultiindexSet) where T<:Number
-    coeffs = zeros(T, size(set.exponents, 2))
-    return DensePolynomial(coeffs, set)
-end
-
-"""
-    zero(::Type{DensePolynomial{Vector{T}}}, set::MultiindexSet, n_components::Int) where T
-
-Construct a zero vector‑valued polynomial with `n_components` components.
-Each coefficient is a zero vector of length `n_components`.
-"""
-function Base.zero(::Type{DensePolynomial{Vector{T}}}, set::MultiindexSet, n_components::Int) where T
-    coeffs = [zeros(T, n_components) for _ in 1:size(set.exponents, 2)]
-    return DensePolynomial{Vector{T}}(coeffs, set)
-end
-
-"""
-    zero(::Type{DensePolynomial{NTuple{N,T}}}, set::MultiindexSet) where {N,T}
-
-Construct a zero tuple‑valued polynomial with `N` components.
-Each coefficient is a zero tuple of length `N`.
-"""
-function Base.zero(::Type{DensePolynomial{NTuple{N,T}}}, set::MultiindexSet) where {N,T}
-    coeffs = [ntuple(__ -> zero(T), N) for _ in 1:size(set.exponents, 2)]
-    println("coeffs =\n", typeof(coeffs))
-    return DensePolynomial{NTuple{N,T}}(coeffs, set)
+function Base.zero(::Type{DensePolynomial{C}}, set::MultiindexSet) where {C}
+    coeffs = [zero(C) for _ in 1:length(set)]
+    return DensePolynomial{C}(coeffs, set)
 end
 
 Base.iszero(p::DensePolynomial) = all(iszero, p.coeffs)
 
 # ---------- Evaluate polynomial ----------
-"""
-    evaluate(poly::DensePolynomial{<:Number}, vals::Vector{<:Number})
 
-Evaluate a scalar polynomial at the given variable values.
 """
-function evaluate(poly::DensePolynomial{<:Number}, vals::Vector{<:Number})
+    _precompute_powers(vals::AbstractVector{<:Number}, max_exponents::Vector{Int})
+
+Precompute `vals[j]^e` for e = 0..max_exponents[j] for each variable j.
+Returns a vector of vectors (or a vector of arrays) for efficient monomial evaluation.
+"""
+@inline function _precompute_powers(::Type{C}, vals::AbstractVector{<:Number}, max_exps::SVector{NVAR,Int}) where {C,NVAR}
+    T = promote_type(eltype(C), eltype(vals))   # monomial type
+    powers = ntuple(j -> Vector{T}(undef, max_exps[j] + 1), NVAR)
+    for j in 1:NVAR
+        v = vals[j]
+        pow = powers[j]
+        pow[1] = one(T)
+        @inbounds for e in 1:max_exps[j]
+            pow[e+1] = pow[e] * v
+        end
+    end
+    return powers
+end
+
+"""
+    _monomial(exp::SVector{N,Int}, powers::NTuple{NVAR,Vector{T}}) where N
+
+Compute the monomial value from precomputed powers.
+"""
+@inline function _monomial(exp::SVector{NVAR,Int}, powers::NTuple{NVAR,Vector{T}}) where {NVAR,T}
+    m = one(T)
+    @inbounds for j in 1:NVAR
+        m *= powers[j][exp[j] + 1]
+    end
+    return m
+end
+
+"""
+    evaluate(poly::DensePolynomial{C}, vals::AbstractVector{<:Number}) where C
+
+Evaluate the polynomial at the given variable values.
+Returns a value of type `C` (number or static array).
+"""
+function evaluate(poly::DensePolynomial{C}, vals::AbstractVector{<:Number}) where {C}
+    @assert nvars(poly) == length(vals)
+    iszero(poly) && return zero(C)
+
+    powers = _precompute_powers(C, vals, poly.max_exponents)
+    result = zero(C)
+    exps = poly.multiindex_set.exponents
+    coeffs = poly.coeffs
+    @inbounds for i in 1:length(coeffs)
+        c = coeffs[i]
+        iszero(c) && continue
+        m = _monomial(exps[i], powers)
+        result += c * m
+    end
+    return result
+end
+
+"""
+    evaluate(poly::DensePolynomial{SVector{L,T}}, vals::AbstractVector{<:Number}, component::Int) where {L,T}
+
+Evaluate the `component`-th component of a vector-valued polynomial at the given variable values.
+"""
+function evaluate(poly::DensePolynomial{SVector{L,T}}, vals::AbstractVector{<:Number}, component::Int) where {L,T}
     @assert nvars(poly) == length(vals) "Number of variables mismatch"
-    T = eltype(poly)
+    @assert 1 <= component <= L "Component index out of range"
+    if iszero(poly)
+        return zero(T)
+    end
+    # Precompute powers
+    powers = _precompute_powers(SVector{L,T}, vals, poly.max_exponents)
     result = zero(T)
-    for (exp, coeff) in each_term(poly)
-        monom = one(eltype(vals))
-        for (j, e) in enumerate(exp)
-            monom *= vals[j]^e
-        end
-        result += coeff * monom
+    exps = poly.multiindex_set.exponents
+    coeffs = poly.coeffs
+    @inbounds for i in 1:length(coeffs)
+        c = coeffs[i][component]
+        iszero(c) && continue
+        m = _monomial(exps[i], powers)
+        result += c * m
     end
     return result
 end
 
+# ---------- Extract component from vector polynomial ----------
 """
-    evaluate(poly::DensePolynomial{Vector{T}}, vals::Vector{<:Number}) where T
+    extract_component(poly::DensePolynomial{SVector{L,T}}, idx::Int) where {L,T}
 
-Evaluate a vector‑valued polynomial at the given variable values.
-Returns a vector of length equal to the number of components.
+For a vector‑valued polynomial (coefficients are `SVector{L,T}`), extract the `idx`-th component
+as a scalar polynomial.
 """
-function evaluate(poly::DensePolynomial{Vector{T}}, vals::Vector{<:Number}) where T
-    @assert nvars(poly) == length(vals) "Number of variables mismatch"
-    # Determine number of components from first non‑zero coefficient (if any)
-    n_comp = 0
-    for coeff in poly.coeffs
-        if !iszero(coeff)
-            n_comp = length(coeff)
-            break
-        end
-    end
-    if n_comp == 0
-        # All coefficients are zero → result is zero vector of unknown length.
-        # Return empty vector; user can check with iszero(poly) first.
-        return T[]
-    end
-    result = zeros(T, n_comp)
-    for (exp, coeff_vec) in each_term(poly)
-        monom = one(eltype(vals))
-        for (j, e) in enumerate(exp)
-            monom *= vals[j]^e
-        end
-        # Use broadcasting for efficiency; this is a BLAS level‑1 operation.
-        result .+= coeff_vec .* monom
-    end
-    return result
-end
-
-"""
-    extract_component(poly::DensePolynomial{Vector{T}}, idx::Int) where T
-
-Return a new scalar polynomial whose coefficients are the `idx`-th component of the original
-vector coefficients.
-"""
-function extract_component(poly::DensePolynomial{Vector{T}}, idx::Int) where T
+function extract_component(poly::DensePolynomial{SVector{L,T}}, idx::Int) where {L,T}
     new_coeffs = [c[idx] for c in poly.coeffs]
-    return DensePolynomial(new_coeffs, poly.multiindex_set)
+    return DensePolynomial{T}(new_coeffs, poly.multiindex_set)
 end
 
 # ---------- Iteration over terms ----------
 """
-    each_term(poly::AbstractPolynomial)
+    each_term(poly::DensePolynomial)
 
 Return a generator that yields `(exponent_vector, coefficient)` for every
 non‑zero term of `poly`. For dense polynomials, zero coefficients are skipped.
 """
 function each_term(poly::DensePolynomial)
-    exps = multiindex_set(poly).exponents
-    coeffs_vec = coeffs(poly)
-    return ((view(exps, :, j), coeffs_vec[j]) for j in 1:size(exps, 2) if !iszero(coeffs_vec[j]))
+    exps = poly.multiindex_set.exponents
+    coeffs_vec = poly.coeffs
+    return ((exps[j], coeffs_vec[j]) for j in 1:length(exps) if !iszero(coeffs_vec[j]))
 end
 
 # ---------- similar_poly (construct polynomial of same type from dictionary) ----------
 """
-    similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{T}, nvars::Int) where {T,C}
+    similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}, nvars::Int) where C
 
-Construct a new polynomial of the same concrete type as `poly` from the dictionary
+Construct a new polynomial of the same coefficient type `C` from the dictionary
 `dict` (exponents → coefficients). The new polynomial will have `nvars` variables.
-For vector‑valued polynomials, the dictionary values must have the same length as the
-original polynomial's coefficients. If `dict` is empty, a zero polynomial with zero
-coefficients is returned; for vector polynomials the component dimension must be
-inferable from `poly` (i.e., `poly` must be non‑empty or you must use the specialized
-`zero` constructor).
+If `dict` is empty, an empty polynomial with zero coefficients is returned.
 """
-function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{T}, nvars::Int) where {T<:Number,C<:Number}
+function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}, nvars::Int) where {C}
     if isempty(dict)
-        exponents = Matrix{Int}(undef, nvars, 0)
-        mset = MultiindexSet(exponents)
-        return DensePolynomial{T}(T[], mset)
+        # Create empty polynomial with nvars variables and zero coefficients
+        mset = MultiindexSet(Matrix{Int}(undef, nvars, 0))
+        return DensePolynomial{C}(C[], mset)
     end
-    mset = MultiindexSet(collect(keys(dict)))
-    coeffs = [haskey(dict, exp) ? convert(T, dict[exp]) : zero(T) for exp in eachcol(mset.exponents)]
-    return DensePolynomial{T}(coeffs, mset)
+    N = length(first(keys(dict)))
+    @assert N == nvars "Dictionary exponent length must match nvars"
+    svdict = Dict{SVector{N,Int}, C}(SVector{N,Int}(k) => v for (k, v) in dict)
+    mset = MultiindexSet(collect(keys(svdict)))  # sorts
+    coeffs = [get(svdict, exp, zero(C)) for exp in mset.exponents]
+    return DensePolynomial{C}(coeffs, mset)
 end
 
-function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{Vector{T}}, nvars::Int) where {T,C<:AbstractVector}
-    if isempty(dict)
-        # Cannot infer component dimension; require poly to be non‑empty or use zero constructor.
-        if isempty(poly.coeffs)
-            error("Cannot create empty vector polynomial without component dimension. " *
-                  "Use zero(DensePolynomial{Vector{T}}, set, n_components).")
-        end
-        # Infer component dimension from poly's coefficients.
-        n_comp = length(poly.coeffs[1])
-        exponents = Matrix{Int}(undef, nvars, 0)
-        mset = MultiindexSet(exponents)
-        return DensePolynomial{Vector{T}}([zeros(T, n_comp) for _ in 1:0], mset)
-    end
-    mset = MultiindexSet(collect(keys(dict)))
-    n_comp = length(first(values(dict)))
-    zero_vec = zeros(T, n_comp)
-    coeffs = [haskey(dict, exp) ? convert(Vector{T}, dict[exp]) : copy(zero_vec) for exp in eachcol(mset.exponents)]
-    return DensePolynomial{Vector{T}}(coeffs, mset)
+"""
+    similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}) where C
+
+Construct a new polynomial of the same coefficient type `C` and same number of variables
+as `poly` from the dictionary `dict`.
+"""
+function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}) where {C}
+    similar_poly(dict, poly, nvars(poly))
 end
 
-# ---------- Basic arithmetic (optional, but useful) ----------
-# These are not strictly required by the original API, but they improve usability.
-
+# ---------- Basic arithmetic (optional) ----------
 import Base: +, -, *, ==
 
-# Scalar multiplication (both orders)
-*(s::Number, p::DensePolynomial{<:Number}) = DensePolynomial(s .* p.coeffs, p.multiindex_set)
-*(p::DensePolynomial{<:Number}, s::Number) = s * p
+*(s::Number, p::DensePolynomial{C}) where {C} = DensePolynomial(s .* p.coeffs, p.multiindex_set)
+*(p::DensePolynomial{C}, s::Number) where {C} = s * p
 
-# For vector polynomials, scalar multiplication is elementwise
-*(s::Number, p::DensePolynomial{Vector{T}}) where T = DensePolynomial([s * c for c in p.coeffs], p.multiindex_set)
-*(p::DensePolynomial{Vector{T}}, s::Number) where T = s * p
-
-# Addition (same multiindex set)
-function +(p1::DensePolynomial{T}, p2::DensePolynomial{T}) where T
+function +(p1::DensePolynomial{C}, p2::DensePolynomial{C}) where {C}
     @assert p1.multiindex_set == p2.multiindex_set "Cannot add polynomials with different multiindex sets"
     DensePolynomial(p1.coeffs .+ p2.coeffs, p1.multiindex_set)
 end
 
-# Subtraction
--(p1::DensePolynomial{T}, p2::DensePolynomial{T}) where T = p1 + (-1)*p2
+-(p1::DensePolynomial{C}, p2::DensePolynomial{C}) where {C} = p1 + (-1)*p2
 
-# Equality (requires same multiindex set)
 function ==(p1::DensePolynomial, p2::DensePolynomial)
     p1.multiindex_set == p2.multiindex_set && p1.coeffs == p2.coeffs
 end
