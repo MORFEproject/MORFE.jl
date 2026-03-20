@@ -1,5 +1,7 @@
-include(joinpath(@__DIR__, "../src/Realification.jl"))
-using .Realification
+include(joinpath(@__DIR__, "../src/MORFE.jl"))
+using .MORFE.Multiindices: all_multiindices_up_to
+using .MORFE.Polynomials #: DensePolynomial, zero, find_term, evaluate
+using .MORFE.Realification
 
 # 1. Create a dense polynomial with 3 variables, max degree 2, and 2‑component coefficients
 nvars, max_degree = 3, 2

@@ -1,10 +1,9 @@
 module Polynomials
 
 using LinearAlgebra
-include("Multiindices.jl")
-using .Multiindices
 
-export MultiindexSet, find_in_set, indices_in_box_with_bounded_degree, build_exponent_index_map
+using ..Multiindices
+
 export AbstractPolynomial, DensePolynomial,
        polynomial_from_dict, polynomial_from_pairs,
        coeffs, multiindex_set, nvars, all_multiindices_up_to,
@@ -131,6 +130,18 @@ Each coefficient is a zero vector of length `n_components`.
 function Base.zero(::Type{DensePolynomial{Vector{T}}}, set::MultiindexSet, n_components::Int) where T
     coeffs = [zeros(T, n_components) for _ in 1:size(set.exponents, 2)]
     return DensePolynomial{Vector{T}}(coeffs, set)
+end
+
+"""
+    zero(::Type{DensePolynomial{NTuple{N,T}}}, set::MultiindexSet) where {N,T}
+
+Construct a zero tuple‑valued polynomial with `N` components.
+Each coefficient is a zero tuple of length `N`.
+"""
+function Base.zero(::Type{DensePolynomial{NTuple{N,T}}}, set::MultiindexSet) where {N,T}
+    coeffs = [ntuple(__ -> zero(T), N) for _ in 1:size(set.exponents, 2)]
+    println("coeffs =\n", typeof(coeffs))
+    return DensePolynomial{NTuple{N,T}}(coeffs, set)
 end
 
 Base.iszero(p::DensePolynomial) = all(iszero, p.coeffs)

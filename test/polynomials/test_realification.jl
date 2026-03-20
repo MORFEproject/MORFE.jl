@@ -1,8 +1,11 @@
 using Test
 using Random
-include(joinpath(@__DIR__, "../../src/Realification.jl"))
 
-using .Realification
+include(joinpath(@__DIR__, "../../src/MORFE.jl"))
+using .MORFE.Multiindices
+using .MORFE.Polynomials
+using .MORFE.Realification
+using .MORFE.Realification: _multinomial, _compositions, _reorder_canonical, _realify_term
 
 # ---------- Helper functions for testing ----------
 
