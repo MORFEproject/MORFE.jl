@@ -1,14 +1,10 @@
 module Multiindices
 
-export MultiindexSet,
-       zero_multiindex, multiindex,
-       all_multiindices_up_to, multiindices_with_total_degree,
-       all_multiindices_in_box,
-       divides, is_constant,
-       find_in_set,
-       indices_in_box_with_bounded_degree, build_exponent_index_map,
-       factorisations_assymetric, factorisations_fully_symmetric, factorisations_groupwise_symmetric,
-       monomial_rank, num_multiindices_up_to
+export MultiindexSet, zero_multiindex,
+       all_multiindices_up_to, multiindices_with_total_degree, 
+       all_multiindices_in_box, indices_in_box_with_bounded_degree,
+       divides, is_constant, find_in_set, build_exponent_index_map,
+       factorisations_asymmetric, factorisations_fully_symmetric, factorisations_groupwise_symmetric
 
 # ==================== Core comparison functions ====================
 
@@ -429,13 +425,13 @@ end
 # ==================== Factorizations ====================
 
 """
-    factorisations_assymetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{NTuple{N,Int}}
+    factorisations_asymmetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int}) -> Vector{NTuple{N,Int}}
 
 Return all ordered `N`-tuples of indices (taken from `candidate_indices`) whose corresponding exponent vectors sum to `exp`.
 Each factorisation is an `NTuple{N,Int}` where the `k`-th entry is the index of the `k`-th factor.
 If no factorisation exists, an empty vector is returned.
 """
-function factorisations_assymetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
+function factorisations_asymmetric(set::MultiindexSet, exp::AbstractVector{Int}, N::Int, candidate_indices::AbstractVector{Int})
     # Quick return for N == 0
     if N == 0
         return iszero(exp) ? NTuple{0,Int}[()] : NTuple{0,Int}[]

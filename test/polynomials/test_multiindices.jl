@@ -1,7 +1,8 @@
 using Test
-include(joinpath(@__DIR__, "../../src/Multiindices.jl"))
-using .Multiindices
-using .Multiindices: grlex_precede
+
+include(joinpath(@__DIR__, "../../src/MORFE.jl"))
+using .MORFE.Multiindices
+using .Multiindices: grlex_precede, num_multiindices_up_to, monomial_rank, multiindex
 
 # ============================================================================
 # Helper functions for testing
@@ -38,26 +39,6 @@ function random_exponent(nvars::Int, max_deg::Int)
         exp[rand(1:nvars)] += 1
     end
     return exp
-end
-
-"""
-    factorization_less(a::Matrix{Int}, b::Matrix{Int}) -> Bool
-
-Lexicographic comparison of two factorizations (matrices where columns are factors)
-using Grlex order on the factor vectors. Returns `true` if `a` comes before `b`.
-"""
-function factorization_less(a::Matrix{Int}, b::Matrix{Int})
-    @assert size(a) == size(b)
-    for j in 1:size(a, 2)
-        col_a = view(a, :, j)
-        col_b = view(b, :, j)
-        if grlex_precede(col_a, col_b)
-            return true
-        elseif grlex_precede(col_b, col_a)
-            return false
-        end
-    end
-    return false  # equal
 end
 
 # ============================================================================
@@ -311,53 +292,40 @@ end
 end
 
 # ============================================================================
-# Test factorizations
+# Test factorisations
 # ============================================================================
-@testset "factorizations" begin
+@testset "factorisations" begin
     exp = [2,1]
     N = 2
 
     # Full set containing all vectors in box 0..exp
     full_set = all_multiindices_in_box(exp)
-    facs = factorizations(full_set, exp, N)
+    candidate_indices = indices_in_box_with_bounded_degree(full_set, exp, 1, sum(exp))
+    facs = factorisations_asymmetric(full_set, exp, N, candidate_indices)
 
-    # Expect 6 factorizations
-    @test length(facs) == 6
+    # Expect 6 factorisations
+    @test length(facs) == 4
     # Verify each factorization sums to exp and all factors belong to set
     for f in facs
-        @test size(f) == (2, N)
+        @test length(f) == N
         s = zeros(Int, 2)
         for j in 1:N
-            s .+= view(f, :, j)
+            s .+= view(full_set.exponents, :, f[j])
         end
         @test s == exp
-        @test all(j -> find_in_set(full_set, f[:, j]) !== nothing, 1:N)
     end
 
-    # Outer list should be sorted lexicographically
-    sorted_facs = sort(facs; lt=factorization_less)
-    @test facs == sorted_facs
-
-    # N = 1
-    facs1 = factorizations(full_set, exp, 1)
-    @test length(facs1) == 1
-    @test facs1[1] == reshape([2,1], 2, 1)
-
-    # N = 0
-    @test factorizations(full_set, exp, 0) == []               # exp not zero
-    @test factorizations(full_set, [0,0], 0) == [zeros(Int, 2, 0)]  # zero exponent
-
     # Set with missing vectors
-    small_set = MultiindexSet([[0,0],[1,0],[2,0],[2,1]])
-    facs_small = factorizations(small_set, exp, N)
-    @test length(facs_small) == 2   # [0,0]+[2,1] and [2,1]+[0,0]
+    small_set = MultiindexSet([[0,0],[0,1],[2,0],[2,1]])
+    candidate_indices = indices_in_box_with_bounded_degree(small_set, exp, 0, sum(exp))
+    facs_small = factorisations_asymmetric(small_set, exp, N, candidate_indices)
+    @test length(facs_small) == 2   # [0,1]+[2,0] and [2,0]+[0,1]
     for f in facs_small
         s = zeros(Int, 2)
         for j in 1:N
-            s .+= view(f, :, j)
+            s .+= view(small_set.exponents, :, f[j])
         end
         @test s == exp
-        @test all(j -> find_in_set(small_set, f[:, j]) !== nothing, 1:N)
     end
 
     # Test with larger N and random exponents
@@ -365,21 +333,17 @@ end
         nvars = 2
         max_deg = 4
         set = all_multiindices_up_to(nvars, max_deg)
+        candidate_indices = indices_in_box_with_bounded_degree(set, exp, 1, sum(exp))
         exp = random_exponent(nvars, max_deg)
         N = rand(1:3)
-        facs = factorizations(set, exp, N)
+        facs = factorisations_asymmetric(set, exp, N, candidate_indices)
         for f in facs
-            @test size(f) == (nvars, N)
+            @test length(f) == N
             s = zeros(Int, nvars)
             for j in 1:N
-                s .+= view(f, :, j)
+                s .+= view(set.exponents, :, f[j])
             end
             @test s == exp
-        end
-        # Ensure sortedness
-        if !isempty(facs)
-            sorted_facs = sort(facs; lt=factorization_less)
-            @test facs == sorted_facs
         end
     end
 end

@@ -1,9 +1,11 @@
 # test/runtests.jl (or a standalone test file for Polynomials module)
 
 using Test
-include(joinpath(@__DIR__, "../../src/Polynomials.jl"))    # adjust path as needed
 
-using .Polynomials
+include(joinpath(@__DIR__, "../../src/MORFE.jl"))    # adjust path as needed
+using .MORFE.Multiindices
+using .MORFE.Multiindices: monomial_rank
+using .MORFE.Polynomials
 
 # ----------------------------
 # Helper: check that two polynomials are approximately equal (for floats)

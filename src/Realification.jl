@@ -1,17 +1,10 @@
 module Realification
 
 using LinearAlgebra
-include(joinpath(@__DIR__, "./Polynomials.jl"))
 
-using .Polynomials
-using .Polynomials: DensePolynomial, AbstractPolynomial, each_term,
-                    MultiindexSet, coeffs, multiindex_set, nvars
+using ..Polynomials
 
 export realify, compose_linear, realify_via_linear
-export DensePolynomial, AbstractPolynomial, evaluate, extract_component,
-       all_multiindices_up_to, find_term,
-       MultiindexSet, coeffs, multiindex_set, nvars
-export _multinomial, _compositions, _reorder_canonical, _realify_term
 
 # ------------------------------------------------------------
 #  Internal helper functions
