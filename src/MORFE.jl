@@ -4,13 +4,10 @@ include("Multiindices.jl")
 include("Polynomials.jl")
 include("FullOrderModel.jl")
 include("Eigensolvers.jl")
-<<<<<<< Updated upstream
-=======
 include("Realification.jl")
 include("ParametrisationMethod/Parametrisation.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
->>>>>>> Stashed changes
 
 # Re‑export public API from submodules
 using .Multiindices
