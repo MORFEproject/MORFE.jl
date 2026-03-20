@@ -2,7 +2,7 @@ module MORFE
 
 #include
 include("FullOrderModel.jl")
-include("Module Eigensolvers.jl")
+include("Eigensolvers.jl")
 
 #export
 export FullOrderModel

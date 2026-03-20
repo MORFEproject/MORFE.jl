@@ -13,7 +13,7 @@ include("assembler.jl")
 include("assembler_dummy.jl")
 include("elemental.jl")
 
-export Field, Grid, material, MORFE_newmaterial, read_mesh
+export Field, Grid, material, MORFE_newmaterial, read_mesh, Infostruct
 export assembler_dummy_MK, assembler_MK!, assembly_G!, assembly_H!
 
 end # module
