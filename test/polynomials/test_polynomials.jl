@@ -33,8 +33,8 @@ end
         @test p_dense.multiindex_set.exponents == expected_set.exponents
 
         # Dense coefficients should align with the set order
-        exps = [collect(e) for e in eachcol(expected_set.exponents)]
-        expected_dense = Float64[get(dict, e, 0) for e in exps]
+        exps = [collect(e) for e in expected_set.exponents]
+        expected_dense = Float64[get(dict, e, nothing) for e in exps]
         @test p_dense.coeffs == expected_dense
     end
 
@@ -69,7 +69,7 @@ end
         # From empty dict
         p_dense_empty = DensePolynomial(Dict{Vector{Int}, Float64}())
         @test length(p_dense_empty) == 0
-        @test size(p_dense_empty.multiindex_set.exponents, 2) == 0
+        @test length(p_dense_empty.multiindex_set.exponents) == 0
 
         # From zero coefficient vector with existing set
         set = all_multiindices_up_to(2, 3)
@@ -136,7 +136,7 @@ end
 
         @test zero_dense isa DensePolynomial{Int}
         @test length(zero_dense) == 6
-        @test size(zero_dense.multiindex_set.exponents,2) == 6
+        @test length(zero_dense.multiindex_set.exponents) == 6
         @test nvars(zero_dense) == 2
 
         # Using zero with an existing set
@@ -153,7 +153,7 @@ end
         set = all_multiindices_up_to(2, 2)
 
         # polynomial_from_pairs with mismatched exponent lengths (should error in MultiindexSet constructor)
-        @test_throws AssertionError polynomial_from_pairs(DensePolynomial{Int}, [[1,0]=>1, [1,0,0]=>2])
+        @test_throws DimensionMismatch polynomial_from_pairs(DensePolynomial{Int}, [[1,0]=>1, [1,0,0]=>2])
     end
 
     # 6. Different element types

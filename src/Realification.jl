@@ -11,12 +11,12 @@ export realify, compose_linear, realify_via_linear
 # ------------------------------------------------------------
 
 """
-    _exponents_to_dict(poly::AbstractPolynomial) -> Dict{Vector{Int}, coeff_type}
+    _exponents_to_dict(poly::DensePolynomial) -> Dict{Vector{Int}, coeff_type}
 
 Convert a polynomial to a dictionary mapping exponent vectors to coefficients.
 Zero coefficients are omitted (only terms from `each_term` are included).
 """
-function _exponents_to_dict(poly::AbstractPolynomial)
+function _exponents_to_dict(poly::DensePolynomial)
     d = Dict{Vector{Int}, eltype(coeffs(poly))}()
     for (exp, coeff) in each_term(poly)
         d[exp] = get(d, exp, zero(coeff)) + coeff
@@ -25,8 +25,8 @@ function _exponents_to_dict(poly::AbstractPolynomial)
 end
 
 """
-    _reorder_canonical(poly::AbstractPolynomial, conj_map::Vector{Int})
-        -> (AbstractPolynomial, n, m)
+    _reorder_canonical(poly::DensePolynomial, conj_map::Vector{Int})
+        -> (DensePolynomial, n, m)
 
 Reorder variables according to a conjugation map `conj_map` of length `N`
 (where `N` = number of variables).  
@@ -39,7 +39,7 @@ Terms with the same exponent after reordering are merged.
 
 Returns the canonical polynomial (same concrete type as `poly`), `n`, and `m`.
 """
-function _reorder_canonical(poly::AbstractPolynomial, conj_map::Vector{Int})
+function _reorder_canonical(poly::DensePolynomial, conj_map::Vector{Int})
     N = length(conj_map)
     @assert nvars(poly) == N "number of variables must match length of conj_map"
 
@@ -182,7 +182,7 @@ end
 # ------------------------------------------------------------
 
 """
-    realify(poly::AbstractPolynomial, conj_map::Vector{Int}) -> AbstractPolynomial
+    realify(poly::DensePolynomial, conj_map::Vector{Int}) -> DensePolynomial
 
 Transform a complex‑valued polynomial (with variables that may be conjugate
 pairs) into a polynomial in real variables.
@@ -198,7 +198,7 @@ with `n` conjugate pairs and `m` real variables. The transformation uses the
 formulas `z = x + i y`, `z̄ = x - i y`. The returned polynomial has the same
 concrete type as the input `poly`.
 """
-function realify(poly::AbstractPolynomial, conj_map::Vector{Int})::AbstractPolynomial
+function realify(poly::DensePolynomial, conj_map::Vector{Int})::DensePolynomial
     canonical_poly, n, m = _reorder_canonical(poly, conj_map)
 
     coeff_type = eltype(coeffs(poly))
@@ -215,7 +215,7 @@ function realify(poly::AbstractPolynomial, conj_map::Vector{Int})::AbstractPolyn
 end
 
 """
-    compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA -> AbstractPolynomial
+    compose_linear(poly::DensePolynomial, M::Matrix{TA}) where TA -> DensePolynomial
 
 Compose a multivariate polynomial with a linear map.
 
@@ -229,7 +229,7 @@ Compose a multivariate polynomial with a linear map.
 A new polynomial in the variables `y₁, …, y_p`. The returned polynomial has
 the same concrete type as the input `poly`.
 """
-function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA
+function compose_linear(poly::DensePolynomial, M::Matrix{TA}) where TA
     n = nvars(poly)
     @assert size(M, 1) == n "First dimension of M must match number of variables"
     p = size(M, 2)
@@ -342,7 +342,7 @@ function compose_linear(poly::AbstractPolynomial, M::Matrix{TA}) where TA
 end
 
 """
-    realify_via_linear(poly::AbstractPolynomial, conj_map::Vector{Int}) -> AbstractPolynomial
+    realify_via_linear(poly::DensePolynomial, conj_map::Vector{Int}) -> DensePolynomial
 
 Transform a complex‑valued polynomial into a polynomial in real variables by
 composing with the linear map that expresses complex variables in terms of real
@@ -352,7 +352,7 @@ type as the input `poly`.
 
 See also: [`realify`](@ref), [`compose_linear`](@ref)
 """
-function realify_via_linear(poly::AbstractPolynomial, conj_map::Vector{Int})::AbstractPolynomial
+function realify_via_linear(poly::DensePolynomial, conj_map::Vector{Int})::DensePolynomial
     canonical_poly, n, m = _reorder_canonical(poly, conj_map)
     N_orig = 2n + m
     N_new = 2n + m   # same number of real variables

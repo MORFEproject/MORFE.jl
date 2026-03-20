@@ -1,20 +1,23 @@
+using StaticArrays: SVector
+
 include(joinpath(@__DIR__, "../src/MORFE.jl"))
 using .MORFE.Multiindices: all_multiindices_up_to
-using .MORFE.Polynomials #: DensePolynomial, zero, find_term, evaluate
-using .MORFE.Realification
+using .MORFE.Polynomials  # DensePolynomial, zero, find_term, evaluate, extract_component
 
 # 1. Create a dense polynomial with 3 variables, max degree 2, and 2‑component coefficients
 nvars, max_degree = 3, 2
-multiindex_set = all_multiindices_up_to(nvars, max_degree)   # all exponents up to degree 2
-poly = zero(DensePolynomial{NTuple{2,ComplexF64}}, multiindex_set)
+# all monomials in 3 variables up to degree 2
+multiindex_set = all_multiindices_up_to(nvars, max_degree)   
+poly = zero(DensePolynomial{SVector{2, ComplexF64}}, multiindex_set)
 println("Zero polynomial initialised")
 
 # 2. Set two non‑zero coefficients (in place)
-poly.coeffs[find_term(poly, [1,1,0])] = (1.0, 2.0im)
-poly.coeffs[find_term(poly, [0,0,2])] = (3.0+4.0im, 5.0)
+# find_term returns an index or nothing; here terms are present.
+poly.coeffs[find_term(poly, [1,1,0])] = [1.0, 2.0im]
+poly.coeffs[find_term(poly, [0,0,2])] = [3.0+4.0im, 5.0]
 println("\nPolynomial after in‑place modification:")
-for (idx, exp) in enumerate(eachcol(poly.multiindex_set.exponents))
-    println("  idx = $idx :\texponent = $exp, \tcoefficient = ", poly.coeffs[idx])
+for (idx, exp) in enumerate(poly.multiindex_set.exponents)
+    println("Index = $idx :\n\texponent = $exp\n\tcoefficient = ", poly.coeffs[idx])
 end
 
 # 3. Evaluate at a point with conjugate pair (z1, z2) and real variable z3

@@ -49,7 +49,7 @@ function polynomial_to_dict(poly::DensePolynomial)
     d = Dict{Vector{Int}, eltype(poly)}()
     exps = multiindex_set(poly).exponents
     cs = coeffs(poly)
-    for j in 1:size(exps, 2)
+    for j in axes(exps, 2)
         if !iszero(cs[j])
             d[exps[:, j]] = cs[j]
         end
