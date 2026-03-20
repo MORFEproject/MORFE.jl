@@ -12,7 +12,7 @@ mutable struct Infostruct
     Ffreq::Int64
     Fmodes::Vector{Int64}
     Fmult::Vector{Float64}
-    nrom:: Int64
+    nrom::Int64
     α::Float64
     β::Float64
     neig::Int64
@@ -25,8 +25,6 @@ mutable struct Infostruct
     Ω_force::Float64
     Infostruct() = new()
 end
-info=Infostruct()
-
 
 """
 Overview: set of constants used over the project.
@@ -142,9 +140,7 @@ Maximum number of elements connected one to the other
 """
 const ncv_max = 30
 
-
 """
 Maximum number nodes for an element
 """
 const nne_max = 27
-
