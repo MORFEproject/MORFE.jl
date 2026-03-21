@@ -1,182 +1,121 @@
-# MORFE Source Code Structure and Dependencies
+# MORFE3.0 Folder Structure and Module Dependencies
 
 ## Folder Structure
 
 ```
 src/
-├── MORFE.jl                          # Main package entry point
-├── FullOrderModel.jl                # Core model types
-├── Multiindices.jl                  # Multiindex set data structure
-├── Polynomials.jl                   # Polynomial representations
-├── Realification.jl                 # Complex-to-real polynomial transformation
-├── Eigensolvers.jl                  # Generalized eigenvalue solver
-├── deprecated_InputFullOrderModel/   # Deprecated input modules
-│   ├── InputModel.jl
-│   ├── InputModelByHand.jl
-│   ├── InputModelGridapMechanical.jl
-│   ├── InputModelInterface.jl
-│   └── Morfe_2_0/
+├── MORFE.jl                              # Main package entry point
+├── Multiindices.jl                       # Multiindex set utilities
+├── Polynomials.jl                         # Dense polynomial representation
+├── Eigensolvers.jl                        # Generalized eigenvalue solver
+├── FullOrderModel.jl                      # N-th order and first-order ODE models
+├── Realification.jl                       # Complex-to-real polynomial transformation
 └── ParametrisationMethod/
-    ├── Parametrisation.jl           # Parametrisation type alias
+    ├── ParametrisationMethod.jl           # Core types (Parametrisation, ReducedDynamics)
+    ├── LinearOperator/                    # (empty directory)
     └── RightHandSide/
-        ├── MultilinearTerms.jl      # Multilinear term computation
-        └── LowerOrderCouplings.jl  # Lower-order coupling computation
+        ├── MultilinearTerms.jl           # Nonlinear term computation
+        └── LowerOrderCouplings.jl         # Lower-order coupling terms
 ```
 
-## Module Dependencies
-
-### Dependency Graph
+## Dependency Graph
 
 ```
-MORFE.jl
-    ├── Multiindices.jl
-    ├── Polynomials.jl
-    │       └── (uses Multiindices.jl)
-    ├── FullOrderModel.jl
-    │       └── (uses LinearAlgebra, SparseArrays)
-    ├── Eigensolvers.jl
-    │       └── (uses Arpack, LinearAlgebra, LinearMaps, SparseArrays)
-    ├── Realification.jl
-    │       └── (uses Polynomials.jl)
-    └── ParametrisationMethod/
-            ├── Parametrisation.jl
-            │       └── (uses Polynomials.jl)
-            └── RightHandSide/
-                    ├── MultilinearTerms.jl
-                    │       ├── (uses Multiindices.jl)
-                    │       ├── (uses Polynomials.jl)
-                    │       ├── (uses Parametrisation.jl)
-                    │       └── (uses FullOrderModel.jl)
-                    └── LowerOrderCouplings.jl
-                            ├── (uses Multiindices.jl)
-                            └── (uses Polynomials.jl)
+MORFE.jl (root)
+├── Multiindices.jl          [standalone - no internal dependencies]
+├── Polynomials.jl           ← Multiindices.jl
+├── FullOrderModel.jl        [standalone - no internal dependencies]
+├── Eigensolvers.jl          [standalone - no internal dependencies]
+├── Realification.jl          ← Polynomials.jl
+└── ParametrisationMethod/
+    └── ParametrisationMethod.jl
+        ├── ← Multiindices.jl
+        └── ← Polynomials.jl
+            └── ← Multiindices.jl
+    └── RightHandSide/
+        ├── MultilinearTerms.jl
+        │   ├── ← Multiindices.jl
+        │   ├── ← ParametrisationMethod.jl
+        │   └── ← FullOrderModel.jl
+        └── LowerOrderCouplings.jl
+            ├── ← Multiindices.jl
+            ├── ← Polynomials.jl
+            └── ← ParametrisationMethod.jl
 ```
 
-### Detailed Module Imports
+## Module Details
 
-#### 1. MORFE.jl (Main Package)
-- **Includes**: `Multiindices.jl`, `Polynomials.jl`, `FullOrderModel.jl`, `Eigensolvers.jl`, `Realification.jl`, `Parametrisation.jl`, `MultilinearTerms.jl`, `LowerOrderCouplings.jl`
-- **Exports**:
-  - `MultiindexSet` (from `Multiindices`)
-  - `DensePolynomial`, `evaluate` (from `Polynomials`)
-  - `FullOrderModel`, `FirstOrderModel`, `NDOrderModel` (from `FullOrderModel`)
-  - `Parametrisation` (from `Parametrisation`)
-  - `compute_multilinear_terms` (from `MultilinearTerms`)
+### 1. Multiindices.jl
+- **Purpose**: Multiindex set data structure and utilities for graded lexicographic ordering
+- **External dependencies**: `StaticArrays`
+- **Exports**: `MultiindexSet`, `zero_multiindex`, `all_multiindices_up_to`, `multiindices_with_total_degree`, `all_multiindices_in_box`, `indices_in_box_with_bounded_degree`, `divides`, `is_constant`, `find_in_set`, `build_exponent_index_map`, `factorisations_asymmetric`, `factorisations_fully_symmetric`, `factorisations_groupwise_symmetric`
 
-#### 2. Multiindices.jl
-- **External dependencies**: None (standalone)
-- **Exports**:
-  - `MultiindexSet`
-  - `zero_multiindex`, `multiindex`
-  - `all_multiindices_up_to`, `multiindices_with_total_degree`, `all_multiindices_in_box`
-  - `divides`, `is_constant`
-  - `find_in_set`
-  - `indices_in_box_with_bounded_degree`, `build_exponent_index_map`
-  - `factorisations_assymetric`, `factorisations_fully_symmetric`, `factorisations_groupwise_symmetric`
-  - `monomial_rank`, `num_multiindices_up_to`
+### 2. Polynomials.jl
+- **Purpose**: Dense polynomial representation with aligned multiindex sets
+- **External dependencies**: `LinearAlgebra`, `StaticArrays`
+- **Internal imports**: `Multiindices` (`MultiindexSet`, `find_in_set`, `zero_multiindex`)
+- **Exports**: `DensePolynomial`, `polynomial_from_dict`, `polynomial_from_pairs`, `coeffs`, `multiindex_set`, `nvars`, `all_multiindices_up_to`, `coefficient`, `has_term`, `find_term`, `find_in_multiindex_set`, `zero`, `evaluate`, `extract_component`, `each_term`, `similar_poly`
 
-#### 3. Polynomials.jl
-- **External dependencies**: `LinearAlgebra`
-- **Internal dependencies**: `..Multiindices` (uses `MultiindexSet`)
-- **Exports**:
-  - `AbstractPolynomial`, `DensePolynomial`
-  - `polynomial_from_dict`, `polynomial_from_pairs`
-  - `coeffs`, `multiindex_set`, `nvars`, `all_multiindices_up_to`
-  - `coefficient`, `has_term`, `find_term`, `find_in_multiindex_set`
-  - `zero`, `evaluate`, `extract_component`, `each_term`, `similar_poly`
-
-#### 4. FullOrderModel.jl
+### 3. FullOrderModel.jl
+- **Purpose**: N-th order and first-order dynamical system representations
 - **External dependencies**: `LinearAlgebra`, `SparseArrays`
-- **Internal dependencies**: None
-- **Exports**:
-  - `NDOrderModel`, `FirstOrderModel`
-  - `MultilinearMap`
-  - `linear_first_order_matrices`, `evaluate_nonlinear_terms!`
+- **Exports**: `NDOrderModel`, `FirstOrderModel`, `MultilinearMap`, `linear_first_order_matrices`, `evaluate_nonlinear_terms!`
 
-#### 5. Eigensolvers.jl
+### 4. Eigensolvers.jl
+- **Purpose**: Generalized eigenvalue problem solver using ARPACK
 - **External dependencies**: `Arpack`, `LinearAlgebra`, `LinearMaps`, `SparseArrays`
-- **Internal dependencies**: None
 - **Exports**: `generalized_eigenpairs`
 
-#### 6. Realification.jl
-- **External dependencies**: `LinearAlgebra`
-- **Internal dependencies**: `..Polynomials` (uses `AbstractPolynomial`, `DensePolynomial`)
-- **Exports**:
-  - `realify`, `compose_linear`, `realify_via_linear`
-  - `_multinomial`, `_compositions`, `_reorder_canonical`, `_realify_term`
+### 5. Realification.jl
+- **Purpose**: Transform complex variable polynomials (z, z̄) to real variable polynomials (x, y) where z = x + iy and z̄ = x - iy; coefficients remain complex-valued
+- **External dependencies**: `LinearAlgebra`, `StaticArrays`
+- **Internal imports**: `Polynomials` (`DensePolynomial`, `nvars`, `each_term`, `similar_poly`, `coefficient`, `coeffs`, `multiindex_set`)
+- **Exports**: `realify`, `compose_linear`, `realify_via_linear`
 
-#### 7. Parametrisation.jl
-- **Internal dependencies**: `..Polynomials` (uses `DensePolynomial`)
-- **Exports**: `Parametrisation` (type alias for `DensePolynomial{NTuple{N,T}}`)
+### 6. ParametrisationMethod.jl
+- **Purpose**: Core types for the parametrisation method (Reduced Order Modeling)
+- **External dependencies**: `StaticArrays`
+- **Internal imports**: `Multiindices` (`MultiindexSet`), `Polynomials` (`DensePolynomial`)
+- **Exports**: `Parametrisation` (type alias), `ReducedDynamics` (type alias), `create_parametrisation_method_objects`
 
-#### 8. MultilinearTerms.jl
-- **Internal dependencies**:
-  - `..Multiindices` (uses `MultiindexSet`, `factorisations_asymmetric`, `factorisations_fully_symmetric`, `factorisations_groupwise_symmetric`, `indices_in_box_with_bounded_degree`)
-  - `..Polynomials` (uses `DensePolynomial`)
-  - `..Parametrisation` (uses `Parametrisation`)
-  - `..FullOrderModel` (uses `NDOrderModel`, `FirstOrderModel`, `MultilinearMap`)
+### 7. MultilinearTerms.jl
+- **Purpose**: Compute nonlinear multilinear terms contributions for the ROM
+- **Internal imports**: `Multiindices` (`indices_in_box_with_bounded_degree`, factorisation functions), `ParametrisationMethod` (`Parametrisation`), `FullOrderModel` (`NDOrderModel`, `FirstOrderModel`, `MultilinearMap`)
 - **Exports**: `compute_multilinear_terms`
 
-#### 9. LowerOrderCouplings.jl
-- **External dependencies**: `LinearAlgebra`
-- **Internal dependencies**:
-  - `.Multiindices` (uses `MultiindexSet`, `indices_in_box_with_bounded_degree`, `build_exponent_index_map`)
-  - `..Polynomials` (uses `DensePolynomial`, `coeffs`, `multiindex_set`, `nvars`)
+### 8. LowerOrderCouplings.jl
+- **Purpose**: Compute lower-order coupling terms in the parametrisation method
+- **External dependencies**: `LinearAlgebra`, `StaticArrays`
+- **Internal imports**: `Multiindices` (`MultiindexSet`, `indices_in_box_with_bounded_degree`, `build_exponent_index_map`), `Polynomials` (`coeffs`, `multiindex_set`, `nvars`), `ParametrisationMethod` (`Parametrisation`, `ReducedDynamics`)
 - **Exports**: `compute_lower_order_couplings`
 
-## Public API Summary
+## Public API (re-exported from MORFE.jl)
 
-| Module | Public Types | Key Functions |
-|--------|-------------|---------------|
-| `Multiindices` | `MultiindexSet` | Multiindex generation, binary search, factorization algorithms |
-| `Polynomials` | `DensePolynomial` | Polynomial construction, evaluation, arithmetic |
-| `FullOrderModel` | `NDOrderModel`, `FirstOrderModel`, `MultilinearMap` | Model representation, matrix conversion, term evaluation |
-| `Eigensolvers` | - | `generalized_eigenpairs` |
-| `Realification` | - | `realify`, `compose_linear`, `realify_via_linear` |
-| `Parametrisation` | `Parametrisation` | Type alias for polynomial with tuple coefficients |
-| `MultilinearTerms` | - | `compute_multilinear_terms` |
-| `LowerOrderCouplings` | - | `compute_lower_order_couplings` |
+```julia
+using .Multiindices          # All exports from Multiindices.jl
+using .Polynomials: DensePolynomial, evaluate
+using .FullOrderModel: FullOrderModel, FirstOrderModel, NDOrderModel
+using .Eigensolvers: generalized_eigenpairs
+using .ParametrisationMethod  # All exports from ParametrisationMethod.jl
+using .MultilinearTerms: compute_multilinear_terms
+using .LowerOrderCouplings   # All exports from LowerOrderCouplings.jl
 
-## Data Flow
-
-```
-User Input
-    │
-    ▼
-┌─────────────────┐
-│  FullOrderModel │  ← Defines the N-th order ODE with linear/nonlinear terms
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────┐
-│  linear_first_order_matrices()                      │
-│  Converts NDOrderModel → (A, B) matrices            │
-└─────────────────────────────┬───────────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────┐
-                    │ Eigensolvers    │  ← Computes dominant eigenpairs
-                    │ generalized_    │
-                    │ eigenpairs()    │
-                    └────────┬────────┘
-                             │
-                             ▼
-              ┌────────────────────────────┐
-              │  Parametrisation           │  ← DensePolynomial with NTuple coefficients
-              │  (from subspace spanned    │
-              │   by eigenvectors)        │
-              └─────────────┬──────────────┘
-                            │
-                            ▼
-              ┌────────────────────────────┐
-              │  compute_multilinear_terms│  ← Evaluates nonlinear terms
-              │  (in parametrised space)  │
-              └────────────────────────────┘
+export MultiindexSet
+export DensePolynomial, evaluate
+export FullOrderModel, FirstOrderModel, NDOrderModel
+export Parametrisation
+export compute_multilinear_terms
 ```
 
-## Notes
+## Dependency Summary Table
 
-- The `deprecated_InputFullOrderModel/` directory contains legacy code and is not included in the main package.
-- The `ParametrisationMethod/LinearOperator/` directory is currently empty.
-- All polynomial operations use graded lexicographic (Grlex) ordering internally.
-- The `MultilinearMap` type enforces that evaluation functions must be truly multilinear (linear in each argument independently).
+| Module | External Dependencies | Internal Dependencies |
+|--------|---------------------|---------------------|
+| Multiindices.jl | StaticArrays | — |
+| Polynomials.jl | LinearAlgebra, StaticArrays | Multiindices.jl |
+| FullOrderModel.jl | LinearAlgebra, SparseArrays | — |
+| Eigensolvers.jl | Arpack, LinearAlgebra, LinearMaps, SparseArrays | — |
+| Realification.jl | LinearAlgebra, StaticArrays | Polynomials.jl |
+| ParametrisationMethod.jl | StaticArrays | Multiindices.jl, Polynomials.jl |
+| MultilinearTerms.jl | — | Multiindices.jl, ParametrisationMethod.jl, FullOrderModel.jl |
+| LowerOrderCouplings.jl | LinearAlgebra, StaticArrays | Multiindices.jl, Polynomials.jl, ParametrisationMethod.jl |

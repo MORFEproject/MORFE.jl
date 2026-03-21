@@ -650,10 +650,10 @@ The keys are `NTuple{N,Int}` where `N` is the number of variables.
 """
 function build_exponent_index_map(set::MultiindexSet{N}) where N
     exps = set.exponents
-    d = Dict{NTuple{N,Int}, Int}()
+    d = Dict{SVector{N,Int}, Int}()
     sizehint!(d, length(exps))
     for (j, v) in enumerate(exps)
-        d[Tuple(v)] = j
+        d[v] = j
     end
     return d
 end

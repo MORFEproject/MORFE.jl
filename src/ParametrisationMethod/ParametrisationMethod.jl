@@ -1,9 +1,10 @@
 module ParametrisationMethod
 
 using StaticArrays: SVector
+using ..Multiindices: MultiindexSet
 using ..Polynomials: DensePolynomial
 
-export Parametrisation, ReducedDynamics, create_ssm_objects
+export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 
 """
     Parametrisation{ORD, FOM, NVAR, T} = DensePolynomial{SVector{ORD, SVector{FOM, T}}, NVAR}
@@ -36,7 +37,7 @@ Represents the reduced dynamics on a manifold of dimension `ROM`.
 const ReducedDynamics{ROM, NVAR, T} = DensePolynomial{SVector{ROM, T}, NVAR}
 
 """
-    create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, ::Type{T}=Float64) where {T<:Number, NVAR}
+    create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, ::Type{T}=Complex) where {T<:Number, NVAR}
 
 Create a consistent pair of polynomials:
 - `W`: a `Parametrisation{ORD, FOM, NVAR, T}` with zero coefficients,
@@ -44,7 +45,7 @@ Create a consistent pair of polynomials:
 
 Both polynomials share the same multiindex set `mset` and element type `T`.
 """
-function create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, ::Type{T}=Float64) where {T<:Number, NVAR}
+function create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, ::Type{T}=Complex) where {T<:Number, NVAR}
     # Parametrisation coefficients: SVector{ORD, SVector{FOM, T}} zeros
     inner_zero = SVector{FOM,T}(zeros(T, FOM))
     outer_zero = SVector{ORD, SVector{FOM,T}}(ntuple(_ -> inner_zero, ORD))
@@ -53,6 +54,21 @@ function create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::I
 
     # Reduced dynamics coefficients: SVector{ROM, T} zeros
     R_coeffs = [SVector{ROM,T}(zeros(T, ROM)) for _ in 1:length(mset)]
+    R = DensePolynomial(R_coeffs, mset)   # ReducedDynamics{ROM,NVAR,T}
+
+    return (W, R)
+end
+
+# In practice, ROM = NVAR
+function create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ::Type{T}=Complex) where {T<:Number, NVAR}
+    # Parametrisation coefficients: SVector{ORD, SVector{FOM, T}} zeros
+    inner_zero = SVector{FOM,T}(zeros(T, FOM))
+    outer_zero = SVector{ORD, SVector{FOM,T}}(ntuple(_ -> inner_zero, ORD))
+    W_coeffs = [outer_zero for _ in 1:length(mset)]
+    W = DensePolynomial(W_coeffs, mset)   # Parametrisation{ORD,FOM,NVAR,T}
+
+    # Reduced dynamics coefficients: SVector{ROM, T} zeros with ROM=NVAR
+    R_coeffs = [SVector{NVAR,T}(zeros(T, NVAR)) for _ in 1:length(mset)]
     R = DensePolynomial(R_coeffs, mset)   # ReducedDynamics{ROM,NVAR,T}
 
     return (W, R)
