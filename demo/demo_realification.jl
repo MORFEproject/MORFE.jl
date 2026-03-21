@@ -40,7 +40,7 @@ conj_map = [2, 1, 3]
 realf_poly = realify(poly, conj_map)   # now in variables (x, y, w)
 
 # 6. Evaluate the realified polynomial at (x,y,w) = (real(z1), imag(z1), z3)
-x, y, w = real(z1), imag(z1), z3
+x, y, w = real(z1), imag(z1), real(z3)
 realf_eval = evaluate(realf_poly, [x, y, w])
 println("\n Realified evaluation at (x=$x, y=$y, w=$w):")
 println("  result = ", realf_eval)
