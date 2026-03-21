@@ -2,33 +2,76 @@
 # Demo for compute_lower_order_couplings function
 
 using LinearAlgebra
+using StaticArrays
 
-# Only include the module that defines the function – it already brings in its own Polynomials
-include(joinpath(@__DIR__, "../src/ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl"))
-using .LowerOrderCouplings
+include(joinpath(@__DIR__, "../src/MORFE.jl"))
+using .MORFE.Multiindices: MultiindexSet
+using .MORFE.Polynomials
+using .MORFE.LowerOrderCouplings
 
-# Bring needed names from its Polynomials submodule into scope
-using .LowerOrderCouplings.Polynomials: DensePolynomial, MultiindexSet, all_multiindices_up_to, each_term
+using .LowerOrderCouplings.ParametrisationMethod: Parametrisation, ReducedDynamics
 
-# Helper to construct a polynomial from a dictionary of coefficients (like in test_polynomials.jl)
-function construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) where T
+# Helper to create a MultiindexSet from a list of exponent vectors
+function make_multiindex_set(exps::Vector{Vector{Int}})
+    N = isempty(exps) ? 0 : length(exps[1])
+    sv_exps = [SVector{N,Int}(exp) for exp in exps]
+    return MultiindexSet(sv_exps)  # sorts in Grlex
+end
+
+# Helper to construct a Parametrisation (first‑order system, ORD = 1) from a dictionary
+function construct_parametrisation(dict::Dict{Vector{Int}, Vector{Float64}})
     if isempty(dict)
-        mset = MultiindexSet(Matrix{Int}(undef, 0, 0))
-        return DensePolynomial(T[], mset)
-    else
-        exps = collect(keys(dict))
-        mset = MultiindexSet(exps)
-        exp_to_idx = Dict{Tuple{Vararg{Int}}, Int}()
-        for (j, col) in enumerate(eachcol(mset.exponents))
-            exp_to_idx[Tuple(col)] = j
-        end
-        sample_val = first(values(dict))
-        coeffs = [zero(sample_val) for _ in 1:length(mset)]
-        for (exp, val) in dict
-            coeffs[exp_to_idx[Tuple(exp)]] = val
-        end
-        return DensePolynomial(coeffs, mset)
+        N = 0
+        FOM = 0
+        mset = MultiindexSet(Vector{SVector{0,Int}}())
+        return DensePolynomial(SVector{1,SVector{FOM,Float64}}[], mset)
     end
+    exps = collect(keys(dict))
+    mset = make_multiindex_set(exps)
+    N = length(exps[1])  # NVAR
+    FOM = length(first(values(dict)))  # FOM
+
+    # Map exponent -> index in mset
+    exp_to_idx = Dict{SVector{N,Int}, Int}()
+    for (idx, exp) in enumerate(mset.exponents)
+        exp_to_idx[exp] = idx
+    end
+
+    # Build coefficient vector: each element is SVector{1, SVector{FOM,Float64}}
+    coeffs = [SVector{1,SVector{FOM,Float64}}(SVector{FOM,Float64}(zeros(FOM))) for _ in 1:length(mset)]
+    for (exp_vec, val) in dict
+        exp_sv = SVector{N,Int}(exp_vec)
+        idx = exp_to_idx[exp_sv]
+        coeffs[idx] = SVector{1,SVector{FOM,Float64}}(SVector{FOM,Float64}(val))
+    end
+    return Parametrisation{1,FOM,N,Float64}(coeffs, mset)
+end
+
+# Helper to construct a ReducedDynamics from a dictionary
+function construct_reduced_dynamics(dict::Dict{Vector{Int}, Vector{Float64}})
+    if isempty(dict)
+        N = 0
+        ROM = 0
+        mset = MultiindexSet(Vector{SVector{0,Int}}())
+        return DensePolynomial(SVector{ROM,Float64}[], mset)
+    end
+    exps = collect(keys(dict))
+    mset = make_multiindex_set(exps)
+    N = length(exps[1])  # NVAR
+    ROM = length(first(values(dict)))  # ROM
+
+    exp_to_idx = Dict{SVector{N,Int}, Int}()
+    for (idx, exp) in enumerate(mset.exponents)
+        exp_to_idx[exp] = idx
+    end
+
+    coeffs = [SVector{ROM,Float64}(zeros(ROM)) for _ in 1:length(mset)]
+    for (exp_vec, val) in dict
+        exp_sv = SVector{N,Int}(exp_vec)
+        idx = exp_to_idx[exp_sv]
+        coeffs[idx] = SVector{ROM,Float64}(val)
+    end
+    return ReducedDynamics{ROM,N,Float64}(coeffs, mset)
 end
 
 # -------------------------------------------------------------------
@@ -55,112 +98,74 @@ red_dict = Dict{Vector{Int}, Vector{Float64}}(
     [0,2] => [5.1, 5.2]
 )
 
-param = construct_polynomial(DensePolynomial, param_dict)
-red   = construct_polynomial(DensePolynomial, red_dict)
-
-upper_bound = (1, 1)
+param = construct_parametrisation(param_dict)
+red = construct_reduced_dynamics(red_dict)
 
 println("\nParametrisation coefficients: ")
-for (exp, coeff) in each_term(param)
-    println("  exp $exp → $coeff")
+for (idx, exp) in enumerate(multiindex_set(param).exponents)
+    println("  exp $exp → $(param.coeffs[idx])")
 end
-println("\nReduced dynamics coefficients (vectors): ")
-for (exp, coeff) in each_term(red)
-    println("  exp $exp → $coeff")
+println("\nReduced dynamics coefficients: ")
+for (idx, exp) in enumerate(multiindex_set(red).exponents)
+    println("  exp $exp → $(red.coeffs[idx])")
 end
-
-
 
 # -------------------------------------------------------------------
 println("\nExample 1: upper_bound = (1,1)")
+upper_bound = SVector{2,Int}(1,1)
 
 result = compute_lower_order_couplings(upper_bound, param, red)
-println("\nResult: $result")
+println("Result: $result")
 
-# for upper_bound = (1,1) we have:
-# i = 1 and e_1 = (1,0)
-#   red_multiindex = (0,1)
-#   param_multiindex = upper_bound - red_multiindex + e_1 = (2,0)
-#   factor = param_multiindex[1] = 2
-# i = 2 and e_2 = (0,1)
-#   nothing
-# result = param_(2,0) * 2 * red_multiindex_(0,1)_1 = [4.0, 16.0, -6.0] * 2 * 2.1 = [16.8, 67.2, -25.2]
+# Expected result: param_(2,0) * 2 * red_(0,1)[1] = [4.0, 16.0, -6.0] * 2 * 2.1 = [16.8, 67.2, -25.2]
 expected_manual_computation = [16.8, 67.2, -25.2]
 println("Expected = $expected_manual_computation")
-
-
+println("Difference: $(result - SVector{1,SVector{3,Float64}}(expected_manual_computation))")
 
 # -------------------------------------------------------------------
 println("\nExample 2: upper_bound = (2,1)")
-
-upper_bound2 = (2, 1) # outside set of multiindices
+upper_bound2 = SVector{2,Int}(2,1)
 result2 = compute_lower_order_couplings(upper_bound2, param, red)
 println("Result: $result2")
 
-# for upper_bound = (2,1) we have:
-# i = 1 and e_1 = (1,0)
-#   red_multiindex = (0,1)
-#       param_multiindex = upper_bound - red_multiindex + e_1 = (3,0)
-#       factor = param_multiindex[1] = 3
-#       -> subtotal = param_(3,0) * 3 * red_multiindex_(0,1)_1 = nothing * 3 * 2.1 = 0.0
-#   red_multiindex = (2,0)
-#       param_multiindex = upper_bound - red_multiindex + e_1 = (1,1)
-#       factor = param_multiindex[1] = 1
-#       -> subtotal = param_(1,1) * 1 * red_multiindex_(2,0)_1 = [5.0, 32.0, -9.0] * 1 * 3.1 = [15.5, 99.2, -27.9]
-#   red_multiindex = (1,1)
-#       param_multiindex = upper_bound - red_multiindex + e_1 = (2,0)
-#       factor = param_multiindex[1] = 2
-#       -> subtotal = param_(2,0) * 2 * red_multiindex_(1,1)_1 = [4.0, 16.0, -6.0] * 2 * 4.1 = [32.8, 131.2, -49.2]
-# i = 2 and e_2 = (0,1)
-#   red_multiindex = (2,0)
-#       param_multiindex = upper_bound - red_multiindex + e_2 = (0,2)
-#       factor = param_multiindex[2] = 2
-#       -> subtotal = param_(0,2) * 2 * red_multiindex_(2,0)_2 = [6.0, 64.0, -12.0] * 2 * 3.2 = [38.4, 409.6, -76.8]
-#   red_multiindex = (1,1)
-#       param_multiindex = upper_bound - red_multiindex + e_2 = (1,1)
-#       factor = param_multiindex[2] = 1
-#       -> subtotal = param_(1,1) * 1 * red_multiindex_(1,1)_2 = [5.0, 32.0, -9.0] * 1 * 4.2 = [21, 134.4, -37.8]
-# result = 0.0 + [15.5, 99.2, -27.9] + [32.8, 131.2, -49.2] + [38.4, 409.6, -76.8] + [21, 134.4, -37.8] = [107.7, 774.4, -191.7]
-expected_manual_computation = [107.7, 774.4, -191.7]
-println("Expected = $expected_manual_computation")
-
-
+expected_manual_computation2 = [107.7, 774.4, -191.7]
+println("Expected = $expected_manual_computation2")
+println("Difference: $(result2 - SVector{1,SVector{3,Float64}}(expected_manual_computation2))")
 
 # -------------------------------------------------------------------
 println("\n--- Example 3: 3 variables, random polynomials ---")
 
-# Random polynomials in 3 variables, total degree up to 2
+# Random polynomials in 3 variables, total degree up to 5
 nvars3 = 3
 maxdeg = 5
-mset3 = all_multiindices_up_to(nvars3, maxdeg)  # from LowerOrderCouplings.Polynomials
+mset3 = all_multiindices_up_to(nvars3, maxdeg)
 nterms = length(mset3)
 
-# Random scalar coefficients for parametrisation (Float64)
-param_coeffs3 = randn(nterms)
-param3 = DensePolynomial(param_coeffs3, mset3)
+# Random coefficients for parametrisation: FOM = 3, ORD = 1
+param_coeffs3 = [SVector{1,SVector{3,Float64}}(randn(SVector{3,Float64})) for _ in 1:nterms]
+param3 = DensePolynomial(param_coeffs3, mset3)  # will be Parametrisation{1,3,3,Float64}
 
-# Random vector coefficients for reduced dynamics (each coefficient a 3‑vector)
-red_coeffs3 = [randn(3) for _ in 1:nterms]
-red3 = DensePolynomial(red_coeffs3, mset3)
+# Random coefficients for reduced dynamics: ROM = 3 (since 3 variables)
+red_coeffs3 = [randn(SVector{3,Float64}) for _ in 1:nterms]
+red3 = DensePolynomial(red_coeffs3, mset3)  # ReducedDynamics{3,3,Float64}
 
-upper_bound3 = (1, 4, 1)
+upper_bound3 = SVector{3,Int}(1,4,1)
 result3 = compute_lower_order_couplings(upper_bound3, param3, red3)
 println("Result for random 3‑variable case: $result3")
-
-
 
 # -------------------------------------------------------------------
 println("\nExample 4: zero polynomials (should return zero)")
 
-mset4 = all_multiindices_up_to(2, 2)
-zero_param = zero(DensePolynomial{Float64}, mset4)
-zero_red   = zero(DensePolynomial{Vector{Float64}}, mset4, 2)  # vector length 2
-upper_bound4 = (1, 1)
+mset4 = all_multiindices_up_to(2, 2)  # up to total degree 2 in 2 variables
+# Zero parametrisation: FOM = 3, ORD = 1
+zero_param = DensePolynomial([SVector{1,SVector{3,Float64}}(zeros(SVector{3,Float64})) for _ in 1:length(mset4)], mset4)
+# Zero reduced dynamics: ROM = 2
+zero_red = DensePolynomial([SVector{2,Float64}(zeros(2)) for _ in 1:length(mset4)], mset4)
+upper_bound4 = SVector{2,Int}(1,1)
 result4 = compute_lower_order_couplings(upper_bound4, zero_param, zero_red)
 println("Result for zero polynomials: $result4")
 @assert iszero(result4)
 
-
-
 # -------------------------------------------------------------------
+println("\n" * "="^80 * "\n")
 println("Demo finished successfully.")

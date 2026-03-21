@@ -1,5 +1,6 @@
 using Test
 using Random
+using StaticArrays: SVector
 
 include(joinpath(@__DIR__, "../../src/MORFE.jl"))
 using .MORFE.Multiindices
@@ -12,46 +13,39 @@ using .MORFE.Realification: _multinomial, _compositions, _reorder_canonical, _re
 """
     construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) -> DensePolynomial
 
-Construct a polynomial of the specified type from a dictionary.
-Uses the default monomial order `Grlex`.
+Construct a polynomial from a dictionary mapping exponent vectors to coefficients.
+The dictionary must be non‑empty. For empty polynomials, use explicit constructors.
 """
 function construct_polynomial(::Type{DensePolynomial}, dict::Dict{Vector{Int}, T}) where T
-    if isempty(dict)
-        mset = MultiindexSet(Matrix{Int}(undef, 0, 0))
-        return DensePolynomial(T[], mset)
-    else
-        exps = collect(keys(dict))
-        mset = MultiindexSet(exps)
-        exp_to_idx = Dict{Tuple{Vararg{Int}}, Int}()
-        for (j, col) in enumerate(eachcol(mset.exponents))
-            exp_to_idx[Tuple(col)] = j
-        end
-
-        # Obtain a sample value to determine the correct zero element
-        sample_val = first(values(dict))
-        # Create an array of independent zero elements (scalar or vector)
-        coeffs = [zero(sample_val) for _ in 1:length(mset)]
-
-        for (exp, val) in dict
-            coeffs[exp_to_idx[Tuple(exp)]] = val
-        end
-        return DensePolynomial(coeffs, mset)
+    @assert !isempty(dict) "construct_polynomial does not support empty dictionaries"
+    N = length(first(keys(dict)))
+    exps_sv = [SVector{N,Int}(exp) for exp in keys(dict)]
+    mset = MultiindexSet(exps_sv)                     # sorts and uniques
+    exp_to_idx = Dict{SVector{N,Int}, Int}()
+    for (i, exp_sv) in enumerate(mset.exponents)
+        exp_to_idx[exp_sv] = i
     end
+    sample_val = first(values(dict))
+    coeffs = [zero(sample_val) for _ in 1:length(mset)]
+    for (exp, val) in dict
+        exp_sv = SVector{N,Int}(exp)
+        coeffs[exp_to_idx[exp_sv]] = val
+    end
+    return DensePolynomial(coeffs, mset)
 end
 
 """
     polynomial_to_dict(poly::DensePolynomial) -> Dict{Vector{Int}, eltype(poly)}
 
-Convert any polynomial back to a dictionary mapping exponent vectors to **non‑zero** coefficients.
-Zero coefficients are omitted to match the sparsity of expected dictionaries.
+Convert a polynomial to a dictionary of non‑zero coefficients.
 """
 function polynomial_to_dict(poly::DensePolynomial)
     d = Dict{Vector{Int}, eltype(poly)}()
     exps = multiindex_set(poly).exponents
     cs = coeffs(poly)
-    for j in axes(exps, 2)
+    for (j, exp_sv) in enumerate(exps)
         if !iszero(cs[j])
-            d[exps[:, j]] = cs[j]
+            d[collect(exp_sv)] = cs[j]
         end
     end
     return d
@@ -133,12 +127,11 @@ end
         end
 
         @testset "vector output" begin
-            # f(x,y) = (1,0) x^2 + (0,1) xy
-            f = Dict([2,0] => [1.0, 0.0], [1,1] => [0.0, 1.0])
-            
-            M = [1 2; 
-                 3 4]
+            # Use SVector instead of plain Vector for coefficients
+            f = Dict([2,0] => SVector{2,Float64}(1.0, 0.0),
+                     [1,1] => SVector{2,Float64}(0.0, 1.0))
 
+            M = [1 2; 3 4]
             p = 2
             # x = z + 2w
             # y = 3z + 4w
@@ -147,9 +140,9 @@ end
             poly = construct_polynomial(PolyType, f)
             result = compose_linear(poly, M)
             result_dict = polynomial_to_dict(result)
-            @test result_dict[[2,0]] ≈ [1.0, 3.0]
-            @test result_dict[[1,1]] ≈ [4.0, 10.0]
-            @test result_dict[[0,2]] ≈ [4.0, 8.0]
+            @test result_dict[[2,0]] ≈ SVector{2,Float64}(1.0, 3.0)
+            @test result_dict[[1,1]] ≈ SVector{2,Float64}(4.0, 10.0)
+            @test result_dict[[0,2]] ≈ SVector{2,Float64}(4.0, 8.0)
         end
 
         @testset "zero matrix" begin
@@ -201,10 +194,8 @@ end
 @testset "realify" begin
     @testset "for $PolyType" for PolyType in [DensePolynomial]
         @testset "reorder_canonical - empty" begin
-            mset = MultiindexSet(zeros(Int, 3, 0))
-            if PolyType == DensePolynomial
-                poly = zero(DensePolynomial{Float64}, mset)
-            end
+            mset = MultiindexSet(Vector{SVector{3,Int}}())
+            poly = zero(DensePolynomial{Float64}, mset)
             conj_map = [2, 1, 3]
             canonical, n, m = _reorder_canonical(poly, conj_map)
             @test nvars(canonical) == 3
@@ -237,7 +228,7 @@ end
         end
 
         @testset "realify_term - z*zbar" begin
-            exp_vec = [1, 1]
+            exp_vec = SVector(1, 1)
             coeff = 2.0 + 3.0im
             n = 1
             result = _realify_term(exp_vec, coeff, n)
@@ -246,7 +237,7 @@ end
         end
 
         @testset "realify_term - z^2" begin
-            exp_vec = [2, 0]
+            exp_vec = SVector(2, 0)
             coeff = 1.0 + 0.0im
             n = 1
             result = _realify_term(exp_vec, coeff, n)
@@ -256,7 +247,7 @@ end
         end
 
         @testset "realify_term - with real variable" begin
-            exp_vec = [1, 1, 2]
+            exp_vec = SVector(1, 1, 2)
             coeff = 2.0 + 0.0im
             n = 1
             result = _realify_term(exp_vec, coeff, n)
@@ -265,10 +256,6 @@ end
         end
 
         @testset "realify - simple example from docs" begin
-            # f(z,z*,w) = (2 + im) zz* + (1 - im) z^2 + 3
-            # z = x + im * y,   z* = x - im * y,    w = w
-            # f(x,y,w) = (2 + im) (x^2 +y^2) + (1 - im) (x^2 + 2*im xy - y^2) + 3
-            #          = 3 + 3 x^2 + (2 + 2*im) xy + (1 + 2*im) y^2
             f = Dict([1,1,0] => 2.0+1.0im, [2,0,0] => 1.0-1.0im, [0,0,0] => 3.0+0.0im)
             poly = construct_polynomial(PolyType, f)
             conj_map = [2, 1, 3]
@@ -386,7 +373,7 @@ end
     end
 
     @testset "empty polynomial" begin
-        mset = MultiindexSet(zeros(Int, 3, 0))
+        mset = MultiindexSet(Vector{SVector{3,Int}}())
         poly = DensePolynomial(Float64[], mset)
         @test length(poly) == 0
         @test nvars(poly) == 3

@@ -77,6 +77,6 @@ for (i, (flat_indices, total_count)) in enumerate(result_group)
     end
 end
 
+# -------------------------------------------------------------------
 println("\n" * "="^80 * "\n")
-
 println("Demo finished successfully.")

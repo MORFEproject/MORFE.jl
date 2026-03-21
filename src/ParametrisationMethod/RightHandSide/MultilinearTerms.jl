@@ -1,9 +1,8 @@
 module MultilinearTerms
 
-using ..Multiindices: MultiindexSet, 
-    factorisations_asymmetric, factorisations_fully_symmetric, factorisations_groupwise_symmetric,
-    indices_in_box_with_bounded_degree
-
+using ..Multiindices: indices_in_box_with_bounded_degree,
+    factorisations_asymmetric, factorisations_fully_symmetric, factorisations_groupwise_symmetric
+    
 using ..Polynomials: DensePolynomial
 
 using ..ParametrisationModule: Parametrisation
@@ -56,8 +55,8 @@ appropriate coefficients in `parametrisation` and add the result directly to `re
 - `exp`: exponent vector.
 - `parametrisation`: tuple of matrices; `parametrisation[d]` is the matrix for derivative order `d-1` (d=1 for x, d=2 for x', …).
 """
-function accumulate_asymmetric!(result, multilinear_term::MultilinearMap{N}, orders::AbstractVector{Int}, 
-        exp::AbstractVector{Int}, parametrisation::Parametrisation{N}, candidate_indices::AbstractVector{Int}) where {N}
+function accumulate_asymmetric!(result, multilinear_term::MultilinearMap{ORD}, orders::AbstractVector{Int}, 
+        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where {ORD}
 
     W = parametrisation.coeffs
     k = multilinear_term.deg
@@ -79,8 +78,8 @@ Accumulate contributions for a fully symmetric multilinear_term (only one positi
 The factor `count` accounts for the number of permutations that yield the same
 ordered tuple due to symmetry inside the single group.
 """
-function accumulate_symmetric!(result, multilinear_term::MultilinearMap{N}, 
-        exp::AbstractVector{Int}, parametrisation::Parametrisation{N}, candidate_indices::AbstractVector{Int}) where {N}
+function accumulate_symmetric!(result, multilinear_term::MultilinearMap{ORD}, 
+        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where {ORD}
 
     W = parametrisation.coeffs
     k = multilinear_term.deg
@@ -121,8 +120,8 @@ scale by `total_count`, and add to `result`.
 
 The group sizes are extracted from the positive entries of `multilinear_term.multiindex`.
 """
-function accumulate_partial!(result, multilinear_term::MultilinearMap{N}, orders::AbstractVector{Int}, 
-        exp::AbstractVector{Int}, parametrisation::Parametrisation{N}, candidate_indices::AbstractVector{Int}) where {N}
+function accumulate_partial!(result, multilinear_term::MultilinearMap{ORD}, orders::AbstractVector{Int}, 
+        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where {ORD}
 
     W = parametrisation.coeffs
     k = multilinear_term.deg
@@ -151,8 +150,8 @@ The symmetry type is decided by counting how many distinct derivative orders app
 - If exactly one positive entry → fully symmetric.
 - Otherwise → partially symmetric.
 """
-function accumulate_multilinear_term!(result, multilinear_term::MultilinearMap{N}, 
-        exp::AbstractVector{Int}, parametrisation::Parametrisation{N}) where {N}
+function accumulate_multilinear_term!(result, multilinear_term::MultilinearMap{ORD}, 
+        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}) where {ORD}
 
     candidate_indices = indices_in_box_with_bounded_degree(parametrisation.multiindex_set, exp, 1, sum(exp))
 
@@ -186,7 +185,7 @@ array.
 # Returns
 An array of the same size and element type as `parametrisation[1]` containing the total sum.
 """
-function compute_multilinear_terms(model::NDOrderModel{N}, exp::AbstractVector{Int}, parametrisation::Parametrisation{N}) where {N}
+function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}) where {ORD}
 
     # Use the first coefficient to termine size and element type
     first_coeff = parametrisation.coeffs[1][1]

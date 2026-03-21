@@ -250,34 +250,28 @@ end
 
 # ---------- similar_poly (construct polynomial of same type from dictionary) ----------
 """
-    similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}, nvars::Int) where C
+    similar_poly(dict::Dict{SVector{NVAR,Int}, C}) where {NVAR,C}
 
-Construct a new polynomial of the same coefficient type `C` from the dictionary
-`dict` (exponents → coefficients). The new polynomial will have `nvars` variables.
+Construct a new polynomial from the dictionary `dict` (exponents → coefficients).
+The polynomial will have `NVAR` variables and coefficient type `C`.
 If `dict` is empty, an empty polynomial with zero coefficients is returned.
 """
-function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}, nvars::Int) where {C}
+function similar_poly(dict::Dict{SVector{NVAR,Int}, C}) where {NVAR,C}
     if isempty(dict)
-        # Create empty polynomial with nvars variables and zero coefficients
-        mset = MultiindexSet(Matrix{Int}(undef, nvars, 0))
-        return DensePolynomial{C}(C[], mset)
+        # Create an empty MultiindexSet with NVAR variables (no exponents)
+        mset = MultiindexSet(Vector{SVector{NVAR,Int}}())
+        return DensePolynomial(C[], mset)
     end
-    N = length(first(keys(dict)))
-    @assert N == nvars "Dictionary exponent length must match nvars"
-    svdict = Dict{SVector{N,Int}, C}(SVector{N,Int}(k) => v for (k, v) in dict)
-    mset = MultiindexSet(collect(keys(svdict)))  # sorts
-    coeffs = [get(svdict, exp, zero(C)) for exp in mset.exponents]
-    return DensePolynomial{C}(coeffs, mset)
-end
 
-"""
-    similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}) where C
+    mset = MultiindexSet(collect(keys(dict)))
 
-Construct a new polynomial of the same coefficient type `C` and same number of variables
-as `poly` from the dictionary `dict`.
-"""
-function similar_poly(dict::Dict{Vector{Int}, C}, poly::DensePolynomial{C}) where {C}
-    similar_poly(dict, poly, nvars(poly))
+    # Build coefficient vector aligned with the sorted exponent set
+    coeffs = Vector{C}(undef, length(mset.exponents))
+    @inbounds for (i, exp) in enumerate(mset.exponents)
+        coeffs[i] = get(dict, exp, zero(C))
+    end
+
+    return DensePolynomial(coeffs, mset)
 end
 
 # ---------- Basic arithmetic (optional) ----------
