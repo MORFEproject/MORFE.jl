@@ -2,10 +2,8 @@ module MultilinearTerms
 
 using ..Multiindices: indices_in_box_with_bounded_degree,
     factorisations_asymmetric, factorisations_fully_symmetric, factorisations_groupwise_symmetric
-    
-using ..Polynomials: DensePolynomial
 
-using ..ParametrisationModule: Parametrisation
+using ..ParametrisationMethod: Parametrisation
 
 using ..FullOrderModel: NDOrderModel, FirstOrderModel, MultilinearMap
 
@@ -56,7 +54,7 @@ appropriate coefficients in `parametrisation` and add the result directly to `re
 - `parametrisation`: tuple of matrices; `parametrisation[d]` is the matrix for derivative order `d-1` (d=1 for x, d=2 for x', …).
 """
 function accumulate_asymmetric!(result, multilinear_term::MultilinearMap{ORD}, orders::AbstractVector{Int}, 
-        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where {ORD}
+        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where ORD
 
     W = parametrisation.coeffs
     k = multilinear_term.deg
@@ -79,7 +77,7 @@ The factor `count` accounts for the number of permutations that yield the same
 ordered tuple due to symmetry inside the single group.
 """
 function accumulate_symmetric!(result, multilinear_term::MultilinearMap{ORD}, 
-        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where {ORD}
+        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where ORD
 
     W = parametrisation.coeffs
     k = multilinear_term.deg
@@ -97,7 +95,7 @@ end
 
 # for first order systems
 function accumulate_symmetric!(result, multilinear_term::MultilinearMap{1}, exp::AbstractVector{Int}, 
-        parametrisation::DensePolynomial, candidate_indices::AbstractVector{Int})
+        parametrisation::Parametrisation{1}, candidate_indices::AbstractVector{Int})
 
     W = parametrisation.coeffs
     k = multilinear_term.deg
@@ -121,7 +119,7 @@ scale by `total_count`, and add to `result`.
 The group sizes are extracted from the positive entries of `multilinear_term.multiindex`.
 """
 function accumulate_partial!(result, multilinear_term::MultilinearMap{ORD}, orders::AbstractVector{Int}, 
-        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where {ORD}
+        exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}, candidate_indices::AbstractVector{Int}) where ORD
 
     W = parametrisation.coeffs
     k = multilinear_term.deg
@@ -172,7 +170,7 @@ end
 # ----------------------------------------------------------------------
 
 """
-    compute_multilinear_terms(model::NDOrderModel{N}, exp::AbstractVector{Int}, parametrisation::NTuple{N, DensePolynomial})
+    compute_multilinear_terms(model::NDOrderModel{N}, exp::AbstractVector{Int}, parametrisation::NTuple{N, Parametrisation{ORD}}) where ORD
 
 Sum the contributions of all nonlinear multilinear_terms in `model` and return the accumulated
 array.
@@ -185,7 +183,7 @@ array.
 # Returns
 An array of the same size and element type as `parametrisation[1]` containing the total sum.
 """
-function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}) where {ORD}
+function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::AbstractVector{Int}, parametrisation::Parametrisation{ORD}) where ORD
 
     # Use the first coefficient to termine size and element type
     first_coeff = parametrisation.coeffs[1][1]
@@ -197,13 +195,15 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::AbstractVector
 end
 
 # Compute multilinear terms for first order systems
-function compute_multilinear_terms(model::FirstOrderModel, exp::AbstractVector{Int}, parametrisation::DensePolynomial)
+function compute_multilinear_terms(model::FirstOrderModel, exp::AbstractVector{Int}, parametrisation::Parametrisation{1})
+
+    candidate_indices = indices_in_box_with_bounded_degree(parametrisation.multiindex_set, exp, 1, sum(exp))
 
     # Use the first coefficient to termine size and element type
     first_coeff = parametrisation.coeffs[1]
     result = zeros(eltype(first_coeff), size(first_coeff))
     for multilinear_term in model.nonlinear_multilinear_terms
-        accumulate_symmetric!(result, multilinear_term, exp, parametrisation)
+        accumulate_symmetric!(result, multilinear_term, exp, parametrisation, candidate_indices)
     end
     return result
 end

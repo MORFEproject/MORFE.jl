@@ -3,7 +3,7 @@ module LowerOrderCouplings
 using LinearAlgebra
 using StaticArrays
 using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree, build_exponent_index_map
-using ..Polynomials: DensePolynomial, coeffs, multiindex_set, nvars
+using ..Polynomials: coeffs, multiindex_set, nvars
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics
 
 export compute_lower_order_couplings

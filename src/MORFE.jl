@@ -5,7 +5,7 @@ include("Polynomials.jl")
 include("FullOrderModel.jl")
 include("Eigensolvers.jl")
 include("Realification.jl")
-include("ParametrisationMethod/Parametrisation.jl")
+include("ParametrisationMethod/ParametrisationMethod.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 
@@ -14,7 +14,7 @@ using .Multiindices
 using .Polynomials: DensePolynomial, evaluate
 using .FullOrderModel: FullOrderModel, FirstOrderModel, NDOrderModel
 using .Eigensolvers: generalized_eigenpairs
-using .ParametrisationModule: Parametrisation
+using .ParametrisationMethod
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 
