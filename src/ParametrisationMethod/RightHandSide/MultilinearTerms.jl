@@ -176,7 +176,7 @@ Sum the contributions of all nonlinear multilinear_terms in `model` and return t
 array.
 
 # Arguments
-- `model`: an object with a field `nonlinear_multilinear_terms` (a list of multilinear_terms).
+- `model`: an object with a field `nonlinear_terms` (a list of multilinear_terms).
 - `exp`: exponent vector.
 - `parametrisation`: a tuple of dense polynomials; `parametrisation[d]` corresponds to derivative order `d-1` (d=1 for x, d=2 for x', …).
 
@@ -188,7 +188,7 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::AbstractVector
     # Use the first coefficient to termine size and element type
     first_coeff = parametrisation.coeffs[1][1]
     result = zeros(eltype(first_coeff), size(first_coeff))
-    for multilinear_term in model.nonlinear_multilinear_terms
+    for multilinear_term in model.nonlinear_terms
         accumulate_multilinear_term!(result, multilinear_term, exp, parametrisation)
     end
     return result
@@ -202,7 +202,7 @@ function compute_multilinear_terms(model::FirstOrderModel, exp::AbstractVector{I
     # Use the first coefficient to termine size and element type
     first_coeff = parametrisation.coeffs[1]
     result = zeros(eltype(first_coeff), size(first_coeff))
-    for multilinear_term in model.nonlinear_multilinear_terms
+    for multilinear_term in model.nonlinear_terms
         accumulate_symmetric!(result, multilinear_term, exp, parametrisation, candidate_indices)
     end
     return result

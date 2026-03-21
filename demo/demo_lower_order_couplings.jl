@@ -35,12 +35,12 @@ param_coeffs = [
 ]
 
 red_coeffs = [
-    SVector{NVAR,Complex}([0.0, 0.0]),   # (0,0)
-    SVector{NVAR,Complex}([1.0im, 0.0]),  # (1,0)
-    SVector{NVAR,Complex}([1.0, 1.0im]),  # (0,1)
-    SVector{NVAR,Complex}([3.0, 3.0im]),   # (2,0)
-    SVector{NVAR,Complex}([4.0, 4.0im]),   # (1,1)
-    SVector{NVAR,Complex}([5.0, 5.0im])    # (0,2)
+    SVector{NVAR,Complex}([0.0, 0.0]),      # (0,0)
+    SVector{NVAR,Complex}([1.0im, 0.0]),    # (1,0)
+    SVector{NVAR,Complex}([1.0, 1.0im]),    # (0,1)
+    SVector{NVAR,Complex}([3.0, 3.0im]),    # (2,0)
+    SVector{NVAR,Complex}([4.0, 4.0im]),    # (1,1)
+    SVector{NVAR,Complex}([5.0, 5.0im])     # (0,2)
 ]
 
 # Construct the polynomials

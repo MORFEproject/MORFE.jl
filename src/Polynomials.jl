@@ -165,7 +165,7 @@ end
 """
     _monomial(exp::SVector{N,Int}, powers::NTuple{NVAR,Vector{T}}) where N
 
-Compute the monomial value from precomputed powers.
+Compute the monomial value from precomputed powers. (x1, x2, ..., xN)^(a1, a2, ..., aN)
 """
 @inline function _monomial(exp::SVector{NVAR,Int}, powers::NTuple{NVAR,Vector{T}}) where {NVAR,T}
     m = one(T)
