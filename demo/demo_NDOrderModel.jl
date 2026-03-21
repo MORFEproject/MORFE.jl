@@ -109,5 +109,9 @@ for deg=1:4
     println("\nDegree $deg contribution: ", res_nd)
 end
 
+# -------------------------------------------------------------------
+println("\n" * "="^80 * "\n")
+println("Demo finished successfully.")
+
 
 

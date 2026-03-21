@@ -2,7 +2,8 @@ using StaticArrays: SVector
 
 include(joinpath(@__DIR__, "../src/MORFE.jl"))
 using .MORFE.Multiindices: all_multiindices_up_to
-using .MORFE.Polynomials  # DensePolynomial, zero, find_term, evaluate, extract_component
+using .MORFE.Polynomials: DensePolynomial, zero, find_term, evaluate, extract_component
+using .MORFE.Realification
 
 # 1. Create a dense polynomial with 3 variables, max degree 2, and 2‑component coefficients
 nvars, max_degree = 3, 2
@@ -43,7 +44,8 @@ x, y, w = real(z1), imag(z1), z3
 realf_eval = evaluate(realf_poly, [x, y, w])
 println("\n Realified evaluation at (x=$x, y=$y, w=$w):")
 println("  result = ", realf_eval)
-println("  error compared to original = ", abs(realf_eval - full_eval))
+using LinearAlgebra
+println("  relative error = ", norm(realf_eval - full_eval)/norm(full_eval))
 
 # 7. Compose the polynomial with a linear transformation f(Mx)
 M = [1.0    1.0im   0.0;
@@ -51,4 +53,10 @@ M = [1.0    1.0im   0.0;
      0.0    0.0     1.0]
 comp_poly = compose_linear(poly, M)
 println("\n Evaluate f(Mx) at (x=$x, y=$y, w=$w):")
-println("  result = ", evaluate(realf_poly, [x, y, w]))
+comp_eval = evaluate(comp_poly, [x, y, w])
+println("  result = ", comp_eval)
+println("  relative error = ", norm(comp_eval - full_eval)/norm(full_eval))
+
+# -------------------------------------------------------------------
+println("\n" * "="^80 * "\n")
+println("Demo finished successfully.")

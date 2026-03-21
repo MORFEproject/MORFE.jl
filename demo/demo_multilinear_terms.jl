@@ -147,3 +147,7 @@ result_nd = compute_multilinear_terms(model_nd, exp, parametrisation_nd, ms, can
 
 println("\nResult for exponent $exp (second‑order model):")
 println(result_nd)
+
+# -------------------------------------------------------------------
+println("\n" * "="^80 * "\n")
+println("Demo finished successfully.")
