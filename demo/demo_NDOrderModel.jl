@@ -2,9 +2,10 @@
 Demonstration of the usage of NDOrderModel and FirstOrderModel
 """
 
-include(joinpath(@__DIR__, "../src/FullOrderModel.jl"))
-using .FullOrderModel
+include(joinpath(@__DIR__, "../src/MORFE.jl"))
+using .MORFE
 using LinearAlgebra
+using StaticArrays: SVector
 
 n = 2 # dimension of system
 
@@ -28,7 +29,6 @@ end
 f_term2 = MultilinearMap(trilinear_term!)  # degree 3
 
 model_fo = FirstOrderModel((B₀, B₁), (f_term1, f_term2))
-
 A_fo, B_fo = linear_first_order_matrices(model_fo)
 println("=== FirstOrderModel ===")
 println("\nA (linear part):\n", repr("text/plain", A_fo))
@@ -38,7 +38,7 @@ println("\nB (mass matrix):\n", repr("text/plain", B_fo))
 x_fo = [1.0, 2.0]
 res_fo = zeros(n)
 
-for deg=1:4
+for deg in 1:4
     res_fo .= 0
     evaluate_nonlinear_terms!(res_fo, model_fo, deg, x_fo)
     println("\nDegree $deg contribution: ", res_fo)
@@ -76,8 +76,16 @@ function nonlinear_damping!(res, x1, x2, xdot)
 end
 term3 = MultilinearMap(nonlinear_damping!, (2, 1))  # two x, one x'
 
+#Term forcing: [1, 0]^T * r  with r'=3*r
+function forcing!(res, r)
+    @. res += [1.0, 0.0, 0.0] * r
+end
+forcing_dynamics = DensePolynomial([SVector(3.0)], MultiindexSet([SVector(1)]))
+term_forcing = MultilinearMap(
+    forcing!, (0, 0), (1,), forcing_dynamics)
+
 # Collect all nonlinear terms
-nonlinear_terms = (term1, term2, term3)
+nonlinear_terms = (term1, term2, term3, term_forcing)
 
 # Build the second‑order model
 model_nd = NDOrderModel((B₀, B₁, B₂), nonlinear_terms)
@@ -98,12 +106,15 @@ state_vectors = (x, xdot)   # tuple expected by evaluate_term!
 res_nd = zeros(n)
 
 for term in model_nd.nonlinear_terms
-    res_nd .= 0
-    println("\nContribution of $(term.f!): ", 
-        term.f!(res_nd, ntuple(_ -> x, term.multiindex[1])..., ntuple(_ -> xdot, term.multiindex[2])...))
+    if length(term.multiindex_external) == 0
+        res_nd .= 0
+        println("\nContribution of $(term.f!): ",
+            term.f!(res_nd, ntuple(_ -> x, term.multiindex[1])...,
+                ntuple(_ -> xdot, term.multiindex[2])...))
+    end
 end
 
-for deg=1:4
+for deg in 1:4
     res_nd .= 0
     evaluate_nonlinear_terms!(res_nd, model_nd, deg, state_vectors)   # evaluate all degree‑i terms
     println("\nDegree $deg contribution: ", res_nd)
@@ -112,6 +123,3 @@ end
 # -------------------------------------------------------------------
 println("\n" * "="^80 * "\n")
 println("Demo finished successfully.")
-
-
-

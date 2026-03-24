@@ -2,11 +2,13 @@ module FullOrderModel
 
 using LinearAlgebra
 using SparseArrays
+using StaticArrays: SVector
+
+using ..Polynomials: DensePolynomial, evaluate
 
 export NDOrderModel, FirstOrderModel,
        MultilinearMap,
-       linear_first_order_matrices,
-       evaluate_nonlinear_terms!
+       linear_first_order_matrices, evaluate_nonlinear_terms!
 
 abstract type AbstractFullOrderModel end
 
@@ -15,16 +17,24 @@ abstract type AbstractFullOrderModel end
 
 Represents a single monomial term of order deg in the nonlinear function of an `NDOrderModel`.
 
-A term is represented using a multiindex stored in the NTupl
+A term is represented using a multiindex stored in the NTuple 
     'multiindex' = (i_0, ..., i_{N-1})  
 where i_k is the multiplicity of the derivative x^(k). So the i_k specifies how many times the derivative x^(k) appears as an argument. 
+In addition it is allowd to have a coupling of M external variables r_1,...,r_M. These fullfill the dynamic system
+    r' = dynamics_external(r),
+where dynamics_external is a DensePolynomial. The influence in f! is also described by a multiindex
+    `multiindex_external` = (j_1,..,j_M)
+
 During evaluation the multilinear map is called as
 
     f!(res,
-       x^(0), ... repeated i₀ times,
-       x^(1), ... repeated i₁ times,
-       …
-       x^(N-1), ...repeated i_{N-1} times)
+       x^(0), ... repeated i_0 times,
+       x^(1), ... repeated i_1 times,
+       ...
+       x^(N-1), ...repeated i_{N-1} times,
+       r_1, ... repeated j_1 times,
+       ...
+       r_M, ... repeated j_M times)
 
 # Important Notes
 - Each `MultilinearMap` **must implement a multilinear map**, i.e., it should be linear in each of its arguments independently.
@@ -34,41 +44,68 @@ During evaluation the multilinear map is called as
     f!(res, x^(1)_1, x^(1)_2, ...) = f!(res, x^(1)_2, x^(1)_1, ...)
 
 """
-struct MultilinearMap{N, F}
+struct MultilinearMap{N, M, F}
     f!::F
-    multiindex::NTuple{N, Int}
+    multiindex::NTuple{N, Int64}
+    multiindex_external::NTuple{M, Int64}
+    dynamics_external::Union{Nothing, DensePolynomial{<:SVector, M}}
     deg::Int
 end
 
 """
-    MultilinearMap{N}(f, multiindex)
+    MultilinearMap{N}(f, multiindex, fom)
 
-Create a multilinear term for a system of order N.
+Create a multilinear term for a system of order N without external dynamics.
 
 # Arguments
 - `f!`: in-place evaluation function
 - `multiindex`: tuple specifying which derivatives are used
+- `fom`: size of the NDOrderModel state vector
 """
-function MultilinearMap(f!, multiindex::NTuple{N, Int}) where {N}
+function MultilinearMap(f!, multiindex::NTuple{N, Int64}) where {N}
     deg = sum(multiindex)
 
     # Check if input arguments of f matches deg
     ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
-    @assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-    @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
+    @assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
+    @assert ms[1].nargs==deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
+    @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
 
-    return MultilinearMap{N, typeof(f!)}(f!, multiindex, deg)
+    return MultilinearMap{N, 0, typeof(f!)}(f!, multiindex, (), nothing, deg)
 end
 
 # Create a multilinear term for a first order system.
 function MultilinearMap(f!)
     ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
+    @assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
     deg = ms[1].nargs - 2 # subtract the function itself and `res`
-    @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
-    multiindex = (deg, )
-    return MultilinearMap{1, typeof(f!)}(f!, multiindex, deg)
+    @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
+
+    multiindex = (deg,)
+    return MultilinearMap{1, 0, typeof(f!)}(f!, multiindex, (), nothing, deg)
+end
+
+function MultilinearMap(
+        f!, multiindex::NTuple{N, Int64}, multiindex_external::NTuple{M, Int64},
+        dynamics_external::DensePolynomial{<:SVector, M}) where {N, M}
+    #TODO
+    deg = 0
+    if N != 0
+        deg += sum(multiindex)
+    end
+    if M != 0
+        deg += sum(multiindex_external)
+    end
+    # Check if input arguments of f matches deg
+    ms = methods(f!)
+    @assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
+    @assert ms[1].nargs==deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
+    if M == 0
+        @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
+    end
+
+    return MultilinearMap{N, M, typeof(f!)}(
+        f!, multiindex, multiindex_external, dynamics_external, deg)
 end
 
 """
@@ -150,7 +187,7 @@ struct NDOrderModel{N, NP1, N_NL, MT <: AbstractMatrix} <: AbstractFullOrderMode
     """
     function NDOrderModel(linear_terms::NTuple{NP1, MT},
             nonlinear_terms::NTuple{N_NL, MultilinearMap{N}}) where {
-                N, NP1, N_NL, MT <: AbstractMatrix}
+            N, NP1, N_NL, MT <: AbstractMatrix}
         @assert NP1 == N + 1
         @assert all(size(B) == size(linear_terms[1]) for B in linear_terms)
 
@@ -161,11 +198,11 @@ end
 """
     evaluate_nonlinear_terms!(res, model, order, state_vectors)
 
+Only used in demo
 Evaluate all nonlinear terms of a given polynomial degree for an `NDOrderModel`.
 """
-function evaluate_nonlinear_terms!(res, model::NDOrderModel{N, NP1, N_NL, MT}, 
-    order, state_vectors) where {N, NP1, N_NL, MT}
-
+function evaluate_nonlinear_terms!(res, model::NDOrderModel{N, NP1, N_NL, MT},
+        order, state_vectors) where {N, NP1, N_NL, MT}
     order <= 1 && return res
 
     for term in model.nonlinear_terms
@@ -206,14 +243,15 @@ and
 
 where `I` is the `n × n` identity matrix.
 """
-function linear_first_order_matrices(model::NDOrderModel{N, NP1, N_NL, MT}) where {N, NP1, N_NL, MT <: SparseMatrixCSC}
+function linear_first_order_matrices(model::NDOrderModel{
+        N, NP1, N_NL, MT}) where {N, NP1, N_NL, MT <: SparseMatrixCSC}
     n = size(model.linear_terms[1], 1)
     T = eltype(model.linear_terms[1])
     total = N * n
 
     B = spzeros(T, total, total)
     A = spzeros(T, total, total)
-    Id = sparse(one(T)*I, n, n)
+    Id = sparse(one(T) * I, n, n)
 
     # --- B matrix ---
     for i in 1:(N - 1)
@@ -245,7 +283,8 @@ function linear_first_order_matrices(model::NDOrderModel{N, NP1, N_NL, MT}) wher
     return A, B
 end
 
-function linear_first_order_matrices(model::NDOrderModel{N, NP1, N_NL, MT}) where {N, NP1, N_NL, MT <: AbstractMatrix}
+function linear_first_order_matrices(model::NDOrderModel{
+        N, NP1, N_NL, MT}) where {N, NP1, N_NL, MT <: AbstractMatrix}
     n = size(model.linear_terms[1], 1)
     T = eltype(model.linear_terms[1])
     total = N * n
@@ -284,7 +323,6 @@ function linear_first_order_matrices(model::NDOrderModel{N, NP1, N_NL, MT}) wher
     return A, B
 end
 
-
 """
     FirstOrderModel{MT, N_NL} <: AbstractFullOrderModel
 
@@ -308,10 +346,12 @@ struct FirstOrderModel{MT, N_NL} <: AbstractFullOrderModel
     B1::MT
     nonlinear_terms::NTuple{N_NL, MultilinearMap{1}}
 
-    function FirstOrderModel(linear_terms::NTuple{2, MT},
-                             nonlinear_terms::NTuple{N_NL, MultilinearMap{1}}) where {MT, N_NL}
+    function FirstOrderModel(
+            linear_terms::NTuple{2, MT},
+            nonlinear_terms::NTuple{N_NL, MultilinearMap{1}}) where {
+            MT, N_NL}
         B0, B1 = linear_terms
-        @assert size(B0) == size(B1) "Linear matrices must have identical size"
+        @assert size(B0)==size(B1) "Linear matrices must have identical size"
         new{MT, N_NL}(B0, B1, nonlinear_terms)
     end
 end
@@ -323,8 +363,7 @@ Evaluate all nonlinear terms of given `order` and accumulate into `res`.
 `state_vectors` must be a 1‑tuple `(x,)`.
 """
 function evaluate_nonlinear_terms!(res, model::FirstOrderModel,
-                                   order::Int, state_vector)
-
+        order::Int, state_vector)
     order <= 1 && return res
 
     @inbounds for term in model.nonlinear_terms
