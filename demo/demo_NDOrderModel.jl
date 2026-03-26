@@ -82,7 +82,7 @@ function forcing!(res, r)
 end
 forcing_dynamics = DensePolynomial([SVector(3.0)], MultiindexSet([SVector(1)]))
 term_forcing = MultilinearMap(
-    forcing!, (0, 0), (1,), forcing_dynamics)
+    forcing!, (0, 0), 1)
 
 # Collect all nonlinear terms
 nonlinear_terms = (term1, term2, term3, term_forcing)
@@ -106,7 +106,7 @@ state_vectors = (x, xdot)   # tuple expected by evaluate_term!
 res_nd = zeros(n)
 
 for term in model_nd.nonlinear_terms
-    if length(term.multiindex_external) == 0
+    if length(term.multiplicy_external) == 0
         res_nd .= 0
         println("\nContribution of $(term.f!): ",
             term.f!(res_nd, ntuple(_ -> x, term.multiindex[1])...,

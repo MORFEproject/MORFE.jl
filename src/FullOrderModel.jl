@@ -18,12 +18,11 @@ abstract type AbstractFullOrderModel end
 Represents a single monomial term of order deg in the nonlinear function of an `NDOrderModel`.
 
 A term is represented using a multiindex stored in the NTuple 
-    'multiindex' = (i_0, ..., i_{N-1})  
+    `multiindex` = (i_0, ..., i_{N-1})  
 where i_k is the multiplicity of the derivative x^(k). So the i_k specifies how many times the derivative x^(k) appears as an argument. 
 In addition it is allowd to have a coupling of M external variables r_1,...,r_M. These fullfill the dynamic system
     r' = dynamics_external(r),
-where dynamics_external is a DensePolynomial. The influence in f! is also described by a multiindex
-    `multiindex_external` = (j_1,..,j_M)
+where dynamics_external is a DensePolynomial defined in NDORderModel. The influence in f! is described by `multiplicy_external`
 
 During evaluation the multilinear map is called as
 
@@ -32,9 +31,7 @@ During evaluation the multilinear map is called as
        x^(1), ... repeated i_1 times,
        ...
        x^(N-1), ...repeated i_{N-1} times,
-       r_1, ... repeated j_1 times,
-       ...
-       r_M, ... repeated j_M times)
+       r, ... repeated `multiplicy_external` times)
 
 # Important Notes
 - Each `MultilinearMap` **must implement a multilinear map**, i.e., it should be linear in each of its arguments independently.
@@ -44,11 +41,10 @@ During evaluation the multilinear map is called as
     f!(res, x^(1)_1, x^(1)_2, ...) = f!(res, x^(1)_2, x^(1)_1, ...)
 
 """
-struct MultilinearMap{N, M, F}
+struct MultilinearMap{N, F}
     f!::F
     multiindex::NTuple{N, Int64}
-    multiindex_external::NTuple{M, Int64}
-    dynamics_external::Union{Nothing, DensePolynomial{<:SVector, M}}
+    multiplicy_external::Int64
     deg::Int
 end
 
@@ -71,7 +67,7 @@ function MultilinearMap(f!, multiindex::NTuple{N, Int64}) where {N}
     @assert ms[1].nargs==deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
     @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
 
-    return MultilinearMap{N, 0, typeof(f!)}(f!, multiindex, (), nothing, deg)
+    return MultilinearMap{N, typeof(f!)}(f!, multiindex, 0, deg)
 end
 
 # Create a multilinear term for a first order system.
@@ -82,30 +78,27 @@ function MultilinearMap(f!)
     @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
 
     multiindex = (deg,)
-    return MultilinearMap{1, 0, typeof(f!)}(f!, multiindex, (), nothing, deg)
+    return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg)
 end
 
 function MultilinearMap(
-        f!, multiindex::NTuple{N, Int64}, multiindex_external::NTuple{M, Int64},
-        dynamics_external::DensePolynomial{<:SVector, M}) where {N, M}
+        f!, multiindex::NTuple{N, Int64}, multiplicy_external::Int64) where {N}
     #TODO
     deg = 0
     if N != 0
         deg += sum(multiindex)
     end
-    if M != 0
-        deg += sum(multiindex_external)
-    end
+    deg += sum(multiplicy_external)
     # Check if input arguments of f matches deg
     ms = methods(f!)
     @assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
     @assert ms[1].nargs==deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-    if M == 0
-        @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
-    end
+    # if multiplicy_external == 0
+    #     @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
+    # end
 
-    return MultilinearMap{N, M, typeof(f!)}(
-        f!, multiindex, multiindex_external, dynamics_external, deg)
+    return MultilinearMap{N, typeof(f!)}(
+        f!, multiindex, multiplicy_external, deg)
 end
 
 """
@@ -175,6 +168,7 @@ Each `MultilinearMap` defines:
 struct NDOrderModel{N, NP1, N_NL, MT <: AbstractMatrix} <: AbstractFullOrderModel
     linear_terms::NTuple{NP1, MT}
     nonlinear_terms::NTuple{N_NL, MultilinearMap{N}}
+    external_dynamics::DensePolynomial{<:SVector, 1}
 
     """
     NDOrderModel(linear_terms, nonlinear_terms)
