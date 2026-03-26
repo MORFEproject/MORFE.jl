@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------
 # import modules, define helper functions
 
-include(joinpath(@__DIR__, "../../src/Eigensolvers.jl"))
+include(joinpath(@__DIR__, "../../src/SpectralDecomposition/Eigensolvers.jl"))
 import .Eigensolvers
 
 using SparseArrays
