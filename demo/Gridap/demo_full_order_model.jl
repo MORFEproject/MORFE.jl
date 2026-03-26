@@ -1,3 +1,5 @@
+DEPRECATED
+
 """
 Structural mechanical problem without forcing.
 
@@ -119,7 +121,8 @@ function evaluate_polynomial_nonlinearity!(res, vec1, vec2)
     res .+= [
         assemble_vector(v -> (g_quad(u1r, u2r, v) - g_quad(u1i, u2i, v)), V), zeros(N2)]
     res .+= [
-        assemble_vector(v -> (g_quad(u1r, u2i, v) + g_quad(u1i, u2r, v)), V), zeros(N2)]
+        assemble_vector(v -> (g_quad(u1r, u2i, v) + g_quad(u1i, u2r, v)), V), zeros(N2)] *
+            im
 end
 function evaluate_polynomial_nonlinearity!(res, vec1, vec2, vec3)
     N = length(vec1)
@@ -141,7 +144,7 @@ function evaluate_polynomial_nonlinearity!(res, vec1, vec2, vec3)
             v -> (h_cube(u1i, u2r, u3r, v) + h_cube(u1r, u2i, u3r, v) +
                   h_cube(u1r, u2r, u3i, v) - h_cube(u1i, u2i, u3i, v)),
             V),
-        zeros(N2)]
+        zeros(N2)] * im
 end
 
 @inline evaluate_polynomial_nonlinearity!(res, args...) = nothing

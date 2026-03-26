@@ -22,7 +22,8 @@ The outer dimension `ORD` corresponds to the order of the original ODE:
   * `ORD = 1` : first‑order system, mapping `ξ` → `x`.
   * `ORD = 2` : second‑order system, mapping `ξ` → `(x, ẋ)`.
 """
-const Parametrisation{ORD, FOM, NVAR, T} = DensePolynomial{SVector{ORD, SVector{FOM, T}}, NVAR}
+const Parametrisation{ORD, NVAR, T} = DensePolynomial{
+    SVector{ORD, Vector{T}}, NVAR}
 
 """
     ReducedDynamics{ROM, NVAR, T} = DensePolynomial{SVector{ROM, T}, NVAR}
@@ -45,30 +46,34 @@ Create a consistent pair of polynomials:
 
 Both polynomials share the same multiindex set `mset` and element type `T`.
 """
-function create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, ::Type{T}=Complex) where {T<:Number, NVAR}
+function create_parametrisation_method_objects(
+        mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int,
+        ::Type{T} = Complex) where {T <: Number, NVAR}
     # Parametrisation coefficients: SVector{ORD, SVector{FOM, T}} zeros
-    inner_zero = SVector{FOM,T}(zeros(T, FOM))
-    outer_zero = SVector{ORD, SVector{FOM,T}}(ntuple(_ -> inner_zero, ORD))
+    inner_zero = Vector{T}(zeros(T, FOM))
+    outer_zero = SVector{ORD, Vector{T}}(ntuple(_ -> inner_zero, ORD))
     W_coeffs = [outer_zero for _ in 1:length(mset)]
     W = DensePolynomial(W_coeffs, mset)   # Parametrisation{ORD,FOM,NVAR,T}
 
     # Reduced dynamics coefficients: SVector{ROM, T} zeros
-    R_coeffs = [SVector{ROM,T}(zeros(T, ROM)) for _ in 1:length(mset)]
+    R_coeffs = [SVector{ROM, T}(zeros(T, ROM)) for _ in 1:length(mset)]
     R = DensePolynomial(R_coeffs, mset)   # ReducedDynamics{ROM,NVAR,T}
 
     return (W, R)
 end
 
 # In practice, ROM = NVAR
-function create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ::Type{T}=Complex) where {T<:Number, NVAR}
+function create_parametrisation_method_objects(
+        mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int,
+        ::Type{T} = Complex) where {T <: Number, NVAR}
     # Parametrisation coefficients: SVector{ORD, SVector{FOM, T}} zeros
-    inner_zero = SVector{FOM,T}(zeros(T, FOM))
-    outer_zero = SVector{ORD, SVector{FOM,T}}(ntuple(_ -> inner_zero, ORD))
+    inner_zero = Vector{T}(zeros(T, FOM))
+    outer_zero = SVector{ORD, Vector{T}}(ntuple(_ -> inner_zero, ORD))
     W_coeffs = [outer_zero for _ in 1:length(mset)]
     W = DensePolynomial(W_coeffs, mset)   # Parametrisation{ORD,FOM,NVAR,T}
 
     # Reduced dynamics coefficients: SVector{ROM, T} zeros with ROM=NVAR
-    R_coeffs = [SVector{NVAR,T}(zeros(T, NVAR)) for _ in 1:length(mset)]
+    R_coeffs = [SVector{NVAR, T}(zeros(T, NVAR)) for _ in 1:length(mset)]
     R = DensePolynomial(R_coeffs, mset)   # ReducedDynamics{ROM,NVAR,T}
 
     return (W, R)
