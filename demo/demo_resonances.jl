@@ -1,5 +1,6 @@
 include(joinpath(@__DIR__, "../src/MORFE.jl"))
-using .MORFE
+using .MORFE.Multiindices: all_multiindices_up_to, find_in_set
+using .MORFE.Resonance: SingleResonance, resonance_set, resonance_set_from_complex_normal_form_style
 using StaticArrays
 
 N = 5
@@ -20,8 +21,8 @@ res_set1 = resonance_set(multiindexset, (res1, res2, res3, res4, res5, res6))
 println(res_set1.resonances)
 
 println("=== Using Tolerance ===")
-eigs = SVector{5, ComplexF64}(1.0, 2.0, 3.0 + 3.0im, 4.0, 5.0)
-res_set_2 = resonance_set_from_eigenvalues(multiindexset, eigs, 1e-9)
+eigenvalues = SVector{5, ComplexF64}(1.0, 2.0, 3.0 + 3.0im, 4.0, 5.0)
+res_set_2 = resonance_set_from_complex_normal_form_style(multiindexset, eigenvalues, 1e-9)
 # println(res_set_2.resonances)
 # 2:1 resonance between λ1 and λ2 
 index = MORFE.Multiindices.find_in_set(multiindexset, [2, 0, 0, 0, 0])
