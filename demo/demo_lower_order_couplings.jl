@@ -24,23 +24,23 @@ FOM = 3
 
 # Coefficient vectors in the same order as mset.exponents
 
-param_coeffs = [ 
-    # position                                          # velocity
-    SVector(SVector{FOM,Complex}([1.0, 2.0, 0.0]),      SVector{FOM,Complex}([1.0, 2.0, 0.0])*im),      # (0,0)
-    SVector(SVector{FOM,Complex}([2.0, 4.0, -1.0]),     SVector{FOM,Complex}([2.0, 4.0, -1.0])*im),     # (1,0)
-    SVector(SVector{FOM,Complex}([3.0, 8.0, -3.0]),     SVector{FOM,Complex}([3.0, 8.0, -3.0])*im),     # (0,1)
-    SVector(SVector{FOM,Complex}([4.0, 16.0, -6.0]),    SVector{FOM,Complex}([4.0, 16.0, -6.0])*im),    # (2,0)
-    SVector(SVector{FOM,Complex}([5.0, 32.0, -9.0]),    SVector{FOM,Complex}([5.0, 32.0, -9.0])*im),    # (1,1)
-    SVector(SVector{FOM,Complex}([6.0, 64.0, -12.0]),   SVector{FOM,Complex}([6.0, 64.0, -12.0])*im)    # (0,2)
+param_coeffs = [
+	# position                                          # velocity
+	SVector(SVector{FOM, Complex}([1.0, 2.0, 0.0]), SVector{FOM, Complex}([1.0, 2.0, 0.0])*im),      # (0,0)
+	SVector(SVector{FOM, Complex}([2.0, 4.0, -1.0]), SVector{FOM, Complex}([2.0, 4.0, -1.0])*im),     # (1,0)
+	SVector(SVector{FOM, Complex}([3.0, 8.0, -3.0]), SVector{FOM, Complex}([3.0, 8.0, -3.0])*im),     # (0,1)
+	SVector(SVector{FOM, Complex}([4.0, 16.0, -6.0]), SVector{FOM, Complex}([4.0, 16.0, -6.0])*im),    # (2,0)
+	SVector(SVector{FOM, Complex}([5.0, 32.0, -9.0]), SVector{FOM, Complex}([5.0, 32.0, -9.0])*im),    # (1,1)
+	SVector(SVector{FOM, Complex}([6.0, 64.0, -12.0]), SVector{FOM, Complex}([6.0, 64.0, -12.0])*im),    # (0,2)
 ]
 
 red_coeffs = [
-    SVector{NVAR,Complex}([0.0, 0.0]),      # (0,0)
-    SVector{NVAR,Complex}([1.0im, 0.0]),    # (1,0)
-    SVector{NVAR,Complex}([1.0, 1.0im]),    # (0,1)
-    SVector{NVAR,Complex}([3.0, 3.0im]),    # (2,0)
-    SVector{NVAR,Complex}([4.0, 4.0im]),    # (1,1)
-    SVector{NVAR,Complex}([5.0, 5.0im])     # (0,2)
+	SVector{NVAR, Complex}([0.0, 0.0]),      # (0,0)
+	SVector{NVAR, Complex}([1.0im, 0.0]),    # (1,0)
+	SVector{NVAR, Complex}([1.0, 1.0im]),    # (0,1)
+	SVector{NVAR, Complex}([3.0, 3.0im]),    # (2,0)
+	SVector{NVAR, Complex}([4.0, 4.0im]),    # (1,1)
+	SVector{NVAR, Complex}([5.0, 5.0im]),     # (0,2)
 ]
 
 # Construct the polynomials
@@ -49,11 +49,11 @@ R = DensePolynomial(red_coeffs, mset)     # ReducedDynamics{ROM=2,NVAR=2,Complex
 
 println("\nParametrisation coefficients: ")
 for (idx, exp) in enumerate(mset.exponents)
-    println("  exp $exp → $(W.coeffs[idx])")
+	println("  exp $exp → $(W.coeffs[idx])")
 end
 println("\nReduced dynamics coefficients: ")
 for (idx, exp) in enumerate(mset.exponents)
-    println("  exp $exp → $(R.coeffs[idx])")
+	println("  exp $exp → $(R.coeffs[idx])")
 end
 
 
@@ -86,7 +86,7 @@ println("Relative error: ", norm(result - expected)/norm(expected))
 # ----------------------------------------------------------------------
 
 println("\nExample 2: upper_bound = (2,1)")
-upper_bound2 = SVector{2,Int}(2,1)
+upper_bound2 = SVector{2, Int}(2, 1)
 result2 = compute_lower_order_couplings(upper_bound2, W, R)
 println("Result: $result2")
 
@@ -132,7 +132,7 @@ println("Result: $result2")
 #        + ([20im,    128im,     -36im    ], [-20,      -128,       36      ])
 #        = ([47+56im, 224+512im, -75-108im], [-56+47im, -512+224im, 108-75im])
 #
-expected2 = SVector{3, Complex}[[47.0+56.0im, 224.0+512.0im, -75.0-108.0im], [-56.0+47.0im, -512.0+224.0im,  108.0-75.0im]]
+expected2 = SVector{3, Complex}[[47.0+56.0im, 224.0+512.0im, -75.0-108.0im], [-56.0+47.0im, -512.0+224.0im, 108.0-75.0im]]
 println("Expected = $expected2")
 println("Relative error: ", norm(result2 - expected2)/norm(expected2))
 
@@ -154,11 +154,11 @@ W3, R3 = create_parametrisation_method_objects(mset3, ORD3, FOM3, NVAR3, Complex
 
 # Fill with random coefficients
 for idx in 1:nterms
-    W3.coeffs[idx] = SVector{1, SVector{3}}(randn(SVector{3, ComplexF64}))
-    R3.coeffs[idx] = randn(SVector{NVAR3,ComplexF64})
+	W3.coeffs[idx] = SVector{1, SVector{3}}(randn(SVector{3, ComplexF64}))
+	R3.coeffs[idx] = randn(SVector{NVAR3, ComplexF64})
 end
 
-upper_bound3 = SVector{3,Int}(1,4,1)
+upper_bound3 = SVector{3, Int}(1, 4, 1)
 result3 = compute_lower_order_couplings(upper_bound3, W3, R3)
 println("Result for random 3‑variable case: $result3")
 
@@ -170,7 +170,7 @@ println("\nExample 4: zero polynomials (should return zero)")
 
 mset4 = all_multiindices_up_to(2, 2)   # up to total degree 2 in 2 variables
 W_zero, R_zero = create_parametrisation_method_objects(mset4, 1, 3, 2, Complex)
-upper_bound4 = SVector{2,Int}(1,1)
+upper_bound4 = SVector{2, Int}(1, 1)
 result4 = compute_lower_order_couplings(upper_bound4, W_zero, R_zero)
 println("Result for zero polynomials: $result4")
 @assert iszero(result4)
