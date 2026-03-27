@@ -1,7 +1,7 @@
 name = "MORFE"
 uuid = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
-authors = ["MORFEproject <https://github.com/MORFEproject>"]
 version = "3.0.0"
+authors = ["MORFEproject <https://github.com/MORFEproject>"]
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
@@ -14,3 +14,4 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 LaTeXStrings = "1.4.0"
 Plots = "1.41.6"
+StaticArrays = "1.9.18"

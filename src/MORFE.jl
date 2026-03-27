@@ -3,7 +3,7 @@ module MORFE
 include("Multiindices.jl")
 include("Polynomials.jl")
 include("FullOrderModel.jl")
-include("Eigensolvers.jl")
+include("SpectralDecomposition/Eigensolvers.jl")
 include("Realification.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
