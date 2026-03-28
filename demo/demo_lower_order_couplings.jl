@@ -23,37 +23,37 @@ ORD = 2
 FOM = 3
 
 # Coefficient vectors in the same order as mset.exponents
-
-param_coeffs = [
-	# position                                          # velocity
-	SVector(SVector{FOM, Complex}([1.0, 2.0, 0.0]), SVector{FOM, Complex}([1.0, 2.0, 0.0])*im),      # (0,0)
-	SVector(SVector{FOM, Complex}([2.0, 4.0, -1.0]), SVector{FOM, Complex}([2.0, 4.0, -1.0])*im),     # (1,0)
-	SVector(SVector{FOM, Complex}([3.0, 8.0, -3.0]), SVector{FOM, Complex}([3.0, 8.0, -3.0])*im),     # (0,1)
-	SVector(SVector{FOM, Complex}([4.0, 16.0, -6.0]), SVector{FOM, Complex}([4.0, 16.0, -6.0])*im),    # (2,0)
-	SVector(SVector{FOM, Complex}([5.0, 32.0, -9.0]), SVector{FOM, Complex}([5.0, 32.0, -9.0])*im),    # (1,1)
-	SVector(SVector{FOM, Complex}([6.0, 64.0, -12.0]), SVector{FOM, Complex}([6.0, 64.0, -12.0])*im),    # (0,2)
+# Each coefficient is an SVector{ORD, Vector{ComplexF64}}
+param_coefficients = [
+	#       position part              velocity part
+	SVector(ComplexF64[1.0, 2.0, 0.0], ComplexF64[1.0im, 2.0im, 0.0]),          # (0,0)
+	SVector(ComplexF64[2.0, 4.0, -1.0], ComplexF64[2.0im, 4.0im, -1.0im]),      # (1,0)
+	SVector(ComplexF64[3.0, 8.0, -3.0], ComplexF64[3.0im, 8.0im, -3.0im]),      # (0,1)
+	SVector(ComplexF64[4.0, 16.0, -6.0], ComplexF64[4.0im, 16.0im, -6.0im]),    # (2,0)
+	SVector(ComplexF64[5.0, 32.0, -9.0], ComplexF64[5.0im, 32.0im, -9.0im]),    # (1,1)
+	SVector(ComplexF64[6.0, 64.0, -12.0], ComplexF64[6.0im, 64.0im, -12.0im]),  # (0,2)
 ]
 
-red_coeffs = [
-	SVector{NVAR, Complex}([0.0, 0.0]),      # (0,0)
-	SVector{NVAR, Complex}([1.0im, 0.0]),    # (1,0)
-	SVector{NVAR, Complex}([1.0, 1.0im]),    # (0,1)
-	SVector{NVAR, Complex}([3.0, 3.0im]),    # (2,0)
-	SVector{NVAR, Complex}([4.0, 4.0im]),    # (1,1)
-	SVector{NVAR, Complex}([5.0, 5.0im]),     # (0,2)
+red_coefficients = [
+	SVector{NVAR, ComplexF64}(0.0, 0.0),        # (0,0)
+	SVector{NVAR, ComplexF64}(1.0im, 0.0),      # (1,0)
+	SVector{NVAR, ComplexF64}(1.0, 1.0im),      # (0,1)
+	SVector{NVAR, ComplexF64}(3.0, 3.0im),      # (2,0)
+	SVector{NVAR, ComplexF64}(4.0, 4.0im),      # (1,1)
+	SVector{NVAR, ComplexF64}(5.0, 5.0im),      # (0,2)
 ]
 
 # Construct the polynomials
-W = DensePolynomial(param_coeffs, mset)   # Parametrisation{ORD=2,FOM=3,NVAR=2,Complex}
-R = DensePolynomial(red_coeffs, mset)     # ReducedDynamics{ROM=2,NVAR=2,Complex}
+W = DensePolynomial(param_coefficients, mset)   # Parametrisation{ORD=2,FOM=3,NVAR=2,Complex}
+R = DensePolynomial(red_coefficients, mset)     # ReducedDynamics{ROM=2,NVAR=2,Complex}
 
 println("\nParametrisation coefficients: ")
 for (idx, exp) in enumerate(mset.exponents)
-	println("  exp $exp → $(W.coeffs[idx])")
+	println("  exp $exp → $(W.coefficients[idx])")
 end
 println("\nReduced dynamics coefficients: ")
 for (idx, exp) in enumerate(mset.exponents)
-	println("  exp $exp → $(R.coeffs[idx])")
+	println("  exp $exp → $(R.coefficients[idx])")
 end
 
 
@@ -77,9 +77,12 @@ println("Result: $result")
 # result = param_(2,0) * 2 * red_multiindex_(0,1)_1 
 # = ([4.0, 16.0, -6.0], [4.0, 16.0, -6.0])*im) * 2 * 1.0 = ([8.0, 32.0, -12.0], [8.0im, 32.0im, -12.0im])
 #
-expected = SVector{3, Complex}[[8.0, 32.0, -12.0], [8.0im, 32.0im, -12.0im]]
-println("Expected = $expected")
-println("Relative error: ", norm(result - expected)/norm(expected))
+expected1 = SVector{2, Vector{ComplexF64}}(
+	ComplexF64[8.0, 32.0, -12.0],          # position part
+	ComplexF64[8.0im, 32.0im, -12.0im],     # velocity part
+)
+println("Expected = $expected1")
+println("Relative error: ", norm(result - expected1)/norm(expected1))
 
 # ----------------------------------------------------------------------
 # 2. Monomial (2,1)
@@ -132,7 +135,10 @@ println("Result: $result2")
 #        + ([20im,    128im,     -36im    ], [-20,      -128,       36      ])
 #        = ([47+56im, 224+512im, -75-108im], [-56+47im, -512+224im, 108-75im])
 #
-expected2 = SVector{3, Complex}[[47.0+56.0im, 224.0+512.0im, -75.0-108.0im], [-56.0+47.0im, -512.0+224.0im, 108.0-75.0im]]
+expected2 = SVector{2, Vector{ComplexF64}}(
+	ComplexF64[47.0+56.0im, 224.0+512.0im, -75.0-108.0im],
+	ComplexF64[-56.0+47.0im, -512.0+224.0im, 108.0-75.0im],
+)
 println("Expected = $expected2")
 println("Relative error: ", norm(result2 - expected2)/norm(expected2))
 
@@ -154,8 +160,8 @@ W3, R3 = create_parametrisation_method_objects(mset3, ORD3, FOM3, NVAR3, Complex
 
 # Fill with random coefficients
 for idx in 1:nterms
-	W3.coeffs[idx] = SVector{1, SVector{3}}(randn(SVector{3, ComplexF64}))
-	R3.coeffs[idx] = randn(SVector{NVAR3, ComplexF64})
+	W3.coefficients[idx] = SVector{1, SVector{3}}(randn(SVector{3, ComplexF64}))
+	R3.coefficients[idx] = randn(SVector{NVAR3, ComplexF64})
 end
 
 upper_bound3 = SVector{3, Int}(1, 4, 1)
