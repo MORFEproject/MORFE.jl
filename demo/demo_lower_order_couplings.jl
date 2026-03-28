@@ -8,7 +8,7 @@ include(joinpath(@__DIR__, "../src/MORFE.jl"))
 using .MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
 using .MORFE.Polynomials
 using .MORFE.LowerOrderCouplings
-using .MORFE.ParametrisationMethod
+using .MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 
 # -------------------------------------------------------------------
 println("Demo: compute_lower_order_couplings \n")
@@ -44,16 +44,16 @@ red_coefficients = [
 ]
 
 # Construct the polynomials
-W = DensePolynomial(param_coefficients, mset)   # Parametrisation{ORD=2,FOM=3,NVAR=2,Complex}
-R = DensePolynomial(red_coefficients, mset)     # ReducedDynamics{ROM=2,NVAR=2,Complex}
+W = Parametrisation(DensePolynomial(param_coefficients, mset), 0)   # Parametrisation{ORD=2,FOM=3,NVAR=2,Complex}
+R = ReducedDynamics(DensePolynomial(red_coefficients, mset), 0)     # ReducedDynamics{ROM=2,NVAR=2,Complex}
 
 println("\nParametrisation coefficients: ")
 for (idx, exp) in enumerate(mset.exponents)
-	println("  exp $exp → $(W.coefficients[idx])")
+	println("  exp $exp → $(W.poly.coefficients[idx])")
 end
 println("\nReduced dynamics coefficients: ")
 for (idx, exp) in enumerate(mset.exponents)
-	println("  exp $exp → $(R.coefficients[idx])")
+	println("  exp $exp → $(R.poly.coefficients[idx])")
 end
 
 
@@ -156,12 +156,12 @@ nterms = length(mset3)
 # Random parametrisation (first‑order, FOM=3)
 ORD3 = 1
 FOM3 = 3
-W3, R3 = create_parametrisation_method_objects(mset3, ORD3, FOM3, NVAR3, Complex)
+W3, R3 = create_parametrisation_method_objects(mset3, ORD3, FOM3, Complex)
 
 # Fill with random coefficients
 for idx in 1:nterms
-	W3.coefficients[idx] = SVector{1, SVector{3}}(randn(SVector{3, ComplexF64}))
-	R3.coefficients[idx] = randn(SVector{NVAR3, ComplexF64})
+	W3.poly.coefficients[idx] = SVector{1, SVector{3}}(randn(SVector{3, ComplexF64}))
+	R3.poly.coefficients[idx] = randn(SVector{NVAR3, ComplexF64})
 end
 
 upper_bound3 = SVector{3, Int}(1, 4, 1)
@@ -175,7 +175,7 @@ println("Result for random 3‑variable case: $result3")
 println("\nExample 4: zero polynomials (should return zero)")
 
 mset4 = all_multiindices_up_to(2, 2)   # up to total degree 2 in 2 variables
-W_zero, R_zero = create_parametrisation_method_objects(mset4, 1, 3, 2, Complex)
+W_zero, R_zero = create_parametrisation_method_objects(mset4, 1, 3, 2, 0, Complex)
 upper_bound4 = SVector{2, Int}(1, 1)
 result4 = compute_lower_order_couplings(upper_bound4, W_zero, R_zero)
 println("Result for zero polynomials: $result4")

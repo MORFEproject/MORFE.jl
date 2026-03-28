@@ -7,76 +7,110 @@ using ..Polynomials: DensePolynomial
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 
 """
-	Parametrisation{ORD, FOM, NVAR, T} = DensePolynomial{SVector{ORD, SVector{FOM, T}}, NVAR}
+	Parametrisation{ORD, NVAR, T}
 
-A dense polynomial whose coefficients are `SVector{ORD, SVector{FOM, T}}`.
-Represents a parametrisation mapping from reduced coordinates to full‑state coordinates.
-- `ORD` is the native order of the full order ODE
-- `FOM` is the size of the full order model, in native order
-- `NVAR` is the number of variables in the reduced order model
-- `T` is the numeric type (e.g. Complex)
+A dense polynomial whose coefficients are `SVector{ORD, Vector{T}}`.
+Represents a parametrisation mapping from reduced coordinates and forcing variables to the full state.
 
-It represents a mapping from reduced coordinates 
-`z` to the full state vector `x` and its derivative `ẋ` (or just `x` for first‑order systems). 
-The outer dimension `ORD` corresponds to the order of the original ODE:
-  * `ORD = 1` : first‑order system, mapping `ξ` → `x`.
-  * `ORD = 2` : second‑order system, mapping `ξ` → `(x, ẋ)`.
+- `ORD`: native order of the full ODE (1 for first‑order, 2 for second‑order).
+- `NVAR`: total number of variables = reduced coordinates + forcing variables.
+- `T`: numeric type (e.g., Complex).
+
+The polynomial is stored in `poly`, and `forcing_size` gives the number of forcing variables.
+The mapping is: (z, r) → (x) for first‑order or (z, r) → (x, ẋ) for second‑order.
+The coefficients are `SVector{ORD, Vector{T}}`, where `Vector{T}` is the full‑state vector
+of length `FOM` (full‑order dimension). This length is not stored in the struct because
+it is determined by the coefficient type.
 """
-const Parametrisation{ORD, NVAR, T} = DensePolynomial{
-	SVector{ORD, Vector{T}}, NVAR}
+struct Parametrisation{ORD, NVAR, T}
+	poly::DensePolynomial{SVector{ORD, Vector{T}}, NVAR}
+	forcing_size::Int
+
+	function Parametrisation(poly::DensePolynomial{SVector{ORD, Vector{T}}, NVAR}, forcing_size::Int) where {ORD, NVAR, T}
+		@assert forcing_size >= 0 "forcing_size must be non‑negative"
+		new{ORD, NVAR, T}(poly, forcing_size)
+	end
+end
+
+Base.size(W::Parametrisation) = length(W.poly.coefficients[1][1]) # the dimension of the full‑order state in its native order
+multiindex_set(W::Parametrisation) = W.poly.multiindex_set
+coefficients(W::Parametrisation) = W.poly.coefficients
 
 """
-	ReducedDynamics{ROM, NVAR, T} = DensePolynomial{SVector{ROM, T}, NVAR}
+	ReducedDynamics{ROM, NVAR, T}
 
 A dense polynomial whose coefficients are `SVector{ROM, T}`.
 Represents the reduced dynamics on a manifold of dimension `ROM`.
-- `ROM` is the size of the reduced order model, a first order system
-- `NVAR` is the number of variables in the reduced order model 
-	(in reality, `NVAR` should be the same as `ROM`, we only keep them separate for future flexibility)
-- `T` is the numeric type (e.g. Complex)
+
+- `ROM`: dimension of the reduced state (first‑order system).
+- `NVAR`: total number of variables = ROM + forcing_size.
+- `T`: numeric type.
+
+The polynomial is stored in `poly`, and `forcing_size` gives the number of forcing variables.
+The dynamics are: ż = R(z, r), where r are the forcing variables.
 """
-const ReducedDynamics{ROM, NVAR, T} = DensePolynomial{SVector{ROM, T}, NVAR}
+struct ReducedDynamics{ROM, NVAR, T}
+	poly::DensePolynomial{SVector{ROM, T}, NVAR}
+	forcing_size::Int
+
+	function ReducedDynamics(poly::DensePolynomial{SVector{ROM, T}, NVAR}, forcing_size::Int) where {ROM, NVAR, T}
+		@assert forcing_size >= 0 "forcing_size must be non‑negative"
+		@assert ROM + forcing_size == NVAR "ROM + forcing_size must equal NVAR; got $(ROM + forcing_size) vs $NVAR"
+		new{ROM, NVAR, T}(poly, forcing_size)
+	end
+end
+
+Base.size(::ReducedDynamics{ROM}) where {ROM} = ROM
+multiindex_set(R::ReducedDynamics) = R.poly.multiindex_set
+coefficients(R::ReducedDynamics) = R.poly.coefficients
 
 """
-	create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, ::Type{T}=Complex) where {T<:Number, NVAR}
+	create_parametrisation_method_objects(mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, forcing_size::Int, ::Type{T}=Complex)
 
 Create a consistent pair of polynomials:
-- `W`: a `Parametrisation{ORD, FOM, NVAR, T}` with zero coefficients,
+- `W`: a `Parametrisation{ORD, NVAR, T}` with zero coefficients,
 - `R`: a `ReducedDynamics{ROM, NVAR, T}` with zero coefficients.
 
 Both polynomials share the same multiindex set `mset` and element type `T`.
+The total number of variables `NVAR` must satisfy `NVAR == ROM + forcing_size`.
+`FOM` is the full‑order dimension (size of the state vector). It is not stored but used
+to initialise the coefficient vectors correctly.
+
+# Arguments
+- `mset`: multiindex set for `NVAR` variables.
+- `ORD`: native order of the full ODE (1 or 2).
+- `FOM`: dimension of the full‑order state in its native order.
+- `ROM`: dimension of the reduced state.
+- `forcing_size`: number of forcing variables (default 0).
+- `T`: element type.
 """
 function create_parametrisation_method_objects(
-	mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int,
+	mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, forcing_size::Int,
 	::Type{T} = Complex) where {T <: Number, NVAR}
-	# Parametrisation coefficients: SVector{ORD, SVector{FOM, T}} zeros
-	inner_zero = Vector{T}(zeros(T, FOM))
+	# Validate variable count
+	@assert NVAR == ROM + forcing_size "Multiindex set has $NVAR variables, but ROM + forcing_size = $(ROM + forcing_size)"
+
+	# Parametrisation coefficients: SVector{ORD, Vector{T}} zeros
+	inner_zero = Vector{T}(undef, FOM)
+	fill!(inner_zero, zero(T))
 	outer_zero = SVector{ORD, Vector{T}}(ntuple(_ -> inner_zero, ORD))
 	W_coeffs = [outer_zero for _ in 1:length(mset)]
-	W = DensePolynomial(W_coeffs, mset)   # Parametrisation{ORD,FOM,NVAR,T}
+	W_poly = DensePolynomial(W_coeffs, mset)
+	W = Parametrisation(W_poly, forcing_size)
 
 	# Reduced dynamics coefficients: SVector{ROM, T} zeros
-	R_coeffs = [SVector{ROM, T}(zeros(T, ROM)) for _ in 1:length(mset)]
-	R = DensePolynomial(R_coeffs, mset)   # ReducedDynamics{ROM,NVAR,T}
+	R_coeffs = [SVector{ROM, T}(ntuple(_ -> zero(T), ROM)) for _ in 1:length(mset)]
+	R_poly = DensePolynomial(R_coeffs, mset)
+	R = ReducedDynamics(R_poly, forcing_size)
 
 	return (W, R)
 end
 
-# In practice, ROM = NVAR
+# For the special case where ROM = NVAR (no forcing, and reduced dimension equals variable count)
 function create_parametrisation_method_objects(
 	mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int,
 	::Type{T} = Complex) where {T <: Number, NVAR}
-	# Parametrisation coefficients: SVector{ORD, SVector{FOM, T}} zeros
-	inner_zero = Vector{T}(zeros(T, FOM))
-	outer_zero = SVector{ORD, Vector{T}}(ntuple(_ -> inner_zero, ORD))
-	W_coeffs = [outer_zero for _ in 1:length(mset)]
-	W = DensePolynomial(W_coeffs, mset)   # Parametrisation{ORD,FOM,NVAR,T}
-
-	# Reduced dynamics coefficients: SVector{ROM, T} zeros with ROM=NVAR
-	R_coeffs = [SVector{NVAR, T}(zeros(T, NVAR)) for _ in 1:length(mset)]
-	R = DensePolynomial(R_coeffs, mset)   # ReducedDynamics{ROM,NVAR,T}
-
-	return (W, R)
+	return create_parametrisation_method_objects(mset, ORD, FOM, NVAR, 0, T)
 end
 
 end # module
