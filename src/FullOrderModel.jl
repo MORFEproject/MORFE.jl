@@ -89,9 +89,7 @@ function MultilinearMap(
 	ms = methods(f!)
 	@assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
 	@assert ms[1].nargs==deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-	# if multiplicy_external == 0
-	#     @assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
-	# end
+	@assert (deg>=2) || (me>=1) "Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
 
 	return MultilinearMap{N, typeof(f!)}(f!, mi, me, deg)
 end

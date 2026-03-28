@@ -404,9 +404,34 @@ end
 # Tolerance calculation using local estimate near a simple eigenvalue
 # ----------------------------------------------------------------------------
 
+"""
+	tolerance_from_local_estimate(
+		multiindices::MultiindexSet{NVAR},
+		spectral_radius::Float64,
+		target_condition_numbers::SVector{N_TARGETS,Float64},
+		max_cond::Float64,
+		target_indices::Union{UnitRange{Int},Vector{Int}}
+	) -> Vector{SVector{length(target_indices),Float64}}
+
+Compute a tolerance matrix for the local estimate method (method 3 in the enumeration):
+for each multiindex and each target j in `target_indices`, if |λ_j - s| < tol then the
+estimated condition number κ(A - sI) exceeds `max_cond`.
+
+The estimate used is:
+	κ(A - sI) ≈ (max_i |λ_i - s|) * (κ_j / |λ_j - s|),
+where κ_j = ‖x_j‖‖y_j‖ / (y_j^* x_j) is the condition number of the target eigenvalue λ_j.
+Since we only have the spectral radius ρ (the largest eigenvalue magnitude) as an upper bound,
+we replace max_i |λ_i - s| by ρ, a conservative bound.
+
+`s` is the superharmonic `multiindex ⋅ λ_super`, computed from the first `NVAR` eigenvalues.
+`super_eigenvalues` must be the eigenvalues of the internal+external modes.
+`target_condition_numbers` must contain the eigenvalue condition numbers for **all** targets
+(internal and outer) in the order they appear in the full eigenvalue list.
+`target_indices` selects which of those targets to compute tolerances for.
+`max_cond` is the desired upper bound on the condition number of (A - sI).
+"""
 function tolerance_from_local_estimate(
 	multiindices::MultiindexSet{NVAR},
-	super_eigenvalues::SVector{NVAR, ComplexF64},
 	spectral_radius::Float64,
 	target_condition_numbers::SVector{N_TARGETS, Float64},
 	max_cond::Float64,
@@ -415,11 +440,9 @@ function tolerance_from_local_estimate(
 	@assert max_cond > 0 "max_cond must be positive"
 	exps = multiindices.exponents
 	NMON = length(exps)
-	superharmonics = [sum(super_eigenvalues .* mi) for mi in exps]
 	NROM = length(target_indices)
 	tolerances = Vector{SVector{NROM, Float64}}(undef, NMON)
 	@inbounds for k in 1:NMON
-		s = superharmonics[k]
 		tol_vec = SVector{NROM, Float64}(
 			ntuple(j -> spectral_radius * target_condition_numbers[target_indices[j]] / max_cond, NROM),
 		)
