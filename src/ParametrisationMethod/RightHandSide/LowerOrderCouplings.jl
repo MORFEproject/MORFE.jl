@@ -4,8 +4,8 @@ using LinearAlgebra
 using StaticArrays
 using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree,
 	build_exponent_index_map
-using ..Polynomials: coefficients, multiindex_set, nvars
-using ..ParametrisationMethod: Parametrisation, ReducedDynamics
+using ..Polynomials: nvars
+using ..ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients, multiindex_set
 
 export compute_lower_order_couplings
 
@@ -117,7 +117,7 @@ function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
 	parametrisation::Parametrisation{ORD, NVAR, T},
 	reduced_dynamics::ReducedDynamics{ROM, NVAR, T}) where {ORD, NVAR, ROM, T}
 	# Extract the full‑order dimension from the first coefficient
-	FOM = length(parametrisation.coefficients[1][1])
+	FOM = size(parametrisation)
 	total_deg_upper = sum(upper_bound)
 	total_deg_upper < 2 && return SVector{ORD, Vector{T}}(ntuple(_ -> zeros(T, FOM), ORD))
 
