@@ -124,3 +124,6 @@ for deg in 1:4
 	evaluate_nonlinear_terms!(res_nd, model_nd, deg, state_vectors, r)
 	println("\nDegree $deg contribution: ", res_nd)
 end
+
+println("\n" * "="^80 * "\n")
+println("Demo finished successfully.")

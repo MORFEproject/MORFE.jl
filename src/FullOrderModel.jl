@@ -20,9 +20,9 @@ Represents a single monomial term of order deg in the nonlinear function of an `
 A term is represented using a multiindex stored in the NTuple 
 	`multiindex` = (i_0, ..., i_{N-1})  
 where i_k is the multiplicity of the derivative x^(k). So the i_k specifies how many times the derivative x^(k) appears as an argument. 
-In addition the function accepts `multiplicy_external` external variables r_1, r_2, ...
+In addition the function accepts `multiplicity_external` external variables r_1, r_2, ...
 which satisfy the first order dynamic system r' = dynamics_external(r),
-where dynamics_external is a DensePolynomial defined in NDOrderModel. The influence in f! is described by `multiplicy_external`
+where dynamics_external is a DensePolynomial defined in NDOrderModel. The influence in f! is described by `multiplicity_external`
 
 During evaluation the multilinear map is called as
 
@@ -31,7 +31,7 @@ During evaluation the multilinear map is called as
 	   x^(1), ... repeated i_1 times,
 	   ...
 	   x^(N-1), ...repeated i_{N-1} times,
-	   r, ... repeated `multiplicy_external` times)
+	   r, ... repeated `multiplicity_external` times)
 
 # Important Notes
 - Each `MultilinearMap` **must implement a multilinear map**, i.e., it should be linear in each of its arguments independently.
@@ -44,7 +44,7 @@ During evaluation the multilinear map is called as
 struct MultilinearMap{N, F}
 	f!::F
 	multiindex::NTuple{N, UInt8}
-	multiplicy_external::UInt8
+	multiplicity_external::UInt8
 	deg::UInt8
 end
 
@@ -81,9 +81,9 @@ function MultilinearMap(f!)
 end
 
 function MultilinearMap(
-	f!, multiindex::NTuple{N, <:Integer}, multiplicy_external::Integer) where {N}
+	f!, multiindex::NTuple{N, <:Integer}, multiplicity_external::Integer) where {N}
 	mi = convert.(UInt8, multiindex)
-	me = convert(UInt8, multiplicy_external)
+	me = convert(UInt8, multiplicity_external)
 	deg = sum(mi) + me
 	# Check if input arguments of f matches deg
 	ms = methods(f!)
@@ -107,7 +107,7 @@ Evaluate a single `MultilinearMap` and accumulate (adds) the result into `res`.
 """
 @inline function evaluate_term!(res, term::MultilinearMap{N}, xs, r) where {N}
 	inds = term.multiindex
-	me = term.multiplicy_external
+	me = term.multiplicity_external
 	total_args = term.deg
 
 	# Build the argument list
@@ -172,8 +172,8 @@ where:
 
 Each `MultilinearMap` defines:
 - which derivatives are involved (via `multiindex`)
-- how many times the external state appears as an argument (via `multiplicy_external`)
-- the combined degree `deg = sum(multiindex) + multiplicy_external`
+- how many times the external state appears as an argument (via `multiplicity_external`)
+- the combined degree `deg = sum(multiindex) + multiplicity_external`
 
 # Notes
 - All matrices must have identical size.
@@ -197,12 +197,12 @@ struct NDOrderModel{N, NP1, N_NL, MT <: AbstractMatrix} <: AbstractFullOrderMode
 	- Correct relationship between `N` and `NP1`.
 	- The external dynamics polynomial must be of type DensePolynomial{<:SVector, 1}.
 	- The external state dimension is extracted from the polynomial coefficients.
-	- For each nonlinear term, `multiplicy_external ≤ n_ext`.
+	- For each nonlinear term, `multiplicity_external ≤ n_ext`.
 	"""
 	function NDOrderModel(
 		linear_terms::NTuple{NP1, MT},
 		nonlinear_terms::NTuple{N_NL, MultilinearMap{N}},
-		external_dynamics::DensePolynomial{<:SVector, 1} = DensePolynomial{SVector{0, Float64}, 1}([], MultiindexSet{1}(0)),
+		external_dynamics::DensePolynomial{<:SVector, 1},
 	) where {N, NP1, N_NL, MT <: AbstractMatrix}
 		@assert NP1 == N + 1
 		n_fom = size(linear_terms[1], 1)
@@ -216,9 +216,9 @@ struct NDOrderModel{N, NP1, N_NL, MT <: AbstractMatrix} <: AbstractFullOrderMode
 			n_ext = length(external_dynamics.coefficients[1])
 		end
 
-		# Consistency: any nonlinear term that uses external variables must have multiplicy_external ≤ n_ext
+		# Consistency: any nonlinear term that uses external variables must have multiplicity_external ≤ n_ext
 		for term in nonlinear_terms
-			@assert term.multiplicy_external <= n_ext "Term uses $(term.multiplicy_external) external variables, but model has only $n_ext"
+			@assert term.multiplicity_external <= n_ext "Term uses $(term.multiplicity_external) external variables, but model has only $n_ext"
 		end
 
 		new{N, NP1, N_NL, MT}(n_fom, n_ext, linear_terms, nonlinear_terms, external_dynamics)

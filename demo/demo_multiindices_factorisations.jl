@@ -21,11 +21,11 @@ result_asym = factorisations_asymmetric(multiindex_set, exp, k, candidate_indice
 
 println("Found ", length(result_asym), " asymmetric factorisation(s):\n")
 for (i, idx_tuple) in enumerate(result_asym)
-    println("  Factorization $i (indices: $idx_tuple):")
-    for (j, idx) in enumerate(idx_tuple)
-        vec = multiindex_set.exponents[idx]
-        println("    term $j: $vec")
-    end
+	println("  Factorization $i (indices: $idx_tuple):")
+	for (j, idx) in enumerate(idx_tuple)
+		vec = multiindex_set.exponents[idx]
+		println("    term $j: $vec")
+	end
 end
 
 println("\n" * "="^80 * "\n")
@@ -36,11 +36,11 @@ result_sym = factorisations_fully_symmetric(multiindex_set, exp, k, candidate_in
 
 println("Found ", length(result_sym), " fully symmetric factorisation(s):\n")
 for (i, (idx_tuple, perm_count)) in enumerate(result_sym)
-    println("  Factorization $i: indices $idx_tuple  (yields $perm_count ordered factorisations)")
-    for (j, idx) in enumerate(idx_tuple)
-        vec = multiindex_set.exponents[idx]
-        println("    term $j: $vec")
-    end
+	println("  Factorization $i: indices $idx_tuple  (yields $perm_count ordered factorisations)")
+	for (j, idx) in enumerate(idx_tuple)
+		vec = multiindex_set.exponents[idx]
+		println("    term $j: $vec")
+	end
 end
 
 println("\n" * "="^80 * "\n")
@@ -52,31 +52,60 @@ println("\n" * "="^80 * "\n")
 #       (3,) means H(U,U,U) → all three arguments are symmetric (same as fully symmetric)
 #       (1,2) means H(U,V,V) → first argument is alone (no symmetry), last are two symmetric
 
-group_sizes = (1,2)
+group_sizes = (1, 2)
 @assert sum(group_sizes) == k
 
 result_group = factorisations_groupwise_symmetric(multiindex_set, exp, group_sizes, candidate_indices)
 
 println("Found ", length(result_group), " groupwise symmetric factorisation(s) with group sizes $group_sizes:\n")
 for (i, (flat_indices, total_count)) in enumerate(result_group)
-    println("  Factorisation $i: flat indices = $flat_indices  (total ordered = $total_count)")
-    
-    # Reconstruct groups from flat_indices according to group_sizes
-    pos = 1
-    for (g, size) in enumerate(group_sizes)
-        if size == 0
-            continue
-        end
-        group_indices = flat_indices[pos:pos+size-1]
-        println("    Group $g (size $size): indices $group_indices")
-        for (j, idx) in enumerate(group_indices)
-            vec = multiindex_set.exponents[idx]
-            println("      term $(pos + j - 1): $vec")
-        end
-        pos += size
-    end
+	println("  Factorisation $i: flat indices = $flat_indices  (total ordered = $total_count)")
+
+	# Reconstruct groups from flat_indices according to group_sizes
+	pos = 1
+	for (g, size) in enumerate(group_sizes)
+		if size == 0
+			continue
+		end
+		group_indices = flat_indices[pos:(pos+size-1)]
+		println("    Group $g (size $size): indices $group_indices")
+		for (j, idx) in enumerate(group_indices)
+			vec = multiindex_set.exponents[idx]
+			println("      term $(pos + j - 1): $vec")
+		end
+		pos += size
+	end
 end
 
-# -------------------------------------------------------------------
+println("\n" * "="^80 * "\n")
+
+# -----------------------------------------------------------------------------
+# 4. Bounded index tuples
+#    Enumerate all ordered index tuples of length M whose counts are bounded by exp.
+#    Each result contains:
+#      - a canonical sorted index tuple
+#      - the corresponding multiindex/count vector
+#      - the number of distinct permutations
+
+M = 0
+using StaticArrays: SVector
+exp_sv = SVector{length(exp), Int}(exp)
+
+result_bounded = bounded_index_tuples(M, exp_sv)
+
+println("Found ", length(result_bounded), " bounded index tuple(s) for M = $M and exp = $exp_sv:\n")
+for (i, (idx_tuple, multiindex, perm_count)) in enumerate(result_bounded)
+	println("  Tuple $i: $idx_tuple")
+	println("    multiindex = $multiindex")
+	println("    permutation count = $perm_count")
+
+	println("    corresponding terms:")
+	for (j, idx) in enumerate(idx_tuple)
+		vec = multiindex_set.exponents[idx+1]
+		println("      position $j: $vec")
+	end
+end
+
+# -----------------------------------------------------------------------------
 println("\n" * "="^80 * "\n")
 println("Demo finished successfully.")

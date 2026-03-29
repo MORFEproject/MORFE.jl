@@ -7,7 +7,8 @@ export MultiindexSet, zero_multiindex, # nvars,
 	all_multiindices_in_box, indices_in_box_with_bounded_degree,
 	divides, is_constant, find_in_set, build_exponent_index_map,
 	factorisations_asymmetric, factorisations_fully_symmetric,
-	factorisations_groupwise_symmetric
+	factorisations_groupwise_symmetric,
+	bounded_index_tuples
 
 # ==================== Core comparison functions ====================
 
@@ -699,6 +700,74 @@ function _multinomial(e::Int, k::Vector{Int})::Int
 		rem -= ki
 	end
 	return res
+end
+
+using StaticArrays
+
+"""
+	bounded_index_tuples(M, exp::SVector{N,Int})
+
+Enumerate all index tuples of length `M` whose component counts are bounded by `exp`.
+
+This function generates all tuples `(i₁, ..., i_M)` with entries in `1:N` such that:
+
+- Each index `k` appears at most `exp[k]` times
+- The total length of the tuple is exactly `M`
+
+Each tuple is represented in its canonical sorted form (non-decreasing order),
+so that it uniquely corresponds to a count vector (multiindex).
+
+For each valid tuple, the function also returns:
+- The associated multiindex `alpha`, where `alpha[k]` is the number of times `k` appears
+- The number of distinct permutations of the tuple
+
+Returns a vector of tuples:
+	(index_tuple, multiindex, permutation_count)
+
+where:
+- `index_tuple::NTuple{M,Int}` is the sorted tuple
+- `multiindex::SVector{N,Int}` contains the counts
+- `permutation_count::Int` is the number of distinct permutations
+"""
+function bounded_index_tuples(M::Int, exp::SVector{N, Int}) where {N}
+	results = Vector{Tuple{NTuple{M, Int}, SVector{N, Int}, Int}}()
+
+	counts = zeros(Int, N)
+
+	function backtrack(pos::Int, remaining::Int)
+		if pos == N
+			if remaining <= exp[pos]
+				counts[pos] = remaining
+
+				# build canonical sorted tuple
+				idx = Vector{Int}(undef, M)
+				k = 1
+				@inbounds for i in 1:N
+					for _ in 1:counts[i]
+						idx[k] = i
+						k += 1
+					end
+				end
+
+				tuple_repr = Tuple(idx)
+				multi = SVector{N, Int}(counts)
+				perm_count = _multinomial(M, counts)
+
+				push!(results, (tuple_repr, multi, perm_count))
+			end
+			return
+		end
+
+		max_val = min(exp[pos], remaining)
+		for v in 0:max_val
+			counts[pos] = v
+			backtrack(pos + 1, remaining - v)
+		end
+	end
+
+	backtrack(1, M)
+
+	return results
 end
 
 end # module
