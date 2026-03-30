@@ -1,5 +1,7 @@
 module MultilinearTerms
 
+using StaticArrays: SVector
+
 using ..Multiindices: indices_in_box_with_bounded_degree,
 	factorisations_asymmetric, factorisations_fully_symmetric, factorisations_groupwise_symmetric,
 	bounded_index_tuples
@@ -13,7 +15,7 @@ using ..FullOrderModel: NDOrderModel, FirstOrderModel, MultilinearMap
 
 abstract type SymmetryType end
 struct FullyAsymmetric <: SymmetryType end  # all multiindex entries ≤ 1
-struct FullySymmetric <: SymmetryType end  # exactly one positive entry with value > 1
+struct FullySymmetric <: SymmetryType end   # exactly one positive entry with value > 1
 struct GroupwiseSymmetric <: SymmetryType end  # multiple positive entries
 
 """
@@ -43,8 +45,9 @@ in `t.multiindex`.
 
 Example: `t.multiindex = (2, 1, 1)` → `(1, 1, 2, 3)`.
 """
-function _derivative_orders(t::MultilinearMap{ORD}) where {ORD}
-	return ntuple(Val(ORD)) do slot
+function _derivative_orders(t::MultilinearMap)
+	deg = sum(t.multiindex)
+	return ntuple(deg) do slot
 		cumulative = 0
 		for (deriv_idx, cnt) in enumerate(t.multiindex)
 			cumulative += cnt
@@ -53,131 +56,155 @@ function _derivative_orders(t::MultilinearMap{ORD}) where {ORD}
 	end
 end
 
+"""
+	_sym_param(sym, t)
+
+Return the symmetry-branch parameter that `_accumulate_inner!` needs:
+- `FullySymmetric`    → `Int`  (the single non-zero derivative index).
+- All other branches  → `NTuple` of per-slot derivative orders.
+
+Dispatching here eliminates both sentinel values (`orders = nothing`,
+`deriv_idx = 0`) and the `isa` check that previously computed them.
+"""
+_sym_param(::FullySymmetric, t) = findfirst(>(0), t.multiindex)::Int
+_sym_param(::SymmetryType, t) = _derivative_orders(t)
+
 # -----------------------------------------------------------------------
-# Accumulation functions
+# AccumContext — per-iteration context bundle
 # -----------------------------------------------------------------------
 
 """
-	accumulate_asymmetric!(result, t, orders, deg_internal, rem, set, W, candidate_indices, args_ext)
+	AccumContext{W, S, R, CI, AE}
 
-All factor slots belong to distinct derivative orders (every entry of
-`t.multiindex` is ≤ 1). `t.f!` increments its first argument in place, so
-no temporary buffer or multiplicity scaling is needed — each call
-accumulates directly into `result`.
+Immutable, stack-allocated bundle of the data that varies across the
+outer forcing-split loop in `accumulate_multilinear_term!`.
+
+# Fields
+- `W`                  — coefficient array of the parametrisation polynomial.
+- `set`                — multiindex set of the parametrisation.
+- `rem`                — exponent remainder after stripping the forcing contribution.
+- `candidate_indices`  — pre-filtered indices compatible with `rem`.
+- `args_ext`           — tuple of unit vectors for the external forcing slots.
+
+Bundling these four arguments reduces every `_accumulate_inner!` specialisation
+from nine positional arguments to five, and makes the per-call allocation
+pattern explicit and easy to audit.
 """
-function accumulate_asymmetric!(result,
-	t::MultilinearMap{ORD}, orders, deg_internal::Int,
-	rem, set, W, candidate_indices, args_ext) where {ORD}
+struct AccumContext{W, S, R, CI, AE}
+	W::W
+	set::S
+	rem::R
+	candidate_indices::CI
+	args_ext::AE
+end
 
-	for idx_tuple in factorisations_asymmetric(set, rem, deg_internal, candidate_indices)
-		@inbounds args = ntuple(i -> W[idx_tuple[i]][orders[i]], Val(deg_internal))
-		t.f!(result, args..., args_ext...)
+# -----------------------------------------------------------------------
+# _accumulate_inner! — dispatched on SymmetryType
+# -----------------------------------------------------------------------
+
+"""
+	_accumulate_inner!(accum, scratch, t, ::FullyAsymmetric, orders, deg_internal, ctx)
+
+All factor slots belong to distinct derivative orders. `t.f!` increments
+`accum` directly; no scratch buffer or multiplicity scaling is needed.
+"""
+function _accumulate_inner!(accum, _scratch,
+	t::MultilinearMap{ORD}, ::FullyAsymmetric, orders, deg_internal::Int,
+	ctx::AccumContext) where {ORD}
+
+	for idx_tuple in factorisations_asymmetric(ctx.set, ctx.rem, deg_internal, ctx.candidate_indices)
+		@inbounds args = ntuple(i -> ctx.W[idx_tuple[i]][orders[i]], Val(deg_internal))
+		t.f!(accum, args..., ctx.args_ext...)
 	end
 end
 
 """
-	accumulate_symmetric!(result, temp, t, deriv_idx, deg_internal, rem, set, W, candidate_indices, args_ext)
+	_accumulate_inner!(accum, scratch, t, ::FullySymmetric, deriv_idx, deg_internal, ctx)
 
-All factor slots share derivative order `deriv_idx`. Each factorisation
-carries `sym_count` to account for internal permutation symmetry; `t.f!`
-evaluates into the scratch buffer `temp`, which is then fused-broadcast
-scaled and accumulated into `result` with no intermediate allocation.
+All factor slots share a single derivative order `deriv_idx`. Each
+factorisation carries `sym_count`; `scratch` is zeroed before each `t.f!`
+evaluation, then fused-broadcast scaled and accumulated into `accum`.
 """
-function accumulate_symmetric!(result, temp,
-	t::MultilinearMap{ORD}, deriv_idx::Int, deg_internal::Int,
-	rem, set, W, candidate_indices, args_ext) where {ORD}
+function _accumulate_inner!(accum, scratch,
+	t::MultilinearMap{ORD}, ::FullySymmetric, deriv_idx::Int, deg_internal::Int,
+	ctx::AccumContext) where {ORD}
 
-	for (idx_tuple, sym_count) in factorisations_fully_symmetric(set, rem, deg_internal, candidate_indices)
-		fill!(temp, 0)
-		@inbounds args = ntuple(i -> W[idx_tuple[i]][deriv_idx], Val(deg_internal))
-		t.f!(temp, args..., args_ext...)
-		@. result += sym_count * temp
+	for (idx_tuple, sym_count) in factorisations_fully_symmetric(ctx.set, ctx.rem, deg_internal, ctx.candidate_indices)
+		fill!(scratch, 0)
+		@inbounds args = ntuple(i -> ctx.W[idx_tuple[i]][deriv_idx], Val(deg_internal))
+		t.f!(scratch, args..., ctx.args_ext...)
+		@. accum += sym_count * scratch
 	end
 end
 
 """
-	accumulate_partial!(result, temp, t, orders, deg_internal, rem, set, W, candidate_indices, args_ext)
+	_accumulate_inner!(accum, scratch, t, ::GroupwiseSymmetric, orders, deg_internal, ctx)
 
-Factor slots belong to multiple derivative orders (groupwise symmetry). Each
-factorisation carries `total_count` accounting for combined within- and
-between-group permutation symmetry.
+Factor slots belong to multiple derivative orders. Each factorisation carries
+`total_count` accounting for combined within- and between-group permutation
+symmetry. `scratch` is zeroed before each `t.f!` evaluation.
 """
-function accumulate_partial!(result, temp,
-	t::MultilinearMap{ORD}, orders, deg_internal::Int,
-	rem, set, W, candidate_indices, args_ext) where {ORD}
+function _accumulate_inner!(accum, scratch,
+	t::MultilinearMap{ORD}, ::GroupwiseSymmetric, orders, deg_internal::Int,
+	ctx::AccumContext) where {ORD}
 
-	for (idx_tuple, total_count) in factorisations_groupwise_symmetric(set, rem, t.multiindex, candidate_indices)
-		fill!(temp, 0)
-		@inbounds args = ntuple(i -> W[idx_tuple[i]][orders[i]], Val(deg_internal))
-		t.f!(temp, args..., args_ext...)
-		@. result += total_count * temp
+	for (idx_tuple, total_count) in factorisations_groupwise_symmetric(ctx.set, ctx.rem, t.multiindex, ctx.candidate_indices)
+		fill!(scratch, 0)
+		@inbounds args = ntuple(i -> ctx.W[idx_tuple[i]][orders[i]], Val(deg_internal))
+		t.f!(scratch, args..., ctx.args_ext...)
+		@. accum += total_count * scratch
 	end
 end
 
 # -----------------------------------------------------------------------
-# Dispatcher
+# accumulate_multilinear_term!
 # -----------------------------------------------------------------------
 
 """
-	accumulate_multilinear_term!(result, temp, temp2, t, exp, parametrisation)
+	accumulate_multilinear_term!(result, temp, temp2, t, exp, parametrisation, unit_vectors)
 
-Classify the symmetry type of `t`, then iterate over all external-forcing
-index splits and delegate to the appropriate accumulation function.
+Classify the symmetry type of `t`, iterate over all external-forcing index
+splits, and delegate to the appropriate `_accumulate_inner!` specialisation.
 
-# Scratch buffers
-- `temp`  — accumulation target for one (f_idx, f_multiindex) split; zeroed
-			 at the start of each outer iteration.
-- `temp2` — inner scratch for `accumulate_symmetric!` / `accumulate_partial!`,
-			 zeroed before each individual `t.f!` evaluation.
+# Argument roles
+- `result`       — running total across all terms; incremented in place.
+- `temp`         — per-forcing-split accumulation buffer; zeroed each iteration.
+- `temp2`        — per-factorisation scratch for the symmetric/partial branches.
+- `unit_vectors` — precomputed forcing unit vectors, passed in from
+				   `compute_multilinear_terms` to avoid repeated allocation.
 
-Both buffers are allocated once by the caller and reused across all terms,
-so this function performs no heap allocation of its own.
+# Dispatch contract
+`symmetry_type(t)` returns a `FullyAsymmetric`, `FullySymmetric`, or
+`GroupwiseSymmetric` tag. `_sym_param` extracts the branch-specific constant
+(an `Int` for symmetric, an `NTuple` for the others) without `isa` checks or
+sentinel values. `_accumulate_inner!` is then specialised at compile time by
+the Julia dispatcher on both the symmetry tag and the param type.
 
 # Contract on `t.f!`
 `t.f!` must *increment* (not overwrite) its first argument. The asymmetric
-path relies on this to accumulate multiple factorisation contributions
-directly into `temp` without a temporary.
+branch relies on this to accumulate multiple factorisation contributions
+directly into `temp` without a per-factorisation temporary.
 """
 function accumulate_multilinear_term!(result, temp, temp2,
-	t::MultilinearMap{ORD}, exp, parametrisation::Parametrisation{ORD}) where {ORD}
+	t::MultilinearMap{ORD}, exp, parametrisation::Parametrisation{ORD},
+	unit_vectors) where {ORD}
 
 	W            = parametrisation.poly.coefficients
-	set          = parametrisation.multiindex_set
+	set          = parametrisation.poly.multiindex_set
 	me           = t.multiplicity_external
 	deg_internal = t.deg - me
-	sym          = symmetry_type(t)
 
-	# orders: shared by the asymmetric and partial branches; skipped for symmetric.
-	orders = sym isa FullySymmetric ? nothing : _derivative_orders(t)
-	# deriv_idx: used only by the symmetric branch.
-	deriv_idx = sym isa FullySymmetric ? findfirst(>(0), t.multiindex) : 0
-
-	# unit_vectors: built only when external forcing is present.
-	forcing_size = parametrisation.forcing_size
-	unit_vectors = me > 0 ?
-				   [SVector(ntuple(k -> k == j ? 1 : 0, forcing_size)) for j in 1:forcing_size] :
-				   SVector{0, Int}[]
+	sym   = symmetry_type(t)
+	param = _sym_param(sym, t)
 
 	for (f_idx, f_multiindex, f_count) in bounded_index_tuples(me, exp)
-		rem = exp - f_multiindex
-		# candidate_indices must reflect rem (the exponent after
-		# stripping the external forcing contribution).
+		rem               = exp - f_multiindex
 		candidate_indices = indices_in_box_with_bounded_degree(set, rem, 1, sum(rem))
 		args_ext          = me > 0 ? ntuple(i -> unit_vectors[f_idx[i]], me) : ()
+		ctx               = AccumContext(W, set, rem, candidate_indices, args_ext)
 
 		fill!(temp, 0)
-
-		if sym isa FullyAsymmetric
-			accumulate_asymmetric!(temp, t, orders, deg_internal,
-				rem, set, W, candidate_indices, args_ext)
-		elseif sym isa FullySymmetric
-			accumulate_symmetric!(temp, temp2, t, deriv_idx, deg_internal,
-				rem, set, W, candidate_indices, args_ext)
-		else
-			accumulate_partial!(temp, temp2, t, orders, deg_internal,
-				rem, set, W, candidate_indices, args_ext)
-		end
-
+		_accumulate_inner!(temp, temp2, t, sym, param, deg_internal, ctx)
 		@. result += f_count * temp
 	end
 end
@@ -192,8 +219,10 @@ end
 Sum contributions of all nonlinear terms in `model` for exponent vector `exp`
 and return the accumulated result array.
 
-`temp` and `temp2` are allocated once here and threaded through the entire
-call stack, so no allocation occurs inside the term loop.
+`temp` and `temp2` are allocated once and threaded through the entire call
+stack; `unit_vectors` is likewise built once here (rather than inside each
+`accumulate_multilinear_term!` call) and shared across all terms.
+No allocation occurs inside the term loop.
 """
 function compute_multilinear_terms(model::NDOrderModel{ORD}, exp,
 	parametrisation::Parametrisation{ORD}) where {ORD}
@@ -204,9 +233,14 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp,
 	temp        = similar(result)
 	temp2       = similar(result)
 
+	forcing_size = parametrisation.forcing_size
+	unit_vectors = forcing_size > 0 ?
+				   [SVector(ntuple(k -> k == j ? 1 : 0, forcing_size)) for j in 1:forcing_size] :
+				   SVector{0, Int}[]
+
 	for t in model.nonlinear_terms
 		t.deg > deg_max && continue
-		accumulate_multilinear_term!(result, temp, temp2, t, exp, parametrisation)
+		accumulate_multilinear_term!(result, temp, temp2, t, exp, parametrisation, unit_vectors)
 	end
 	return result
 end
