@@ -769,4 +769,14 @@ function bounded_index_tuples(M::Int, exp::SVector{N, Int}) where {N}
 	return results
 end
 
+function bounded_index_tuples(M::Int, exp::SVector{0, T}) where T
+	if M == 0
+		# Exactly one empty tuple, zero multiindex, and 1 permutation
+		return [(tuple(), zero(SVector{0, T}), 1)]
+	else
+		# Cannot choose M > 0 indices from an empty set
+		return Tuple{NTuple{M, Int}, SVector{0, T}, Int}[]
+	end
+end
+
 end # module
