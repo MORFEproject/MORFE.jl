@@ -87,14 +87,11 @@ function forcing!(res, r)
 end
 term_forcing = MultilinearMap(forcing!, (0, 0), 1)   # no state derivatives, one external variable
 
-# External dynamics: r' = 3*r (polynomial of degree 1 in r)
-external_dynamics = DensePolynomial([SVector(3.0)], MultiindexSet([SVector(1)]))
-
 # Collect all nonlinear terms
 nonlinear_terms = (term1, term2, term3, term_forcing)
 
 # Build the second‑order model, including external dynamics
-model_nd = NDOrderModel((B₀, B₁, B₂), nonlinear_terms, external_dynamics)
+model_nd = NDOrderModel((B₀, B₁, B₂), nonlinear_terms)
 
 # Generate the equivalent first‑order matrices for the linear part:
 #   B Ẋ = A X   with X = [x; x']

@@ -269,6 +269,7 @@ function find_in_set(set::MultiindexSet{N}, exp::AbstractVector{Int}) where {N}
 	end
 	return nothing
 end
+
 """
 	_sv_eq_tuple(v::SVector{N,Int}, t::NTuple{N,Int})
 
@@ -282,6 +283,7 @@ Helper functions that compares:  SVector ==(indexwise) NTuple
 	end
 	return true
 end
+
 """
 	find_in_set(set::MultiindexSet, exp::NTuple{N,Int}) where N -> Union{Int, Nothing}
 
@@ -436,7 +438,7 @@ function factorisations_asymmetric(
 	end
 	exp_svec = SVector{N, Int}(exp)
 	exps = set.exponents
-	results = NTuple{num_factors, Int}[]
+	results = NTuple{Int64(num_factors), Int}[]
 	current_idxs = Vector{Int}(undef, num_factors)
 
 	function backtrack(depth::Int, current_sum::SVector{N, Int})
@@ -551,7 +553,6 @@ function factorisations_groupwise_symmetric(
 	group_sizes::NTuple{M, Int},
 	candidate_indices::AbstractVector{Int}) where {N, M}
 	exp_svec = SVector{N, Int}(exp)
-	exps = set.exponents
 
 	global_candidates = sort(unique(candidate_indices))
 
@@ -702,8 +703,6 @@ function _multinomial(e::Int, k::Vector{Int})::Int
 	return res
 end
 
-using StaticArrays
-
 """
 	bounded_index_tuples(M, exp::SVector{N,Int})
 
@@ -730,7 +729,7 @@ where:
 - `permutation_count::Int` is the number of distinct permutations
 """
 function bounded_index_tuples(M::Int, exp::SVector{N, Int}) where {N}
-	results = Vector{Tuple{NTuple{M, Int}, SVector{N, Int}, Int}}()
+	results = Vector{Tuple{NTuple{Int64(M), Int}, SVector{N, Int}, Int}}()
 
 	counts = zeros(Int, N)
 
@@ -751,7 +750,7 @@ function bounded_index_tuples(M::Int, exp::SVector{N, Int}) where {N}
 
 				tuple_repr = Tuple(idx)
 				multi = SVector{N, Int}(counts)
-				perm_count = _multinomial(M, counts)
+				perm_count = _multinomial(Int64(M), counts)
 
 				push!(results, (tuple_repr, multi, perm_count))
 			end
