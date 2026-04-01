@@ -33,7 +33,7 @@ const NVAR = ROM + FORCING_SIZE   # = 3
 term1 = MultilinearMap((res, x, xdot)->(@. res += x*xdot), (1, 1)) # me=0
 term2 = MultilinearMap((res, xdot1, xdot2)->(@. res += 0.5*xdot1*xdot2), (0, 2)) # me=0
 term3 = MultilinearMap((res, x1, x2, xdot)->(@. res += 0.5*x1*x2*xdot), (2, 1)) # me=0
-term4 = MultilinearMap((res, x, u)->(@. res += 2.0*x*u), (1, 0), 1) # me=1
+term4 = MultilinearMap((res, x, r)->(@. res += 2.0*x*r), (1, 0), 1) # me=1
 term5 = MultilinearMap((res, u)->(@. res += [100.0, 200.0]*u), (0, 0), 1) # me=1
 
 Id = Matrix{Float64}(I, FOM, FOM)
