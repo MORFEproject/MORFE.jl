@@ -421,4 +421,11 @@ function linear_first_order_matrices(model::FirstOrderModel)
 	return -model.B0, model.B1
 end
 
+struct ExternalSystem
+	size::Int
+	dynamics::DensePolynomial{<:SVector}
+	linear_matrix::AbstractMatrix
+	# optionally store nonlinear parts separately
+end
+
 end # module
