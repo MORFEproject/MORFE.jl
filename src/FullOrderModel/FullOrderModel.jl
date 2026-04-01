@@ -8,9 +8,7 @@ using ..Polynomials: DensePolynomial
 using ..MultilinearMap: MultilinearMap, evaluate_term!
 using ..ExternalSystem: ExternalSystem
 
-export NDOrderModel, FirstOrderModel,
-	MultilinearMap,
-	linear_first_order_matrices, evaluate_nonlinear_terms!
+export NDOrderModel, FirstOrderModel, linear_first_order_matrices, evaluate_nonlinear_terms!
 
 abstract type AbstractFullOrderModel end
 

@@ -1,19 +1,14 @@
 # MORFE.jl
 
-<img src="docs/logo.svg" alt="MORFE.jl logo" width="400"/> 
+![MORFE.jl logo](logo.svg)
 
-<br><br>
-
-`Model Order Reduction for Finite Elements in Julia`
+**Model Order Reduction for Finite Elements in Julia**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Project Status: Pre-Alpha](https://img.shields.io/badge/Project_Status-Pre--Alpha-FF9900)](https://opensource.org/licenses/MIT)
 [![Julia 1.10+](https://img.shields.io/badge/Julia-1.10+-9558B2.svg)](https://julialang.org/downloads/)
-[![CI Status](https://img.shields.io/badge/CI-Pending-orange)](https://github.com/MORFEproject/MORFE.jl/actions)
 
-MORFE.jl is the next generation of the **Model Order Reduction for Finite Elements** framework. It implements the **DPIM (Direct Parametrisation of Invariant Manifolds)** algorithm in Julia, offering a modular, FEM-agnostic approach to reduced-order modeling.
-
----
+MORFE.jl implements the **DPIM (Direct Parametrisation of Invariant Manifolds)** algorithm in Julia, offering a modular, FEM-agnostic approach to reduced-order modeling.
 
 ## Features
 
@@ -23,8 +18,6 @@ MORFE.jl is the next generation of the **Model Order Reduction for Finite Elemen
 - **Julia Native**: Written in Julia with modern best practices (multiple dispatch, type stability)
 - **Modular Architecture**: Easily extensible with custom solvers and visualization tools
 
----
-
 ## Installation
 
 MORFE.jl is not yet registered in the Julia General Registry. To install:
@@ -33,14 +26,6 @@ MORFE.jl is not yet registered in the Julia General Registry. To install:
 using Pkg
 Pkg.add(url="https://github.com/MORFEproject/MORFE.jl.git")
 ```
-
-Or inPkg mode:
-
-```julia
-] add https://github.com/MORFEproject/MORFE.jl.git
-```
-
----
 
 ## Quick Start
 
@@ -54,9 +39,19 @@ fom = FullOrderModel()
 # (more examples coming soon)
 ```
 
-For more detailed examples, see the `demo/` directory.
+## Contents
 
----
+```@contents
+Pages = [
+    "index.md",
+    "project-overview.md",
+    "multiindices.md",
+    "polynomials.md",
+    "realification.md",
+    "multilinear_terms.md",
+]
+Depth = 2
+```
 
 ## Project Structure
 
@@ -70,11 +65,9 @@ MORFE.jl/
 └── Project.toml          # Julia project manifest
 ```
 
----
-
 ## Status
 
-⚠️ **Pre-Alpha**: This project is in early development. The API may change significantly.
+**Pre-Alpha**: This project is in early development. The API may change significantly.
 
 ### Implemented
 
@@ -85,29 +78,4 @@ MORFE.jl/
 
 ### Roadmap
 
-See [Project Overview & Requirements](docs/project-overview.md) for detailed plans.
-
----
-
-## Documentation
-
-- [Project Overview & Requirements](docs/project-overview.md) - Detailed requirements and design decisions
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to open an issue or submit a pull request.
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## References
-
-- DPIM (Direct Parametrisation of Invariant Manifolds) method for nonlinear model order reduction
-- MORFE2.0 - Previous version of the framework (Julia-based)
+See [Project Overview & Requirements](project-overview.md) for detailed plans.

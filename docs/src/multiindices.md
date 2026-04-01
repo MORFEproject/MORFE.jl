@@ -37,7 +37,7 @@ MultiindexSet(exponents::Vector{Vector{Int}})        # from vector of vectors
 **Examples**:
 ```julia
 all_multiindices_up_to(2, 2)   # 6 vectors: [0,0], [1,0], [0,1], [2,0], [1,1], [0,2]
-all_multiindices_in_box([2,1]) # same as above but stops at [2,1]
+all_multiindices_in_box([2,1]) # [0,0], [1,0], [0,1], [2,0], [1,1], [2,1]
 ```
 
 ---
