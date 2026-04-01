@@ -1,0 +1,37 @@
+# Julia compiled code
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+Manifest.toml
+docs/Manifest.toml
+.JuliaFormatter.toml
+
+# Package artifacts (stores downloaded dependencies)
+/artifacts/
+
+# Generated documentation
+docs/build/
+docs/site/
+
+# Temporary files from editors and OS
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.tmp
+
+# Julia's package manager local logs
+/LocalPreferences.toml
+
+# (Optional) If you use Jupyter notebooks or other notebooks
+*.ipynb_checkpoints/
+
+# (Optional) If you use coverage tools like Codecov
+/coverage/

@@ -1,0 +1,6 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+MORFE = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
+
+[compat]
+Documenter = "1"

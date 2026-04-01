@@ -1,4 +1,4 @@
-# MORFE3.0 Folder Structure and Module Dependencies
+# MORFE.jl Folder Structure and Module Dependencies
 
 ## Folder Structure
 
