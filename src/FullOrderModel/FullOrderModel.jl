@@ -4,133 +4,15 @@ using LinearAlgebra
 using SparseArrays
 using StaticArrays: SVector
 
-using ..Polynomials: DensePolynomial, evaluate
+using ..Polynomials: DensePolynomial
+using ..MultilinearMap: MultilinearMap, evaluate_term!
+using ..ExternalSystem: ExternalSystem
 
 export NDOrderModel, FirstOrderModel,
 	MultilinearMap,
 	linear_first_order_matrices, evaluate_nonlinear_terms!
 
 abstract type AbstractFullOrderModel end
-
-"""
-	MultilinearMap{ORD, F}
-
-Represents a single monomial term of order deg in the nonlinear function of an `NDOrderModel`.
-
-A term is represented using a multiindex stored in the NTuple 
-	`multiindex` = (i_0, ..., i_{ORD-1})  
-where i_k is the multiplicity of the derivative x^(k). So the i_k specifies how many times the derivative x^(k) appears as an argument. 
-In addition the function accepts `multiplicity_external` external variables r_1, r_2, ...
-which satisfy the first order dynamic system r' = dynamics_external(r),
-where dynamics_external is a DensePolynomial defined in NDOrderModel. The influence in f! is described by `multiplicity_external`
-
-During evaluation the multilinear map is called as
-
-	f!(res,
-	   x^(0), ... repeated i_0 times,
-	   x^(1), ... repeated i_1 times,
-	   ...
-	   x^(ORD-1), ...repeated i_{ORD-1} times,
-	   r, ... repeated `multiplicity_external` times)
-
-# Important Notes
-- Each `MultilinearMap` **must implement a multilinear map**, i.e., it should be linear in each of its arguments independently.
-- The function `f!` accumulates (adds) into `res` and must be callable with the appropriate number of arguments.
-- If one i_k is larger than 1 we assume the input arguments are symmetric by permutation. For example:
-	multiindex = (0, 2,...)
-	f!(res, x^(1)_1, x^(1)_2, ...) = f!(res, x^(1)_2, x^(1)_1, ...)
-
-"""
-struct MultilinearMap{ORD, F}
-	f!::F
-	multiindex::NTuple{ORD, Int}
-	multiplicity_external::Int
-	deg::Int
-end
-
-"""
-	MultilinearMap(f, multiindex)
-
-Create a multilinear term for a system of order ORD without external dynamics.
-
-# Arguments
-- `f!`: in-place evaluation function
-- `multiindex`: tuple specifying which derivatives are used
-"""
-function MultilinearMap(f!, multiindex::NTuple{ORD, Int}) where {ORD}
-	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
-	deg = sum(multiindex)
-	# Check if input arguments of f matches deg
-	ms = methods(f!)
-	@assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
-	@assert ms[1].nargs==deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-	@assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
-
-	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg)
-end
-
-# Create a multilinear term for a first order system.
-function MultilinearMap(f!)
-	ms = methods(f!)
-	@assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
-	deg = ms[1].nargs - 2 # subtract the function itself and `res`
-	@assert deg>=2 "Function $(f!) must have degree at least 2, but has degree $deg"
-	multiindex = (UInt8(deg),)
-	return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg)
-end
-
-function MultilinearMap(
-	f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int) where {ORD}
-	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
-	@assert multiplicity_external >= 0 "The argument multiplicity_external cannot be negative, but multiplicity_external=$multiplicity_external"
-	deg = sum(multiindex) + multiplicity_external
-	# Check if input arguments of f matches deg
-	ms = methods(f!)
-	@assert length(ms)==1 "Function $(f!) must have exactly one method to determine number of inputs"
-	@assert ms[1].nargs==deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-	@assert (deg>=2) || (multiplicity_external>=1)
-	"Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
-
-	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg)
-end
-
-"""
-	evaluate_term!(res, term, xs, r)
-
-Evaluate a single `MultilinearMap` and accumulate (adds) the result into `res`.
-
-# Arguments
-- `res`: output vector (modified in-place)
-- `term`: multilinear term
-- `xs`: tuple `(x, x^(1), …, x^(ORD-1))` of state derivatives
-- `r`: external state vector (or `nothing` if not used). If `r` is `nothing` but the term expects external arguments, an error is thrown.
-"""
-@inline function evaluate_term!(res, term::MultilinearMap{ORD}, xs, r) where {ORD}
-	inds = term.multiindex
-	me = term.multiplicity_external
-	total_args = term.deg
-
-	# Build the argument list
-	args = ntuple(total_args) do k
-		if k <= sum(inds)
-			# Pick from xs based on multiindex
-			s = 0
-			for j in 1:ORD
-				s += inds[j]
-				if k ≤ s
-					return @inbounds xs[j]
-				end
-			end
-		else
-			# Pick from external state
-			if r === nothing
-				error("Term expects external arguments but no external state provided")
-			end
-			return r
-		end
-	end
-	term.f!(res, args...)
-end
 
 """
 
@@ -150,20 +32,18 @@ where:
 # Generic type parameters
 
 - `ORD` defines the order of the ODE.
-
 - `ORDP1` is the number of linear terms (from 0 through ORD). It must satisfy ORDP1 == ORD+1.
-
 - `N_NL` is the number of nonlinear terms in the tuple nonlinear_terms.
-
-- `MT` is the type of the matrices in the ORDP1-tuple linear_terms.
+- `N_EXT` is the size of the external system.
+- `T` is the numeric type.
+- `MT` is the matrix type that forms the ORDP1-tuple of linear_terms.
 
 # Fields
 
 - `n_fom`: dimension of the full‑order state vector x.
-- `n_ext`: dimension of the external forcing state r (0 if no forcing).
 - `linear_terms`: tuple of linear coefficient matrices (B_0, …, B_ORD).
 - `nonlinear_terms`: tuple of `MultilinearMap` representing nonlinear contributions.
-- `external_dynamics`: polynomial defining the dynamics of external forcing variables r.
+- `external_system`: object of tyle `ExternalSystem` defining the external dynamics.
 
 # Representation
 
@@ -180,41 +60,43 @@ Each `MultilinearMap` defines:
 - The nonlinear structure is stored in sparse form (only active terms).
 - TODO For large `K`, a `Vector` may be more appropriate than an `NTuple`.
 """
-struct NDOrderModel{ORD, ORDP1, N_NL, MT <: AbstractMatrix} <: AbstractFullOrderModel
+struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <: AbstractFullOrderModel
 	n_fom::Int
-	n_ext::Int
 	linear_terms::NTuple{ORDP1, MT}
 	nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}}
-	external_dynamics::Union{Nothing, DensePolynomial{<:SVector, 1}}
+	external_system::Union{Nothing, ExternalSystem{N_EXT, T}}
 
 	"""
 	NDOrderModel(linear_terms, nonlinear_terms, external_dynamics = DensePolynomial{...}())
 
-	Construct an `NDOrderModel` and validate consistency.
+	Construct an `NDOrderModel` with external system.
 
 	# Checks performed
-	- All matrices in `linear_terms` must have identical size.
 	- Correct relationship between `ORD` and `ORDP1`.
-	- The external dynamics polynomial must be of type DensePolynomial{<:SVector, 1}.
-	- The external state dimension is extracted from the polynomial coefficients.
-	- For each nonlinear term, `multiplicity_external ≤ n_ext`.
+	- All matrices in `linear_terms` must be adequately sized.
 	"""
 	function NDOrderModel(
 		linear_terms::NTuple{ORDP1, MT},
 		nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}},
-		external_dynamics::Union{Nothing, DensePolynomial{<:SVector, 1}} = nothing,
-	) where {ORD, ORDP1, N_NL, MT <: AbstractMatrix}
+		external_dynamics::DensePolynomial{SVector{N_EXT, T}, N_EXT},
+	) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}}
 		@assert ORDP1 == ORD + 1
 		n_fom = size(linear_terms[1], 1)
 		@assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
 
-		if external_dynamics isa Nothing
-			n_ext = 0
-		else
-			n_ext = nvars(external_dynamics)
-		end
+		new{ORD, ORDP1, N_NL, N_EXT, T, MT}(n_fom, linear_terms, nonlinear_terms, ExternalSystem(external_dynamics))
+	end
 
-		new{ORD, ORDP1, N_NL, MT}(n_fom, n_ext, linear_terms, nonlinear_terms, external_dynamics)
+	# Constructor without external system
+	function NDOrderModel(
+		linear_terms::NTuple{ORDP1, MT},
+		nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}},
+	) where {ORD, ORDP1, N_NL, T, MT <: AbstractMatrix{T}}
+		@assert ORDP1 == ORD + 1
+		n_fom = size(linear_terms[1], 1)
+		@assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
+
+		new{ORD, ORDP1, N_NL, 0, T, MT}(n_fom, linear_terms, nonlinear_terms, nothing)
 	end
 end
 
@@ -273,10 +155,10 @@ and
 
 where `I` is the `n_fom × n_fom` identity matrix.
 """
-function linear_first_order_matrices(model::NDOrderModel{
-	ORD, ORDP1, N_NL, MT}) where {ORD, ORDP1, N_NL, MT <: SparseMatrixCSC}
+function linear_first_order_matrices(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}
+) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: SparseMatrixCSC{T}}
 	n = model.n_fom
-	T = eltype(model.linear_terms[1])
+	#T = eltype(model.linear_terms[1])
 	total = ORD * n
 
 	B = spzeros(T, total, total)
@@ -313,10 +195,10 @@ function linear_first_order_matrices(model::NDOrderModel{
 	return A, B
 end
 
-function linear_first_order_matrices(model::NDOrderModel{
-	ORD, ORDP1, N_NL, MT}) where {ORD, ORDP1, N_NL, MT <: AbstractMatrix}
+function linear_first_order_matrices(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}
+) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}}
 	n = model.n_fom
-	T = eltype(model.linear_terms[1])
+	# T = eltype(model.linear_terms[1])
 	total = ORD * n
 
 	B = zeros(T, total, total)
@@ -419,13 +301,6 @@ Return the matrices `(A, B)` of the equivalent linear first‑order system
 """
 function linear_first_order_matrices(model::FirstOrderModel)
 	return -model.B0, model.B1
-end
-
-struct ExternalSystem
-	size::Int
-	dynamics::DensePolynomial{<:SVector}
-	linear_matrix::AbstractMatrix
-	# optionally store nonlinear parts separately
 end
 
 end # module

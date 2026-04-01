@@ -9,7 +9,7 @@ export DensePolynomial,
 	coefficients, multiindex_set, nvars,
 	coefficient, has_term, find_term, find_in_multiindex_set,
 	zero, evaluate, extract_component, each_term, similar_poly,
-	linear_matrix
+	linear_matrix_of_polynomial
 
 # ---------- DensePolynomial ----------
 """
@@ -289,11 +289,11 @@ end
 
 # ---------- extract the linear part of the polynomial as a matrix ----------
 """
-	linear_matrix(poly::DensePolynomial{<:SVector})
+	linear_matrix_of_polynomial(poly::DensePolynomial{<:SVector})
 
 Return the linear part of the polynomial as a matrix `A` such that the linear term is `A * x`.
 """
-function linear_matrix(poly::DensePolynomial{SVector{L, T}, NVAR}) where {L, NVAR, T}
+function linear_matrix_of_polynomial(poly::DensePolynomial{SVector{L, T}, NVAR}) where {L, NVAR, T}
 	A = zeros(T, L, NVAR)
 
 	# Loop over all monomials in the multiindex set
@@ -301,9 +301,10 @@ function linear_matrix(poly::DensePolynomial{SVector{L, T}, NVAR}) where {L, NVA
 		if sum(exp) == 1
 			# find which variable is raised to power 1
 			j = findfirst(==(1), exp)
-			@assert j !== nothing  # degree 1 monomial => exactly one exponent =1
 			coeff = poly.coefficients[idx]  # this is an SVector of length n
 			A[:, j] .= coeff
+		elseif sum(exp) > 1
+			break
 		end
 	end
 	return A

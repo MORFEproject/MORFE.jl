@@ -77,17 +77,17 @@ _sym_param(::SymmetryType, t) = _derivative_orders(t)
 	AccumContext{W, S, R, CI, AE}
 
 Immutable, stack-allocated bundle of the data needed by `_accumulate_inner!`
-for one forcing-split iteration.
+for one (external system)-split iteration.
 
 # Fields
 - `W`                 — coefficient array of the parametrisation polynomial.
 - `set`               — multiindex set of the parametrisation.
-- `rem`               — exponent remainder after stripping the forcing contribution.
+- `rem`               — exponent remainder after stripping the external contribution.
 - `candidate_indices` — indices pre-filtered at the top level from the full
-						exponent `exp`; shared across all terms and all forcing
+						exponent `exp`; shared across all terms and all external system
 						splits.  Acts as a superset: the factorisation routines
 						perform their own exact filtering against `rem`.
-- `args_ext`          — tuple of unit vectors for the external forcing slots.
+- `args_ext`          — tuple of unit vectors for the external external slots.
 """
 struct AccumContext{W, S, R, CI, AE}
 	W::W
@@ -165,19 +165,19 @@ end
 """
 	accumulate_multilinear_term!(result, temp, temp2, t, exp, parametrisation, unit_vectors, candidate_indices)
 
-Classify the symmetry type of `t`, iterate over all external-forcing index
+Classify the symmetry type of `t`, iterate over all external index
 splits, and delegate to the appropriate `_accumulate_inner!` specialisation.
 
 # Argument roles
 - `result`            — running total across all terms; incremented in place.
-- `temp`              — per-forcing-split accumulation buffer; zeroed each iteration.
+- `temp`              — per-(external system)-split accumulation buffer; zeroed each iteration.
 - `temp2`             — per-factorisation scratch for the symmetric/partial branches.
-- `unit_vectors`      — precomputed forcing unit vectors (built once in
+- `unit_vectors`      — precomputed external unit vectors (built once in
 						`compute_multilinear_terms`).
 - `candidate_indices` — multiindex set pre-filtered from the full exponent `exp`
 						(built once in `compute_multilinear_terms`, shared across
-						all terms and all forcing splits).
-- `forcing_exp`       — the last `forcing_size` components of `exp`, extracted
+						all terms and all external splits).
+- `external_exp`       — the last `external_system_size` components of `exp`, extracted
 						once in `compute_multilinear_terms` and shared across all
 						terms.
 
@@ -194,31 +194,31 @@ directly into `temp` without a per-factorisation temporary.
 """
 function accumulate_multilinear_term!(result, temp, temp2,
 	t::MultilinearMap{ORD}, exp::SVector{NVAR}, parametrisation::Parametrisation{ORD, NVAR},
-	unit_vectors, candidate_indices, forcing_exp) where {ORD, NVAR}
+	unit_vectors, candidate_indices, external_exp) where {ORD, NVAR}
 
 	W            = parametrisation.poly.coefficients
 	set          = parametrisation.poly.multiindex_set
 	me           = t.multiplicity_external
 	deg_internal = t.deg - me
-	ROM          = NVAR - parametrisation.forcing_size
+	ROM          = NVAR - parametrisation.external_system_size
 
 	sym   = symmetry_type(t)
 	param = _sym_param(sym, t)
 
-	@debug "Term enter" f! = t.f! multiindex = t.multiindex symmetry = sym deg_internal forcing_exp
+	@debug "Term enter" f! = t.f! multiindex = t.multiindex symmetry = sym deg_internal external_exp
 
-	for (f_idx, f_multiindex_forcing, f_count) in bounded_index_tuples(me, forcing_exp)
-		# Reconstruct the full NVAR-length multiindex: prepend ROM zeros to the forcing part.
-		f_multiindex = SVector(ntuple(i -> i <= ROM ? 0 : f_multiindex_forcing[i-ROM], Val(NVAR)))
-		rem          = exp - f_multiindex
-		args_ext     = me > 0 ? ntuple(i -> unit_vectors[f_idx[i]], me) : ()
-		ctx          = AccumContext(W, set, rem, candidate_indices, args_ext)
+	for (ext_idx, ext_multiindex_external, ext_count) in bounded_index_tuples(me, external_exp)
+		# Reconstruct the full NVAR-length multiindex: prepend ROM zeros to the external part.
+		ext_multiindex = SVector(ntuple(i -> i <= ROM ? 0 : ext_multiindex_external[i-ROM], Val(NVAR)))
+		rem = exp - ext_multiindex
+		args_ext = me > 0 ? ntuple(i -> unit_vectors[ext_idx[i]], me) : ()
+		ctx = AccumContext(W, set, rem, candidate_indices, args_ext)
 
-		@debug "Forcing split" f_idx f_multiindex f_count rem args_ext
+		@debug "Forcing split" ext_idx ext_multiindex ext_count rem args_ext
 
 		fill!(temp, 0)
 		_accumulate_inner!(temp, temp2, t, sym, param, deg_internal, ctx)
-		@. result += f_count * temp
+		@. result += ext_count * temp
 	end
 end
 
@@ -238,7 +238,7 @@ through the entire call stack, so no allocation occurs inside the term loop.
 
 `candidate_indices` is computed from the full exponent `exp` (not from the
 per-split remainder `rem`), giving a fixed superset of valid polynomial indices
-that is valid for every term and every forcing split.  The factorisation
+that is valid for every term and every external split.  The factorisation
 routines perform their own exact filtering against `rem`.
 """
 function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::SVector{NVAR},
@@ -251,22 +251,22 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::SVector{NVAR},
 	temp        = similar(result)
 	temp2       = similar(result)
 
-	forcing_size      = parametrisation.forcing_size
-	ROM               = NVAR - forcing_size
-	unit_vectors      = forcing_size > 0 ?
-	[SVector(ntuple(k -> k == j ? 1 : 0, forcing_size)) for j in 1:forcing_size] :
-	SVector{0, Int}[]
+	external_system_size = parametrisation.external_system_size
+	ROM = NVAR - external_system_size
+	unit_vectors = external_system_size > 0 ?
+				   [SVector(ntuple(k -> k == j ? 1 : 0, external_system_size)) for j in 1:external_system_size] :
+				   SVector{0, Int}[]
 	candidate_indices = indices_in_box_with_bounded_degree(set, exp, 1, deg_max)
-	# Only the last `forcing_size` components of `exp` govern the forcing
-	forcing_exp = SVector(ntuple(i -> exp[ROM+i], forcing_size))
+	# Only the last `external_system_size` components of `exp` govern the external system
+	external_exp = SVector(ntuple(i -> exp[ROM+i], external_system_size))
 
-	@debug "compute_multilinear_terms" exp deg_max ROM forcing_exp n_multilinear_terms = length(model.nonlinear_terms) candidate_indices
+	@debug "compute_multilinear_terms" exp deg_max ROM external_exp n_multilinear_terms = length(model.nonlinear_terms) candidate_indices
 
 	for t in model.nonlinear_terms
 		t.deg > deg_max && continue
 		@debug "Processing term" f! = t.f! deg = t.deg multiindex = t.multiindex multiplicity_external = t.multiplicity_external
 		accumulate_multilinear_term!(result, temp, temp2, t, exp, parametrisation,
-			unit_vectors, candidate_indices, forcing_exp)
+			unit_vectors, candidate_indices, external_exp)
 	end
 	return result
 end
