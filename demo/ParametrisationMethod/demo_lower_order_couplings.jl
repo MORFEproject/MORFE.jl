@@ -4,7 +4,7 @@
 using LinearAlgebra
 using StaticArrays
 
-include(joinpath(@__DIR__, "../src/MORFE.jl"))
+include(joinpath(@__DIR__, "../../src/MORFE.jl"))
 using .MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
 using .MORFE.Polynomials
 using .MORFE.LowerOrderCouplings

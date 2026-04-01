@@ -14,7 +14,7 @@
 
 # ENV["JULIA_DEBUG"] = "MultilinearTerms" # enable debug for the module
 
-include(joinpath(@__DIR__, "../src/MORFE.jl"))
+include(joinpath(@__DIR__, "../../src/MORFE.jl"))
 using .MORFE.Multiindices: all_multiindices_up_to
 using .MORFE.FullOrderModel: NDOrderModel, MultilinearMap
 using .MORFE.ParametrisationMethod: create_parametrisation_method_objects
