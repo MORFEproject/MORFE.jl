@@ -24,10 +24,13 @@ the linear matrix, and its eigenvalues.
   If `T<:Real`, `EigenValueType = Complex{T}`; otherwise `EigenValueType = T`.
 
 # Constructors
-1. `ExternalSystem(first_order_dynamics, eigenvalues)`
-   Build from a polynomial and precomputed eigenvalues. Computes linear matrix automatically.
+1. `ExternalSystem(first_order_dynamics)`
+   Build from a polynomial. Computes linear matrix and associated automatically.
 
-2. `ExternalSystem(eigenvalues)`
+2. `ExternalSystem(first_order_dynamics, eigenvalues)`
+   Same as above, but with precomputed eigenvalues.
+
+3. `ExternalSystem(eigenvalues)`
    Construct a purely linear system `dx/dt = diag(eigenvalues) * x`, i.e., decoupled linear dynamics.
 """
 struct ExternalSystem{N_EXT, T, EigenValueType}
@@ -40,12 +43,38 @@ end
 _evtype(::Type{T}) where {T <: Real} = Complex{T}
 _evtype(::Type{T}) where {T <: Complex} = T
 
+# Constructor from polynomial only; eigenvalues computed automatically
+function ExternalSystem(first_order_dynamics::DensePolynomial{SVector{N_EXT, T}, N_EXT}) where {N_EXT, T}
+	linear_matrix = SMatrix{N_EXT, N_EXT, T}(linear_matrix_of_polynomial(first_order_dynamics))
+
+	# Compute eigenvalues of the linear matrix
+	evals = eigvals(Matrix(linear_matrix))                # returns Vector{ComplexF64} or similar
+	EigenValueType = _evtype(T)                          # Complex{T} if T<:Real else T
+	eigenvalues = SVector{N_EXT, EigenValueType}(convert.(EigenValueType, evals))
+
+	ExternalSystem{N_EXT, T, EigenValueType}(first_order_dynamics, linear_matrix, eigenvalues)
+end
+
 # Constructor from polynomial and eigenvalues; compute linear matrix 
 function ExternalSystem(
 	first_order_dynamics::DensePolynomial{SVector{N_EXT, T}, N_EXT},
-	eigenvalues::SVector{N_EXT, EigenValueType},
+	eigenvalues::SVector{N_EXT, EigenValueType};
+	check::Bool = true,
+	rtol::Real = 1e-10,
+	atol::Real = 1e-12,
 ) where {N_EXT, T, EigenValueType}
 	linear_matrix = SMatrix{N_EXT, N_EXT, T}(linear_matrix_of_polynomial(first_order_dynamics))
+
+	if check
+		actual = eigvals(Matrix(linear_matrix))
+		actual_ev = SVector{N_EXT, EigenValueType}(actual)
+		if !all(isapprox.(sort(actual_ev, by = x -> (real(x), imag(x))),
+			sort(eigenvalues, by = x -> (real(x), imag(x))),
+			rtol = rtol, atol = atol))
+			error("Provided eigenvalues do not match the eigenvalues of the linear matrix.")
+		end
+	end
+
 	ExternalSystem{N_EXT, T, EigenValueType}(first_order_dynamics, linear_matrix, eigenvalues)
 end
 
