@@ -66,9 +66,9 @@ coefficients = [
 poly = DensePolynomial(coefficients, multi_set)
 
 # Build ExternalSystem from polynomial and eigenvalues (computes linear matrix automatically)
-ext_sys2 = ExternalSystem(poly, SVector(-1.0, -1.0))
+ext_sys2 = ExternalSystem(poly)
 
-println("\n=== System with quadratic nonlinearities ===\n")
+println("\n=== System with quadratic nonlinearities from DensePolynomial ===\n")
 println("Type: ", typeof(ext_sys2))
 println("Linear matrix:\n", repr("text/plain", ext_sys2.linear_matrix))
 println("Eigenvalues: ", ext_sys2.eigenvalues)
@@ -89,7 +89,7 @@ println("polynomial evaluate =\t", evaluate(ext_sys2.first_order_dynamics, r))
 eigenvalues_complex = (-0.5 + 1.0im, -0.5 - 1.0im, -1.0 + 0.0im)
 ext_sys3 = ExternalSystem(eigenvalues_complex)
 
-println("\n=== Linear decoupled system with complex eigenvalues ===\n")
+println("\n=== Linear decoupled system from complex eigenvalues ===\n")
 println("Eigenvalues: ", ext_sys3.eigenvalues)
 println("Linear matrix:\n", repr("text/plain", ext_sys3.linear_matrix))
 
