@@ -8,6 +8,7 @@ include("FullOrderModel/FullOrderModel.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
 include("Realification.jl")
 include("ParametrisationMethod/LinearOperator/Resonance.jl")
+include("ParametrisationMethod/LinearOperator/LinearOperator.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
@@ -20,6 +21,7 @@ using .ExternalSystem
 using .FullOrderModel
 using .Eigensolvers: generalized_eigenpairs
 using .Resonance
+using .LinearOperator
 using .ParametrisationMethod
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
