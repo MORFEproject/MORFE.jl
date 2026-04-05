@@ -34,8 +34,12 @@ B2 = 5.0 * Matrix{ComplexF64}(I, FOM, FOM)
 linear_terms = (B0, B1, B2)   # NTuple{ORDP1} = (B₀, B₁, B₂)
 
 # Reduced dynamics linear part (NVAR × NVAR) – Jordan form
-# For demo, a diagonal matrix with eigenvalues λ₁, λ₂ = -0.1±1i (master) and λ₃ = 3.0 (external)
-reduced_dynamics_linear = diagm([-0.1+1im, -0.1-1im, -3.0+0.0im])
+# For demo, a matrix with eigenvalues λ₁, λ₂ = -0.1±1i (master) and λ₃ = 3.0 (external)
+reduced_dynamics_linear = [
+	-0.1+1.0im   0.0+0.0im   1.0+0.0im; # forcing excites master mode 1
+	 0.0+0.0im  -0.1-1.0im   0.0+0.0im; # forcing does not excite master mode 2
+	 0.0+0.0im   0.0+0.0im   0.0+1.0im
+]  # Example matrix
 println("\nReduced dynamics linear part (NVAR × NVAR):\n", repr("text/plain", reduced_dynamics_linear))
 
 # Generalised eigenvectors (FOM × NVAR)
@@ -116,6 +120,23 @@ println("\nLower‑order RHS contribution:\n", lower_rhs)
 rhs_ext = zeros(ComplexF64, FOM)
 evaluate_external_rhs!(rhs_ext, s, external_dynamics, E_coeffs)
 println("\nExternal RHS contribution:\n", rhs_ext)
+
+println("\n=== Low‑level function manual computations ===")
+
+C = B2 * generalised_eigenmodes * s +
+	B2 * generalised_eigenmodes * reduced_dynamics_linear +
+	B1 * generalised_eigenmodes
+
+println("\nC₁($s) =\n", C * [1.0, 0.0, 0.0])
+
+println("\nL($s) = \n", repr("text/plain", B2 * (s^2) + B1 * s + B0))
+
+println("\nLower‑order RHS contribution:\n",
+	-(B2 * s + B1) * lower_order_couplings[1] - B2 * lower_order_couplings[2],
+)
+
+println("\nExternal RHS contribution:\n", - C * [0.0, 0.0, external_dynamics[1]])
+
 
 println("\n" * "="^80)
 println("Demo finished successfully.")
