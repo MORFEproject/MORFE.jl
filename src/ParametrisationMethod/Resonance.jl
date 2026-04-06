@@ -88,8 +88,7 @@ function build_resonances(rule::GraphStyleRule{NVAR, NO, Float64}, multiindices:
 	return resonances
 end
 
-function build_resonances(rule::GraphStyleRule{NVAR, NO, Vector{SVector{NO, Float64}}},
-	multiindices::MultiindexSet{NVAR}) where {NVAR, NO}
+function build_resonances(rule::GraphStyleRule{NVAR, NO, Vector{SVector{NO, Float64}}}, multiindices::MultiindexSet{NVAR}) where {NVAR, NO}
 	n_internal = rule.n_internal
 	N_TARGETS = n_internal + NO
 	exps = multiindices.exponents
