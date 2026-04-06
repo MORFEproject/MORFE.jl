@@ -1,233 +1,380 @@
-module MasterModeOrthogonality
+"""
+	MasterModeOrthogonality
 
-# =============================================================================
-#
-#  MasterModeOrthogonality.jl
-#
-#  Assembles the orthogonality conditions that arise in the parametrisation method,
-#  a reduced order modelling technique for high-dimensional dynamical systems.
-#
-#  The resonant master modes are indexed by the set R ⊂ {1,…,ROM} of master-mode indices.
-#  The amount of resonant modes is |R| = length(R) ≤ ROM. 
-#  The reduced dynamics of the non-resonant master modes is trivial (zero), 
-#  therefore they are not included in the orthogonality conditions.
-#
-#  For each multiindex **k** and superharmonic s_k = Σᵢ kᵢ λᵢ,
-#  the orthogonality condition w.r.t master mode r has the block structure
-#
-#      [ L_r  C_r ] * [ W; f ] = RHS_r .
-#
-#  Via Horner's method, we evaluate the 1 × FOM operator acting on the parametrisation W
-#
-#      L_r(s) = Σ_{j=1}^{ORD} J_r[j] s^{j-1}
-#
-#  where J_r[j] are the 1 × FOM pre-computed orthogonality linear operator coefficients satisfying
-#
-#      J_r[j] = Σ_{a=j+1}^{ORD+1} eigenvalue_r^{a-j} · left_eigenmode_r · B[a]
-#
-#  which can be computed by the downward Horner recurrence
-#
-#	   J_r[ORD] = left_eigenmode_r · B[ORD+1]
-# 	   J_r[j] = eigenvalue_r · J_r[j+1] + left_eigenmode_r · B[j+1] .
-#
-#  Via Horner's method, we build the 1 × |R| operator acting on the reduced dynamics f
-#
-#      C_r(s) = Σ_{j=1}^{ORD-1} Q_r[j] s^{j-1}
-#
-#  where we precompute the 1 × |R| coefficient matrices Q_r[j] for j = 1,…,ORD-1 as
-#
-#      Q_r[j] = Σ_{a=j+1}^{ORD} J_r[j] · generalised_right_eigenmodes · reduced_dynamics_linear^{a-(j+1)} 
-#
-#  which can be computed by the downward Horner recurrence
-#
-#	   Q_r[ORD-1] = J_r[ORD] · generalised_right_eigenmodes
-#	   Q_r[j] = J_r[j+1] · generalised_right_eigenmodes + Q_r[j+1] · reduced_dynamics_linear .
-#
-#  Above, `generalised_eigenmodes` collects the generalised eigenvectors (master modes
-#  followed by external forcing modes) and `reduced_dynamics_linear` is the
-#  Jordan-form matrix of the linear part of the reduced dynamics on the manifold.
-#
-#  The right-hand side RHS_r is assembled from the nonlinear terms and the lower-order
-#
-#
-#  Considering all resonant modes r ∈ R, the full orthogonality condition is assembled by stacking the rows per-mode 
-#  into a |R| × FOM operator L(s) and a |R| × |R| operator C(s) acting on the parametrisation and reduced dynamics, respectively.
-#
-#  Contents
-#  --------
-#  1.  (TODO)
-#  2.  (TODO)
-#
-# =============================================================================
+Assemble the orthogonality conditions that arise in the parametrisation method,
+a reduced-order modelling technique for high-dimensional dynamical systems.
+
+---
+
+# Nomenclature
+
+| Symbol  | Meaning |
+|:--------|:--------|
+| FOM     | Full-order model dimension |
+| ROM     | Number of master modes (reduced coordinates) |
+| N_EXT   | Number of external forcing modes |
+| NVAR    | `ROM + N_EXT` (total reduced variables) |
+| R       | Set of resonant master modes (`|R| ≤ ROM`) |
+
+Non-resonant master modes have trivial (zero) reduced dynamics and are excluded
+from the orthogonality equations.
+
+---
+
+# Per-multiindex orthogonality equation
+
+For each multi-index **γ** and superharmonic `s_k = Σᵢ γᵢ λᵢ`, the orthogonality
+condition with respect to master mode `r` has the block structure
+
+```
+[ L_r(s)  C_r(s) ] * [ W; f_res ] = RHS_r
+```
+
+where:
+- `L_r(s)` (`1 × FOM`) acts on the parametrisation `W`,
+- `C_r(s)` (`1 × |R|`) acts on the unknown reduced dynamics of the resonant modes
+  `f_res`,
+- `RHS_r` is a scalar containing all known contributions (lower-order terms and
+  external forcing).
+
+The external forcing modes are **not** unknowns; their contributions are
+incorporated into `RHS_r` via the operator `E_r(s)`.
+
+---
+
+# Joint operator `D_r` and its blocks `C_r` and `E_r`
+
+Define the joint operator acting on the full reduced state as
+
+```
+D_r(s) = [ C_r(s)  E_r(s) ],      size: 1 × NVAR
+```
+
+where `C_r` acts on the master modes and `E_r` acts on the external forcing.
+`D_r` is built via Horner's method:
+
+```
+D_r(s) = Σ_{j=1}^{ORD-1} Q_r[j] · s^{j-1}
+```
+
+with `Q_r[j]` (`1 × NVAR`) pre-computed by a downward recurrence.
+
+Because the external forcing is known, the term `E_r(s) · (external dynamics)`
+is moved to the right-hand side. Consequently, the linear system for the
+unknowns `[W; f_res]` involves only `L_r` and `C_r`.
+
+---
+
+# Construction of `L_r` and `Q_r` via Horner
+
+```
+L_r(s) = Σ_{j=1}^{ORD} J_r[j] · s^{j-1}
+```
+
+with `J_r[j]` (`1 × FOM`) computed by the downward recurrence
+
+```
+J_r[ORD]   = Xℓ_r · B[ORD+1]
+J_r[j]     = λ_r · J_r[j+1] + Xℓ_r · B[j+1],   j = ORD-1, …, 1
+```
+
+where `Xℓ_r` is the left eigenmode of master mode `r`, `λ_r` its eigenvalue, and
+`B[k]` the `k`-th coefficient matrix of the linear part of the full-order model.
+
+For the joint operator:
+
+```
+Q_r[ORD-1] = J_r[ORD] · Y
+Q_r[j]     = J_r[j+1] · Y + Q_r[j+1] · Λ,   j = ORD-2, …, 1
+```
+
+where:
+- `Y = generalised_right_eigenmodes` (`FOM × NVAR`) collects the generalised
+  eigenvectors of all master and external forcing modes,
+- `Λ = reduced_dynamics_linear` (`NVAR × NVAR`) is the Jordan matrix of the
+  linear part of the reduced dynamics.
+
+The split `Q_r = [ Ĉ_r  Ê_r ]` yields `C_r(s)` from the first `ROM` entries
+and `E_r(s)` from the remaining `N_EXT` entries of each `Q_r[j]`.
+
+---
+
+# Precomputation and assembly
+
+`Q_r` coefficients are pre-computed for all `NVAR = ROM + N_EXT` entries. At
+assembly time, only a subset is used:
+
+- **LHS matrix** `[L_r  C_r]`: only the `|R|` columns of `C_r(s)` corresponding
+  to resonant master modes are included; non-resonant columns are omitted because
+  their reduced dynamics is identically zero.
+- **RHS scalar**: only the `N_EXT_active` non-zero external forcing entries of
+  `E_r(s)` contribute; their values are multiplied by `external_dynamics` and
+  accumulated into `RHS_r`.
+
+---
+
+# Right-hand-side assembly
+
+`RHS_r` is the sum of two scalar contributions:
+
+## Lower-order RHS
+
+During the Horner evaluation of `L_r(s)`, the intermediate row vectors
+
+```
+L_r_j(s) = Σ_{k=j+1}^{ORD} J_r[k] · s^{k-(j+1)},   j = 1, …, ORD-1
+```
+
+are naturally available. Dotting each with the pre-computed coupling vector
+`ξ_j` gives a scalar contribution:
+
+```
+RHS_lower_r = -Σ_{j=1}^{ORD-1} L_r_j(s) · ξ_j
+```
+
+This accumulation is performed **in the same Horner loop** that computes `L_r(s)`,
+avoiding recomputation of the `L_r_j` intermediates.
+
+## External forcing RHS
+
+For external forcing modes `e = 1, …, N_EXT`, the scalar-valued polynomial
+
+```
+E_r_e(s) = Σ_{j=1}^{ORD-1} E_coeffs[r][j, e] · s^{j-1}
+```
+
+gives the contribution of mode `e` to `RHS_r` when multiplied by
+`external_dynamics[e]`. The total external contribution is
+
+```
+RHS_ext_r = -Σ_{e active} external_dynamics[e] · E_r_e(s)
+```
+
+Only active (non-zero) external modes are processed. Their contributions are
+combined into a single scalar Horner pass, avoiding per-mode evaluations.
+
+The complete right-hand side is therefore
+
+```
+RHS_r = RHS_lower_r + RHS_ext_r
+```
+
+---
+
+# Full system assembly
+
+Stacking the per-mode conditions for all `r ∈ R` yields the global linear system
+
+```
+[ L   C ] · [ W; f_res ] = RHS_R
+```
+
+where:
+- `L` is `|R| × FOM` (rows `L_r`),
+- `C` is `|R| × |R|` (resonant columns of `C_r` from the joint operator),
+- `f_res` is the vector of unknown reduced-dynamics coefficients for the resonant
+  modes,
+- `RHS_R` is the assembled `|R|`-vector of scalar right-hand sides.
+
+---
+
+# Module contents
+
+| Function | Description |
+|:---------|:------------|
+| [`precompute_orthogonality_operator_coefficients`](@ref)   | Pre-compute `J_r` coefficient arrays for the orthogonality row operators `L_r(s)` |
+| [`precompute_orthogonality_column_polynomials`](@ref)      | Pre-compute `Q_r` coefficient arrays split into `C_coeffs` and `E_coeffs` |
+| [`evaluate_orthogonality_row_and_lower_order_rhs!`](@ref)  | Fused Horner pass for `L_r(s)` (row) + scalar lower-order RHS |
+| [`evaluate_orthogonality_column_row!`](@ref)               | Evaluate the resonant block of `C_r(s)` into one row of the `C` block |
+| [`evaluate_orthogonality_external_rhs`](@ref)              | Compute the scalar external-forcing RHS for mode `r` |
+| [`assemble_orthogonality_matrix_and_rhs`](@ref)            | Full block-matrix and RHS assembly for all resonant modes |
+"""
+module MasterModeOrthogonality
 
 using LinearAlgebra
 using StaticArrays
 
 # =============================================================================
-# 1.  Pre-compute orthogonality linear operator coefficients for parametrisation
+# 1.  Pre-compute orthogonality row-operator coefficients J_r
 # =============================================================================
 
 """
-	precompute_orthogonality_linear_operator_coefficients(
-		fom_matrices::NTuple{ORDP1, <:AbstractMatrix{T}},
-		left_eigenmodes::SVector{ROM, Vector{T}},
-		eigenvalues::SVector{ROM, T}
-	) where {ORDP1, ROM, T<:Number}
+	precompute_orthogonality_operator_coefficients(fom_matrices, left_eigenmodes,
+												   master_eigenvalues)
+	-> NTuple{ROM, Matrix{T}}
 
-Precompute coefficients for the orthogonality linear operator using a downward
-Horner recurrence.
+Pre-compute the polynomial coefficient arrays for the orthogonality row operators
+`L_r(s)` using a downward Horner recurrence on the left eigenstructure.
 
-Returns an `NTuple{ROM, Matrix{T}}` where each entry `J_coeffs[r]` is an
-`ORD × FOM` matrix (`ORD = ORDP1 - 1`). Row `j` of `J_coeffs[r]` stores the
-degree‑`(j-1)` row vector coefficient for mode `r`.
+## Return value
 
-## Return values
- 
+An `NTuple{ROM, Matrix{T}}` where entry `r` is an `ORD × FOM` matrix
+`J_coeffs[r]`.  Row `j` of `J_coeffs[r]` stores the degree-`(j-1)` row-vector
+coefficient of `L_r`:
+
+```
+L_r(s) = Σ_{j=1}^{ORD} J_coeffs[r][j, :] · s^{j-1}
+```
+
 ## Arguments
- 
+
+- `fom_matrices       :: NTuple{ORD+1, <:AbstractMatrix{T}}` – linear matrices of
+  the full-order model; `fom_matrices[k+1]` corresponds to `B_k` (0-indexed).
+- `left_eigenmodes    :: SVector{ROM, <:AbstractVector{T}}` – left eigenvectors of
+  the master modes; `left_eigenmodes[r]` is a length-`FOM` vector.
+- `master_eigenvalues :: SVector{ROM, T}` – eigenvalues `λ_r` of the master modes.
+
 ## Recurrence
- 
+
+For each mode `r`, a single downward pass fills `J_coeffs[r]` (`ORD × FOM`):
+
+```
+J_r[ORD, :]   ←  Xℓ_r ·  B[ORD+1]
+J_r[j,   :]   ←  λ_r · J_r[j+1, :] + Xℓ_r ·  B[j+1],   j = ORD-1, …, 1
+```
+
 ## Complexity
- 
+
+- Time:    `O(ROM · ORD · FOM²)` (one `FOM`-vector update per `(r, j)` pair)
+- Storage: `O(ROM · ORD · FOM)`
 """
-function precompute_orthogonality_linear_operator_coefficients(
+function precompute_orthogonality_operator_coefficients(
 	fom_matrices::NTuple{ORDP1, <:AbstractMatrix{T}},
-	left_eigenmodes::SVector{ROM, <:AbstractVector{T}},   # each is a row vector (1×FOM)
+	left_eigenmodes::SVector{ROM, <:AbstractVector{T}}, # contains the hermitian transpose of the left eigenmodes, Xℓ
 	master_eigenvalues::SVector{ROM, T},
 ) where {ORDP1, ROM, T <: Number}
-
 	ORD = ORDP1 - 1
 	FOM = size(first(fom_matrices), 1)
 
 	@assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
 	@assert ROM ≥ 1 "ROM must be ≥ 1."
+	@assert all(length(Xℓ) == FOM for Xℓ in left_eigenmodes) "Each left eigenmode must have length FOM = $(FOM)."
 
-	# Return an NTuple of matrices, one per reduced mode
 	return ntuple(ROM) do r
-		X = left_eigenmodes[r]   # row vector, size 1×FOM
+		Xℓ = left_eigenmodes[r]    # length-FOM left eigenmode
 		λ = master_eigenvalues[r]
 
 		J_r = Matrix{T}(undef, ORD, FOM)
 
-		# Highest degree (j = ORD): J = X * fom_matrices[ORDP1]
-		mul!(view(J_r, ORD, :), X, fom_matrices[ORDP1])
+		# Highest degree: J_r[ORD, :] = Xℓ ·B[ORDP1]
+		mul!(view(J_r, ORD, :), Xℓ, fom_matrices[ORDP1])
 
-		# Downward Horner recurrence: J_r = X * fom_matrices[j+1] + λ * J_r
+		# Downward recurrence: J_r[j, :] = λ · J_r[j+1, :] + B[j+1]ᵀ · Xℓ
 		for j in (ORD-1):-1:1
-			# Inplace matrix-matrix multiply-add
-			mul!(view(J_r, j, :), X, fom_matrices[j+1], one(T), λ)
+			view(J_r, j, :) .= λ .* view(J_r, j+1, :)            # copy and scale
+			mul!(view(J_r, j, :), Xℓ, fom_matrices[j+1], one(T), one(T))  # accumulate
 		end
 
-		return J_r
+		J_r
 	end
 end
 
 # =============================================================================
-# 2.  Coefficient pre-computation
+# 2.  Pre-compute joint operator coefficients Q_r → (C_coeffs, E_coeffs)
 # =============================================================================
 
 """
-	precompute_rhs_columns(B, generalised_eigenmodes, reduced_dynamics_linear, ROM)
+	precompute_orthogonality_column_polynomials(J_coeffs,
+												generalised_right_eigenmodes,
+												reduced_dynamics_linear)
 	-> (C_coeffs, E_coeffs)
- 
-Precompute the polynomial coefficient arrays that appear in the cohomological
-operator columns (for master modes) and in the external-forcing right-hand side.
- 
-## Return values
- 
-- `C_coeffs :: Vector{Matrix{T}}` of length ROM, where `C_coeffs[r]` is
-  FOM × ORD.  Column j of `C_coeffs[r]` is the degree-(j-1) coefficient of the
-  r-th reduced-dynamics operator column:
-	  C_r(s) = Σ_{j=1}^{ORD} C_coeffs[r][:, j] · s^{j-1}.
- 
-- `E_coeffs :: Vector{Matrix{T}}` of length N_EXT = NVAR - ROM, where
-  `E_coeffs[e]` is FOM × ORD.  Column j of `E_coeffs[e]` is the degree-(j-1)
-  coefficient of the e-th external-forcing operator column:
-	  E_e(s) = Σ_{j=1}^{ORD} E_coeffs[e][:, j] · s^{j-1}.
- 
-## Arguments
- 
-- `B::NTuple{ORD+1}` – linear matrices of the full-order
-  model; `B[k+1]` corresponds to `B_k` (0-indexed in the ODE).
-- `generalised_eigenmodes::AbstractMatrix{T}` of size FOM × NVAR –
-  generalised eigenvectors; columns 1:ROM are the master modes, columns
-  ROM+1:NVAR are the external forcing modes.
-- `reduced_dynamics_linear::AbstractMatrix{T}` of size NVAR × NVAR –
-  Jordan-form matrix of the linear part of the reduced dynamics on the SSM.
-- `ROM::Int` – number of master modes (dimension of the reduced-order model).
- 
-## Recurrence
- 
-The output matrices are filled by a single downward Horner recurrence
-(j goes from ORD down to 1) using one FOM × NVAR working buffer `D`:
- 
-	D ← B[ORDP1] * generalised_eigenmodes                               (j = ORD)
-	C_coeffs[r][:, j] ← D[:, r]       for r = 1…ROM
-	E_coeffs[e][:, j] ← D[:, ROM+e]   for e = 1…N_EXT
- 
-	D ← D * reduced_dynamics_linear + B[j+1] * generalised_eigenmodes  (j = ORD-1, …, 1)
-	C_coeffs[r][:, j] ← D[:, r]       for r = 1…ROM
-	E_coeffs[e][:, j] ← D[:, ROM+e]   for e = 1…N_EXT
- 
-After step j, column j of every per-target matrix holds the exact degree-(j-1)
-coefficient
- 
-	D[:, ·] = Σ_{k=j+1}^{ORDP1} B[k] * generalised_eigenmodes * reduced_dynamics_linear^{k-(j+1)}.
- 
-## Complexity
- 
-- Time:    O(ORD · FOM · NVAR)  (dominated by ORD matrix–matrix products)
-- Storage: O(ORD · FOM · NVAR)
-"""
-function precompute_rhs_columns(
-	orthogonality_linear_operator_coefficients::NTuple{ROM, <:AbstractMatrix{T}},
-	generalised_right_eigenmodes::AbstractMatrix{T},           # FOM × NVAR
-	reduced_dynamics_linear::AbstractMatrix{T},      # NVAR × NVAR  (Jordan form)
-	ROM::Int,
-) where {ORDP1, T <: Number}
 
-	ORD   = ORDP1 - 1                                # polynomial order; compile-time constant
-	FOM   = size(fom_matrices[1], 1)
-	NVAR  = size(generalised_eigenmodes, 2)
+Pre-compute the polynomial coefficient arrays for the joint operator `D_r(s) =
+[C_r(s)  E_r(s)]` that couples the orthogonality equations to the unknown
+reduced dynamics and to the external forcing.
+
+## Return values
+
+- `C_coeffs :: Vector{Matrix{T}}` of length `ROM`, where `C_coeffs[r]` is an
+  `(ORD-1) × ROM` matrix.  Row `j` of `C_coeffs[r]` is the degree-`(j-1)`
+  coefficient of the master-mode block of `D_r`:
+  ```
+  C_r(s) = Σ_{j=1}^{ORD-1} C_coeffs[r][j, :] · s^{j-1}      (1 × ROM row polynomial)
+  ```
+
+- `E_coeffs :: Vector{Matrix{T}}` of length `ROM`, where `E_coeffs[r]` is an
+  `(ORD-1) × N_EXT` matrix.  Row `j` of `E_coeffs[r]` is the degree-`(j-1)`
+  coefficient of the external-forcing block of `D_r`:
+  ```
+  E_r(s) = Σ_{j=1}^{ORD-1} E_coeffs[r][j, :] · s^{j-1}      (1 × N_EXT row polynomial)
+  ```
+
+  When `ORD = 1` both matrices have zero rows and the polynomials are identically
+  zero; the corresponding blocks are absent from the assembled system.
+
+## Arguments
+
+- `J_coeffs                    :: NTuple{ROM, <:AbstractMatrix{T}}` – output of
+  [`precompute_orthogonality_operator_coefficients`](@ref); `J_coeffs[r]` is
+  `ORD × FOM`.
+- `generalised_right_eigenmodes :: AbstractMatrix{T}` of size `FOM × NVAR` –
+  generalised eigenvectors; columns `1:ROM` are the master modes, columns
+  `ROM+1:NVAR` are the external forcing modes.
+- `reduced_dynamics_linear      :: AbstractMatrix{T}` of size `NVAR × NVAR` –
+  Jordan-form matrix of the linear part of the reduced dynamics.
+
+## Recurrence
+
+For each mode `r`, a single downward pass computes the `NVAR`-vector polynomial
+`Q_r` using two alternating buffers:
+
+```
+q ← J_r[ORD, :] · Y   (j = ORD-1)
+C_coeffs[r][ORD-1, :] ← q[1:ROM];   E_coeffs[r][ORD-1, :] ← q[ROM+1:NVAR]
+
+q ← J_r[j+1, :] · Y + q_prev · Λ,   j = ORD-2, …, 1
+C_coeffs[r][j, :] ← q[1:ROM];   E_coeffs[r][j, :] ← q[ROM+1:NVAR]
+```
+
+## Complexity
+
+- Time:    `O(ROM · ORD · FOM · NVAR)` (one `NVAR`-vector update per `(r, j)`)
+- Storage: `O(ROM · ORD · NVAR)`
+"""
+function precompute_orthogonality_column_polynomials(
+	J_coeffs::NTuple{ROM, <:AbstractMatrix{T}},
+	generalised_right_eigenmodes::AbstractMatrix{T},   # FOM × NVAR
+	reduced_dynamics_linear::AbstractMatrix{T},        # NVAR × NVAR
+) where {ROM, T <: Number}
+	ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
+	FOM = size(generalised_right_eigenmodes, 1)
+	NVAR = size(generalised_right_eigenmodes, 2)
 	N_EXT = NVAR - ROM
 
-	@assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
-	@assert size(generalised_eigenmodes, 1) == FOM "generalised_eigenmodes must have FOM = $(FOM) rows."
+	@assert ORD ≥ 1 "ODE order ORD = size(J_coeffs[1], 1) must be ≥ 1, but got $(ORD)."
+	@assert size(J_coeffs[1], 2) == FOM "The number of columns in J_coeffs must be FOM = $(FOM)."
 	@assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
-	@assert 0 ≤ ROM ≤ NVAR "ROM must satisfy 0 ≤ ROM ≤ NVAR = $(NVAR)."
+	@assert ROM ≥ 1 && ROM ≤ NVAR "ROM must satisfy 1 ≤ ROM ≤ NVAR = $(NVAR)."
 
-	# Allocate output structures in their final per-target layout.
-	# C_coeffs[r][:, j] will hold the degree-(j-1) coefficient for master mode r.
-	# E_coeffs[e][:, j] will hold the degree-(j-1) coefficient for external mode e.
-	C_coeffs = [[Matrix{T}(undef, ORD, FOM) for _ in 1:ROM] for _r in 1:ROM]
-	E_coeffs = [[Matrix{T}(undef, ORD, FOM) for _ in 1:ROM] for _e in 1:N_EXT]
+	# C_coeffs[r] : (ORD-1) × ROM   — row j = degree-(j-1) coeff of C_r(s)
+	# E_coeffs[r] : (ORD-1) × N_EXT — row j = degree-(j-1) coeff of E_r(s)
+	C_coeffs = [Matrix{T}(undef, ORD - 1, ROM) for _ in 1:ROM]
+	E_coeffs = [Matrix{T}(undef, ORD - 1, N_EXT) for _ in 1:ROM]
 
-	# ── Downward Horner recurrence ────────────────────────────────────────────
-	# D is the single FOM × NVAR working buffer.
-	# Invariant before the write step at index j:
-	#   D = Σ_{k=j+1}^{ORDP1} B[k] * generalised_eigenmodes * reduced_dynamics_linear^{k-(j+1)}.
-	# Each column of D is written directly into column j of the corresponding
-	# per-target matrix; no intermediate storage or repacking is needed.
-	D     = Matrix{T}(undef, FOM, NVAR)   # current Horner step
-	D_tmp = Matrix{T}(undef, FOM, NVAR)   # scratch for the next step
+	# Two alternating NVAR-length buffers for the current and previous Q_r step.
+	q     = Vector{T}(undef, NVAR)
+	q_tmp = Vector{T}(undef, NVAR)
 
-	mul!(D, fom_matrices[ORDP1], generalised_eigenmodes) # D ← B_{ORD+1}·Y  (step j = ORD)
 	for r in 1:ROM
-		C_coeffs[r][:, ORD] .= @view D[:, r];
-	end
-	for e in 1:N_EXT
-		E_coeffs[e][:, ORD] .= @view D[:, ROM+e];
-	end
+		Jr = J_coeffs[r]   # ORD × FOM
 
-	for j in (ORD-1):-1:1
-		mul!(D_tmp, D, reduced_dynamics_linear) # D_tmp ← D · Λ
-		mul!(D_tmp, fom_matrices[j+1], generalised_eigenmodes, one(T), one(T))  # D_tmp ← D_tmp + B_{j+1} · Y
-		D, D_tmp = D_tmp, D # swap buffers (no copy)
-		for r in 1:ROM
-			C_coeffs[r][:, j] .= @view D[:, r];
+		if ORD == 1
+			# No Q_r terms exist; C_coeffs[r] and E_coeffs[r] are 0×… (already allocated).
+			continue
 		end
-		for e in 1:N_EXT
-			E_coeffs[e][:, j] .= @view D[:, ROM+e];
+
+		# ── Step j = ORD-1: Q_r[ORD-1] = J_r[ORD, :] · Y ─────────────────
+		mul!(q, view(Jr, ORD, :), generalised_right_eigenmodes) # q = J_r[ORD, :] · Y
+		C_coeffs[r][ORD-1, :] .= @view q[1:ROM]
+		N_EXT > 0 && (E_coeffs[r][ORD-1, :] .= @view q[(ROM+1):NVAR])
+
+		# ── Steps j = ORD-2, …, 1: Q_r[j] = J_r[j+1,:] · Y + Q_r[j+1]· Λ ──
+		for j in (ORD-2):-1:1
+			mul!(q_tmp, view(Jr, j+1, :), generalised_right_eigenmodes)  # q_tmp = J_r[j+1,:] · Y
+			mul!(q_tmp, q, reduced_dynamics_linear, one(T), one(T))       # q_tmp += Q_r[j+1]· Λ
+			q, q_tmp = q_tmp, q                                            # swap buffers (no copy)
+			C_coeffs[r][j, :] .= @view q[1:ROM]
+			N_EXT > 0 && (E_coeffs[r][j, :] .= @view q[(ROM+1):NVAR])
 		end
 	end
 
@@ -235,307 +382,371 @@ function precompute_rhs_columns(
 end
 
 # =============================================================================
-# 2.  Fused Horner pass: parametrisation operator L(s) and lower-order RHS
+# 3.  Fused Horner pass: orthogonality row L_r(s) and scalar lower-order RHS
 # =============================================================================
 
 """
-	evaluate_system_matrix_and_lower_order_rhs!(parametrisation_operator,
-												lower_order_rhs,
-												s, lower_order_couplings,
-												linear_terms) -> parametrisation_operator
+	evaluate_orthogonality_row_and_lower_order_rhs!(row, s,
+													lower_order_couplings,
+													J_coeffs_r)
+	-> scalar_rhs :: T
 
-Evaluate the parametrisation operator `L(s)` **and** accumulate the lower-order 
-right-hand-side  contributions in a **single Horner pass**, reusing the transient 
-intermediate matrices that are available only during the polynomial evaluation.
+Evaluate the orthogonality row operator `L_r(s)` **and** compute the scalar
+lower-order right-hand-side contribution for mode `r` in a **single Horner
+pass**, reusing the transient intermediate row vectors.
 
 ## Mathematical context
 
 At step `j` of the Horner recurrence (before the scalar multiply by `s`),
-the intermediate matrix
+the intermediate row vector
 
-	L_j(s) = Σ_{k=j+1}^{ORD+1} B_k · s^{k-(j+1)}
+```
+L_r_j(s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
+```
 
-is available.  Multiplying by the precomputed coupling vector ξ_j =
-`lower_order_couplings[j]` gives the contribution of lower-order solution terms
-at derivative order j to the right-hand side:
+is available.  Dotting with the pre-computed coupling vector `ξ_j` gives the
+scalar contribution of lower-order solution terms at step `j`:
 
-	contribution_j = -L_j(s) · ξ_j
+```
+contribution_j = -L_r_j(s) · ξ_j
+```
 
 The negative sign arises because these terms originate from the left-hand side
-of the cohomological equation and are transposed to the right-hand side.
+of the cohomological equation.  Summed over `j = 1, …, ORD-1`:
 
-Summed over j = 1, …, ORD, the full lower-order RHS accumulation is
+```
+RHS_lower_r = -Σ_{j=1}^{ORD-1} L_r_j(s) · ξ_j
+```
 
-	lower_order_rhs = -Σ_{j=1}^{ORD} L_j(s) · ξ_j
-					= -Σ_{j=1}^{ORD} ( Σ_{k=j+1}^{ORD+1} B_k · s^{k-(j+1)} ) · ξ_j
-
-This computation **must** share the Horner loop with L(s): the L_j intermediates
-are transient, and recomputing them would double the O(ORD · FOM²) work.
-
-The coupling vectors are obtained from
-`MORFE.LowerOrderCouplings.compute_lower_order_couplings` applied to the
-lower-order multiindices associated with each Horner step.
+The sum runs to `ORD-1` (one fewer than in [`InvarianceEquation`](@ref)) because
+the joint operator `Q_r` has one fewer degree.  Sharing the loop with the
+`L_r(s)` evaluation avoids recomputing the `L_r_j` intermediates.
 
 ## Arguments
 
-- `parametrisation_operator :: AbstractMatrix{T}` – output buffer (FOM × FOM),
-  overwritten with L(s) = Σ_{k=1}^{ORD+1} B_k · s^{k-1}.
-- `lower_order_rhs :: AbstractVector{T}` – accumulator (FOM), updated in-place.
-  Must be initialised to zero (or the desired starting value) by the caller.
-- `s :: T` – evaluation frequency.
-- `lower_order_couplings :: SVector{ORD}` – coupling vectors ξ_j for j = 1,…,ORD;
-  each element is an AbstractVector{T} of length FOM.
-- `linear_terms :: NTuple{ORD+1}` – `linear_terms[k]` = B_k.
+- `row                  :: AbstractVector{T}` – output buffer (length `FOM`),
+  overwritten with `L_r(s) = Σ_{j=1}^{ORD} J_r[j, :] · s^{j-1}`.
+- `s                    :: T` – evaluation superharmonic.
+- `lower_order_couplings :: SVector{ORD_M1, <:AbstractVector{T}}` – coupling
+  vectors `ξ_j` for `j = 1, …, ORD-1`; each is a length-`FOM` vector.
+- `J_coeffs_r           :: AbstractMatrix{T}` – `ORD × FOM` matrix; row `j`
+  is `J_r[j, :]`, the degree-`(j-1)` coefficient of `L_r`.  Obtained from
+  [`precompute_orthogonality_operator_coefficients`](@ref).
 
-## Complexity  O(ORD · FOM²)  (shared with the L(s) evaluation)
+## Returns
+
+The scalar lower-order RHS accumulation
+`RHS_lower_r = -Σ_{j=1}^{ORD-1} L_r_j(s) · ξ_j`.
+
+## Complexity
+
+`O(ORD · FOM)`, shared with the `L_r(s)` evaluation.
 """
-function evaluate_system_matrix_and_lower_order_rhs!(
-	parametrisation_operator::AbstractMatrix{T},
-	lower_order_rhs::AbstractVector{T},
+function evaluate_orthogonality_row_and_lower_order_rhs!(
+	row::AbstractVector{T},
 	s::T,
-	lower_order_couplings::SVector{ORD, <:AbstractVector{T}},
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix{T}},
-) where {ORD, ORDP1, T}
-	@assert ORDP1 == ORD + 1 "ORDP1 = length(linear_terms) must equal ORD + 1."
+	lower_order_couplings::SVector{ORD_M1, <:AbstractVector{T}},
+	J_coeffs_r::AbstractMatrix{T},  # ORD × FOM,  ORD = ORD_M1 + 1
+) where {T, ORD_M1}
+	ORD = ORD_M1 + 1
 
-	copyto!(parametrisation_operator, linear_terms[ORDP1])   # L ← B_{ORD+1}
+	copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
 
-	for j in ORD:-1:1
-		# Here: parametrisation_operator = L_j(s) = Σ_{k=j+1}^{ORD+1} B_k · s^{k-(j+1)}.
-		# Accumulate: lower_order_rhs -= L_j(s) · ξ_j.
-		# mul!(y, M, x, -1, 1) computes y = y - M·x without allocation.
-		mul!(lower_order_rhs, parametrisation_operator, lower_order_couplings[j], -one(T), one(T))
-
-		rmul!(parametrisation_operator, s)            # L ← L · s
-		parametrisation_operator .+= linear_terms[j]  # L ← L + B_j
-		# Here: parametrisation_operator = L_{j-1}(s) = Σ_{k=j}^{ORD+1} B_k · s^{k-j}.
+	scalar_rhs = zero(T)
+	for j in (ORD-1):-1:1
+		# row = L_r_j(s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
+		# Accumulate scalar dot: scalar_rhs -= row · ξ_j
+		scalar_rhs -= dot(row, lower_order_couplings[j])
+		row .*= s
+		row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
+		# row = L_r_{j-1}(s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
 	end
-	# On exit: parametrisation_operator = L_0(s) = Σ_{k=1}^{ORD+1} B_k · s^{k-1} = L(s).
-	return parametrisation_operator
+	# On exit: row = L_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
+
+	return scalar_rhs
 end
 
 # =============================================================================
-# 3.  Inner-column polynomial evaluation: C_j(s) = Σ_{L=0}^{ORD-1} D_{L,j} s^L
+# 4.  Resonant-column row evaluation: C_r(s) restricted to resonant modes
 # =============================================================================
 
 """
-	evaluate_column!(c, s, j, C_coeffs) -> c
+	evaluate_orthogonality_column_row!(c, s, r, C_coeffs, resonance) -> c
 
-Evaluate `C_r(s) = Σ_{L=0}^{ORD-1} C_coeffs[r][:, L+1] · s^L` in-place via
-Horner's method, overwriting the pre-allocated FOM-vector `c`.
+Evaluate the resonant block of the joint operator row `C_r(s)` in-place via
+Horner's method, overwriting the pre-allocated `|R|`-vector `c`.
 
-`c` may be a plain `Vector{T}` or a column view `view(M, :, col)`.
+`C_r(s) = Σ_{j=1}^{ORD-1} C_coeffs[r][j, :] · s^{j-1}` is a `1 × ROM` row
+polynomial; this function evaluates it at `s` and extracts only the `|R|` entries
+corresponding to resonant master modes (those with `resonance[j] == true`), in
+increasing-`j` order.
 
-### Horner recurrence  (L runs from ORD-2 down to 0)
+`c` may be a plain `Vector{T}` or a row view `view(M, row, col_range)`.
 
-	c  ←  C_coeffs[r][:, ORD]                (highest-degree coefficient)
-	for L = ORD-1, …, 1:   c ← c · s + C_coeffs[r][:, L]
+## Horner recurrence (column-wise, no allocation)
 
-Column access `C_coeffs[r][:, L+1]` reads contiguous memory (Julia is
-column-major), so the loop touches sequential cache lines.
+For each resonant column index `j` independently:
+
+```
+val  ←  C_coeffs[r][ORD-1, j]
+for L = ORD-2, …, 1:
+	val ← val · s + C_coeffs[r][L, j]
+c[resonant_rank(j)] ← val
+```
+
+Column `j` of `C_coeffs[r]` is contiguous in memory (Julia is column-major),
+so each per-column Horner pass is cache-friendly.
 
 ## Arguments
 
-- `c        :: AbstractVector{T}`    – output buffer (FOM), overwritten.
-- `s        :: T`                    – evaluation frequency.
-- `r        :: Int`                  – 1-based master-mode index (1 ≤ r ≤ ROM).
-- `C_coeffs :: Vector{Matrix{T}}`   – precomputed coefficients from
-  `precompute_rhs_columns`; `C_coeffs[j]` is FOM × ORD.
+- `c        :: AbstractVector{T}`           – output buffer (length `|R|`),
+  overwritten with the resonant entries of `C_r(s)`.
+- `s        :: T`                           – evaluation frequency.
+- `r        :: Int`                         – 1-based master-mode index for the
+  row equation (`1 ≤ r ≤ ROM`).
+- `C_coeffs :: Vector{<:AbstractMatrix{T}}` – pre-computed coefficients from
+  [`precompute_orthogonality_column_polynomials`](@ref);
+  `C_coeffs[r]` is `(ORD-1) × ROM`.
+- `resonance :: SVector{ROM, Bool}`         – `resonance[j]` is `true` iff master
+  mode `j` is resonant at the current multi-index.
 
-## Complexity  O(ORD · FOM)
+## Complexity
+
+`O((ORD-1) · |R|)`, with no heap allocation.
 """
-function evaluate_column!(
+function evaluate_orthogonality_column_row!(
 	c::AbstractVector{T},
 	s::T,
 	r::Int,
 	C_coeffs::Vector{<:AbstractMatrix{T}},
-) where {T}
-	Cr  = C_coeffs[r]              # FOM × ORD;  column L ↔ D_{L-1, r}
-	ORD = size(Cr, 2)
+	resonance::SVector{ROM, Bool},
+) where {T, ROM}
+	Cr = C_coeffs[r]       # (ORD-1) × ROM
+	ORD_M1 = size(Cr, 1)      # ORD - 1
 
-	ORD == 0 && (fill!(c, zero(T)); return c)
+	if ORD_M1 == 0
+		fill!(c, zero(T))
+		return c
+	end
 
-	copyto!(c, @view Cr[:, ORD])   # c ← D_{ORD-1, r}  (highest-degree coefficient)
-	for L in (ORD-1):-1:1
-		c .*= s
-		c .+= @view Cr[:, L]   # c ← c · s + D_{L, r}
+	# Evaluate each resonant column of Cr independently via a scalar Horner pass.
+	# Column j of Cr is C_coeffs[r][:, j], which is contiguous in memory.
+	col = 1
+	for j in eachindex(resonance)
+		if resonance[j]
+			val = Cr[ORD_M1, j]                  # highest-degree coefficient
+			for L in (ORD_M1-1):-1:1
+				val = val * s + Cr[L, j]
+			end
+			c[col] = val
+			col += 1
+		end
 	end
 	return c
 end
 
 # =============================================================================
-# 4.  External-forcing RHS accumulation
+# 5.  Scalar external-forcing RHS for one orthogonality equation
 # =============================================================================
 
 """
-	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs) -> rhs
+	evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs) -> T
 
-Accumulate the external-forcing contribution to the cohomological right-hand side:
+Compute the scalar external-forcing contribution to the right-hand side of the
+orthogonality equation for master mode `r`:
 
-	rhs -= Σ_{e=1}^{N_EXT} external_dynamics[e] · E_e(s)
+```
+RHS_ext_r = -Σ_{e active} external_dynamics[e] · E_r_e(s)
+```
 
-where `E_e(s) = Σ_{L=1}^{ORD} E_coeffs[e][:, L] · s^{L-1}` is the e-th
-external column polynomial (precomputed by `precompute_rhs_columns`).
+where `E_r_e(s) = Σ_{j=1}^{ORD-1} E_coeffs[r][j, e] · s^{j-1}` is the scalar
+polynomial for forcing mode `e` in the row equation for mode `r` (pre-computed by
+[`precompute_orthogonality_column_polynomials`](@ref)).
 
-The negative sign reflects that these terms originate from the left-hand side of
-the cohomological equation (the known forcing drives the right-hand side).
+The negative sign reflects that these terms are moved from the left-hand side of
+the cohomological equation to the right-hand side.
 
-### Sparse exploitation
+## Sparse exploitation
 
-Only the nonzero entries of `external_dynamics` are processed.  For periodic
-forcing of a few harmonics this is typically a small subset of N_EXT.
+Only the non-zero entries of `external_dynamics` are processed. For periodic
+forcing of a few harmonics this is typically a small subset of `N_EXT`.
 
-### Combined Horner pass
+## Combined Horner pass
 
-Rather than evaluating each E_e(s) independently, the nonzero contributions
-are combined into a single degree-(ORD-1) vector polynomial
+The non-zero contributions are combined into a single scalar polynomial
 
-	g(s) = Σ_{e active} external_dynamics[e] · E_e(s)
+```
+g(s) = Σ_{e active} external_dynamics[e] · E_r_e(s)
+```
 
-and evaluated in one Horner pass (ORD-1 scalar-vector multiplies plus ORD-1
-saxpy operations over FOM), instead of N_EXT_active separate Horner passes.
+and evaluated in one Horner pass (`ORD-2` scalar multiplies and `ORD-2 · N_EXT_active`
+scalar additions), instead of `N_EXT_active` separate Horner passes.
 
 ## Arguments
 
-- `rhs               :: AbstractVector{T}` – accumulator (FOM), updated in-place.
-- `s                 :: T`                 – evaluation frequency.
-- `external_dynamics :: AbstractVector{T}` – known amplitudes of the N_EXT
-  external forcing modes; typically sparse.
-- `E_coeffs          :: Vector{Matrix{T}}` – precomputed external coefficients
-  from `precompute_rhs_columns`; `E_coeffs[e]` is FOM × ORD.
+- `s                 :: T`                           – evaluation frequency.
+- `r                 :: Int`                         – 1-based master-mode index
+  (`1 ≤ r ≤ ROM`).
+- `external_dynamics :: AbstractVector{T}`           – known amplitudes of the
+  `N_EXT` external forcing modes; typically sparse.
+- `E_coeffs          :: Vector{<:AbstractMatrix{T}}` – pre-computed coefficients
+  from [`precompute_orthogonality_column_polynomials`](@ref);
+  `E_coeffs[r]` is `(ORD-1) × N_EXT`.
 
-## Complexity  O(N_EXT_active · FOM · ORD)  for combining coefficients +
-			  O(FOM · ORD)                  for the single Horner evaluation.
+## Returns
+
+The scalar `RHS_ext_r = -g(s)`.
+
+## Complexity
+
+`O(N_EXT_active · (ORD-1))` for combining coefficients plus `O(ORD-1)` for the
+single Horner evaluation.
 """
-function evaluate_external_rhs!(
-	rhs::AbstractVector{T},
+function evaluate_orthogonality_external_rhs(
 	s::T,
+	r::Int,
 	external_dynamics::AbstractVector{T},
 	E_coeffs::Vector{<:AbstractMatrix{T}},
 ) where {T}
-	N_EXT = length(E_coeffs)
-	@assert length(external_dynamics) == N_EXT "external_dynamics length must equal N_EXT = $(N_EXT)."
-	isempty(E_coeffs) && return rhs
+	Er    = E_coeffs[r]
+	N_EXT = length(external_dynamics)
+	@assert size(Er, 2) == N_EXT "E_coeffs[r] must have N_EXT = $(N_EXT) columns."
 
-	ORD = size(E_coeffs[1], 2)
-	FOM = length(rhs)
+	ORD_M1 = size(Er, 1)   # ORD - 1
 
-	# Collect active (nonzero) external indices to avoid unnecessary work.
+	ORD_M1 == 0 && return zero(T)
+
+	# Collect active (non-zero) external indices.
 	active = findall(!iszero, external_dynamics)
-	isempty(active) && return rhs
+	isempty(active) && return zero(T)
 
-	# Form the combined coefficient vector for each polynomial degree:
-	# g[:, L] = Σ_{e active} E_coeffs[e][:, L] · external_dynamics[e],  L = 1…ORD
-	# then evaluate g(s) = Σ_{L=1}^{ORD} g[:, L] · s^{L-1} via a single Horner pass.
-	g = zeros(T, FOM)
-
-	# Initialise with the highest-degree combined coefficient (degree ORD-1).
+	# Combine active external contributions into a single scalar polynomial g(s),
+	# then evaluate via a single Horner pass.
+	g = zero(T)
 	for e in active
-		@. g += E_coeffs[e][:, ORD] * external_dynamics[e]
+		g += Er[ORD_M1, e] * external_dynamics[e]
 	end
-
-	# Descend through remaining degrees.
-	for L in (ORD-1):-1:1
-		g .*= s
+	for L in (ORD_M1-1):-1:1
+		g *= s
 		for e in active
-			@. g += E_coeffs[e][:, L] * external_dynamics[e]
+			g += Er[L, e] * external_dynamics[e]
 		end
 	end
 
-	rhs .-= g   # sign flip: terms moved from the LHS to the RHS
-	return rhs
+	return -g   # sign flip: term moved from LHS to RHS
 end
 
 # =============================================================================
-# 5.  Full cohomological-matrix and RHS assembly
+# 6.  Full orthogonality matrix and RHS assembly
 # =============================================================================
 
 """
-	assemble_cohomological_matrix_and_rhs(
-			s, linear_terms, C_coeffs, E_coeffs,
+	assemble_orthogonality_matrix_and_rhs(
+			s, J_coeffs, C_coeffs, E_coeffs,
 			resonance, lower_order_couplings, external_dynamics)
 	-> (M, rhs)
 
-Assemble the full cohomological system matrix and the complete right-hand side
-for one multiindex, in a minimal number of Horner passes.
+Assemble the full orthogonality system matrix and the complete right-hand side
+for one multi-index, stacking one scalar equation per resonant master mode.
 
-### System matrix
+## System matrix
 
-	M = [ L(s) | C_{j₁}(s)  C_{j₂}(s)  … ]
+```
+M = [ L | C ]
+```
 
-where `j₁ < j₂ < …` are the resonant master modes (`resonance[j] == true`).
-`M` has size FOM × (FOM + nR) with `nR = count(resonance)`.
+where each row `r` (corresponding to the `r`-th resonant mode in increasing
+order) is
 
-- Columns `1 : FOM`        → `L(s)` block, the parametrisation operator.
-- Columns `FOM+1 : FOM+nR` → one column `C_j(s)` per resonant master mode,
-							 in increasing-j order.
+```
+M[r, :] = [ L_{j_r}(s)  C_{j_r}(s)|_resonant ]
+```
 
-### Right-hand side
+`M` has size `nR × (FOM + nR)` with `nR = count(resonance)`.
 
-	rhs = lower_order_rhs + rhs_ext
+- Columns `1 : FOM`         → `L` block; row `r` is `L_{j_r}(s)` (`1 × FOM`).
+- Columns `FOM+1 : FOM+nR`  → `C` block; row `r` contains the `nR` resonant
+							   entries of `C_{j_r}(s)`, in increasing-mode order.
+
+## Right-hand side
+
+```
+rhs[r] = RHS_lower_{j_r} + RHS_ext_{j_r}
+```
 
 where
 
-	lower_order_rhs = -Σ_{j=1}^{ORD} L_j(s) · ξ_j
-	rhs_ext         = -Σ_{e=1}^{N_EXT} external_dynamics[e] · E_e(s)
+```
+RHS_lower_r  = -Σ_{j=1}^{ORD-1} L_r_j(s) · ξ_j        (scalar dot products)
+RHS_ext_r    = -Σ_{e active} external_dynamics[e] · E_r_e(s)    (scalar)
+```
 
-The `L(s)` block and `lower_order_rhs` are computed in a **single fused Horner
-pass** by [`evaluate_system_matrix_and_lower_order_rhs!`](@ref).
-`rhs_ext` is then accumulated into the same vector by
-[`evaluate_external_rhs!`](@ref).
+`RHS_lower_r` and the `L` row are computed in a **single fused Horner pass** by
+[`evaluate_orthogonality_row_and_lower_order_rhs!`](@ref).  `RHS_ext_r` is then
+computed by [`evaluate_orthogonality_external_rhs`](@ref) and added.
 
 ## Arguments
 
-- `s                     :: T`                   – evaluation frequency s_k = Σᵢ kᵢ λᵢ.
-- `linear_terms          :: NTuple{ORD+1}`       – `linear_terms[k]` = B_k.
-- `C_coeffs              :: Vector{Matrix{T}}`   – precomputed reduced-dynamics
-  coefficients; `C_coeffs[j]` is FOM × ORD.
-- `E_coeffs              :: Vector{Matrix{T}}`   – precomputed external-forcing
-  coefficients; `E_coeffs[e]` is FOM × ORD.
-- `resonance             :: SVector{ROM, Bool}`  – `resonance[j]` is true iff
-  master mode j is resonant at the current multiindex.
-- `lower_order_couplings :: SVector{ORD}`        – coupling vectors ξ_j for
-  j = 1,…,ORD; obtained from
-  `MORFE.LowerOrderCouplings.compute_lower_order_couplings`.
-- `external_dynamics     :: AbstractVector{T}`   – known amplitudes of the N_EXT
+- `s                      :: T` – evaluation frequency `s_k = Σᵢ kᵢ λᵢ`.
+- `J_coeffs               :: NTuple{ROM, <:AbstractMatrix{T}}` – pre-computed
+  operator row coefficients from
+  [`precompute_orthogonality_operator_coefficients`](@ref); `J_coeffs[r]` is
+  `ORD × FOM`.
+- `C_coeffs               :: Vector{<:AbstractMatrix{T}}` – pre-computed resonant
+  block coefficients from [`precompute_orthogonality_column_polynomials`](@ref);
+  `C_coeffs[r]` is `(ORD-1) × ROM`.
+- `E_coeffs               :: Vector{<:AbstractMatrix{T}}` – pre-computed external
+  block coefficients from [`precompute_orthogonality_column_polynomials`](@ref);
+  `E_coeffs[r]` is `(ORD-1) × N_EXT`.
+- `resonance              :: SVector{ROM, Bool}` – `resonance[j]` is `true` iff
+  master mode `j` is resonant at the current multi-index.
+- `lower_order_couplings  :: SVector{ORD_M1, <:AbstractVector{T}}` – coupling
+  vectors `ξ_j` for `j = 1, …, ORD-1`; each is a length-`FOM` vector, obtained
+  from `MORFE.LowerOrderCouplings.compute_lower_order_couplings`.
+- `external_dynamics      :: AbstractVector{T}` – known amplitudes of the `N_EXT`
   external forcing modes; typically sparse.
 
 ## Returns
 
-`(M, rhs)` where `M` is FOM × (FOM + nR) and `rhs` is a FOM vector.
+`(M, rhs)` where `M` is `nR × (FOM + nR)` and `rhs` is a length-`nR` vector.
 """
-function assemble_cohomological_matrix_and_rhs(
+function assemble_orthogonality_matrix_and_rhs(
 	s::T,
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix{T}},
+	J_coeffs::NTuple{ROM, <:AbstractMatrix{T}},
 	C_coeffs::Vector{<:AbstractMatrix{T}},
 	E_coeffs::Vector{<:AbstractMatrix{T}},
 	resonance::SVector{ROM, Bool},
-	lower_order_couplings::SVector{ORD, <:AbstractVector{T}},
+	lower_order_couplings::SVector{ORD_M1, <:AbstractVector{T}},
 	external_dynamics::AbstractVector{T},
-) where {T, ROM, ORD, ORDP1}
-	FOM = size(linear_terms[1], 1)
+) where {T, ROM, ORD_M1}
+	FOM = size(J_coeffs[1], 2)   # J_coeffs[r] is ORD × FOM
 	nR  = count(resonance)
-	M   = Matrix{T}(undef, FOM, FOM + nR)
+	M   = Matrix{T}(undef, nR, FOM + nR)
+	rhs = Vector{T}(undef, nR)
 
-	# Block 1: L(s) in columns 1:FOM, with fused lower-order RHS accumulation.
-	rhs = zeros(T, FOM)
-	evaluate_system_matrix_and_lower_order_rhs!(
-		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
-	)
+	row = 1
+	for r in eachindex(resonance)
+		if resonance[r]
+			# Fill L_r(s) into columns 1:FOM of row `row`, accumulate scalar lower-order RHS.
+			rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
+				view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r],
+			)
 
-	# Blocks 2…: one column C_j(s) per resonant master mode, in increasing-j order.
-	col = FOM + 1
-	for j in eachindex(resonance)
-		if resonance[j]
-			evaluate_column!(view(M, :, col), s, j, C_coeffs)
-			col += 1
+			# Fill the resonant block of C_r(s) into columns FOM+1:FOM+nR of row `row`.
+			evaluate_orthogonality_column_row!(
+				view(M, row, (FOM+1):(FOM+nR)), s, r, C_coeffs, resonance,
+			)
+
+			# Accumulate scalar external-forcing contribution.
+			rhs[row] += evaluate_orthogonality_external_rhs(
+				s, r, external_dynamics, E_coeffs,
+			)
+
+			row += 1
 		end
 	end
-
-	# Accumulate external-forcing contribution: rhs += rhs_ext.
-	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs)
 
 	return M, rhs
 end
 
-end # module LinearOperator
+end # module MasterModeOrthogonality

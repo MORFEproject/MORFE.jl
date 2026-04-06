@@ -44,8 +44,8 @@ end
 
 n_internal(rule::GraphStyleRule) = rule.n_internal
 
-function build_resonances(rule::GraphStyleRule{NVAR, NO, Float64},
-	multiindices::MultiindexSet{NVAR}) where {NVAR, NO}
+function build_resonances(rule::GraphStyleRule{NVAR, NO, Float64}, multiindices::MultiindexSet{NVAR}) where {NVAR, NO}
+
 	n_internal = rule.n_internal
 	N_TARGETS = n_internal + NO
 	exps = multiindices.exponents
