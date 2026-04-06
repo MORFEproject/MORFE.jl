@@ -1,4 +1,4 @@
-include(joinpath(@__DIR__, "../src/MORFE.jl"))
+include(joinpath(@__DIR__, "../../src/MORFE.jl"))
 using .MORFE.Multiindices: all_multiindices_up_to, find_in_set
 using .MORFE.Resonance:
 	SingleResonance,
