@@ -1,7 +1,7 @@
 name = "MORFE"
 uuid = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
 version = "3.0.0"
-authors = ["MORFEproject <https://github.com/MORFEproject>"]
+authors = ["MORFEproject <https://github.com/MORFE.jl>"]
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"

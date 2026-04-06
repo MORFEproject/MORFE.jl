@@ -6,7 +6,7 @@ Demonstration of the usage of LinearOperator module:
 """
 
 include(joinpath(@__DIR__, "../../src/MORFE.jl"))
-using .MORFE.LinearOperator: precompute_rhs_columns,
+using .MORFE.InvarianceEquation: precompute_rhs_columns,
 	evaluate_column!,
 	evaluate_external_rhs!,
 	evaluate_system_matrix_and_lower_order_rhs!,
@@ -44,6 +44,7 @@ println("\nReduced dynamics linear part (NVAR × NVAR):\n", repr("text/plain", r
 
 # Generalised eigenvectors (FOM × NVAR)
 # Columns 1:ROM = master modes, ROM+1:NVAR = external forcing modes
+# Only store the position part
 generalised_eigenmodes = Matrix{ComplexF64}(I, FOM, NVAR)  # identity for simplicity
 for i in 1:ORD
 	println("\nGeneralised eigenmodes at order $i (FOM × NVAR) = ",
@@ -77,8 +78,8 @@ resonance = SVector{ROM, Bool}(true, false)   # the single master mode is resona
 # Lower‑order couplings ξ_j (j = 1…ORD) – each is a FOM‑vector
 # In a real simulation these come from lower‑order multiindices.
 lower_order_couplings = SVector{ORD, Vector{ComplexF64}}(
-	[0.1, 0.1, 0.1, 0.1, 0.1],      # position
-	[10.0, 10.0, 10.0, 10.0, 10.0],    # velocity
+	[0.1, 0.1, 0.1, 0.1, 0.1],       # position
+	[10.0, 10.0, 10.0, 10.0, 10.0],  # velocity
 )
 
 # External dynamics amplitudes (length N_EXT)
