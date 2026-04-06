@@ -1,12 +1,5 @@
-"""
-Demonstration of the usage of LinearOperator module:
-
-- Precomputation of C_coeffs and E_coeffs for reduced dynamics and external forcing.
-- Evaluation of cohomological matrix and right-hand side for a given multiindex.
-"""
-
 include(joinpath(@__DIR__, "../../src/MORFE.jl"))
-using .MORFE.InvarianceEquation: precompute_rhs_columns,
+using .MORFE.InvarianceEquation: precompute_column_polynomials,
 	evaluate_column!,
 	evaluate_external_rhs!,
 	evaluate_system_matrix_and_lower_order_rhs!,
@@ -54,7 +47,7 @@ end
 # -------------------------------------------------------------------
 # 2.  Precompute coefficient arrays C_coeffs and E_coeffs
 # -------------------------------------------------------------------
-C_coeffs, E_coeffs = precompute_rhs_columns(
+C_coeffs, E_coeffs = precompute_column_polynomials(
 	linear_terms, generalised_eigenmodes, reduced_dynamics_linear, ROM,
 )
 
@@ -103,8 +96,11 @@ println("\nRight‑hand side vector rhs:\n", rhs)
 println("\n=== Low‑level function demonstrations ===")
 
 # Evaluate a single column C_j(s) for j = 1 (master mode)
-c = zeros(ComplexF64, FOM)
-evaluate_column!(c, s, 1, C_coeffs)
+c1 = zeros(ComplexF64, FOM)
+evaluate_column!(c1, s, 1, C_coeffs)
+
+c2 = zeros(ComplexF64, FOM)
+evaluate_column!(c2, s, 2, C_coeffs)
 
 # Fused L(s) + lower‑order RHS evaluation
 L = Matrix{ComplexF64}(undef, FOM, FOM)
@@ -113,7 +109,8 @@ evaluate_system_matrix_and_lower_order_rhs!(
 	L, lower_rhs, s, lower_order_couplings, linear_terms,
 )
 
-println("\nC₁($s) =\n", c)
+println("\nC₁($s) =\n", c1)
+println("\nC₂($s) =\n", c2)
 println("\nL($s) = \n", repr("text/plain", L))
 println("\nLower‑order RHS contribution:\n", lower_rhs)
 
@@ -129,6 +126,8 @@ C = B2 * generalised_eigenmodes * s +
 	B1 * generalised_eigenmodes
 
 println("\nC₁($s) =\n", C * [1.0, 0.0, 0.0])
+
+println("\nC₂($s) =\n", C * [0.0, 1.0, 0.0])
 
 println("\nL($s) = \n", repr("text/plain", B2 * (s^2) + B1 * s + B0))
 

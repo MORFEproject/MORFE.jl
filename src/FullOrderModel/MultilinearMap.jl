@@ -95,7 +95,7 @@ Evaluate a single `MultilinearMap` and accumulate (adds) the result into `res`.
 """
 @inline function evaluate_term!(res, term::MultilinearMap{ORD}, xs, r) where {ORD}
 	inds = term.multiindex
-	me = term.multiplicity_external
+	# me = term.multiplicity_external
 	total_args = term.deg
 
 	# Build the argument list
