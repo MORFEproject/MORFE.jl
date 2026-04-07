@@ -113,4 +113,18 @@ function create_parametrisation_method_objects(
 	return create_parametrisation_method_objects(mset, ORD, FOM, NVAR, 0, T)
 end
 
+# after solving for the parametrisation coefficients for the zero-th time derivative in the full‑order ODE, 
+# we can compute the coefficients for the higher time derivatives using the superharmonic structure of the invariance equation
+# after having the x components of the parametrisation W, we compute the x' and x'' components 
+function compute_higher_derivative_coefficients!(
+	param_coeff::SVector{ORD, Vector{T}}, red_coeff::SVector{ROM, T}, superharmonic::T,
+	generalised_eigenmodes::SVector{ORD, <: AbstractMatrix{T}}, low_order_couplings::SVector{ORD, Vector{T}}) where {ORD, T}
+
+	for j in 1:(ORD-1)
+		param_coeff[j+1] .= (param_coeff[j] * superharmonic)
+		+ (generalised_eigenmodes[j] * red_coeff)
+		+ low_order_couplings[j]
+	end
+end
+
 end # module
