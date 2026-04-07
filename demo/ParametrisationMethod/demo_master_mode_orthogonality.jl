@@ -33,18 +33,18 @@ fom_matrices = (B0, B1, B2)   # NTuple{ORDP1}: fom_matrices[k+1] = Bₖ
 λ₂ = -0.1 - 1.0im
 master_eigenvalues = SVector{ROM, ComplexF64}(λ₁, λ₂)
 
-# Left eigenmodes ℓ_r (each a length-FOM vector).
+# Left eigenmodes Xℓ_r (each a length-FOM vector).
 # For simplicity, use the first two standard basis vectors.
-ℓ₁ = [1.0+0.0im, 0.0, 0.0, 0.0, 0.0]
-ℓ₂ = [0.0+0.0im, 1.0, 0.0, 0.0, 0.0]
-left_eigenmodes = SVector{ROM, Vector{ComplexF64}}(ℓ₁, ℓ₂)
+Xℓ₁ = [1.0+0.0im, 0.0, 0.0, 0.0, 0.0]
+Xℓ₂ = [0.0+0.0im, 1.0, 0.0, 0.0, 0.0]
+left_eigenmodes = SVector{ROM, Vector{ComplexF64}}(Xℓ₁, Xℓ₂)
 
 # Generalised right eigenvectors Y (FOM × NVAR).
 # Columns 1:ROM = master modes, ROM+1:NVAR = external forcing modes.
 generalised_right_eigenmodes = Matrix{ComplexF64}(I, FOM, NVAR)
 
 # Reduced dynamics linear part Λ (NVAR × NVAR).
-# Eigenvalues: λ₁, λ₂ for master modes; ω_ext = 0+1im for the external mode.
+# Eigenvalues: λ₁, λ₂ for master modes; λ_ext = 0+1im for the external mode.
 reduced_dynamics_linear = ComplexF64[
 	-0.1+1.0im  0.0+0.0im  1.0+0.0im;   # coupling: forcing excites master mode 1
 	 0.0+0.0im -0.1-1.0im  0.0+0.0im;   # no coupling to master mode 2
@@ -61,11 +61,11 @@ display(reduced_dynamics_linear)
 # J_coeffs[r] is ORD × FOM; row j stores the degree-(j-1) coefficient of L_r(s).
 #
 # Recurrence (ORD = 2):
-#   J_r[2, :] = B₂ᵀ · ℓ_r
-#   J_r[1, :] = λ_r · J_r[2, :] + B₁ᵀ · ℓ_r
+#   J_r[2, :] = B₂ᵀ · Xℓ_r
+#   J_r[1, :] = λ_r · J_r[2, :] + B₁ᵀ · Xℓ_r
 #
 # => L_r(s) = J_r[1,:] + J_r[2,:] · s
-#           = ℓ_rᵀ · (B₂·(s + λ_r) + B₁)   (row vector)
+#           = Xℓ_rᵀ · (B₂·(s + λ_r) + B₁)   (row vector)
 J_coeffs = precompute_orthogonality_operator_coefficients(
 	fom_matrices, left_eigenmodes, master_eigenvalues,
 )
@@ -77,14 +77,14 @@ for r in 1:ROM
 end
 
 # Manual verification for J_coeffs.
-println("\n--- Manual J_coeffs verification ---")
+println("\nManual J_coeffs verification")
 for r in 1:ROM
-	ℓ = left_eigenmodes[r]
+	Xℓ = left_eigenmodes[r]
 	λ = master_eigenvalues[r]
-	J2_manual = B2' * ℓ                      # degree-1 coefficient
-	J1_manual = λ .* J2_manual .+ B1' * ℓ    # degree-0 coefficient
-	println("Mode $r  |  J_r[2,:] error = ", norm(J_coeffs[r][2, :] - J2_manual))
-	println("Mode $r  |  J_r[1,:] error = ", norm(J_coeffs[r][1, :] - J1_manual))
+	J2_manual = B2' * Xℓ                    # degree-1 coefficient
+	J1_manual = B2' * Xℓ .* λ .+ B1' * Xℓ   # degree-0 coefficient
+	println("Mode $r  |  J_$r[2,:] error = ", norm(J_coeffs[r][2, :] - J2_manual))
+	println("Mode $r  |  J_$r[1,:] error = ", norm(J_coeffs[r][1, :] - J1_manual))
 end
 
 # -------------------------------------------------------------------
@@ -94,7 +94,7 @@ end
 # E_coeffs[r] is (ORD-1) × N_EXT; E_r(s) = Σ_{j=1}^{ORD-1} E_coeffs[r][j,:] · s^{j-1}
 #
 # For ORD = 2, ORD-1 = 1: both polynomials are constants (degree 0):
-#   Q_r[1] = Yᵀ · J_r[2, :] = Yᵀ · B₂ᵀ · ℓ_r
+#   Q_r[1] = Yᵀ · J_r[2, :] = Yᵀ · B₂ᵀ · Xℓ_r
 #   C_coeffs[r][1, :] = Q_r[1][1:ROM]
 #   E_coeffs[r][1, :] = Q_r[1][ROM+1:NVAR]
 C_coeffs, E_coeffs = precompute_orthogonality_column_polynomials(
@@ -110,11 +110,11 @@ for r in 1:ROM
 end
 
 # Manual verification.
-println("\n--- Manual C_coeffs / E_coeffs verification ---")
+println("\n--- Manual verification ---")
 Y = generalised_right_eigenmodes
 for r in 1:ROM
-	ℓ = left_eigenmodes[r]
-	Q1_manual = Y' * (B2' * ℓ)    # = (ℓᵀ · B₂ · Y)ᵀ stored as column
+	Xℓ = left_eigenmodes[r]
+	Q1_manual = Y' * (B2' * Xℓ)    # = (Xℓᵀ · B₂ · Y)ᵀ, i.e. stored as column
 	C1_manual = Q1_manual[1:ROM]
 	E1_manual = Q1_manual[(ROM+1):NVAR]
 	println("Mode $r  |  C_coeffs[r][1,:] error = ", norm(C_coeffs[r][1, :] - C1_manual))
@@ -128,13 +128,14 @@ end
 s = -2.0 + 0.0im
 
 # Resonance pattern: only master mode 1 is resonant.
-resonance = SVector{ROM, Bool}(true, false)
+resonance = SVector{ROM, Bool}(true, true)
 nR = count(resonance)
 
-# Lower-order couplings ξ_j (j = 1, …, ORD-1 = 1):
-# SVector of ORD-1 = 1 FOM-vector.
-lower_order_couplings = SVector{ORD-1, Vector{ComplexF64}}(
-	[0.1, 0.1, 0.1, 0.1, 0.1],
+# Lower‑order couplings ξ_j (j = 1…ORD) – each is a FOM‑vector
+# In a real simulation these come from lower‑order multiindices.
+lower_order_couplings = SVector{ORD, Vector{ComplexF64}}(
+	[0.1, 0.1, 0.1, 0.1, 0.1],       # position
+	[10.0, 10.0, 10.0, 10.0, 10.0],  # velocity
 )
 
 # External dynamics amplitudes (length N_EXT).
@@ -155,6 +156,28 @@ println("\nSystem matrix M (nR × (FOM + nR)) = ($nR × $(FOM + nR)):")
 display(M)
 println("\nRight-hand side rhs (length nR = $nR):")
 display(rhs)
+
+println("\n--- Manual verification ---")
+M_manual = zeros(ComplexF64, nR, FOM + nR)
+rhs_manual = zeros(ComplexF64, nR)
+row_count = 1
+for r in 1:ROM
+	if resonance[r]
+		aux = B2' * left_eigenmodes[r]
+		M_manual[row_count, 1:FOM] = aux * (s + master_eigenvalues[r]) .+ (B1' * left_eigenmodes[r])
+
+		for rr in 1:ROM
+			if resonance[rr]
+				M_manual[row_count, FOM+rr] = dot(generalised_right_eigenmodes[:, rr], aux)
+			end
+		end
+
+		rhs_manual[row_count] = - lower_order_couplings[1]' * (B2' * left_eigenmodes[r])   # only j=1 coupling for ORD=2
+		global row_count += 1
+	end
+end
+println("System matrix error:", norm(M - M_manual))
+println("RHS error:", norm(rhs - rhs_manual))
 
 # -------------------------------------------------------------------
 # 6.  Low-level function demonstrations
@@ -179,18 +202,15 @@ println("\nC₁($s) restricted to resonant modes: ", c1)
 rhs_ext_1 = evaluate_orthogonality_external_rhs(s, 1, external_dynamics, E_coeffs)
 println("External RHS contribution for mode 1: ", rhs_ext_1)
 
-# -------------------------------------------------------------------
-# 7.  Manual verification
-# -------------------------------------------------------------------
-println("\n=== Manual verification ===")
+println("\n--- Manual verification ---")
 
 # For ORD = 2:
-#   L_r(s) = ℓ_rᵀ · (B₂·(s + λ_r) + B₁)   (row vector, length FOM)
+#   L_r(s) = Xℓ_rᵀ · (B₂·(s + λ_r) + B₁)   (row vector, length FOM)
 for r in 1:ROM
-	ℓ = left_eigenmodes[r]
+	Xℓ = left_eigenmodes[r]
 	λ = master_eigenvalues[r]
-	L_r_manual = (B2 .* (s + λ) .+ B1)' * ℓ   # ℓ_rᵀ · (B₂(s+λ_r) + B₁)
-	println("L_$r($s) error = ", norm(J_coeffs[r] * [1.0; s] - L_r_manual))
+	L_r_manual = (B2 .* (s + λ) .+ B1)' * Xℓ   # Xℓ_rᵀ · (B₂(s+λ_r) + B₁)
+	println("L_$r($s) error = ", norm(J_coeffs[r]' * [1.0; s] - L_r_manual))
 	#   row * [1; s] evaluates J_r[1,:] + J_r[2,:]*s = L_r(s)
 end
 
@@ -199,7 +219,7 @@ L1_from_J = J_coeffs[1][1, :] .+ J_coeffs[1][2, :] .* s
 println("\nL₁($s) from J_coeffs vs. row buffer error = ", norm(row1 - L1_from_J))
 
 # Lower-order RHS for mode 1 (ORD-1 = 1 coupling only):
-#   RHS_lower_1 = -J_r[2,:] · ξ₁ = -(B₂ᵀ·ℓ₁)ᵀ · ξ₁
+#   RHS_lower_1 = -J_r[2,:] · ξ₁ = -(B₂ᵀ·Xℓ₁)ᵀ · ξ₁
 rhs_lower_1_manual = -dot(J_coeffs[1][2, :], lower_order_couplings[1])
 println("\nRHS_lower_1 error = ", abs(rhs_lower_1 - rhs_lower_1_manual))
 

@@ -49,7 +49,7 @@ This result appears as a right-hand-side contribution in the **homological equat
 
 Consider an ORD-th order ODE in $\mathbb{R}^n$:
 
-$$B_{\text{ORD}}\, x^{(\text{ORD})} + \cdots + B_1\, \dot{x} + B_0\, x = F(x, \dot{x}, \ldots, x^{(\text{ORD}-1)},\, r)$$
+$$B_{\text{ORD}}\, x^{(\text{ORD})} + \cdots + B_1\, \dot{x} + B_0\, x = F(x, \dot{x}, \ldots, x^{(\text{ORD}-1)}, r)$$
 
 where $r \in \mathbb{R}^s$ is a vector of **external forcing variables** with their own autonomous dynamics $\dot{r} = g(r)$.
 
