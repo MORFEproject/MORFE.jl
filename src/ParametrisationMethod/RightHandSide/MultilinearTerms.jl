@@ -152,7 +152,7 @@ function _accumulate_inner!(accum, scratch,
 	for (idx_tuple, total_count) in factorisations_groupwise_symmetric(ctx.set, ctx.rem, t.multiindex, ctx.candidate_indices)
 		@debug "GroupwiseSymmetric factorisation" idx_tuple total_count
 		fill!(scratch, 0)
-		@inbounds args = ntuple(i -> ctx.W[..idx_tuple[i]][orders[i]], Val(deg_internal))
+		@inbounds args = ntuple(i -> ctx.W[:, idx_tuple[i], orders[i]], Val(deg_internal))
 		t.f!(scratch, args..., ctx.args_ext...)
 		@. accum += total_count * scratch
 	end

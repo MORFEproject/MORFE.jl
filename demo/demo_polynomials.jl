@@ -2,23 +2,25 @@ using StaticArrays: SVector
 
 include(joinpath(@__DIR__, "../src/MORFE.jl"))
 using .MORFE.Multiindices: all_multiindices_up_to
-using .MORFE.Polynomials: DensePolynomial, zero, find_term, evaluate, extract_component, linear_matrix_of_polynomial
+using .MORFE.Polynomials: DensePolynomial, zero, find_term, evaluate, extract_component, linear_matrix_of_polynomial, nmonomials, coeff_shape
 using .MORFE.Realification
 
 # 1. Create a dense polynomial with 3 variables, max degree 2, and 2‑component coefficients
 nvars, max_degree = 3, 2
 # all monomials in 3 variables up to degree 2
 multiindex_set = all_multiindices_up_to(nvars, max_degree)
-poly = zero(DensePolynomial{SVector{2, ComplexF64}}, multiindex_set)
-println("Zero polynomial initialised")
 
-# 2. Set two non‑zero coefficients (in place)
-# find_term returns an index or nothing; here terms are present.
-poly.coefficients[find_term(poly, [1, 1, 0])] = [1.0, 2.0im]
-poly.coefficients[find_term(poly, [0, 0, 2])] = [3.0+4.0im, 5.0]
+# zero(DensePolynomial{T}, coeff_shape, mset) — new API for vector-valued polynomials
+poly = zero(DensePolynomial{ComplexF64}, (2,), multiindex_set)
+println("Zero polynomial initialised: coeff_shape=$(coeff_shape(poly)), nmonomials=$(nmonomials(poly))")
+
+# 2. Set two non‑zero coefficients in place.
+# The coefficient matrix has shape (2, L); columns are indexed by monomial position.
+poly.coefficients[:, find_term(poly, [1, 1, 0])] = [1.0, 2.0im]
+poly.coefficients[:, find_term(poly, [0, 0, 2])] = [3.0+4.0im, 5.0]
 println("\nPolynomial after in‑place modification:")
 for (idx, exp) in enumerate(poly.multiindex_set.exponents)
-	println("Index = $idx:\texponent = $exp\tcoefficient = ", poly.coefficients[idx])
+	println("Index = $idx:\texponent = $exp\tcoefficient = ", poly.coefficients[:, idx])
 end
 
 # 3. Evaluate at a point with conjugate pair (z1, z2) and real variable z3
@@ -48,7 +50,7 @@ using LinearAlgebra
 println("  relative error = ", norm(realf_eval - full_eval)/norm(full_eval))
 
 # 7. Compose the polynomial with a linear transformation f(Mx)
-M = [                                    1.0    1.0im   0.0;
+M = [ 1.0    1.0im   0.0;
 	1.0   -1.0im   0.0;
 	0.0    0.0     1.0]
 comp_poly = compose_linear(poly, M)
@@ -65,14 +67,20 @@ println("\n\n=== Random Polynomial ===\n")
 output_size, input_size = 7, 3
 max_degree = 2
 multiindex_set = all_multiindices_up_to(input_size, max_degree)
-idx = 1 + rand(1:input_size)
+deleteat!(multiindex_set.exponents, 1) # delete the constant term
+idx = rand(1:input_size)
 println("Deleting exponent $(multiindex_set.exponents[idx])\n")
 deleteat!(multiindex_set.exponents, idx) # delete a random linear exponent
-rand_poly = DensePolynomial([randn(SVector{output_size, Float16}) for _ in 1:length(multiindex_set)], multiindex_set)
+
+# Vector{SVector{K,T}} constructor converts to a contiguous (K × L) matrix automatically
+rand_poly = DensePolynomial([randn(SVector{output_size, Float64}) for _ in 1:length(multiindex_set)], multiindex_set)
 for (i, exp) in enumerate(rand_poly.multiindex_set.exponents)
-	println("Index = $i:\texponent = $exp\tcoefficient=$(rand_poly.coefficients[i])")
+	println("Index = $i:\texponent = $exp\tcoefficient=$(rand_poly.coefficients[:, i])")
 end
 println("\nLinear part =\n", repr("text/plain", linear_matrix_of_polynomial(rand_poly)))
+
+println("\nDisplay coefficients array (shape $(size(rand_poly.coefficients))):")
+display(rand_poly.coefficients)
 
 # -------------------------------------------------------------------
 println("\n" * "="^80 * "\n")
