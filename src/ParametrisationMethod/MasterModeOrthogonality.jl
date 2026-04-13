@@ -245,7 +245,7 @@ function precompute_orthogonality_operator_coefficients(
 	fom_matrices::NTuple{ORDP1, <:AbstractMatrix{T}},
 	left_eigenmodes::SVector{ROM, <:AbstractVector{T}},
 	master_eigenvalues::SVector{ROM, T},
-) where {ORDP1, ROM, T <: Number}
+) where {ORDP1, ROM, T}
 	ORD = ORDP1 - 1
 	FOM = size(first(fom_matrices), 1)
 
@@ -342,7 +342,7 @@ function precompute_orthogonality_column_polynomials(
 	J_coeffs::NTuple{ROM, <:AbstractMatrix{T}},
 	generalised_right_eigenmodes::AbstractMatrix{T},   # FOM × NVAR
 	reduced_dynamics_linear::AbstractMatrix{T},        # NVAR × NVAR
-) where {ROM, T <: Number}
+) where {ROM, T}
 	ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
 	FOM = size(generalised_right_eigenmodes, 1)
 	NVAR = size(generalised_right_eigenmodes, 2)

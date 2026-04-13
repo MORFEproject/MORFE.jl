@@ -23,10 +23,10 @@ Dense representation: coefficients aligned with the full multiindex_set.
 	across all monomials in the polynomial
 
 For scalar polynomials, `C <: Number`. For vector‑valued polynomials,
-`C` should be a static array type (e.g., `SVector{3, Float64}`).
+`C` should be an array type (e.g., `Vector{Float64}`).
 """
-struct DensePolynomial{C, NVAR}
-	coefficients::Vector{C}
+struct DensePolynomial{C, T, CM <: AbstractMatrix{T}, NVAR}
+	coefficients::Vector{C} # CM
 	multiindex_set::MultiindexSet{NVAR}
 	max_exponents::SVector{NVAR, Int}
 

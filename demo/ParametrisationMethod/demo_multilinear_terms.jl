@@ -34,7 +34,7 @@ term1 = MultilinearMap((res, x, xdot)->(@. res += x*xdot), (1, 1)) # me=0
 term2 = MultilinearMap((res, xdot1, xdot2)->(@. res += 0.5*xdot1*xdot2), (0, 2)) # me=0
 term3 = MultilinearMap((res, x1, x2, xdot)->(@. res += 0.5*x1*x2*xdot), (2, 1)) # me=0
 term4 = MultilinearMap((res, x, r)->(@. res += 2.0*x*r), (1, 0), 1) # me=1
-term5 = MultilinearMap((res, u)->(@. res += [100.0, 200.0]*u), (0, 0), 1) # me=1
+term5 = MultilinearMap((res, r)->(@. res += [100.0, 200.0]*r), (0, 0), 1) # me=1
 
 Id = Matrix{Float64}(I, FOM, FOM)
 model = NDOrderModel((Id, Id, Id), (term1, term2, term3, term4, term5))
@@ -67,7 +67,7 @@ b = ComplexF64[6.0, 7.0]
 
 W.poly.coefficients[2] = SVector{ORD, Vector{ComplexF64}}(copy(φ₁), λ₁*φ₁)   # (1,0,0)
 W.poly.coefficients[3] = SVector{ORD, Vector{ComplexF64}}(copy(φ₂), λ₂*φ₂)   # (0,1,0)
-W.poly.coefficients[4] = SVector{ORD, Vector{ComplexF64}}(b, b*1.0im)      # (0,0,1)
+W.poly.coefficients[4] = SVector{ORD, Vector{ComplexF64}}(b, b*1.0im)        # (0,0,1)
 
 # Quadratic coefficients
 W.poly.coefficients[5] = SVector{ORD, Vector{ComplexF64}}(0.1*φ₁, b .+ φ₂)   # (2,0,0)
