@@ -59,8 +59,8 @@ The set is guaranteed to be sorted according to the graded lexicographic (Grlex)
 - `exponents::Vector{SVector{N, Int}}`: each element is an exponent vector.
 """
 struct MultiindexSet{N}
-	exponents::Vector{SVector{N, Int}}
-
+	exponents::Vector{SVector{N, Int}} # unknown size list of exponent vectors, sorted by Grlex
+	# each exponent is fixed length SVector for efficient storage and comparison
 	# Internal constructor with sortedness assertion (debug mode only)
 	function MultiindexSet(exponents::Vector{SVector{N, Int}}, ::Val{true}) where {N}
 		if !is_sorted(exponents)

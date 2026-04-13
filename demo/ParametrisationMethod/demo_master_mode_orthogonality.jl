@@ -244,4 +244,13 @@ println("M[1, 1:FOM] vs. L₁($s) error = ", norm(M[1, 1:FOM] - row1))
 println("M[1, FOM+1:end] vs. C₁($s) error = ", norm(M[1, (FOM+1):end] - c1))
 
 println("\n" * "="^80)
+
+# ===================================================================
+# 7.  Random parametrisation and reduced dynamics
+# ===================================================================
+
+
+
+
+println("\n" * "="^80)
 println("Demo finished successfully.")
