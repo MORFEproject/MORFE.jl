@@ -9,30 +9,28 @@ export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 """
 	Parametrisation{ORD, NVAR, T}
 
-A dense polynomial whose coefficients are `SVector{ORD, Vector{T}}`.
+A dense polynomial with a contiguous `(FOM, ORD, L)` coefficient array.
 Represents a parametrisation mapping from reduced coordinates and forcing variables to the full state.
 
 - `ORD`: native order of the full ODE (1 for first‑order, 2 for second‑order).
 - `NVAR`: total number of variables = reduced coordinates + forcing variables.
-- `T`: numeric type (e.g., Complex).
+- `T`: numeric element type (e.g., `ComplexF64`).
 
-The polynomial is stored in `poly`, and `external_system_size` gives the number of forcing variables.
-The mapping is: (z, r) → (x) for first‑order or (z, r) → (x, ẋ) for second‑order.
-The coefficients are `SVector{ORD, Vector{T}}`, where `Vector{T}` is the full‑state vector
-of length `FOM` (full‑order dimension). This length is not stored in the struct because
-it is determined by the coefficient type.
+Layout: `coefficients[:, ord, l]` is the full‑state vector (length FOM) for the
+`ord`-th time derivative of the `l`-th monomial coefficient.
 """
 struct Parametrisation{ORD, NVAR, T}
-	poly::DensePolynomial{SVector{ORD, Vector{T}}, NVAR}
+	poly::DensePolynomial{T, NVAR, 3, Array{T, 3}}
 	external_system_size::Int
 
-	function Parametrisation(poly::DensePolynomial{SVector{ORD, Vector{T}}, NVAR}, external_system_size::Int) where {ORD, NVAR, T}
+	function Parametrisation(poly::DensePolynomial{T, NVAR, 3, Array{T, 3}}, external_system_size::Int) where {T, NVAR}
+		ORD = size(poly.coefficients, 2)
 		@assert external_system_size >= 0 "external_system_size must be non‑negative"
 		new{ORD, NVAR, T}(poly, external_system_size)
 	end
 end
 
-Base.size(W::Parametrisation) = length(W.poly.coefficients[1][1]) # the dimension of the full‑order state in its native order
+Base.size(W::Parametrisation) = size(W.poly.coefficients, 1) # FOM: full‑order state dimension
 multiindex_set(W::Parametrisation) = W.poly.multiindex_set
 coefficients(W::Parametrisation) = W.poly.coefficients
 
@@ -50,10 +48,11 @@ The polynomial is stored in `poly`, and `external_system_size` gives the number 
 The dynamics are: ż = R(z, r), where r are the forcing variables.
 """
 struct ReducedDynamics{ROM, NVAR, T}
-	poly::DensePolynomial{SVector{ROM, T}, NVAR}
+	poly::DensePolynomial{T, NVAR, 2, Matrix{T}}
 	external_system_size::Int
 
-	function ReducedDynamics(poly::DensePolynomial{SVector{ROM, T}, NVAR}, external_system_size::Int) where {ROM, NVAR, T}
+	function ReducedDynamics(poly::DensePolynomial{T, NVAR, 2, Matrix{T}}, external_system_size::Int) where {T, NVAR}
+		ROM = size(poly.coefficients, 1)
 		@assert external_system_size >= 0 "external_system_size must be non‑negative"
 		@assert ROM + external_system_size == NVAR "ROM + external_system_size must equal NVAR; got $(ROM + external_system_size) vs $NVAR"
 		new{ROM, NVAR, T}(poly, external_system_size)
@@ -90,17 +89,12 @@ function create_parametrisation_method_objects(
 	# Validate variable count
 	@assert NVAR == ROM + external_system_size "Multiindex set has $NVAR variables, but ROM + external_system_size = $(ROM + external_system_size)"
 
-	# Parametrisation coefficients: SVector{ORD, Vector{T}} zeros
-	inner_zero = Vector{T}(undef, FOM)
-	fill!(inner_zero, zero(T))
-	outer_zero = SVector{ORD, Vector{T}}(ntuple(_ -> inner_zero, ORD))
-	W_coeffs = [outer_zero for _ in 1:length(mset)]
-	W_poly = DensePolynomial(W_coeffs, mset)
+	# Parametrisation coefficients: (FOM, ORD, L) 3-D array
+	W_poly = DensePolynomial(zeros(T, FOM, ORD, length(mset)), mset)
 	W = Parametrisation(W_poly, external_system_size)
 
-	# Reduced dynamics coefficients: SVector{ROM, T} zeros
-	R_coeffs = [SVector{ROM, T}(ntuple(_ -> zero(T), ROM)) for _ in 1:length(mset)]
-	R_poly = DensePolynomial(R_coeffs, mset)
+	# Reduced dynamics coefficients: (ROM, L) matrix
+	R_poly = DensePolynomial(zeros(T, ROM, length(mset)), mset)
 	R = ReducedDynamics(R_poly, external_system_size)
 
 	return (W, R)
@@ -117,13 +111,14 @@ end
 # we can compute the coefficients for the higher time derivatives using the superharmonic structure of the invariance equation
 # after having the x components of the parametrisation W, we compute the x' and x'' components 
 function compute_higher_derivative_coefficients!(
-	param_coeff::SVector{ORD, Vector{T}}, red_coeff::SVector{ROM, T}, superharmonic::T,
-	generalised_eigenmodes::SVector{ORD, <: AbstractMatrix{T}}, low_order_couplings::SVector{ORD, Vector{T}}) where {ORD, T}
+	param_coeff::AbstractMatrix{T}, red_coeff::AbstractVector{T}, superharmonic::T,
+	generalised_eigenmodes::AbstractVector{<:AbstractMatrix{T}}, low_order_couplings::AbstractMatrix{T}) where {T}
 
+	ORD = size(param_coeff, 2)
 	for j in 1:(ORD-1)
-		param_coeff[j+1] .= (param_coeff[j] * superharmonic)
+		param_coeff[:, j+1] .= (param_coeff[:, j] * superharmonic)
 		+ (generalised_eigenmodes[j] * red_coeff)
-		+ low_order_couplings[j]
+		+ low_order_couplings[:, j]
 	end
 end
 
