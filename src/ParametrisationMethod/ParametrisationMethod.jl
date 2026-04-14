@@ -111,13 +111,13 @@ end
 # we can compute the coefficients for the higher time derivatives using the superharmonic structure of the invariance equation
 # after having the x components of the parametrisation W, we compute the x' and x'' components 
 function compute_higher_derivative_coefficients!(
-	param_coeff::AbstractMatrix{T}, red_coeff::AbstractVector{T}, superharmonic::T,
+	param_coeff::AbstractMatrix{T}, red_coeff::AbstractVector{T}, superharmonic::T, global_index::Int,
 	generalised_eigenmodes::AbstractVector{<:AbstractMatrix{T}}, low_order_couplings::AbstractMatrix{T}) where {T}
 
 	ORD = size(param_coeff, 2)
 	for j in 1:(ORD-1)
-		param_coeff[:, j+1] .= (param_coeff[:, j] * superharmonic)
-		+ (generalised_eigenmodes[j] * red_coeff)
+		param_coeff[:, j+1, global_index] .= (param_coeff[:, j, global_index] * superharmonic)
+		+ (generalised_eigenmodes[j] * red_coeff[:, global_index])
 		+ low_order_couplings[:, j]
 	end
 end

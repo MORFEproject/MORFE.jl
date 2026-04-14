@@ -248,8 +248,40 @@ println("\n" * "="^80)
 # ===================================================================
 # 7.  Random parametrisation and reduced dynamics
 # ===================================================================
+println("\n=== Random parametrisation and reduced dynamics, full check ===")
+
+using .MORFE.ParametrisationMethod: create_parametrisation_method_objects, compute_higher_derivative_coefficients!
+using .MORFE.LowerOrderCouplings: compute_lower_order_couplings
+
+NVAR7 = 3
+maxdeg7 = 5
+mset7 = all_multiindices_up_to(NVAR7, NVAR7*maxdeg7)
+nterms = length(mset7)
+
+# Random parametrisation (first‑order, FOM=3, ROM=NVAR7)
+ORD3 = 1
+FOM3 = 3
+W7, R7 = create_parametrisation_method_objects(mset7, ORD3, FOM3, NVAR7, 0, ComplexF64)
+
+# Fill with random coefficients
+for idx in 1:nterms
+	W7.poly.coefficients[:, 1, idx] = randn(ComplexF64, FOM3)
+	R7.poly.coefficients[:, idx]    = randn(ComplexF64, NVAR7)
+end
+
+exp = rand(0:maxdeg7, N)
+superharmonic = rand() + im*rand()
+low_order_couplings = compute_lower_order_couplings(upper_bound3, W7, R7)
+global_index = rand(1:nterms)
+compute_higher_derivative_coefficients!(
+	W7.poly.coefficients, R7.poly.coefficients, superharmonic, global_index,
+	generalised_eigenmodes, low_order_couplings,
+)
 
 
+
+
+println("Result for random 3‑variable case: $result3")
 
 
 println("\n" * "="^80)

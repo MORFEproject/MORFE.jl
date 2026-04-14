@@ -18,7 +18,7 @@ include(joinpath(@__DIR__, "../../src/MORFE.jl"))
 using .MORFE.Multiindices: all_multiindices_up_to
 using .MORFE.FullOrderModel: NDOrderModel, MultilinearMap
 using .MORFE.ParametrisationMethod: create_parametrisation_method_objects
-using .MORFE.MultilinearTerms: compute_multilinear_terms
+using .MORFE.MultilinearTerms: compute_multilinear_terms, build_multilinear_terms_cache
 using StaticArrays: SVector
 using LinearAlgebra
 
@@ -169,5 +169,25 @@ manual300_term4 =
 manual300 = manual300_term1 + manual300_term2 + manual300_term3 + manual300_term4
 println("manual = $manual300\t(term1+term2+term3+term4)\n")
 
-println("="^80)
+# -----------------------------------------------------------------------
+# Verify cached path gives identical results
+# -----------------------------------------------------------------------
+println("\n=== FactorisationCache verification ===\n")
+
+cache = build_multilinear_terms_cache(model, W)
+
+mset_exps = mset.exponents
+for (exp_str, exp_vec) in [
+	("(1,0,0)", exp100), ("(0,0,1)", exp001),
+	("(2,0,0)", exp200), ("(1,0,1)", exp101)]
+
+	exp_index = findfirst(==(exp_vec), mset_exps)
+	r_direct = compute_multilinear_terms(model, exp_vec, W)
+	r_cached = compute_multilinear_terms(model, exp_index, W, cache)
+	err = norm(r_cached - r_direct)
+	println("exp $exp_str: cached vs direct error = $err")
+	@assert err == 0 "Mismatch for exp $exp_str"
+end
+
+println("\n" * "="^80 * "\n")
 println("Demo finished successfully.")
