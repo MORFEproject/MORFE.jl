@@ -6,7 +6,6 @@ include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
-include("SpectralDecomposition/EigenmodesPropagation.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation.jl")
@@ -23,7 +22,6 @@ using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
 using .Eigensolvers: generalized_eigenpairs
-using .EigenmodesPropagation
 using .Resonance
 using .InvarianceEquation
 using .MasterModeOrthogonality

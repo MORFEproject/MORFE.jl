@@ -7,7 +7,7 @@ export MultiindexSet, zero_multiindex, # nvars,
 	all_multiindices_in_box, indices_in_box_with_bounded_degree,
 	divides, is_constant, find_in_set, build_exponent_index_map,
 	factorisations_asymmetric, factorisations_fully_symmetric,
-	factorisations_groupwise_symmetric,
+	factorisations_groupwise_symmetric, FactorisationEntry,
 	bounded_index_tuples
 
 # ==================== Core comparison functions ====================
@@ -424,34 +424,53 @@ end
 # ==================== Factorizations ====================
 
 """
-	factorisations_asymmetric(set::MultiindexSet, exp::AbstractVector{Int}, num_factors::Int, candidate_indices::AbstractVector{Int}) -> Vector{NTuple{num_factors,Int}}
+	FactorisationEntry
 
-Return all ordered `num_factors`-tuples of indices (taken from `candidate_indices`) whose corresponding exponent vectors sum to `exp`.
-Each factorisation is an `NTuple{num_factors,Int}` where the `k`-th entry is the index of the `k`-th factor.
-If no factorisation exists, an empty vector is returned.
+One result from a factorisation function: an ordered list of multiindex-set
+indices (one per factor slot) together with the number of distinct ordered
+arrangements of that combination.
+
+- `factor_indices` — indices into the multiindex set, one per factor slot.
+- `multiplier`     — number of distinct orderings (permutations) of this
+					 combination.  Always 1 for `factorisations_asymmetric`,
+					 which enumerates each ordering as a separate entry.
+
+All three factorisation functions return `Vector{FactorisationEntry}`, so
+call sites do not need to know which variant produced the data.
+"""
+struct FactorisationEntry
+	factor_indices::Vector{Int}
+	multiplier::Int
+end
+
+"""
+	factorisations_asymmetric(set, exp, num_factors, candidate_indices) -> Vector{FactorisationEntry}
+
+Return every ordered `num_factors`-tuple of indices from `candidate_indices`
+whose exponent vectors sum to `exp`.  Each ordering is a separate entry with
+`multiplier = 1`.
 """
 function factorisations_asymmetric(
 	set::MultiindexSet{N}, exp::AbstractVector{Int}, num_factors::Int,
 	candidate_indices::AbstractVector{Int}) where {N}
 	if num_factors == 0
-		return iszero(exp) ? NTuple{0, Int}[()] : NTuple{0, Int}[]
+		return iszero(exp) ? [FactorisationEntry(Int[], 1)] : FactorisationEntry[]
 	end
 	exp_svec = SVector{N, Int}(exp)
 	exps = set.exponents
-	results = NTuple{Int64(num_factors), Int}[]
+	results = FactorisationEntry[]
 	current_idxs = Vector{Int}(undef, num_factors)
 
 	function backtrack(depth::Int, current_sum::SVector{N, Int})
 		if depth == 0
 			if current_sum == exp_svec
-				push!(results, Tuple(current_idxs))
+				push!(results, FactorisationEntry(copy(current_idxs), 1))
 			end
 			return
 		end
 		for i in candidate_indices
 			v = exps[i]
 			new_sum = current_sum + v
-			# Prune: if any component exceeds exp
 			if any(new_sum .> exp_svec)
 				continue
 			end
@@ -465,22 +484,20 @@ function factorisations_asymmetric(
 end
 
 """
-	factorisations_fully_symmetric(set::MultiindexSet, exp::AbstractVector{Int}, num_factors::Int, candidate_indices::AbstractVector{Int}) -> Vector{Tuple{NTuple{num_factors,Int}, Int}}
+	factorisations_fully_symmetric(set, exp, num_factors, candidate_indices) -> Vector{FactorisationEntry}
 
-Return all `num_factors`-tuples of indices (taken from `candidate_indices`) with non‑decreasing indices whose corresponding exponent vectors sum to `exp`.
-For each such combination, the result includes the tuple itself and the number of distinct ordered factorisations (permutations) that can be formed from it.
+Return all unordered (non-decreasing index) `num_factors`-tuples from
+`candidate_indices` whose exponent vectors sum to `exp`.  `multiplier` is
+the multinomial coefficient `num_factors! / (m₁! m₂! … mₖ!)` counting the
+distinct ordered arrangements of each combination.
 
-The number of permutations equals `num_factors! / (m₁! m₂! … mₖ!)` where `mⱼ` are the multiplicities of each distinct index in the tuple.
-
-The input `candidate_indices` is assumed to contain unique indices; duplicate entries are removed internally.
-
-If no factorisation exists, an empty vector is returned.
+Duplicate entries in `candidate_indices` are removed internally.
 """
 function factorisations_fully_symmetric(
 	set::MultiindexSet{N}, exp::AbstractVector{Int}, num_factors::Int,
 	candidate_indices::AbstractVector{Int}) where {N}
 	if num_factors == 0
-		return iszero(exp) ? [((), 1)] : Tuple{NTuple{0, Int}, Int}[]
+		return iszero(exp) ? [FactorisationEntry(Int[], 1)] : FactorisationEntry[]
 	end
 
 	exp_svec = SVector{N, Int}(exp)
@@ -489,13 +506,12 @@ function factorisations_fully_symmetric(
 	sorted_candidates = sort(unique(candidate_indices))
 	L = length(sorted_candidates)
 
-	results = Vector{Tuple{NTuple{num_factors, Int}, Int}}()
-	current_idxs = Vector{Int}(undef, num_factors)   # indices chosen so far
+	results = FactorisationEntry[]
+	current_idxs = Vector{Int}(undef, num_factors)
 
 	function backtrack(depth::Int, start_pos::Int, current_sum::SVector{N, Int})
 		if depth == 0
 			if current_sum == exp_svec
-				# Compute number of permutations (_multinomial coefficient)
 				counts = Int[]
 				i = 1
 				while i <= num_factors
@@ -506,8 +522,7 @@ function factorisations_fully_symmetric(
 					push!(counts, j - i)
 					i = j
 				end
-				perm_count = _multinomial(num_factors, counts)
-				push!(results, (Tuple(current_idxs), perm_count))
+				push!(results, FactorisationEntry(copy(current_idxs), _multinomial(num_factors, counts)))
 			end
 			return
 		end
@@ -519,7 +534,7 @@ function factorisations_fully_symmetric(
 				continue
 			end
 			current_idxs[num_factors-depth+1] = idx
-			backtrack(depth - 1, pos, new_sum)      # allow same index again (non‑decreasing)
+			backtrack(depth - 1, pos, new_sum)
 		end
 	end
 
@@ -528,25 +543,14 @@ function factorisations_fully_symmetric(
 end
 
 """
-	factorisations_groupwise_symmetric(set::MultiindexSet, exp::AbstractVector{Int},
-										group_sizes::NTuple{M,Int},
-										candidate_indices::AbstractVector{Int}) where M
+	factorisations_groupwise_symmetric(set, exp, group_sizes, candidate_indices) -> Vector{FactorisationEntry}
 
-Return factorisations of the exponent vector `exp` into `M` groups, where group `i`
-has size `group_sizes[i]` and is symmetric within itself (permutations inside a group are equivalent).
+Return factorisations of `exp` into `M = length(group_sizes)` groups, where
+group `i` has `group_sizes[i]` factor slots and is internally symmetric.
 
-The result is a vector of `(flat_indices, total_count)`:
-- `flat_indices`: concatenation of the indices for each group in group order,
-  with each group's indices sorted non‑decreasingly (canonical representation).
-- `total_count`: number of ordered factorisations (full sequences) corresponding to this combination.
-
-The algorithm recursively processes groups. For the current group of size `k` and remaining exponent `rem`,
-it enumerates all sub‑exponents `s` with `0 ≤ s ≤ rem`. For each `s`, it calls
-`factorisations_fully_symmetric(set, s, k, global_candidates)` to obtain all unordered `k`-tuples
-(indices with multiplicities) summing to `s`. Their permutation counts are multiplied into the total,
-and recursion continues with `rem - s`. When all groups are processed and `rem = 0`, the combination is recorded.
-
-Returns an empty vector if no factorisation exists.
+`factor_indices` in each entry is the concatenation of per-group indices in
+group order (each group sorted non-decreasingly).  `multiplier` is the product
+of the per-group permutation counts — the total number of ordered arrangements.
 """
 function factorisations_groupwise_symmetric(
 	set::MultiindexSet{N}, exp::AbstractVector{Int},
@@ -556,13 +560,13 @@ function factorisations_groupwise_symmetric(
 
 	global_candidates = sort(unique(candidate_indices))
 
-	results = Vector{Tuple{Vector{Int}, Int}}()
+	results = FactorisationEntry[]
 
 	function recurse_groups(group_idx::Int, remaining::SVector{N, Int},
 		current_flat::Vector{Int}, current_count::Int)
 		if group_idx > M
 			if iszero(remaining)
-				push!(results, (copy(current_flat), current_count))
+				push!(results, FactorisationEntry(copy(current_flat), current_count))
 			end
 			return
 		end
@@ -573,23 +577,15 @@ function factorisations_groupwise_symmetric(
 			return
 		end
 
-		# Enumerate all possible sub‑exponents s with 0 ≤ s ≤ remaining (componentwise)
 		ranges = [0:remaining[i] for i in 1:N]
-		range_tuple = Tuple(ranges)
-
-		for s_idx in CartesianIndices(range_tuple)
+		for s_idx in CartesianIndices(Tuple(ranges))
 			s = SVector{N, Int}(ntuple(i -> s_idx[i], N))
-			# Get all unordered factorisations of s with exactly k indices
-			unordered = factorisations_fully_symmetric(set, s, k, global_candidates)
-
-			for (tuple, perm_count) in unordered
+			for entry in factorisations_fully_symmetric(set, s, k, global_candidates)
 				new_remaining = remaining - s
 				if all(≥(0), new_remaining)
-					# Append this group's indices to the flat list
-					append!(current_flat, collect(tuple))
+					append!(current_flat, entry.factor_indices)
 					recurse_groups(group_idx + 1, new_remaining,
-						current_flat, current_count * perm_count)
-					# Backtrack: remove the indices we just added
+						current_flat, current_count * entry.multiplier)
 					for _ in 1:k
 						pop!(current_flat)
 					end
