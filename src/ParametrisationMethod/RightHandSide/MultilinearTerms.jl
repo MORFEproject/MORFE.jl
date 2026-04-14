@@ -113,7 +113,7 @@ function _accumulate_inner!(accum, _scratch,
 
 	for idx_tuple in factorisations_asymmetric(ctx.set, ctx.rem, deg_internal, ctx.candidate_indices)
 		@debug "FullyAsymmetric factorisation" idx_tuple
-		@inbounds args = ntuple(i -> ctx.W[idx_tuple[i]][orders[i]], Val(deg_internal))
+		@inbounds args = ntuple(i -> @view(ctx.W[:, orders[i], idx_tuple[i]]), Val(deg_internal))
 		t.f!(accum, args..., ctx.args_ext...)
 	end
 end
@@ -132,7 +132,7 @@ function _accumulate_inner!(accum, scratch,
 	for (idx_tuple, sym_count) in factorisations_fully_symmetric(ctx.set, ctx.rem, deg_internal, ctx.candidate_indices)
 		@debug "FullySymmetric factorisation" idx_tuple sym_count
 		fill!(scratch, 0)
-		@inbounds args = ntuple(i -> ctx.W[idx_tuple[i]][deriv_idx], Val(deg_internal))
+		@inbounds args = ntuple(i -> @view(ctx.W[:, deriv_idx, idx_tuple[i]]), Val(deg_internal))
 		t.f!(scratch, args..., ctx.args_ext...)
 		@. accum += sym_count * scratch
 	end
@@ -152,7 +152,7 @@ function _accumulate_inner!(accum, scratch,
 	for (idx_tuple, total_count) in factorisations_groupwise_symmetric(ctx.set, ctx.rem, t.multiindex, ctx.candidate_indices)
 		@debug "GroupwiseSymmetric factorisation" idx_tuple total_count
 		fill!(scratch, 0)
-		@inbounds args = ntuple(i -> ctx.W[:, idx_tuple[i], orders[i]], Val(deg_internal))
+		@inbounds args = ntuple(i -> @view(ctx.W[:, orders[i], idx_tuple[i]]), Val(deg_internal))
 		t.f!(scratch, args..., ctx.args_ext...)
 		@. accum += total_count * scratch
 	end
@@ -246,8 +246,8 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::SVector{NVAR},
 
 	deg_max = sum(exp)
 	set = parametrisation.poly.multiindex_set
-	first_coeff = parametrisation.poly.coefficients[1][1]
-	result = zeros(eltype(first_coeff), size(first_coeff))
+	FOM = size(parametrisation)
+	result = zeros(eltype(parametrisation.poly), FOM)
 	temp = similar(result)
 	temp2 = similar(result)
 
