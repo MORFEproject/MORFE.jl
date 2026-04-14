@@ -6,51 +6,50 @@ using .Multiindices
 nvars, max_degree = 4, 20
 multiindex_set = all_multiindices_up_to(nvars, max_degree)
 
-exp = [2, 2, 0, 0] # exponent vector to factorise
+exp = [2, 2, 0, 0]   # exponent vector to factorise
 total_deg = sum(exp)
 candidate_indices = indices_in_box_with_bounded_degree(multiindex_set, exp, 1, total_deg)
 
-k = 3   # number of terms in the factorisation
+k = 3   # number of factor slots
 
 println("Target exponent: $exp  (total degree $total_deg)")
-println("Number of terms: $k\n")
+println("Number of factors: $k\n")
 
 # -----------------------------------------------------------------------------
-# 1. Asymmetric factorisations – every permutation is distinct
+# 1. Asymmetric factorisations — every permutation is a distinct entry (multiplier = 1)
 result_asym = factorisations_asymmetric(multiindex_set, exp, k, candidate_indices)
 
 println("Found ", length(result_asym), " asymmetric factorisation(s):\n")
-for (i, idx_tuple) in enumerate(result_asym)
-	println("  Factorization $i (indices: $idx_tuple):")
-	for (j, idx) in enumerate(idx_tuple)
-		vec = multiindex_set.exponents[idx]
-		println("    term $j: $vec")
+for (i, entry) in enumerate(result_asym)
+	println("  Factorisation $i (indices: $(entry.factor_indices)):")
+	for (j, idx) in enumerate(entry.factor_indices)
+		println("    factor $j: $(multiindex_set.exponents[idx])")
 	end
 end
 
 println("\n" * "="^80 * "\n")
 
 # -----------------------------------------------------------------------------
-# 2. Fully symmetric factorisations – all permutations equivalent
+# 2. Fully symmetric factorisations — one representative per unordered combination;
+#    multiplier counts the distinct ordered arrangements.
 result_sym = factorisations_fully_symmetric(multiindex_set, exp, k, candidate_indices)
 
 println("Found ", length(result_sym), " fully symmetric factorisation(s):\n")
-for (i, (idx_tuple, perm_count)) in enumerate(result_sym)
-	println("  Factorization $i: indices $idx_tuple  (yields $perm_count ordered factorisations)")
-	for (j, idx) in enumerate(idx_tuple)
-		vec = multiindex_set.exponents[idx]
-		println("    term $j: $vec")
+for (i, entry) in enumerate(result_sym)
+	println("  Factorisation $i: indices $(entry.factor_indices)  ($(entry.multiplier) ordered arrangement(s))")
+	for (j, idx) in enumerate(entry.factor_indices)
+		println("    factor $j: $(multiindex_set.exponents[idx])")
 	end
 end
 
 println("\n" * "="^80 * "\n")
 
 # -----------------------------------------------------------------------------
-# 3. Groupwise symmetric factorisations – symmetry within each group, groups in fixed order
-#    Examples: 
-#       (1,1,1) means H(U,V,W) → all all arguments are different (same as assymetric case)
-#       (3,) means H(U,U,U) → all three arguments are symmetric (same as fully symmetric)
-#       (1,2) means H(U,V,V) → first argument is alone (no symmetry), last are two symmetric
+# 3. Groupwise symmetric factorisations — symmetry within each group, groups in fixed order.
+#    Examples:
+#      (1,1,1) → all arguments distinct            (same as asymmetric)
+#      (3,)    → all three arguments symmetric     (same as fully symmetric)
+#      (1,2)   → first argument alone, last two symmetric
 
 group_sizes = (1, 2)
 @assert sum(group_sizes) == k
@@ -58,37 +57,30 @@ group_sizes = (1, 2)
 result_group = factorisations_groupwise_symmetric(multiindex_set, exp, group_sizes, candidate_indices)
 
 println("Found ", length(result_group), " groupwise symmetric factorisation(s) with group sizes $group_sizes:\n")
-for (i, (flat_indices, total_count)) in enumerate(result_group)
-	println("  Factorisation $i: flat indices = $flat_indices  (total ordered = $total_count)")
-
-	# Reconstruct groups from flat_indices according to group_sizes
+for (i, entry) in enumerate(result_group)
+	println("  Factorisation $i: indices $(entry.factor_indices)  ($(entry.multiplier) ordered arrangement(s))")
 	pos = 1
-	for (g, size) in enumerate(group_sizes)
-		if size == 0
-			continue
-		end
-		group_indices = flat_indices[pos:(pos+size-1)]
-		println("    Group $g (size $size): indices $group_indices")
+	for (g, sz) in enumerate(group_sizes)
+		sz == 0 && continue
+		group_indices = entry.factor_indices[pos:(pos+sz-1)]
+		println("    Group $g (size $sz): indices $group_indices")
 		for (j, idx) in enumerate(group_indices)
-			vec = multiindex_set.exponents[idx]
-			println("      term $(pos + j - 1): $vec")
+			println("      factor $(pos+j-1): $(multiindex_set.exponents[idx])")
 		end
-		pos += size
+		pos += sz
 	end
 end
 
 println("\n" * "="^80 * "\n")
 
 # -----------------------------------------------------------------------------
-# 4. Bounded index tuples
-#    Enumerate all ordered index tuples of length M whose counts are bounded by exp.
-#    Each result contains:
+# 4. Bounded index tuples — enumerate all sorted index tuples of length M whose
+#    per-index counts are bounded by exp.  Each result contains:
 #      - a canonical sorted index tuple
 #      - the corresponding multiindex/count vector
 #      - the number of distinct permutations
-
-M = 0
 using StaticArrays: SVector
+M = 6
 exp_sv = SVector{length(exp), Int}(exp)
 
 result_bounded = bounded_index_tuples(M, exp_sv)
@@ -98,14 +90,7 @@ for (i, (idx_tuple, multiindex, perm_count)) in enumerate(result_bounded)
 	println("  Tuple $i: $idx_tuple")
 	println("    multiindex = $multiindex")
 	println("    permutation count = $perm_count")
-
-	println("    corresponding terms:")
-	for (j, idx) in enumerate(idx_tuple)
-		vec = multiindex_set.exponents[idx+1]
-		println("      position $j: $vec")
-	end
 end
 
-# -----------------------------------------------------------------------------
 println("\n" * "="^80 * "\n")
 println("Demo finished successfully.")
