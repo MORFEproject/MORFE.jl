@@ -13,7 +13,7 @@ Fills complete left eigenvector from the ORD th component (X[ORD])
 resulting from turning the N-th order system in to a first order system.
 It uses the relations:
 
-    -B[1]*X[ORD] = \\overline{λ} X[1] 
+    -X[ORD]^H*B[1] = λ*X[1]^H 
     X[i-1]^H = λ*X[i]^H + X[ORD]^H B[j]
 
 where B[i] are the linear matrices from the NDOrderModel.
@@ -37,26 +37,29 @@ function propagate_left_eigenvector_from_last(
     ord = size(eigenvectors, 2)
     @assert length(x_last)==fom "Vector x_last needs to have the same size as the full order model: $fom"
     @assert ord==ORD "`eigenvectors[i,:,j]` must be of length ORD"
-    #@assert for index?
+
+    # X[ORD]
     eigenvectors[:, ORD, index] .= x_last
+
     tmp_conj = x_last'
     x_last_conj = x_last'
-    for j in (ord - 1):-1:3
-        tmp_conj .= eigenvectors[:, j, index]'
-        eigenvectors[:, j - 1, index] .= (λ .* tmp_conj .+
-                                          x_last_conj * linear_terms[j])'
-    end
+
     # X[ORD-1]
     if ORD > 2
         eigenvectors[:, ORD - 1, index] .= (λ .* x_last_conj * linear_terms[ORDP1] .+
                                             x_last_conj * linear_terms[ORD])'
     end
-    # X[1]
+    #X[...]
+    for j in (ord - 1):-1:3
+        tmp_conj .= eigenvectors[:, j, index]'
+        eigenvectors[:, j - 1, index] .= (λ .* tmp_conj .+
+                                          x_last_conj * linear_terms[j])'
+    end
+    #X[1]
     if iszero(λ) != true
         eigenvectors[:, 1, index] .= ((-1) / λ * x_last_conj * linear_terms[1])'
     else
-        # ?
-        # eigenvectors[:, 1, index] .= (x_last_conj * linear_terms[2])'
+        eigenvectors[:, 1, index] .= (x_last_conj * linear_terms[2])'
     end
 end
 

@@ -49,10 +49,38 @@ for i in 1:(ORD * FOM)
     propagate_left_eigenvector_from_last(
         model, left_eigenvectors, X[(FOM * (ORD - 1) + 1):end, i], conj(μ[i]), i)
     tmp = norm(Y[:, i] - vec(param_coeff)[(FOM * ORD * (i - 1) + 1):(FOM * ORD * i)])
-    println("   left: $tmp")
-    tmp = norm(X[:, i] - vec(left_eigenvectors)[(FOM * ORD * (i - 1) + 1):(FOM * ORD * i)])
     println("   right: $tmp")
+    tmp = norm(X[:, i] - vec(left_eigenvectors)[(FOM * ORD * (i - 1) + 1):(FOM * ORD * i)])
+    println("   left: $tmp")
 end
+
+# # -------------------------------------------------------------------
+# # 2. Left and right jordan vectors
+# # -------------------------------------------------------------------
+# FOM = 2
+# B₂ = 1.0 * Matrix{Float64}(I, FOM, FOM)
+# B₁ = -2.0 * Matrix{Float64}(I, FOM, FOM)
+# B₀ = [1.0 1.0;
+#       0.0 1.0]
+# linear_terms = (B₀, B₁, B₂)
+# ORD = length(linear_terms) - 1
+# model = NDOrderModel(linear_terms)
+
+# #First order matrices
+# A, B = linear_first_order_matrices(model)
+# # defective system: λ=1.0 and eigenvectors are not lin. indipendent
+# eig = eigen(B \ A)
+# λ = eig.values
+# Y = eig.vectors
+# display(B \ A)
+# # println("rank of X: $(rank(Y))")
+# # println("λ: $(λ)")
+# println("Y: $(Y)")
+# M = A - λ[1] * B
+# y1 = []
+# y2 = []
+# y3 = []
+# y4 = []
 
 println("="^80)
 println("Demo finished successfully.")
