@@ -11,6 +11,7 @@ include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation.jl")
 include("ParametrisationMethod/MasterModeOrthogonality.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
+include("SpectralDecomposition/EigenModesPropagation.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 
@@ -25,18 +26,19 @@ using .Resonance
 using .InvarianceEquation
 using .MasterModeOrthogonality
 using .ParametrisationMethod
+using .EigenModesPropagation
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 
 export MultiindexSet, zero_multiindex,
-	all_multiindices_up_to, multiindices_with_total_degree,
-	all_multiindices_in_box, indices_in_box_with_bounded_degree
+       all_multiindices_up_to, multiindices_with_total_degree,
+       all_multiindices_in_box, indices_in_box_with_bounded_degree
 export DensePolynomial, evaluate
 export MultilinearMap, ExternalSystem
-export FullOrderModel, FirstOrderModel, NDOrderModel, MultilinearMap,
-	linear_first_order_matrices, evaluate_nonlinear_terms!
+export FullOrderModel, FirstOrderModel, NDOrderModel,
+       linear_first_order_matrices, evaluate_nonlinear_terms!
 export SingleResonance, ResonanceSet, resonance_set, resonance_set_from_eigenvalues
-export Parametrisation
+export Parametrisation, create_parametrisation_method_objects
 export compute_multilinear_terms
 
 end # module
