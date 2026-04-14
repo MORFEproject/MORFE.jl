@@ -65,22 +65,42 @@ b = ComplexF64[6.0, 7.0]
 # (0,0,2) idx10
 # ...
 
-W.poly.coefficients[2] = SVector{ORD, Vector{ComplexF64}}(copy(φ₁), λ₁*φ₁)   # (1,0,0)
-W.poly.coefficients[3] = SVector{ORD, Vector{ComplexF64}}(copy(φ₂), λ₂*φ₂)   # (0,1,0)
-W.poly.coefficients[4] = SVector{ORD, Vector{ComplexF64}}(b, b*1.0im)        # (0,0,1)
+# W.poly.coefficients layout: (FOM=2, ORD=2, L)
+#   W.poly.coefficients[:, 1, idx] = position part  (k=1)
+#   W.poly.coefficients[:, 2, idx] = velocity part  (k=2)
+
+# Linear coefficients
+# Position 	
+W.poly.coefficients[:, 1, 2] = φ₁;      # (1,0,0)
+W.poly.coefficients[:, 1, 3] = φ₂;      # (0,1,0)
+W.poly.coefficients[:, 1, 4] = b;       # (0,0,1)
+# Velocity	
+W.poly.coefficients[:, 2, 2] = λ₁*φ₁    # (1,0,0)
+W.poly.coefficients[:, 2, 3] = λ₂*φ₂    # (0,1,0)
+W.poly.coefficients[:, 2, 4] = b*1.0im  # (0,0,1)
 
 # Quadratic coefficients
-W.poly.coefficients[5] = SVector{ORD, Vector{ComplexF64}}(0.1*φ₁, b .+ φ₂)   # (2,0,0)
-W.poly.coefficients[8] = SVector{ORD, Vector{ComplexF64}}(b .+ φ₂, 0.2*φ₂)   # (0,2,0)
-W.poly.coefficients[6] = SVector{ORD, Vector{ComplexF64}}(0.05*φ₁, 0.05*φ₂)     # (1,1,0)
-W.poly.coefficients[7] = SVector{ORD, Vector{ComplexF64}}(0.1*φ₁, -0.3*φ₂)       # (1,0,1)
+# Position 	
+W.poly.coefficients[:, 1, 5] = 0.1*φ₁;  # (2,0,0)
+W.poly.coefficients[:, 1, 8] = b .+ φ₂; # (0,2,0)
+W.poly.coefficients[:, 1, 6] = 0.05*φ₁; # (1,1,0)
+W.poly.coefficients[:, 1, 7] = 0.1*φ₁;  # (1,0,1)
+# Velocity	
+W.poly.coefficients[:, 2, 5] = b .+ φ₂  # (2,0,0)
+W.poly.coefficients[:, 2, 8] = 0.2*φ₂   # (0,2,0)
+W.poly.coefficients[:, 2, 6] = 0.05*φ₂  # (1,1,0)
+W.poly.coefficients[:, 2, 7] = -0.3*φ₂  # (1,0,1)
+
 
 # Cubic coefficients
-W.poly.coefficients[11] = SVector{ORD, Vector{ComplexF64}}(500.0*φ₁, -500im*φ₂)  # (3,0,0)
+W.poly.coefficients[:, 1, 11] = 500.0*φ₁;
+W.poly.coefficients[:, 2, 11] = -500im*φ₂  # (3,0,0)
 
 println("\nParametrisation coefficients (first few):")
 for idx in 1:10
-	println("  $(mset.exponents[idx]) → $(W.poly.coefficients[idx])")
+	pos = W.poly.coefficients[:, 1, idx]
+	vel = W.poly.coefficients[:, 2, idx]
+	println("  $(mset.exponents[idx]) → pos=$pos  vel=$vel")
 end
 
 # -----------------------------------------------------------------------

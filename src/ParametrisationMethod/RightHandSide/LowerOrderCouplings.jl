@@ -9,22 +9,16 @@ using ..ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients, m
 
 export compute_lower_order_couplings
 
-# Helper: check whether an SVector of Vectors is the zero element
-@inline function _is_zero_coeff(coeff::SVector{ORD, Vector{T}}) where {ORD, T}
-	for v in coeff
-		for x in v
-			!iszero(x) && return false
-		end
-	end
-	return true
-end
+# Helper: check whether a coefficient slice (FOM × ORD matrix view) is all zero
+@inline _is_zero_coeff(coeff::AbstractMatrix) = iszero(coeff)
 
 # Helper: sum over unit‑vector multi‑indices (total degree 1) from reduced dynamics
 @inline function _sum_degree_one_terms!(accumulator::Vector{Vector{T}},
 	upper_bound::SVector{NVAR, Int},
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
-	red_coefficients::Vector{SVector{ROM, T}},
-	param_coefficients::Vector{SVector{ORD, Vector{T}}}) where {NVAR, ORD, ROM, T}
+	red_coefficients::AbstractMatrix{T},
+	param_coefficients::AbstractArray{T, 3}) where {NVAR, T}
+	ORD = size(param_coefficients, 2)
 	# Pre‑compute all unit vectors as SVector
 	unit_vectors = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR)))
 					for j in 1:NVAR]
@@ -36,7 +30,7 @@ end
 		idx_unit = get(multiindex_dict, unit_vec, nothing)
 		idx_unit === nothing && continue
 
-		red_coeff = red_coefficients[idx_unit]   # SVector{ROM,T}
+		red_coeff = @view red_coefficients[:, idx_unit]   # length-ROM view
 
 		# difference = upper_bound - eⱼ
 		diff = upper_bound - unit_vec   # SVector{NVAR,Int}
@@ -50,15 +44,14 @@ end
 			param_idx = get(multiindex_dict, param_exp, nothing)
 			param_idx === nothing && continue
 
-			@inbounds param_coeff = param_coefficients[param_idx]
+			param_coeff = @view param_coefficients[:, :, param_idx]  # FOM × ORD view
 			_is_zero_coeff(param_coeff) && continue
 
 			factor = param_exp[i] * red_val
 			for k in 1:ORD
-				vec = param_coeff[k]
 				acc_vec = accumulator[k]
-				@inbounds for l in eachindex(vec, acc_vec)
-					acc_vec[l] += factor * vec[l]
+				@inbounds for l in eachindex(acc_vec)
+					acc_vec[l] += factor * param_coeff[l, k]
 				end
 			end
 		end
@@ -70,9 +63,10 @@ end
 	upper_bound::SVector{NVAR, Int},
 	mset::MultiindexSet,
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
-	red_coefficients::Vector{SVector{ROM, T}},
-	param_coefficients::Vector{SVector{ORD, Vector{T}}},
-	total_deg_upper::Int) where {NVAR, ORD, ROM, T}
+	red_coefficients::AbstractMatrix{T},
+	param_coefficients::AbstractArray{T, 3},
+	total_deg_upper::Int) where {NVAR, T}
+	ORD = size(param_coefficients, 2)
 	candidate_idxs = indices_in_box_with_bounded_degree(
 		mset, collect(upper_bound), 2, total_deg_upper)
 	isempty(candidate_idxs) && return
@@ -84,7 +78,7 @@ end
 	exps = mset.exponents
 	@inbounds for idx in candidate_idxs
 		multiindex = exps[idx]
-		red_coeff = red_coefficients[idx]
+		red_coeff = @view red_coefficients[:, idx]   # length-ROM view
 
 		diff = upper_bound - multiindex
 
@@ -96,15 +90,14 @@ end
 			param_idx = get(multiindex_dict, param_exp, nothing)
 			param_idx === nothing && continue
 
-			@inbounds param_coeff = param_coefficients[param_idx]
+			param_coeff = @view param_coefficients[:, :, param_idx]  # FOM × ORD view
 			_is_zero_coeff(param_coeff) && continue
 
 			factor = param_exp[i] * red_val
 			for k in 1:ORD
-				vec = param_coeff[k]
 				acc_vec = accumulator[k]
-				@inbounds for l in eachindex(vec, acc_vec)
-					acc_vec[l] += factor * vec[l]
+				@inbounds for l in eachindex(acc_vec)
+					acc_vec[l] += factor * param_coeff[l, k]
 				end
 			end
 		end
@@ -116,7 +109,6 @@ end
 function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
 	parametrisation::Parametrisation{ORD, NVAR, T},
 	reduced_dynamics::ReducedDynamics{ROM, NVAR, T}) where {ORD, NVAR, ROM, T}
-	# Extract the full‑order dimension from the first coefficient
 	FOM = size(parametrisation)
 	total_deg_upper = sum(upper_bound)
 	total_deg_upper < 2 && return SVector{ORD, Vector{T}}(ntuple(_ -> zeros(T, FOM), ORD))
@@ -126,10 +118,10 @@ function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
 
 	multiindex_dict = build_exponent_index_map(mset)  # Dict{SVector{NVAR,Int},Int}
 
-	red_coefficients = coefficients(reduced_dynamics)   # Vector{SVector{ROM,T}}
-	param_coefficients = coefficients(parametrisation)   # Vector{SVector{ORD,Vector{T}}}
+	red_coefficients   = coefficients(reduced_dynamics)    # Matrix{T}   (ROM × L)
+	param_coefficients = coefficients(parametrisation)     # Array{T,3}  (FOM × ORD × L)
 
-	# Create accumulator: a vector of zero vectors (one per order component)
+	# Accumulator: one FOM-vector per order component
 	accumulator = [zeros(T, FOM) for _ in 1:ORD]
 
 	_sum_degree_one_terms!(accumulator, upper_bound,
@@ -138,7 +130,6 @@ function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
 	_sum_higher_degree_terms!(accumulator, upper_bound,
 		mset, multiindex_dict, red_coefficients, param_coefficients, total_deg_upper)
 
-	# Wrap the accumulator into an SVector and return
 	return SVector{ORD, Vector{T}}(tuple(accumulator...))
 end
 
