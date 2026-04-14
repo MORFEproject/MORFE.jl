@@ -1,5 +1,7 @@
 module MultilinearMaps
 
+export MultilinearMap, evaluate_term!
+
 """
 	MultilinearMap{ORD, F}
 

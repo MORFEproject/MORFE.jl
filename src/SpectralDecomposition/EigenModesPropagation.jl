@@ -3,6 +3,9 @@ module EigenModesPropagation
 using ..FullOrderModel
 using ..ParametrisationMethod: Parametrisation
 
+export propagate_left_eigenvector_from_last, propagate_left_jordan_vector,
+       propagate_right_eigenvector_form_first, propagate_right_jordan_vector
+
 """
     propagate_left_eigenvector_from_last(model, eigenvectors, x_last, λ, index)
 
@@ -24,28 +27,36 @@ where B[i] are the linear matrices from the NDOrderModel.
 """
 function propagate_left_eigenvector_from_last(
         model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
-        eigenvectors::Array{FOM, ORD, M},
-        x_last::Vector{T},
+        eigenvectors::Array{T2, 3},
+        x_last::Vector{T2},
         λ::Number,
-        index::Int) where {T}
+        index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT}
     linear_terms = model.linear_terms
 
-    fom = size(param_coeff, 1)
+    fom = size(eigenvectors, 1)
+    ord = size(eigenvectors, 2)
     @assert length(x_last)==fom "Vector x_last needs to have the same size as the full order model: $fom"
-    #@assert index?
+    @assert ord==ORD "`eigenvectors[i,:,j]` must be of length ORD"
+    #@assert for index?
     eigenvectors[:, ORD, index] .= x_last
-    tmp_conj = conj(x_last)
-    x_last_conj = conj(x_last)
-    for j in ORD:-1:3
-        tmp_conj .= conj(eigenvectors[:, j, index])
-        eigenvectors[:, j - 1, index] .= conj(λ .* tmp_conj .+
-                                              x_last_conj * linear_terms[j])
+    tmp_conj = x_last'
+    x_last_conj = x_last'
+    for j in (ord - 1):-1:3
+        tmp_conj .= eigenvectors[:, j, index]'
+        eigenvectors[:, j - 1, index] .= (λ .* tmp_conj .+
+                                          x_last_conj * linear_terms[j])'
+    end
+    # X[ORD-1]
+    if ORD > 2
+        eigenvectors[:, ORD - 1, index] .= (λ .* x_last_conj * linear_terms[ORDP1] .+
+                                            x_last_conj * linear_terms[ORD])'
     end
     # X[1]
-    if iszero(λ) != false
-        eigenvectors[:, 1, index] .= (-1) / λ * x_last_conj * linear_terms[1]
+    if iszero(λ) != true
+        eigenvectors[:, 1, index] .= ((-1) / λ * x_last_conj * linear_terms[1])'
     else
-        eigenvectors[:, 1, index] .= x_last_conj * linear_terms[2]
+        # ?
+        # eigenvectors[:, 1, index] .= (x_last_conj * linear_terms[2])'
     end
 end
 
@@ -69,12 +80,13 @@ It is assumed that the index of the previous Jordan vector is `index-1`.
 """
 function propagate_left_jordan_vector(
         model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
-        eigenvectors::Array{FOM, ORD, M},
+        eigenvectors::Array{T2, 3},
         λ::Number,
-        index::Int) where {T}
+        index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT}
     linear_terms = model.linear_terms
 
-    fom = size(param_coeff, 1)
+    fom = size(eigenvectors, 1)
+    ord = size(eigenvectors, 2)
     tmp_mat = linear_terms[1]
     for i in 2:ORDP1
         tmp_mat .+= λ^(i - 1) * linear_terms[i]
@@ -85,20 +97,21 @@ function propagate_left_jordan_vector(
     end
     x_last = tmp_mat \ tmp_vec
     @assert length(x_last)==fom "Vector x_last needs to have the same size as the full order model: $fom"
+    @assert ord==ORD "`eigenvectors[i,:,j]` must be of length ORD"
 
     eigenvectors[:, ORD, index] .= x_last
-    tmp_conj = conj(x_last)
-    tmp_conj2 = conj(x_last)
-    x_last_conj = conj(x_last)
+    tmp_conj = x_last'
+    tmp_conj2 = x_last'
+    x_last_conj = x_last'
     for j in ORD:-1:3
-        tmp_conj .= conj(eigenvectors[:, j, index])
-        tmp_conj2 .= conj(eigenvectors[:, j, index - 1])
-        eigenvectors[:, j - 1, index] .= conj(λ .* tmp_conj .- tmp_conj2 .+
-                                              x_last_conj * linear_terms[j])
+        tmp_conj .= eigenvectors[:, j, index]'
+        tmp_conj2 .= eigenvectors[:, j, index - 1]'
+        eigenvectors[:, j - 1, index] .= (λ .* tmp_conj .- tmp_conj2 .+
+                                          x_last_conj * linear_terms[j])'
     end
     # X[1]
     if iszero(λ) != false
-        tmp_conj2 .= conj(eigenvectors[:, 1, index - 1])
+        tmp_conj2 .= (eigenvectors[:, 1, index - 1])'
         eigenvectors[:, 1, index] .= (-1) / λ * (x_last_conj * linear_terms[1] .+ tmp_conj2)
     end
 end
@@ -122,9 +135,9 @@ where B[i] are the linear matrices from the NDOrderModel.
 """
 function propagate_right_eigenvector_form_first(
         param::Parametrisation{ORD, NVAR, T},
-        y_first::Vector{T},
+        y_first::Vector{T2},
         λ::Number,
-        index::Int) where {T}
+        index::Int) where {ORD, NVAR, T, T2}
     param_coeff = param.poly.coefficients
 
     fom = size(param_coeff, 1)
@@ -135,7 +148,7 @@ function propagate_right_eigenvector_form_first(
     λ_tmp = 1.0
     for j in 1:(ORD - 1)
         λ_tmp *= λ
-        param_coeff[:, j + 1, index] .= y_first
+        param_coeff[:, j + 1, index] .= λ_tmp * y_first
     end
 end
 
@@ -159,9 +172,9 @@ It is assumed that the index of the previous Jordan vector is `index-1`.
 """
 function propagate_right_jordan_vector(
         model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
-        param::Parametrisation{ORD, NVAR, T},
+        param::Parametrisation{ORD, NVAR, T2},
         λ::Number,
-        index::Int) where {T}
+        index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT, NVAR}
     linear_terms = model.linear_terms
     param_coeff = param.poly.coefficients
 
