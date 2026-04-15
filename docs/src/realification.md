@@ -16,13 +16,13 @@ All functions preserve the concrete polynomial type (`SparsePolynomial` or `Dens
 
 ## What is the maths?
 
-Given variables grouped as $(z_1,\dots,z_n,\bar z_1,\dots,\bar z_n,w_1,\dots,w_m)$ after canonical reordering, each monomial
+Given variables grouped as \$(z_1,\dots,z_n,\bar z_1,\dots,\bar z_n,w_1,\dots,w_m)$ after canonical reordering, each monomial
 
 $$
 z_1^{\alpha_1}\cdots z_n^{\alpha_n}\;\bar z_1^{\beta_1}\cdots\bar z_n^{\beta_n}\;w_1^{\gamma_1}\cdots w_m^{\gamma_m}
 $$
 
-is expanded using the binomial theorem for each pair $(z_k,\bar z_k)$:
+is expanded using the binomial theorem for each pair \$(z_k,\bar z_k)$:
 
 $$
 z_k^{\alpha_k}\bar z_k^{\beta_k}
@@ -33,14 +33,14 @@ z_k^{\alpha_k}\bar z_k^{\beta_k}
    y_k^{m_k+n_k}.
 $$
 
-Multiplying over all $k$ yields a sum of real monomials $x^{\gamma_x}y^{\gamma_y}w^{\gamma_w}$. Coefficients are accumulated from all combinations $(\mathbf m,\mathbf n)$ satisfying
+Multiplying over all $k$ yields a sum of real monomials $x^{\gamma_x}y^{\gamma_y}w^{\gamma_w}$. Coefficients are accumulated from all combinations \$(\mathbf m,\mathbf n)$ satisfying
 $\gamma_x = \alpha+\beta-\mathbf m-\mathbf n$ and $\gamma_y = \mathbf m+\mathbf n$.
 
 The module also handles unpaired real variables directly. The conjugation map `conj_map` (length = number of original variables) encodes:
 - `conj_map[i] = j`  means variable $i$ is the conjugate of variable $j$;
 - `conj_map[i] = i`   means variable $i$ is real.
 
-Variables are internally reordered to the canonical order $(z,\bar z,w)$ for efficient processing.
+Variables are internally reordered to the canonical order \$(z,\bar z,w)$ for efficient processing.
 
 ## How does one use the module?
 
@@ -68,7 +68,7 @@ conj_map = [2, 1, 3]   # conj(z1)=z2, conj(z2)=z1, conj(z3)=z3
 real_poly = realify(poly, conj_map)
 ```
 
-The new polynomial has variables $(x_1, y_1, w_1)$ (since $n=1$, $m=1$). Evaluation now expects real numbers:
+The new polynomial has variables \$(x_1, y_1, w_1)$ (since $n=1$, $m=1$). Evaluation now expects real numbers:
 
 ```julia
 x = real(z1); y = imag(z1); w = real(z3)
@@ -104,7 +104,7 @@ scalar = evaluate(comp1_poly, [z1,z2,z3])    # returns a number
 
 - All functions preserve the polynomial type (`Sparse`/`Dense`) and work with arbitrary coefficient types (numbers, vectors, tuples).
 - The module does not simplify powers of `im` beyond normal arithmetic; the final coefficients may still contain `im` but multiplied by real‑valued numbers, which is acceptable because the polynomial is complex‑valued but expressed in real variables.
-- The canonical variable ordering after `realify` is always $(x_1,\dots,x_n, y_1,\dots,y_n, w_1,\dots,w_m)$. This order is used in the exponent vectors of the returned polynomial.
+- The canonical variable ordering after `realify` is always \$(x_1,\dots,x_n, y_1,\dots,y_n, w_1,\dots,w_m)$. This order is used in the exponent vectors of the returned polynomial.
 - The internal functions `_reorder_canonical`, `_realify_term`, `_multinomial`, `_compositions` are for module use only; the public API is what is exported.
 
 For a complete working example, see the demo file that accompanies the module.
