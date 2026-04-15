@@ -66,7 +66,7 @@ Private = true
 ### EigenModesPropagation
 
 ```@autodocs
-Modules = [MORFE.EigenModesPropagation]
+Modules = [MORFE.PropagateEigenmodes]
 Order   = [:type, :function]
 Private = true
 ```
