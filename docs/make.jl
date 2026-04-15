@@ -20,6 +20,7 @@ makedocs(
         MORFE.ExternalSystems,
         MORFE.FullOrderModel,
         MORFE.Eigensolvers,
+        MORFE.JordanChain,
         MORFE.PropagateEigenmodes,
         MORFE.Realification,
         MORFE.Resonance,
@@ -38,7 +39,29 @@ makedocs(
             "Realification"     => "realification.md",
             "Multilinear Terms" => "multilinear_terms.md",
         ],
-        "API Reference" => "api.md",
+        "API Reference" => [
+            "Multiindices"       => "api/multiindices.md",
+            "Polynomials"        => "api/polynomials.md",
+            "Realification"      => "api/realification.md",
+            "Full Order Model"   => [
+                "MultilinearMaps"  => "api/multilinear_maps.md",
+                "ExternalSystems"  => "api/external_systems.md",
+                "FullOrderModel"   => "api/full_order_model.md",
+            ],
+            "Spectral Decomposition" => [
+                "Eigensolvers"        => "api/eigensolvers.md",
+                "JordanChain"         => "api/jordan_chain.md",
+                "PropagateEigenmodes" => "api/propagate_eigenmodes.md",
+            ],
+            "Parametrisation Method" => [
+                "Resonance"               => "api/resonance.md",
+                "InvarianceEquation"      => "api/invariance_equation.md",
+                "MasterModeOrthogonality" => "api/master_mode_orthogonality.md",
+                "ParametrisationMethod"   => "api/parametrisation_method.md",
+                "MultilinearTerms"        => "api/multilinear_terms.md",
+                "LowerOrderCouplings"     => "api/lower_order_couplings.md",
+            ],
+        ],
     ],
     format = Documenter.HTML(
         # Render math with MathJax 3 — handles complex LaTeX (sums, aligned
@@ -54,10 +77,12 @@ makedocs(
         # GitHub repo link shown in the top-right corner.
         repolink   = "https://github.com/MORFEproject/MORFE.jl",
 
-        # Collapse the sidebar to depth 1 by default so the left panel isn't
-        # overwhelming on first load; users can expand sections as needed.
-        collapselevel = 2,
+        # custom.css for improved typography and layout.
+        # logo.svg in assets/ is auto-detected by Documenter and shown in the sidebar.
         assets = ["assets/custom.css"],
+
+        # Collapse the sidebar to depth 2 so API sub-sections start expanded.
+        collapselevel = 2,
 
         # Use pretty /section/ URLs in CI; fall back to file.html locally so
         # the build can be opened directly from the filesystem without a server.
@@ -73,7 +98,6 @@ makedocs(
 )
 
 deploydocs(
-    repo         = "github.com/MORFEproject/MORFE.jl.git",
-    devbranch    = "main",
-    push_preview = true,
+    repo      = "github.com/MORFEproject/MORFE.jl.git",
+    devbranch = "main",
 )

@@ -6,12 +6,13 @@ include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
+include("SpectralDecomposition/JordanChain.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation.jl")
 include("ParametrisationMethod/MasterModeOrthogonality.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
-include("SpectralDecomposition/EigenModesPropagation.jl")
+include("SpectralDecomposition/PropagateEigenmodes.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 
@@ -22,11 +23,12 @@ using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
 using .Eigensolvers
+using .JordanChain
 using .Resonance
 using .InvarianceEquation
 using .MasterModeOrthogonality
 using .ParametrisationMethod
-using .EigenModesPropagation
+using .PropagateEigenmodes
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 

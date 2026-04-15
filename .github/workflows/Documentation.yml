@@ -4,19 +4,15 @@ on:
   push:
     branches: [main]
     tags: ['*']
-  pull_request:
 
 # GITHUB_TOKEN needs write access to push the built site to the gh-pages branch.
-# statuses: write lets Documenter post a commit status on PRs.
 permissions:
   contents: write
-  statuses: write
 
-# Cancel an in-progress docs build for the same branch/PR when a newer push
-# arrives.  Never cancel a running production (main / tag) deployment.
+# Cancel an in-progress docs build when a newer push arrives on main.
 concurrency:
   group: docs-${{ github.ref }}
-  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+  cancel-in-progress: false
 
 jobs:
   docs:
