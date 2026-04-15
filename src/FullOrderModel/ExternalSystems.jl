@@ -2,6 +2,8 @@ module ExternalSystems
 
 using StaticArrays, LinearAlgebra
 
+export ExternalSystem
+
 using ..Multiindices: all_multiindices_up_to
 
 using ..Polynomials: DensePolynomial, linear_matrix_of_polynomial

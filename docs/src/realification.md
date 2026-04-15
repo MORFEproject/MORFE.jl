@@ -22,7 +22,7 @@ $$
 z_1^{\alpha_1}\cdots z_n^{\alpha_n}\;\bar z_1^{\beta_1}\cdots\bar z_n^{\beta_n}\;w_1^{\gamma_1}\cdots w_m^{\gamma_m}
 $$
 
-is expanded using the binomial theorem for each pair \$(z_k,\bar z_k)$:
+is expanded using the binomial theorem for each pair \$(z_k,\bar z_k)\$ as follows:
 
 $$
 z_k^{\alpha_k}\bar z_k^{\beta_k}
@@ -76,7 +76,7 @@ val = evaluate(real_poly, [x, y, w])
 ```
 
 ### 4. Compose with a linear map
-If you have a polynomial in variables $x_1,\dots,x_n$ and want to express it in new variables $y_1,\dots,y_p$ via $x_i = \sum_j M_{ij} y_j$:
+If you have a polynomial in variables $x_1,\dots,x_n$ and want to express it in new variables $y_1,\dots,y_p$ via $x_i = \sum_j M_{ij} y_j$ —
 
 ```julia
 M = [1 1; 1 -1]   # 2×2 matrix

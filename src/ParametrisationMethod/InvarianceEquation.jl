@@ -175,6 +175,12 @@ module InvarianceEquation
 using LinearAlgebra
 using StaticArrays
 
+export precompute_column_polynomials,
+       evaluate_system_matrix_and_lower_order_rhs!,
+       evaluate_column!,
+       evaluate_external_rhs!,
+       assemble_cohomological_matrix_and_rhs
+
 # =============================================================================
 # 1.  Coefficient pre-computation
 # =============================================================================
