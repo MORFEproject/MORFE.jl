@@ -1,10 +1,12 @@
 module EigenModesPropagation
 
+using LinearAlgebra
+
 using ..FullOrderModel
 using ..ParametrisationMethod: Parametrisation
 
 export propagate_left_eigenvector_from_last, propagate_left_jordan_vector,
-	propagate_right_eigenvector_form_first, propagate_right_jordan_vector
+       propagate_right_eigenvector_form_first, propagate_right_jordan_vector
 
 """
 	propagate_left_eigenvector_from_last(model, eigenvectors, x_last, λ, index)
@@ -26,41 +28,42 @@ where B[i] are the linear matrices from the NDOrderModel.
 - `index`: Describes position of the current eigenvector in eigenvectors
 """
 function propagate_left_eigenvector_from_last(
-	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
-	eigenvectors::Array{T2, 3},
-	x_last::Vector{T2},
-	λ::Number,
-	index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT}
-	linear_terms = model.linear_terms
+        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
+        eigenvectors::Array{T2, 3},
+        x_last::Vector{T2},
+        λ::Number,
+        index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT}
+    linear_terms = model.linear_terms
 
-	fom = size(eigenvectors, 1)
-	ord = size(eigenvectors, 2)
-	@assert length(x_last)==fom "Vector x_last needs to have the same size as the full order model: $fom"
-	@assert ord==ORD "`eigenvectors[i,:,j]` must be of length ORD"
+    fom = size(eigenvectors, 1)
+    ord = size(eigenvectors, 2)
+    @assert length(x_last)==fom "Vector x_last needs to have the same size as the full order model: $fom"
+    @assert ord==ORD "`eigenvectors[i,:,j]` must be of length ORD"
 
-	# X[ORD]
-	eigenvectors[:, ORD, index] .= x_last
+    # X[ORD]
+    eigenvectors[:, ORD, index] .= x_last
 
-	tmp_conj = x_last'
-	x_last_conj = x_last'
+    tmp_conj = x_last'
+    x_last_conj = x_last'
 
-	# X[ORD-1]
-	if ORD > 2
-		eigenvectors[:, ORD-1, index] .= (λ .* x_last_conj * linear_terms[ORDP1] .+
-										  x_last_conj * linear_terms[ORD])'
-	end
-	#X[...]
-	for j in (ord-1):-1:3
-		tmp_conj .= eigenvectors[:, j, index]'
-		eigenvectors[:, j-1, index] .= (λ .* tmp_conj .+
-										x_last_conj * linear_terms[j])'
-	end
-	#X[1]
-	if iszero(λ) != true
-		eigenvectors[:, 1, index] .= ((-1) / λ * x_last_conj * linear_terms[1])'
-	else
-		eigenvectors[:, 1, index] .= (x_last_conj * linear_terms[2])'
-	end
+    # X[ORD-1]
+    if ORD > 2
+        eigenvectors[:, ORD - 1, index] .= (λ .* x_last_conj * linear_terms[ORDP1] .+
+                                            x_last_conj * linear_terms[ORD])'
+    end
+    #X[...]
+    for j in (ORD - 1):-1:2
+        tmp_conj = eigenvectors[:, j, index]'
+        eigenvectors[:, j - 1, index] .= (λ .* tmp_conj .+
+                                          x_last_conj * linear_terms[j])'
+    end
+    # Test last condition for X[1]
+    if iszero(λ) != true
+        tmp = norm(eigenvectors[:, 1, index] - ((-1) / λ * x_last_conj * linear_terms[1])')
+        if tmp > 1e-10
+            @warn "Left Eigenvector: `λX[1]^H = -X[ORD]^H*N[1]` not fullfilled"
+        end
+    end
 end
 
 """
@@ -82,41 +85,41 @@ It is assumed that the index of the previous Jordan vector is `index-1`.
 - `index`: Describes position of the current jordan vector in eigenvectors
 """
 function propagate_left_jordan_vector(
-	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
-	eigenvectors::Array{T2, 3},
-	λ::Number,
-	index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT}
-	linear_terms = model.linear_terms
+        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
+        eigenvectors::Array{T2, 3},
+        λ::Number,
+        index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT}
+    linear_terms = model.linear_terms
 
-	fom = size(eigenvectors, 1)
-	ord = size(eigenvectors, 2)
-	tmp_mat = linear_terms[1]
-	for i in 2:ORDP1
-		tmp_mat .+= λ^(i - 1) * linear_terms[i]
-	end
-	tmp_vec = eigenvectors[:, 1, index-1]
-	for j in 2:ORD
-		tmp_vec += eigenvectors[:, j, index-1]
-	end
-	x_last = tmp_mat \ tmp_vec
-	@assert length(x_last)==fom "Vector x_last needs to have the same size as the full order model: $fom"
-	@assert ord==ORD "`eigenvectors[i,:,j]` must be of length ORD"
+    fom = size(eigenvectors, 1)
+    ord = size(eigenvectors, 2)
+    tmp_mat = linear_terms[1]
+    for i in 2:ORDP1
+        tmp_mat .+= λ^(i - 1) * linear_terms[i]
+    end
+    tmp_vec = eigenvectors[:, 1, index - 1]
+    for j in 2:ORD
+        tmp_vec += eigenvectors[:, j, index - 1]
+    end
+    x_last = tmp_mat \ tmp_vec
+    @assert length(x_last)==fom "Vector x_last needs to have the same size as the full order model: $fom"
+    @assert ord==ORD "`eigenvectors[i,:,j]` must be of length ORD"
 
-	eigenvectors[:, ORD, index] .= x_last
-	tmp_conj = x_last'
-	tmp_conj2 = x_last'
-	x_last_conj = x_last'
-	for j in ORD:-1:3
-		tmp_conj .= eigenvectors[:, j, index]'
-		tmp_conj2 .= eigenvectors[:, j, index-1]'
-		eigenvectors[:, j-1, index] .= (λ .* tmp_conj .- tmp_conj2 .+
-										x_last_conj * linear_terms[j])'
-	end
-	# X[1]
-	if iszero(λ) != false
-		tmp_conj2 .= (eigenvectors[:, 1, index-1])'
-		eigenvectors[:, 1, index] .= (-1) / λ * (x_last_conj * linear_terms[1] .+ tmp_conj2)
-	end
+    eigenvectors[:, ORD, index] .= x_last
+    tmp_conj = x_last'
+    tmp_conj2 = x_last'
+    x_last_conj = x_last'
+    for j in ORD:-1:3
+        tmp_conj .= eigenvectors[:, j, index]'
+        tmp_conj2 .= eigenvectors[:, j, index - 1]'
+        eigenvectors[:, j - 1, index] .= (λ .* tmp_conj .- tmp_conj2 .+
+                                          x_last_conj * linear_terms[j])'
+    end
+    # X[1]
+    if iszero(λ) != false
+        tmp_conj2 .= (eigenvectors[:, 1, index - 1])'
+        eigenvectors[:, 1, index] .= (-1) / λ * (x_last_conj * linear_terms[1] .+ tmp_conj2)
+    end
 end
 
 """
@@ -137,22 +140,22 @@ where B[i] are the linear matrices from the NDOrderModel.
 - `index`: Describes position of the current eigenvector in param
 """
 function propagate_right_eigenvector_form_first(
-	param::Parametrisation{ORD, NVAR, T},
-	y_first::Vector{T2},
-	λ::Number,
-	index::Int) where {ORD, NVAR, T, T2}
-	param_coeff = param.poly.coefficients
+        param::Parametrisation{ORD, NVAR, T},
+        y_first::Vector{T2},
+        λ::Number,
+        index::Int) where {ORD, NVAR, T, T2}
+    param_coeff = param.poly.coefficients
 
-	fom = size(param_coeff, 1)
-	@assert length(y_first)==fom "Vector y_first needs to have the same size as the full order model: $fom"
+    fom = size(param_coeff, 1)
+    @assert length(y_first)==fom "Vector y_first needs to have the same size as the full order model: $fom"
 
-	#@assert index?
-	param_coeff[:, 1, index] .= y_first
-	λ_tmp = 1.0
-	for j in 1:(ORD-1)
-		λ_tmp *= λ
-		param_coeff[:, j+1, index] .= λ_tmp * y_first
-	end
+    #@assert index?
+    param_coeff[:, 1, index] .= y_first
+    λ_tmp = 1.0
+    for j in 1:(ORD - 1)
+        λ_tmp *= λ
+        param_coeff[:, j + 1, index] .= λ_tmp * y_first
+    end
 end
 
 """
@@ -174,27 +177,27 @@ It is assumed that the index of the previous Jordan vector is `index-1`.
 - `index`: Describes position of the current jordan vector in param
 """
 function propagate_right_jordan_vector(
-	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
-	param::Parametrisation{ORD, NVAR, T2},
-	λ::Number,
-	index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT, NVAR}
-	linear_terms = model.linear_terms
-	param_coeff = param.poly.coefficients
+        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
+        param::Parametrisation{ORD, NVAR, T2},
+        λ::Number,
+        index::Int) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT, NVAR}
+    linear_terms = model.linear_terms
+    param_coeff = param.poly.coefficients
 
-	fom = size(param_coeff, 1)
-	tmp_mat = linear_terms[1]
-	for i in 2:ORDP1
-		tmp_mat .+= λ^(i - 1) * linear_terms[i]
-	end
-	y_first = tmp_mat \ (-linear_terms[end]param_coeff[:, ORD, index-1])
+    fom = size(param_coeff, 1)
+    tmp_mat = linear_terms[1]
+    for i in 2:ORDP1
+        tmp_mat .+= λ^(i - 1) * linear_terms[i]
+    end
+    y_first = tmp_mat \ (-linear_terms[end]param_coeff[:, ORD, index - 1])
 
-	@assert length(y_first)==fom "Vector y_first needs to have the same size as the full order model: $fom"
+    @assert length(y_first)==fom "Vector y_first needs to have the same size as the full order model: $fom"
 
-	param_coeff[:, 1, index] .= y_first
-	for j in 1:(ORD-1)
-		param_coeff[:, j+1, index] .= λ * param_coeff[:, j+1, index] .+
-									  param_coeff[:, j+1, index-1]
-	end
+    param_coeff[:, 1, index] .= y_first
+    for j in 1:(ORD - 1)
+        param_coeff[:, j + 1, index] .= λ * param_coeff[:, j + 1, index] .+
+                                        param_coeff[:, j + 1, index - 1]
+    end
 end
 
 end
