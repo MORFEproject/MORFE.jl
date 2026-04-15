@@ -27,7 +27,7 @@ const FOM = 2
 const ORD = 2
 const ROM = 2
 const FORCING_SIZE = 1
-const NVAR = ROM + FORCING_SIZE   # = 3
+const NVAR = ROM + FORCING_SIZE # = 3
 
 # Multilinear terms
 term1 = MultilinearMap((res, x, xdot)->(@. res += x*xdot), (1, 1)) # me=0

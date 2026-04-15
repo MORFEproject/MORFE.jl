@@ -43,6 +43,7 @@ function propagate_left_eigenvector_from_last(
     # X[ORD]
     eigenvectors[:, ORD, index] .= x_last
 
+<<<<<<< Updated upstream
     tmp_conj = x_last'
     x_last_conj = x_last'
 
@@ -64,6 +65,28 @@ function propagate_left_eigenvector_from_last(
             @warn "Left Eigenvector: `λX[1]^H = -X[ORD]^H*N[1]` not fullfilled"
         end
     end
+=======
+	x_last_conj = x_last'              # read-only view of x_last
+	tmp_conj = adjoint(copy(x_last))   # fresh mutable copy — mutations won't alias x_last_conj
+
+	# X[ORD-1]
+	if ORD > 2
+		eigenvectors[:, ORD-1, index] .= (λ .* x_last_conj * linear_terms[ORDP1] .+
+										  x_last_conj * linear_terms[ORD])'
+	end
+	#X[...]
+	for j in (ord-2):-1:1
+		tmp_conj .= eigenvectors[:, j+1, index]'
+		eigenvectors[:, j, index] .= (λ .* tmp_conj .+
+									  x_last_conj * linear_terms[j+1])'
+	end
+	#X[1]
+	#if iszero(λ) != true
+	#	eigenvectors[:, 1, index] .= ((-1) / λ * x_last_conj * linear_terms[1])'
+	#else
+	#	eigenvectors[:, 1, index] .= (x_last_conj * linear_terms[2])'
+	#end
+>>>>>>> Stashed changes
 end
 
 """

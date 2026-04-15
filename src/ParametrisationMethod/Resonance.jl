@@ -87,7 +87,7 @@ function apply_internal_resonances!(resonances::AbstractMatrix{Bool}, ::GraphInt
 end
 
 # ======================================================================
-# External conditions
+# Outer conditions
 #
 # All `is_resonant(cond, target, s, k)` methods use **local indexing**:
 # `target` is a global target index; the condition first looks it up in
@@ -95,9 +95,9 @@ end
 # index to address `cond.eigenvalues` (and `cond.condition_numbers`).
 # This decouples the size of the stored arrays from the global N_TARGETS.
 # ======================================================================
-abstract type ExternalResonanceCondition end
+abstract type OuterResonanceCondition end
 
-struct EigenvalueCondition <: ExternalResonanceCondition
+struct EigenvalueCondition <: OuterResonanceCondition
 	eigenvalues::Vector{ComplexF64}
 	tol::Union{Float64, Vector{Vector{Float64}}}
 	target_indices::Vector{Int}   # global target indices this condition applies to
@@ -106,7 +106,7 @@ struct EigenvalueCondition <: ExternalResonanceCondition
 	end
 end
 
-struct RealEigenvalueCondition <: ExternalResonanceCondition
+struct RealEigenvalueCondition <: OuterResonanceCondition
 	eigenvalues::Vector{ComplexF64}
 	conjugacy_map::Vector{Int}    # local index map: conjugacy_map[local_i] = local_j
 	tol::Union{Float64, Vector{Vector{Float64}}}
@@ -116,7 +116,7 @@ struct RealEigenvalueCondition <: ExternalResonanceCondition
 	end
 end
 
-struct ConditionNumberEstimateCondition <: ExternalResonanceCondition
+struct ConditionNumberEstimateCondition <: OuterResonanceCondition
 	eigenvalues::Vector{ComplexF64}
 	spectral_radius::Float64
 	condition_numbers::Vector{Float64}
@@ -129,7 +129,7 @@ struct ConditionNumberEstimateCondition <: ExternalResonanceCondition
 end
 
 # Local-index helper: returns nothing if target is not in the condition.
-@inline _local_index(cond::ExternalResonanceCondition, target::Int) =
+@inline _local_index(cond::OuterResonanceCondition, target::Int) =
 	findfirst(==(target), cond.target_indices)
 
 function is_resonant(cond::EigenvalueCondition, target::Int, s::ComplexF64, k::Int)::Bool
@@ -183,13 +183,13 @@ end
 abstract type AbstractResonanceStyle end
 
 # n_targets: total number of target modes (rows in the resonance matrix).
-# This may exceed length(external_condition.eigenvalues) when, e.g., internal
-# resonances are handled by GraphInternal but the external condition only stores
+# This may exceed length(outer_condition.eigenvalues) when, e.g., internal
+# resonances are handled by GraphInternal but the outer condition only stores
 # the outer eigenvalues.
-struct ResonanceStyle{INT <: InternalResonance, EXT <: ExternalResonanceCondition} <: AbstractResonanceStyle
+struct ResonanceStyle{INT <: InternalResonance, EXT <: OuterResonanceCondition} <: AbstractResonanceStyle
 	super_eigenvalues::Vector{ComplexF64}
 	internal_strategy::INT
-	external_condition::EXT
+	outer_condition::EXT
 	n_internal::Int
 	n_targets::Int
 end
@@ -208,7 +208,7 @@ function build_resonances_matrix(style::ResonanceStyle{INT, EXT}, multiindices::
 		s = superharmonics[k]
 		apply_internal_resonances!(resonances, style.internal_strategy, mi, n_int, k)
 		for j in 1:N_TARGETS
-			if is_resonant(style.external_condition, j, s, k)
+			if is_resonant(style.outer_condition, j, s, k)
 				resonances[j, k] = true
 			end
 		end
@@ -280,12 +280,12 @@ function resonance_set_from_condition_number_estimate(
 	return resonance_set_from_style(style, multiindices)
 end
 
-# Advanced: graph style with any pre-built external condition.
+# Advanced: graph style with any pre-built outer condition.
 # n_targets is inferred as max(n_internal, maximum(cond.target_indices)).
-function resonance_set_from_graph_style(n_internal::Int, multiindices::MultiindexSet{NVAR}, super_eigenvalues::Vector{ComplexF64}, external_condition::ExternalResonanceCondition) where {NVAR}
-	N_TARGETS = isempty(external_condition.target_indices) ?
-				n_internal : max(n_internal, maximum(external_condition.target_indices))
-	style = ResonanceStyle(super_eigenvalues, GraphInternal(), external_condition, n_internal, N_TARGETS)
+function resonance_set_from_graph_style(n_internal::Int, multiindices::MultiindexSet{NVAR}, super_eigenvalues::Vector{ComplexF64}, outer_condition::OuterResonanceCondition) where {NVAR}
+	N_TARGETS = isempty(outer_condition.target_indices) ?
+				n_internal : max(n_internal, maximum(outer_condition.target_indices))
+	style = ResonanceStyle(super_eigenvalues, GraphInternal(), outer_condition, n_internal, N_TARGETS)
 	return resonance_set_from_style(style, multiindices)
 end
 

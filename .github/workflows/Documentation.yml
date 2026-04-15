@@ -2,23 +2,49 @@ name: Documentation
 
 on:
   push:
-    branches:
-      - main
-    tags: '*'
+    branches: [main]
+    tags: ['*']
   pull_request:
 
+# GITHUB_TOKEN needs write access to push the built site to the gh-pages branch.
+# statuses: write lets Documenter post a commit status on PRs.
+permissions:
+  contents: write
+  statuses: write
+
+# Cancel an in-progress docs build for the same branch/PR when a newer push
+# arrives.  Never cancel a running production (main / tag) deployment.
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
-  build:
+  docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.10'
-      - name: Install dependencies
-        run: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
-      - name: Build and deploy
+
+      # Cache the Julia depot so repeated runs don't re-download packages.
+      - uses: julia-actions/cache@v2
+
+      # Resolve MORFE from the local checkout (it is not in the General registry),
+      # then install all remaining docs/ dependencies.
+      - name: Install documentation dependencies
+        run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path="."))
+            Pkg.instantiate()
+          '
+
+      # Build the Documenter site and push it to the gh-pages branch.
+      # No DOCUMENTER_KEY is needed: GITHUB_TOKEN with contents:write is enough
+      # for Documenter.jl >= 1.0.
+      - name: Build and deploy documentation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
         run: julia --project=docs docs/make.jl
