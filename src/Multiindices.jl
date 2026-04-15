@@ -431,9 +431,7 @@ indices (one per factor slot) together with the number of distinct ordered
 arrangements of that combination.
 
 - `factor_indices` — indices into the multiindex set, one per factor slot.
-- `multiplier`     — number of distinct orderings (permutations) of this
-					 combination.  Always 1 for `factorisations_asymmetric`,
-					 which enumerates each ordering as a separate entry.
+- `multiplier`     — number of distinct orderings (permutations) of this combination.  Always 1 for `factorisations_asymmetric`, which enumerates each ordering as a separate entry.
 
 All three factorisation functions return `Vector{FactorisationEntry}`, so
 call sites do not need to know which variant produced the data.
