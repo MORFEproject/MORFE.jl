@@ -3,19 +3,20 @@ name: Documentation
 on:
   push:
     branches: [main]
-    tags: ['*']
 
-# GITHUB_TOKEN needs write access to push the built site to the gh-pages branch.
+# Permissions required for GitHub Pages artifact deployment.
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
-# Cancel an in-progress docs build when a newer push arrives on main.
+# Only one deployment at a time; cancel in-progress if a new push arrives.
 concurrency:
-  group: docs-${{ github.ref }}
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  docs:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,11 +25,8 @@ jobs:
         with:
           version: '1.10'
 
-      # Cache the Julia depot so repeated runs don't re-download packages.
       - uses: julia-actions/cache@v2
 
-      # Resolve MORFE from the local checkout (it is not in the General registry),
-      # then install all remaining docs/ dependencies.
       - name: Install documentation dependencies
         run: |
           julia --project=docs -e '
@@ -37,10 +35,21 @@ jobs:
             Pkg.instantiate()
           '
 
-      # Build the Documenter site and push it to the gh-pages branch.
-      # No DOCUMENTER_KEY is needed: GITHUB_TOKEN with contents:write is enough
-      # for Documenter.jl >= 1.0.
-      - name: Build and deploy documentation
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build documentation
         run: julia --project=docs docs/make.jl
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

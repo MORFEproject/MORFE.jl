@@ -96,8 +96,3 @@ makedocs(
     doctest  = false,
     warnonly = [:docs_block, :missing_docs],
 )
-
-deploydocs(
-    repo      = "github.com/MORFEproject/MORFE.jl.git",
-    devbranch = "main",
-)
