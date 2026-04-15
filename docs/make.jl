@@ -20,7 +20,7 @@ makedocs(
         MORFE.ExternalSystems,
         MORFE.FullOrderModel,
         MORFE.Eigensolvers,
-        MORFE.EigenModesPropagation,
+        MORFE.PropagateEigenmodes,
         MORFE.Realification,
         MORFE.Resonance,
         MORFE.InvarianceEquation,
@@ -56,7 +56,8 @@ makedocs(
 
         # Collapse the sidebar to depth 1 by default so the left panel isn't
         # overwhelming on first load; users can expand sections as needed.
-        collapselevel = 1,
+        collapselevel = 2,
+        assets = ["assets/custom.css"],
 
         # Use pretty /section/ URLs in CI; fall back to file.html locally so
         # the build can be opened directly from the filesystem without a server.

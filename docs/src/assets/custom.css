@@ -1,0 +1,160 @@
+/* ─── Typography ─────────────────────────────────────────────────── */
+:root {
+    --font-size-base: 16px;
+    --line-height-base: 1.65;
+    --content-max-width: 900px;
+}
+
+body {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+}
+
+/* ─── Sidebar ────────────────────────────────────────────────────── */
+nav.docs-sidebar {
+    font-size: 0.88rem;
+}
+
+nav.docs-sidebar .docs-brand {
+    padding: 1.2rem 1rem 0.8rem;
+}
+
+nav.docs-sidebar .docs-brand a {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* Active link highlight */
+nav.docs-sidebar a.is-active,
+nav.docs-sidebar a:is(.is-active) {
+    font-weight: 600;
+}
+
+/* ─── Main content area ──────────────────────────────────────────── */
+article.content {
+    max-width: var(--content-max-width);
+    font-size: 1rem;
+}
+
+/* Headings */
+article.content h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin-top: 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid #e8e8e8;
+}
+
+article.content h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin-top: 2.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #eee;
+}
+
+article.content h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    color: #333;
+}
+
+article.content h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #444;
+}
+
+/* ─── Code blocks ────────────────────────────────────────────────── */
+pre {
+    border-radius: 6px;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+}
+
+code {
+    font-size: 0.9em;
+    border-radius: 3px;
+    padding: 0.1em 0.35em;
+}
+
+/* ─── Tables ─────────────────────────────────────────────────────── */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.93rem;
+    margin: 1.2rem 0;
+}
+
+th {
+    font-weight: 600;
+    text-align: left;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 2px solid #d0d0d0;
+}
+
+td {
+    padding: 0.45rem 0.85rem;
+    border-bottom: 1px solid #eaeaea;
+    vertical-align: top;
+}
+
+tr:hover td {
+    background: #f9f9f9;
+}
+
+/* ─── Badges / shields in headings ──────────────────────────────── */
+p img[src*="shields.io"] {
+    vertical-align: middle;
+    margin-right: 0.25rem;
+}
+
+/* ─── Horizontal rules ───────────────────────────────────────────── */
+article.content hr {
+    margin: 2.5rem 0;
+    border: none;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* ─── Blockquotes ────────────────────────────────────────────────── */
+blockquote {
+    border-left: 4px solid #9558B2;
+    margin: 1.2rem 0;
+    padding: 0.6rem 1rem;
+    background: #f8f4fc;
+    border-radius: 0 4px 4px 0;
+    color: #444;
+}
+
+blockquote p {
+    margin: 0;
+}
+
+/* ─── API docstring entries ──────────────────────────────────────── */
+.docstring {
+    border-left: 3px solid #9558B2;
+    padding-left: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.docstring > .docstring-header {
+    font-size: 0.92rem;
+}
+
+/* ─── Search bar refinement ──────────────────────────────────────── */
+.docs-search input {
+    border-radius: 4px;
+    font-size: 0.88rem;
+}
+
+/* ─── Page header / breadcrumb ───────────────────────────────────── */
+.docs-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
