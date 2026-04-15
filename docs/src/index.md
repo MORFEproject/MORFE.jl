@@ -42,7 +42,7 @@ result = generalised_eigenpairs(A, B; nev = 4, sigma = 0.0)
 ## Features
 
 - **DPIM implementation** — Direct Parametrisation of Invariant Manifolds for nonlinear model order reduction
-- **N-th order ODEs** — native support for second-order (and higher-order) mechanical systems
+- **N-th order ODEs** — native support for second-order (and higher-order) systems
 - **External forcing** — polynomial external forcing handled at the level of the invariance equation
 - **Resonance handling** — graph-style, complex/real normal form, and condition-number–based strategies
 - **Polynomial framework** — multiindex sets, dense polynomials, and realification utilities
