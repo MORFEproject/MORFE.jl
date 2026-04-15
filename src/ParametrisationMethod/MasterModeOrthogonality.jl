@@ -194,6 +194,13 @@ module MasterModeOrthogonality
 using LinearAlgebra
 using StaticArrays
 
+export precompute_orthogonality_operator_coefficients,
+       precompute_orthogonality_column_polynomials,
+       evaluate_orthogonality_row_and_lower_order_rhs!,
+       evaluate_orthogonality_column_row!,
+       evaluate_orthogonality_external_rhs,
+       assemble_orthogonality_matrix_and_rhs
+
 # =============================================================================
 # 1.  Pre-compute orthogonality row-operator coefficients J_r
 # =============================================================================

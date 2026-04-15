@@ -1,6 +1,7 @@
 # API Reference
 
 Auto-generated from docstrings in the MORFE.jl source code.
+All documented names are included, both exported (public) and internal (private).
 
 ---
 
@@ -8,8 +9,8 @@ Auto-generated from docstrings in the MORFE.jl source code.
 
 ```@autodocs
 Modules = [MORFE.Multiindices]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ---
@@ -18,8 +19,8 @@ Public = true
 
 ```@autodocs
 Modules = [MORFE.Polynomials]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ---
@@ -30,24 +31,24 @@ Public = true
 
 ```@autodocs
 Modules = [MORFE.MultilinearMaps]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### ExternalSystems
 
 ```@autodocs
 Modules = [MORFE.ExternalSystems]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### Model Types
 
 ```@autodocs
 Modules = [MORFE.FullOrderModel]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ---
@@ -58,16 +59,16 @@ Public = true
 
 ```@autodocs
 Modules = [MORFE.Eigensolvers]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### EigenModesPropagation
 
 ```@autodocs
 Modules = [MORFE.EigenModesPropagation]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ---
@@ -76,8 +77,8 @@ Public = true
 
 ```@autodocs
 Modules = [MORFE.Realification]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ---
@@ -88,46 +89,54 @@ Public = true
 
 ```@autodocs
 Modules = [MORFE.Resonance]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### InvarianceEquation
 
+```@docs
+MORFE.InvarianceEquation
+```
+
 ```@autodocs
 Modules = [MORFE.InvarianceEquation]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### MasterModeOrthogonality
 
+```@docs
+MORFE.MasterModeOrthogonality
+```
+
 ```@autodocs
 Modules = [MORFE.MasterModeOrthogonality]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### Core Types
 
 ```@autodocs
 Modules = [MORFE.ParametrisationMethod]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### MultilinearTerms
 
 ```@autodocs
 Modules = [MORFE.MultilinearTerms]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
 
 ### LowerOrderCouplings
 
 ```@autodocs
 Modules = [MORFE.LowerOrderCouplings]
-Order = [:type, :function]
-Public = true
+Order   = [:type, :function]
+Private = true
 ```
