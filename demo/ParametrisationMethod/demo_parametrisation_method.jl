@@ -117,13 +117,6 @@ NVAR  = ROM + N_EXT
 master_eigenvalues = SVector{ROM, ComplexF64}(result.values[1:ROM])
 master_modes       = eigenvectors_pos[:, 1:ROM]   # FOM × ROM
 
-# Forcing direction (spatial distribution of the external load)
-external_direction = ComplexF64[1.0, 0.5]
-external_direction ./= norm(external_direction)
-
-# Generalised right eigenmode matrix:  columns = [master modes | external direction]
-generalised_right_eigenmodes = hcat(master_modes, external_direction)  # FOM × NVAR
-
 # Left eigenmodes for the master modes (needed for the orthogonality conditions)
 # In a properly implemented pipeline these come from the left eigenproblem;
 # here we use the right eigenmodes as a placeholder for illustration.
@@ -157,7 +150,7 @@ end
 W, R = solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
-	generalised_right_eigenmodes, left_eigenmodes,
+	master_modes, left_eigenmodes,
 	resonance_set,
 )
 

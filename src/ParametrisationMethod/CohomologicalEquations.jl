@@ -70,6 +70,7 @@ using ..MasterModeOrthogonality: assemble_orthogonality_matrix_and_rhs,
 	precompute_orthogonality_operator_coefficients,
 	precompute_orthogonality_column_polynomials
 using ..FullOrderModel: NDOrderModel
+using ..MultilinearTerms: compute_multilinear_terms
 using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using StaticArrays: SVector
@@ -196,12 +197,12 @@ end
 # 2.  Auxiliary helpers (module-private)
 # ==============================================================================
 
-# Return the positions in `mset` of the linear monomials eᵣ for r = 1 … ROM.
-# These correspond to the eigenmodes and are already initialised; they are
-# skipped during the main solve loop.
-function _linear_monomial_indices(mset::MultiindexSet{NVAR}, ROM::Int) where {NVAR}
+# Return the positions in `mset` of ALL unit-vector monomials eᵣ for r = 1 … NVAR.
+# These are all initialised (master modes from eigenvectors, external modes from the
+# linear cohomological solve) and are skipped during the main solve loop.
+function _linear_monomial_indices(mset::MultiindexSet{NVAR}) where {NVAR}
 	indices = Int[]
-	for r in 1:ROM
+	for r in 1:NVAR
 		e_r = zeros(Int, NVAR)
 		e_r[r] = 1
 		idx = findfirst(==(e_r), mset.exponents)
@@ -226,7 +227,7 @@ end
 # ==============================================================================
 
 """
-	solve_single_monomial!(W, R, idx, ctx) -> nothing
+	solve_single_monomial!(W, R, idx, ctx, model) -> nothing
 
 Solve the cohomological equations for the monomial with multiindex‑set position
 `idx`, updating the coefficients of `W` and `R` in‑place.
@@ -239,14 +240,18 @@ Solve the cohomological equations for the monomial with multiindex‑set positio
    `ctx.resonance_set`.
 3. Compute lower‑order coupling vectors `ξ[j]` (length `FOM`) via
    [`LowerOrderCouplings.compute_lower_order_couplings`](@ref).
-4. Retrieve the known external dynamics at this monomial from
+4. Compute the nonlinear model RHS via
+   [`MultilinearTerms.compute_multilinear_terms`](@ref).  This evaluates all
+   nonlinear terms of the full‑order model at the current monomial using
+   already‑solved lower‑order parametrisation coefficients.
+5. Retrieve the known external dynamics at this monomial from
    `ctx.external_dynamics_matrix[:, idx]`.
-5. Assemble and solve the stacked `(FOM + nR) × (FOM + nR)` linear system using
+6. Assemble and solve the stacked `(FOM + nR) × (FOM + nR)` linear system using
    [`InvarianceEquation.assemble_cohomological_matrix_and_rhs`](@ref) and
    [`MasterModeOrthogonality.assemble_orthogonality_matrix_and_rhs`](@ref).
-6. Store `W[α]` (zeroth time‑derivative) and the resonant reduced‑dynamics
+7. Store `W[α]` (zeroth time‑derivative) and the resonant reduced‑dynamics
    coefficients `R_res`.
-7. Compute higher time‑derivative coefficients `W^(j)[α]` for `j = 1 … ORD-1`
+8. Compute higher time‑derivative coefficients `W^(j)[α]` for `j = 1 … ORD-1`
    via [`ParametrisationMethod.compute_higher_derivative_coefficients!`](@ref).
 
 ## Arguments
@@ -255,12 +260,14 @@ Solve the cohomological equations for the monomial with multiindex‑set positio
 - `R :: ReducedDynamics{ROM, NVAR, T}` — reduced dynamics object (updated in‑place).
 - `idx :: Int` — position of the target monomial in the shared multiindex set.
 - `ctx :: CohomologicalContext{T, ORD, ORDP1, NVAR, ROM, FOM}` — all precomputed data.
+- `model :: NDOrderModel` — full‑order model; provides nonlinear term evaluations.
 """
 function solve_single_monomial!(
 	W::Parametrisation{ORD, NVAR, T},
 	R::ReducedDynamics{ROM, NVAR, T},
 	idx::Int,
 	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, ROM, FOM},
+	model::NDOrderModel,
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1}
 
 	multi = multiindex_set(W)[idx]
@@ -274,10 +281,15 @@ function solve_single_monomial!(
 	# ── 3. Lower-order coupling vectors ξ[j] (length FOM each) ───────────────
 	lower_order_couplings = compute_lower_order_couplings(multi, W, R)
 
-	# ── 4. Known external dynamics at this monomial ───────────────────────────
+	# ── 4. Nonlinear model terms at this monomial ─────────────────────────────
+	# Evaluates all nonlinear terms of the full-order model using lower-order W
+	# coefficients (already solved).  Added directly to the invariance RHS.
+	nonlinear_rhs = T.(compute_multilinear_terms(model, multi, W))
+
+	# ── 5. Known external dynamics at this monomial ───────────────────────────
 	external_dynamics = view(ctx.external_dynamics_matrix, :, idx)
 
-	# ── 5. Assemble and solve the stacked cohomological system ────────────────
+	# ── 6. Assemble and solve the stacked cohomological system ────────────────
 	#   invariance block:    M_inv  (FOM × FOM+nR),  rhs_inv  (FOM)
 	#   orthogonality block: M_orth (nR  × FOM+nR),  rhs_orth (nR)
 	#   stacked:             (FOM+nR) × (FOM+nR)  →  square system
@@ -290,6 +302,8 @@ function solve_single_monomial!(
 		lower_order_couplings,
 		external_dynamics,
 	)
+	rhs_inv .+= nonlinear_rhs
+
 	M_orth, rhs_orth = assemble_orthogonality_matrix_and_rhs(
 		s,
 		ctx.orthogonality_J_coeffs,
@@ -335,26 +349,29 @@ end
 # ==============================================================================
 
 """
-	solve_cohomological_equations!(W, R, ctx) -> nothing
+	solve_cohomological_equations!(W, R, ctx, model) -> nothing
 
 Solve the cohomological equations for **all** monomials in the multiindex set
 of `W` and `R`, processing them in *causal order* (ascending total degree so
 that lower‑order coefficients are available when higher‑order ones are solved).
 
-The linear monomials `eᵣ` for `r = 1 … ROM` (standard basis vectors) are
-assumed to have been initialised to the spectral data beforehand and are
-skipped.
+All unit‑vector monomials `eᵣ` for `r = 1 … NVAR` (both master modes and
+external forcing modes) are assumed to have been initialised to the spectral
+data beforehand and are skipped.
 
 ## Arguments
 
 - `W :: Parametrisation{ORD, NVAR, T}` — parametrisation (updated in‑place).
 - `R :: ReducedDynamics{ROM, NVAR, T}` — reduced dynamics (updated in‑place).
 - `ctx :: CohomologicalContext` — all precomputed data and the resonance set.
+- `model :: NDOrderModel` — full‑order model; passed through to
+  [`solve_single_monomial!`](@ref) for nonlinear term evaluation.
 """
 function solve_cohomological_equations!(
 	W::Parametrisation{ORD, NVAR, T},
 	R::ReducedDynamics{ROM, NVAR, T},
 	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, ROM, FOM},
+	model::NDOrderModel,
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1}
 
 	mset    = multiindex_set(W)
@@ -363,12 +380,13 @@ function solve_cohomological_equations!(
 	# Causal ordering: ascending total degree so lower-order data is ready first
 	indices_by_order = sort(1:nterms, by = i -> sum(mset[i]))
 
-	# Linear monomials eᵣ (r = 1…ROM) are already initialised to eigenmodes
-	skip_set = Set(_linear_monomial_indices(mset, ROM))
+	# All unit-vector monomials (master modes and external forcing) are already
+	# initialised before this loop and are skipped.
+	skip_set = Set(_linear_monomial_indices(mset))
 
 	for idx in indices_by_order
 		idx in skip_set && continue
-		solve_single_monomial!(W, R, idx, ctx)
+		solve_single_monomial!(W, R, idx, ctx, model)
 	end
 
 	return nothing
@@ -381,7 +399,7 @@ end
 """
 	solve_cohomological_problem(
 		model, mset, master_eigenvalues,
-		generalised_right_eigenmodes, left_eigenmodes, resonance_set;
+		master_modes, left_eigenmodes, resonance_set;
 		initial_W = nothing, initial_R = nothing
 	) -> (W, R)
 
@@ -397,19 +415,24 @@ linear‑operator tuple is read from `model.linear_terms`.
 1. Extract external eigenvalues from `model.external_system` and build the
    Jordan matrix `Λ`.
 2. Create (or reuse) the [`Parametrisation`](@ref) `W` and
-   [`ReducedDynamics`](@ref) `R` objects and initialise their linear monomials.
-3. Build the `N_EXT × L` external‑dynamics matrix (non‑zero only at the linear
+   [`ReducedDynamics`](@ref) `R` objects and initialise the master‑mode
+   linear monomials from `master_modes`.
+3. Solve the linear cohomological equations for each external forcing direction:
+   `L(s_ext) · W_ext = compute_multilinear_terms(model, e_ext, W)`.
+   This yields the particular solution at the forcing frequency and populates
+   the external columns of `generalised_right_eigenmodes`.
+4. Build the `N_EXT × L` external‑dynamics matrix (non‑zero only at the linear
    forcing monomials `e_{ROM+e}`).
-4. Precompute the invariance‑equation operator columns
+5. Precompute the invariance‑equation operator columns
    (`invariance_C_coeffs`, `invariance_E_coeffs`) via
    [`InvarianceEquation.precompute_column_polynomials`](@ref).
-5. Precompute the orthogonality‑condition operators
+6. Precompute the orthogonality‑condition operators
    (`orthogonality_J_coeffs`, `orthogonality_C_coeffs`, `orthogonality_E_coeffs`)
    via
    [`MasterModeOrthogonality.precompute_orthogonality_operator_coefficients`](@ref)
    and
    [`MasterModeOrthogonality.precompute_orthogonality_column_polynomials`](@ref).
-6. Assemble a [`CohomologicalContext`](@ref) and call
+7. Assemble a [`CohomologicalContext`](@ref) and call
    [`solve_cohomological_equations!`](@ref).
 
 ## Arguments
@@ -421,8 +444,9 @@ linear‑operator tuple is read from `model.linear_terms`.
   variables (`NVAR = ROM + N_EXT`).
 - `master_eigenvalues :: SVector{ROM, ComplexF64}` — eigenvalues of the master
   modes.
-- `generalised_right_eigenmodes :: Matrix{ComplexF64}` — size `FOM × NVAR`;
-  columns `1:ROM` are master eigenmodes, `ROM+1:NVAR` are external eigenmodes.
+- `master_modes :: Matrix{ComplexF64}` — size `FOM × ROM`; right eigenvectors
+  of the master modes.  The external forcing directions are derived internally
+  by solving the linear cohomological equations.
 - `left_eigenmodes :: SVector{ROM, Vector{ComplexF64}}` — left eigenvectors of
   the master modes (used in the orthogonality conditions).
 - `resonance_set :: ResonanceSet` — precomputed resonance look‑up table.
@@ -437,7 +461,7 @@ function solve_cohomological_problem(
 	model::NDOrderModel,
 	mset::MultiindexSet{NVAR},
 	master_eigenvalues::SVector{ROM, ComplexF64},
-	generalised_right_eigenmodes::Matrix{ComplexF64},
+	master_modes::Matrix{ComplexF64},
 	left_eigenmodes::SVector{ROM, Vector{ComplexF64}},
 	resonance_set::ResonanceSet;
 	initial_W::Union{Nothing, Parametrisation} = nothing,
@@ -452,8 +476,8 @@ function solve_cohomological_problem(
 	N_EXT = length(external_eigenvalues)
 
 	@assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
-	FOM = size(generalised_right_eigenmodes, 1)
-	@assert size(generalised_right_eigenmodes, 2) == NVAR
+	FOM = size(master_modes, 1)
+	@assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
 
 	ORDP1 = length(model.linear_terms)
 	ORD   = ORDP1 - 1
@@ -484,25 +508,56 @@ function solve_cohomological_problem(
 			e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
 			idx = findfirst(==(e_r), mset.exponents)
 			idx === nothing && continue
-			W.poly.coefficients[:, 1, idx] .= view(generalised_right_eigenmodes, :, r)
+			W.poly.coefficients[:, 1, idx] .= view(master_modes, :, r)
 			for k in 2:ORD
-				W.poly.coefficients[:, k, idx] .= view(generalised_right_eigenmodes, :, r) .* (Λ[r, r]^(k - 1))
+				W.poly.coefficients[:, k, idx] .= view(master_modes, :, r) .* (Λ[r, r]^(k - 1))
 			end
 			R.poly.coefficients[r, idx] = Λ[r, r]
 		end
-		# Initialise linear monomials for external forcing modes
+
+		# ── 2b. Solve external forcing directions ──────────────────────────────
+		# For each external mode e, the external direction Φ_ext[:, e] = W[e_ext]
+		# is the particular solution of the linear cohomological equation
+		#
+		#   L(s_ext) · W_ext = compute_multilinear_terms(model, e_ext, W)
+		#
+		# where s_ext = λ_{ROM+e} and W currently has only the master-mode linear
+		# monomials filled in.  This correctly derives the spatial distribution
+		# of the forcing response from the model rather than prescribing it externally.
+		external_directions = zeros(ComplexF64, FOM, N_EXT)
 		for e in 1:N_EXT
-			e_ext = SVector{NVAR, Int}(ntuple(i -> i == ROM + e ? 1 : 0, Val(NVAR)))
-			idx   = findfirst(==(e_ext), mset.exponents)
-			idx === nothing && continue
-			W.poly.coefficients[:, 1, idx] .= view(generalised_right_eigenmodes, :, ROM + e)
-			for k in 2:ORD
-				W.poly.coefficients[:, k, idx] .= view(generalised_right_eigenmodes, :, ROM + e) .* (Λ[ROM + e, ROM + e]^(k - 1))
+			s_ext = external_eigenvalues[e]
+			# Build L(s_ext) = B₀ + s·B₁ + … + s^ORD·B_ORD via Horner
+			L_sext = copy(linear_terms[ORDP1])  # start: B_ORD
+			for k in (ORDP1 - 1):-1:1
+				L_sext .= s_ext .* L_sext .+ linear_terms[k]
 			end
-			# External reduced dynamics stored in external_dynamics_matrix (step 3),
-			# not in R (which only carries master-mode rows).
+			e_ext_svec = SVector{NVAR, Int}(ntuple(i -> i == ROM + e ? 1 : 0, Val(NVAR)))
+			rhs_ext = ComplexF64.(compute_multilinear_terms(model, e_ext_svec, W))
+			W_ext = L_sext \ rhs_ext
+			external_directions[:, e] .= W_ext
+			# Store in W (zeroth and higher-derivative orders at e_ext)
+			idx_ext = findfirst(==(e_ext_svec), mset.exponents)
+			if idx_ext !== nothing
+				W.poly.coefficients[:, 1, idx_ext] .= W_ext
+				for k in 2:ORD
+					W.poly.coefficients[:, k, idx_ext] .= W_ext .* (s_ext^(k - 1))
+				end
+			end
 		end
 	end
+
+	# ── 2c. Build generalised_right_eigenmodes = [master_modes | external_directions]
+	# When initial_W/R were provided we recover the external columns from W.
+	if initial_W !== nothing && initial_R !== nothing
+		external_directions = zeros(ComplexF64, FOM, N_EXT)
+		for e in 1:N_EXT
+			e_ext_svec = SVector{NVAR, Int}(ntuple(i -> i == ROM + e ? 1 : 0, Val(NVAR)))
+			idx_ext = findfirst(==(e_ext_svec), mset.exponents)
+			idx_ext !== nothing && (external_directions[:, e] .= W.poly.coefficients[:, 1, idx_ext])
+		end
+	end
+	generalised_right_eigenmodes = hcat(master_modes, external_directions)
 
 	# ── 3. External-dynamics matrix (N_EXT × L) ───────────────────────────────
 	# For a linear external system the only non-zero entries are at the linear
@@ -542,7 +597,7 @@ function solve_cohomological_problem(
 		resonance_set,
 	)
 
-	solve_cohomological_equations!(W, R, ctx)
+	solve_cohomological_equations!(W, R, ctx, model)
 
 	return W, R
 end
