@@ -1,79 +1,131 @@
 # API Reference
 
-This page provides auto-generated documentation for the public API of MORFE.jl.
+Auto-generated from docstrings in the MORFE.jl source code.
 
-# Submodules
+---
 
 ## Multiindices
+
 ```@autodocs
 Modules = [MORFE.Multiindices]
 Order = [:type, :function]
 Public = true
 ```
 
+---
+
 ## Polynomials
+
 ```@autodocs
 Modules = [MORFE.Polynomials]
 Order = [:type, :function]
 Public = true
 ```
 
-## MultilinearMaps
+---
+
+## FullOrderModel
+
+### MultilinearMaps
+
 ```@autodocs
 Modules = [MORFE.MultilinearMaps]
 Order = [:type, :function]
 Public = true
 ```
 
-## ExternalSystems
+### ExternalSystems
+
 ```@autodocs
 Modules = [MORFE.ExternalSystems]
 Order = [:type, :function]
 Public = true
 ```
 
-## FullOrderModels
+### Model Types
+
 ```@autodocs
 Modules = [MORFE.FullOrderModel]
 Order = [:type, :function]
 Public = true
 ```
 
-## Eigensolvers
+---
+
+## SpectralDecomposition
+
+### Eigensolvers
+
 ```@autodocs
 Modules = [MORFE.Eigensolvers]
 Order = [:type, :function]
 Public = true
 ```
 
-## Resonance
+### EigenModesPropagation
+
+```@autodocs
+Modules = [MORFE.EigenModesPropagation]
+Order = [:type, :function]
+Public = true
+```
+
+---
+
+## Realification
+
+```@autodocs
+Modules = [MORFE.Realification]
+Order = [:type, :function]
+Public = true
+```
+
+---
+
+## ParametrisationMethod
+
+### Resonance
+
 ```@autodocs
 Modules = [MORFE.Resonance]
 Order = [:type, :function]
 Public = true
 ```
-## InvarianceEquation
+
+### InvarianceEquation
+
 ```@autodocs
 Modules = [MORFE.InvarianceEquation]
 Order = [:type, :function]
 Public = true
 ```
 
-## ParametrisationMethod
+### MasterModeOrthogonality
+
+```@autodocs
+Modules = [MORFE.MasterModeOrthogonality]
+Order = [:type, :function]
+Public = true
+```
+
+### Core Types
+
 ```@autodocs
 Modules = [MORFE.ParametrisationMethod]
 Order = [:type, :function]
 Public = true
 ```
 
-## MultilinearTerms
+### MultilinearTerms
+
 ```@autodocs
 Modules = [MORFE.MultilinearTerms]
 Order = [:type, :function]
 Public = true
 ```
 
-## LowerOrderCouplings
+### LowerOrderCouplings
+
 ```@autodocs
 Modules = [MORFE.LowerOrderCouplings]
 Order = [:type, :function]
