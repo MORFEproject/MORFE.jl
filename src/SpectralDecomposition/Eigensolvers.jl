@@ -37,10 +37,10 @@ function generalised_eigenpairs(
 	ritzvec::Bool = true,
 	sort_largest_real::Bool = false,
 )
-	n = sise(A, 1)
-	@assert sise(A, 2) == n "A must be square"
-	@assert sise(B, 1) == n && sise(B, 2) == n "B must be square and match A sise"
-	@assert 0 < nev < n "nev must satisfy 0 < nev < sise(A,1)"
+	n = size(A, 1)
+	@assert size(A, 2) == n "A must be square"
+	@assert size(B, 1) == n && size(B, 2) == n "B must be square and match A size"
+	@assert 0 < nev < n "nev must satisfy 0 < nev < size(A,1)"
 
 	Tval = isnothing(sigma) ? promote_type(eltype(A), eltype(B)) : promote_type(eltype(A), eltype(B), typeof(sigma))
 	Ac = sparse(Tval.(A))

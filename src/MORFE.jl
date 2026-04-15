@@ -21,7 +21,7 @@ using .Polynomials: DensePolynomial, evaluate
 using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
-using .Eigensolvers: generalized_eigenpairs
+using .Eigensolvers
 using .Resonance
 using .InvarianceEquation
 using .MasterModeOrthogonality
@@ -31,12 +31,12 @@ using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 
 export MultiindexSet, zero_multiindex,
-       all_multiindices_up_to, multiindices_with_total_degree,
-       all_multiindices_in_box, indices_in_box_with_bounded_degree
+	all_multiindices_up_to, multiindices_with_total_degree,
+	all_multiindices_in_box, indices_in_box_with_bounded_degree
 export DensePolynomial, evaluate
 export MultilinearMap, ExternalSystem
 export FullOrderModel, FirstOrderModel, NDOrderModel,
-       linear_first_order_matrices, evaluate_nonlinear_terms!
+	linear_first_order_matrices, evaluate_nonlinear_terms!
 export SingleResonance, ResonanceSet, resonance_set, resonance_set_from_eigenvalues
 export Parametrisation, create_parametrisation_method_objects
 export compute_multilinear_terms
