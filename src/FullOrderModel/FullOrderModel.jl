@@ -63,7 +63,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     n_fom::Int
     linear_terms::NTuple{ORDP1, MT}
     nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}}
-    external_system::Union{Nothing, ExternalSystem{N_EXT, T}}
+    external_system::Union{Nothing, ExternalSystem{N_EXT}}
 
     """
     NDOrderModel(linear_terms, nonlinear_terms, external_dynamics = DensePolynomial{...}())
@@ -74,11 +74,26 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     - Correct relationship between `ORD` and `ORDP1`.
     - All matrices in `linear_terms` must be adequately sized.
     """
+    # Constructor accepting an ExternalSystem object directly
     function NDOrderModel(
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}},
-            external_dynamics::DensePolynomial{SVector{N_EXT, T}, N_EXT}
+            external_system::ExternalSystem{N_EXT}
     ) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}}
+        @assert ORDP1 == ORD + 1
+        n_fom = size(linear_terms[1], 1)
+        @assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
+
+        new{ORD, ORDP1, N_NL, N_EXT, T, MT}(
+            n_fom, linear_terms, nonlinear_terms, external_system)
+    end
+
+    # Constructor accepting the external dynamics polynomial directly
+    function NDOrderModel(
+            linear_terms::NTuple{ORDP1, MT},
+            nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}},
+            external_dynamics::DensePolynomial{TE, N_EXT}
+    ) where {ORD, ORDP1, N_NL, N_EXT, T, TE, MT <: AbstractMatrix{T}}
         @assert ORDP1 == ORD + 1
         n_fom = size(linear_terms[1], 1)
         @assert all(size(B) == (n_fom, n_fom) for B in linear_terms)

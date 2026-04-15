@@ -15,6 +15,7 @@ include("ParametrisationMethod/ParametrisationMethod.jl")
 include("SpectralDecomposition/PropagateEigenmodes.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
+include("ParametrisationMethod/CohomologicalEquations.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -31,6 +32,7 @@ using .ParametrisationMethod
 using .PropagateEigenmodes
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
+using .CohomologicalEquations
 
 export MultiindexSet, zero_multiindex,
 	all_multiindices_up_to, multiindices_with_total_degree,
@@ -40,7 +42,8 @@ export MultilinearMap, ExternalSystem
 export FullOrderModel, FirstOrderModel, NDOrderModel,
 	linear_first_order_matrices, evaluate_nonlinear_terms!
 export SingleResonance, ResonanceSet, resonance_set, resonance_set_from_eigenvalues
-export Parametrisation, create_parametrisation_method_objects
+export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 export compute_multilinear_terms
+export CohomologicalContext, solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
 
 end # module

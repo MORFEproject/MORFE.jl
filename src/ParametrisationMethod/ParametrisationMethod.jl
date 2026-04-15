@@ -1,10 +1,12 @@
 module ParametrisationMethod
 
+using LinearAlgebra: mul!
 using StaticArrays: SVector
 using ..Multiindices: MultiindexSet
 using ..Polynomials: DensePolynomial
 
-export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
+export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
+	compute_higher_derivative_coefficients!
 
 """
 	Parametrisation{ORD, NVAR, T}
@@ -107,19 +109,83 @@ function create_parametrisation_method_objects(
 	return create_parametrisation_method_objects(mset, ORD, FOM, NVAR, 0, T)
 end
 
-# after solving for the parametrisation coefficients for the zero-th time derivative in the full‑order ODE, 
-# we can compute the coefficients for the higher time derivatives using the superharmonic structure of the invariance equation
-# after having the x components of the parametrisation W, we compute the x' and x'' components 
-function compute_higher_derivative_coefficients!(
-	param_coeff::AbstractMatrix{T}, red_coeff::AbstractVector{T}, superharmonic::T, global_index::Int,
-	generalised_eigenmodes::AbstractVector{<:AbstractMatrix{T}}, low_order_couplings::AbstractMatrix{T}) where {T}
+"""
+	compute_higher_derivative_coefficients!(
+		param_coeff, red_coeff, external_dynamics, superharmonic, global_index,
+		generalised_eigenmodes, lower_order_couplings
+	) -> nothing
 
-	ORD = size(param_coeff, 2)
-	for j in 1:(ORD-1)
-		param_coeff[:, j+1, global_index] .= (param_coeff[:, j, global_index] * superharmonic)
-		+ (generalised_eigenmodes[j] * red_coeff[:, global_index])
-		+ low_order_couplings[:, j]
+Compute the higher time‑derivative coefficients `W^(j+1)[α]` for `j = 1 … ORD-1`
+using the superharmonic recurrence
+
+```
+W^(j+1)[α] = s · W^(j)[α]  +  Φ_master · R[α]  +  Φ_ext · e_dyn  +  ξ[j]
+```
+
+where:
+- `s = superharmonic` is the frequency `⟨λ, α⟩`,
+- `Φ = generalised_eigenmodes` (`FOM × NVAR`) collects the right eigenmodes,
+- `R[α] = red_coeff[:, global_index]` (`ROM`‑vector) contains the master‑mode
+  reduced‑dynamics coefficients at the current monomial (already solved),
+- `e_dyn = external_dynamics` (`N_EXT`‑vector) contains the *known* external
+  dynamics at the current monomial,
+- `ξ[j] = lower_order_couplings[j]` (`FOM`‑vector) contains the coupling
+  from lower‑order monomials at derivative order `j`.
+
+Modifies `param_coeff` in‑place.  Does nothing when `ORD = 1` (no higher
+derivatives exist for a first‑order ODE).
+
+## Arguments
+
+- `param_coeff :: AbstractArray{T, 3}` — shape `FOM × ORD × L`; the coefficient
+  tensor of the parametrisation polynomial.
+- `red_coeff :: AbstractMatrix{T}` — shape `ROM × L`; master‑mode reduced‑dynamics
+  coefficients.
+- `external_dynamics :: AbstractVector{T}` — length `N_EXT`; known external
+  dynamics at the current monomial.
+- `superharmonic :: T` — scalar `s = ⟨λ, α⟩`.
+- `global_index :: Int` — monomial index into the last axis of `param_coeff` and
+  the last axis of `red_coeff`.
+- `generalised_eigenmodes :: AbstractMatrix{T}` — shape `FOM × NVAR`; right
+  generalised eigenvectors (master modes in columns `1:ROM`, external modes in
+  `ROM+1:NVAR`).
+- `lower_order_couplings :: AbstractVector{<:AbstractVector{T}}` — length `ORD`;
+  element `j` is a length‑`FOM` vector `ξ[j]` produced by
+  [`LowerOrderCouplings.compute_lower_order_couplings`](@ref).
+"""
+function compute_higher_derivative_coefficients!(
+	param_coeff::AbstractArray{T, 3},
+	red_coeff::AbstractMatrix{T},
+	external_dynamics::AbstractVector{T},
+	superharmonic::T,
+	global_index::Int,
+	generalised_eigenmodes::AbstractMatrix{T},
+	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+) where {T}
+	ORD  = size(param_coeff, 2)
+	ROM  = size(red_coeff, 1)
+	NVAR = size(generalised_eigenmodes, 2)
+	N_EXT = NVAR - ROM
+
+	Rα = view(red_coeff, :, global_index)
+
+	for j in 1:(ORD - 1)
+		Wj  = view(param_coeff, :, j,     global_index)
+		Wj1 = view(param_coeff, :, j + 1, global_index)
+
+		# W^(j+1)[α] = s·W^(j)[α] + ξ[j]
+		@. Wj1 = superharmonic * Wj + lower_order_couplings[j]
+
+		# + Φ_master · R[α]
+		mul!(Wj1, view(generalised_eigenmodes, :, 1:ROM), Rα, one(T), one(T))
+
+		# + Φ_ext · e_dyn  (only if external modes are present)
+		if N_EXT > 0
+			mul!(Wj1, view(generalised_eigenmodes, :, (ROM + 1):NVAR), external_dynamics, one(T), one(T))
+		end
 	end
+
+	return nothing
 end
 
 end # module
