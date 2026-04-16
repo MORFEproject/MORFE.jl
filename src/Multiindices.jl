@@ -158,15 +158,15 @@ Generate all exponent vectors with `nvars` variables whose total degree ≤ `max
 sorted according to graded lexicographic order.
 Returns a `MultiindexSet`.
 """
-function all_multiindices_up_to(nvars::Int, max_degree::Int)
+function all_multiindices_up_to(nvars::Int, max_degree::Int; min_degree::Int = 0)
 	if nvars == 0
 		return MultiindexSet(
 			max_degree >= 0 ? [SVector{0, Int}()] : SVector{0, Int}[], Val(true))
 	end
-	total = binomial(max_degree + nvars, nvars)
+	total = binomial(max_degree + nvars, nvars) - binomial(min_degree-1 + nvars, nvars)
 	exponents = Matrix{Int}(undef, nvars, total)
 	col = 1
-	for d in 0:max_degree
+	for d in min_degree:max_degree
 		block_size = binomial(d + nvars - 1, nvars - 1)
 		block = view(exponents, :, col:(col+block_size-1))
 		_generate_ascending_lex_fixed!(block, nvars, d)

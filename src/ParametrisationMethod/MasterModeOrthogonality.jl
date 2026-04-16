@@ -208,7 +208,7 @@ export precompute_orthogonality_operator_coefficients,
 """
 	precompute_orthogonality_operator_coefficients(fom_matrices, left_eigenmodes,
 												   master_eigenvalues)
-	-> NTuple{ROM, Matrix{T}}
+	-> Vector{Matrix{T}}
 
 Pre-compute the polynomial coefficient arrays for the orthogonality row operators
 `L_r(s)` using a downward Horner recurrence on the left eigenstructure.
@@ -227,8 +227,8 @@ L_r(s) = Σ_{j=1}^{ORD} J_coeffs[r][j, :] · s^{j-1}
 
 - `fom_matrices       :: NTuple{ORD+1, <:AbstractMatrix{T}}` – linear matrices of
   the full-order model; `fom_matrices[k+1]` corresponds to `B_k` (0-indexed).
-- `left_eigenmodes    :: SVector{ROM, <:AbstractVector{T}}` – left eigenvectors of
-  the master modes; `left_eigenmodes[r]` is a length-`FOM` vector.
+- `left_eigenmodes    :: AbstractMatrix{T}` – left eigenvectors of
+  the master modes; `left_eigenmodes[:, r]` is the length-`FOM` vector for mode `r`.
 - `master_eigenvalues :: SVector{ROM, T}` – eigenvalues `λ_r` of the master modes.
 
 ## Recurrence
@@ -250,7 +250,7 @@ stored as a column; this is standard Julia `mul!(dest, B', x)`.
 """
 function precompute_orthogonality_operator_coefficients(
 	fom_matrices::NTuple{ORDP1, <:AbstractMatrix{T}},
-	left_eigenmodes::SVector{ROM, <:AbstractVector{T}},
+	left_eigenmodes::AbstractMatrix{T},
 	master_eigenvalues::SVector{ROM, T},
 ) where {ORDP1, ROM, T}
 	ORD = ORDP1 - 1
@@ -258,10 +258,11 @@ function precompute_orthogonality_operator_coefficients(
 
 	@assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
 	@assert ROM ≥ 1 "ROM must be ≥ 1."
-	@assert all(length(ℓ) == FOM for ℓ in left_eigenmodes) "Each left eigenmode must have length FOM = $(FOM)."
+	@assert size(left_eigenmodes) == (FOM, ROM) "left_eigenmodes must be FOM × ROM ($(FOM) × $(ROM))."
 
-	return ntuple(ROM) do r
-		ℓ = left_eigenmodes[r]    # length-FOM left eigenmode
+	result = Vector{Matrix{T}}(undef, ROM)
+	for r in 1:ROM
+		ℓ = view(left_eigenmodes, :, r)    # length-FOM left eigenmode
 		λ = master_eigenvalues[r]
 
 		J_r = Matrix{T}(undef, ORD, FOM)
@@ -275,8 +276,9 @@ function precompute_orthogonality_operator_coefficients(
 			mul!(view(J_r, j, :), fom_matrices[j+1]', ℓ, one(T), one(T))  # accumulate
 		end
 
-		J_r
+		result[r] = J_r
 	end
+	return result
 end
 
 # =============================================================================
@@ -314,7 +316,7 @@ reduced dynamics and to the external forcing.
 
 ## Arguments
 
-- `J_coeffs                    :: NTuple{ROM, <:AbstractMatrix{T}}` – output of
+- `J_coeffs                    :: Vector{<:AbstractMatrix{T}}` – output of
   [`precompute_orthogonality_operator_coefficients`](@ref); `J_coeffs[r]` is
   `ORD × FOM`.
 - `generalised_right_eigenmodes :: AbstractMatrix{T}` of size `FOM × NVAR` –
@@ -346,10 +348,11 @@ onto the eigenmode basis, and `Λᵀ · q` implements the right-multiply
 - Storage: `O(ROM · ORD · NVAR)`
 """
 function precompute_orthogonality_column_polynomials(
-	J_coeffs::NTuple{ROM, <:AbstractMatrix{T}},
+	J_coeffs::AbstractVector{<:AbstractMatrix{T}},
 	generalised_right_eigenmodes::AbstractMatrix{T},   # FOM × NVAR
 	reduced_dynamics_linear::AbstractMatrix{T},        # NVAR × NVAR
-) where {ROM, T}
+) where {T}
+	ROM = length(J_coeffs)
 	ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
 	FOM = size(generalised_right_eigenmodes, 1)
 	NVAR = size(generalised_right_eigenmodes, 2)
@@ -700,7 +703,7 @@ computed by [`evaluate_orthogonality_external_rhs`](@ref) and added.
 ## Arguments
 
 - `s                      :: T` – evaluation frequency `s_k = Σᵢ kᵢ λᵢ`.
-- `J_coeffs               :: NTuple{ROM, <:AbstractMatrix{T}}` – pre-computed
+- `J_coeffs               :: Vector{<:AbstractMatrix{T}}` – pre-computed
   operator row coefficients from
   [`precompute_orthogonality_operator_coefficients`](@ref); `J_coeffs[r]` is
   `ORD × FOM`.
@@ -724,7 +727,7 @@ computed by [`evaluate_orthogonality_external_rhs`](@ref) and added.
 """
 function assemble_orthogonality_matrix_and_rhs(
 	s::T,
-	J_coeffs::NTuple{ROM, <:AbstractMatrix{T}},
+	J_coeffs::AbstractVector{<:AbstractMatrix{T}},
 	C_coeffs::Vector{<:AbstractMatrix{T}},
 	E_coeffs::Vector{<:AbstractMatrix{T}},
 	resonance::SVector{ROM, Bool},
