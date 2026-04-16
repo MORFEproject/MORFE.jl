@@ -40,7 +40,7 @@ function generalised_eigenpairs(
 	n = size(A, 1)
 	@assert size(A, 2) == n "A must be square"
 	@assert size(B, 1) == n && size(B, 2) == n "B must be square and match A size"
-	@assert 0 < nev < n "nev must satisfy 0 < nev < size(A,1)"
+	@assert 0 <= nev <= n "nev must satisfy 0 < nev < size(A,1)"
 
 	Tval = isnothing(sigma) ? promote_type(eltype(A), eltype(B)) : promote_type(eltype(A), eltype(B), typeof(sigma))
 	Ac = sparse(Tval.(A))
