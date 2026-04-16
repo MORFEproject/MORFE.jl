@@ -54,7 +54,7 @@ term_drag = MultilinearMap(
 )
 
 # External harmonic forcing
-F_ext = ComplexF64[0.0, 0.2]
+F_ext = ComplexF64[1.0, 1.0]
 term_forcing = MultilinearMap(
 	(res, r) -> (@. res += F_ext * r),
 	(0, 0), 1,   # one external variable
@@ -119,7 +119,7 @@ master_modes       = sorted_vecs[:, 1:ROM]          # size: FOM × ROM
 # Left eigenmodes for the master modes (needed for the orthogonality conditions)
 # In a properly implemented pipeline these come from the left eigenproblem;
 # here we use the right eigenmodes as a placeholder for illustration.
-left_eigenmodes = SVector{ROM, Vector{ComplexF64}}([master_modes[:, r] for r in 1:ROM]...)
+left_eigenmodes = master_modes   # FOM × ROM matrix
 
 println("\nSelected eigenpairs:")
 for (i, λ) in enumerate(master_eigenvalues)
@@ -143,7 +143,7 @@ for (i, λ) in enumerate(super_eigenvalues)
 end
 
 max_degree = 3
-mset = all_multiindices_up_to(NVAR, max_degree)
+mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
 resonance_set = resonance_set_from_graph_style(
@@ -180,7 +180,7 @@ println("\n=== Parametrisation W (first $n_monomials monomials) ===")
 for idx in 1:n_monomials
 	pos = W.poly.coefficients[:, 1, idx]
 	vel = W.poly.coefficients[:, 2, idx]
-	println("  $(mset.exponents[idx]) → pos = $pos,  vel = $vel")
+	println("  $(mset.exponents[idx]) → \tpos = $pos\n\t\tvel = $vel\n")
 end
 
 println("\n=== Reduced dynamics R (first $n_monomials monomials) ===")

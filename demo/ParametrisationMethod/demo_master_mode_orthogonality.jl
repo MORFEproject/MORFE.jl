@@ -37,7 +37,7 @@ master_eigenvalues = SVector{ROM, ComplexF64}(λ₁, λ₂)
 # For simplicity, use the first two standard basis vectors.
 Xℓ₁ = [1.0+0.0im, 0.0, 0.0, 0.0, 0.0]
 Xℓ₂ = [0.0+0.0im, 1.0, 0.0, 0.0, 0.0]
-left_eigenmodes = SVector{ROM, Vector{ComplexF64}}(Xℓ₁, Xℓ₂)
+left_eigenmodes = hcat(Xℓ₁, Xℓ₂)   # FOM × ROM matrix
 
 # Generalised right eigenvectors Y (FOM × NVAR).
 # Columns 1:ROM = master modes, ROM+1:NVAR = external forcing modes.
@@ -57,7 +57,7 @@ display(reduced_dynamics_linear)
 # -------------------------------------------------------------------
 # 2.  Precompute J_coeffs: row operator coefficients L_r(s)
 # -------------------------------------------------------------------
-# J_coeffs is NTuple{ROM, Matrix{ComplexF64}}.
+# J_coeffs is Vector{Matrix{ComplexF64}}.
 # J_coeffs[r] is ORD × FOM; row j stores the degree-(j-1) coefficient of L_r(s).
 #
 # Recurrence (ORD = 2):
@@ -79,7 +79,7 @@ end
 # Manual verification for J_coeffs.
 println("\nManual J_coeffs verification")
 for r in 1:ROM
-	Xℓ = left_eigenmodes[r]
+	Xℓ = left_eigenmodes[:, r]
 	λ = master_eigenvalues[r]
 	J2_manual = B2' * Xℓ                    # degree-1 coefficient
 	J1_manual = B2' * Xℓ .* λ .+ B1' * Xℓ   # degree-0 coefficient
@@ -113,7 +113,7 @@ end
 println("\n--- Manual verification ---")
 Y = generalised_right_eigenmodes
 for r in 1:ROM
-	Xℓ = left_eigenmodes[r]
+	Xℓ = left_eigenmodes[:, r]
 	Q1_manual = Y' * (B2' * Xℓ)    # = (Xℓᵀ · B₂ · Y)ᵀ, i.e. stored as column
 	C1_manual = Q1_manual[1:ROM]
 	E1_manual = Q1_manual[(ROM+1):NVAR]
@@ -163,8 +163,8 @@ rhs_manual = zeros(ComplexF64, nR)
 row_count = 1
 for r in 1:ROM
 	if resonance[r]
-		aux = B2' * left_eigenmodes[r]
-		M_manual[row_count, 1:FOM] = aux * (s + master_eigenvalues[r]) .+ (B1' * left_eigenmodes[r])
+		aux = B2' * left_eigenmodes[:, r]
+		M_manual[row_count, 1:FOM] = aux * (s + master_eigenvalues[r]) .+ (B1' * left_eigenmodes[:, r])
 
 		for rr in 1:ROM
 			if resonance[rr]
@@ -172,7 +172,7 @@ for r in 1:ROM
 			end
 		end
 
-		rhs_manual[row_count] = - lower_order_couplings[1]' * (B2' * left_eigenmodes[r])   # only j=1 coupling for ORD=2
+		rhs_manual[row_count] = - lower_order_couplings[1]' * (B2' * left_eigenmodes[:, r])   # only j=1 coupling for ORD=2
 		global row_count += 1
 	end
 end
@@ -207,7 +207,7 @@ println("\n--- Manual verification ---")
 # For ORD = 2:
 #   L_r(s) = Xℓ_rᵀ · (B₂·(s + λ_r) + B₁)   (row vector, length FOM)
 for r in 1:ROM
-	Xℓ = left_eigenmodes[r]
+	Xℓ = left_eigenmodes[:, r]
 	λ = master_eigenvalues[r]
 	L_r_manual = (B2 .* (s + λ) .+ B1)' * Xℓ   # Xℓ_rᵀ · (B₂(s+λ_r) + B₁)
 	println("L_$r($s) error = ", norm(J_coeffs[r]' * [1.0; s] - L_r_manual))
@@ -250,6 +250,7 @@ println("\n" * "="^80)
 # ===================================================================
 println("\n=== Random parametrisation and reduced dynamics, full check ===")
 
+using .MORFE.Multiindices: all_multiindices_up_to
 using .MORFE.ParametrisationMethod: create_parametrisation_method_objects, compute_higher_derivative_coefficients!
 using .MORFE.LowerOrderCouplings: compute_lower_order_couplings
 
@@ -269,9 +270,9 @@ for idx in 1:nterms
 	R7.poly.coefficients[:, idx]    = randn(ComplexF64, NVAR7)
 end
 
-exp = rand(0:maxdeg7, N)
+exp = rand(0:maxdeg7, NVAR7)
 superharmonic = rand() + im*rand()
-low_order_couplings = compute_lower_order_couplings(upper_bound3, W7, R7)
+low_order_couplings = compute_lower_order_couplings(exp, W7, R7)
 global_index = rand(1:nterms)
 compute_higher_derivative_coefficients!(
 	W7.poly.coefficients, R7.poly.coefficients, superharmonic, global_index,
