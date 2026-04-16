@@ -13,7 +13,7 @@ export generalised_eigenpairs
 end
 
 """
-	generalised_eigenpairs(A, B; nev, sigma=nothing, which=:LM, tol=0.0,
+	generalised_eigenpairs(A, B; nev, shift=nothing, which=:LM, tol=0.0,
 						   maxiter=3000, ncv=nothing, v0=nothing,
 						   ritzvec=true, sort_largest_real=false)
 
@@ -28,7 +28,7 @@ function generalised_eigenpairs(
 	A::AbstractMatrix,
 	B::AbstractMatrix;
 	nev::Integer,
-	sigma = nothing,
+	shift = nothing,
 	which::Symbol = :LR,
 	tol::Real = 0.0,
 	maxiter::Integer = 3000,
@@ -42,7 +42,7 @@ function generalised_eigenpairs(
 	@assert size(B, 1) == n && size(B, 2) == n "B must be square and match A size"
 	@assert 0 <= nev <= n "nev must satisfy 0 < nev < size(A,1)"
 
-	Tval = isnothing(sigma) ? promote_type(eltype(A), eltype(B)) : promote_type(eltype(A), eltype(B), typeof(sigma))
+	Tval = isnothing(shift) ? promote_type(eltype(A), eltype(B)) : promote_type(eltype(A), eltype(B), typeof(shift))
 	Ac = sparse(Tval.(A))
 	Bc = sparse(Tval.(B))
 
@@ -66,12 +66,12 @@ function generalised_eigenpairs(
 	nmult = 0
 	resid = Tval[]
 
-	if isnothing(sigma)
+	if isnothing(shift)
 		# No shift requested: use ARPACK generalised eigs directly, so `which`
 		# follows the package's native semantics.
 		vals, vecs, nconv, niter, nmult, resid = eigs(Ac, Bc; eigs_kwargs...)
 	else
-		sigc = convert(Tval, sigma)
+		sigc = convert(Tval, shift)
 		F = lu(Ac - sigc * Bc)
 		T = LinearMap{Tval}(n, n; ismutating = false) do x
 			F \ (Bc * x)

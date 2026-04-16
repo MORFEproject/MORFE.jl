@@ -33,9 +33,9 @@ using StaticArrays
 FOM = 2
 
 # NDOrderModel stores linear terms as (B₀, B₁, …, B_ORD)
-B0 = [3.0 -1.0; -1.0 2.0]   # stiffness
-B1 = 0.02 * B0   # proportional (light) damping
-B2 = [2.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
+B0 = [2.0 -1.0; -1.0 2.0]   # stiffness
+B1 = [0.01 0.0; 0.0 0.01]   # light damping
+B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 
 # ------------------------------------------------------------------------------
 # 2. Nonlinear terms and external system
@@ -43,7 +43,7 @@ B2 = [2.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 
 # Cubic stiffness:  β * x³  (Duffing-type, β = 0.5)
 term_cubic = MultilinearMap(
-	(res, x1, x2, x3) -> (@. res += 0.5 * x1 * x2 * x3),
+	(res, x1, x2, x3) -> (@. res += 1.0 * x1 * x2 * x3),
 	(3, 0),
 )
 
@@ -54,14 +54,14 @@ term_drag = MultilinearMap(
 )
 
 # External harmonic forcing
-F_ext = ComplexF64[1.0, -2.0]
+F_ext = ComplexF64[0.0, 0.2]
 term_forcing = MultilinearMap(
 	(res, r) -> (@. res += F_ext * r),
 	(0, 0), 1,   # one external variable
 )
 
 # ExternalSystem: harmonic forcing ṙ = iΩ·r with Ω = 2.5
-external_system = ExternalSystem((ComplexF64(-0.025 + 1.5809411753762381im),))
+external_system = ExternalSystem((ComplexF64(1.0im),))
 
 # ------------------------------------------------------------------------------
 # 3. Build the full-order model
@@ -70,7 +70,7 @@ external_system = ExternalSystem((ComplexF64(-0.025 + 1.5809411753762381im),))
 # ------------------------------------------------------------------------------
 model = NDOrderModel(
 	(B0, B1, B2),
-	(term_cubic, term_drag, term_forcing),
+	(term_cubic, term_forcing), # term_drag
 	external_system,
 )
 
@@ -85,52 +85,67 @@ A_eig, B_eig = linear_first_order_matrices(model)
 # ------------------------------------------------------------------------------
 # 5. Solve the generalised eigenproblem
 # ------------------------------------------------------------------------------
-# The companion system has size ORD * FOM × ORD * FOM; nev must be < that.
-nev    = 2 * FOM #- 1   # request all but one eigenvalue
-result = generalised_eigenpairs(
-A_eig, B_eig;
-nev = nev,
-which = :LM,
-tol = 1e-12,
-ncv = max(nev + 10, 20),
-v0 = randn(MersenneTwister(42), 2 * FOM),
-sort_largest_real = true
-)
 
-println("Converged eigenvalues: ", result.nconv)
-println("Eigenvalues (first $(min(nev, result.nconv))):")
-for (i, λ) in enumerate(result.values)
-	println("  $i: ", round(λ; digits = 6))
-end
+# Compute the generalized eigenproblem (A - λB) φ = 0
+eig_result = eigen(A_eig, B_eig)
 
-# Position part of eigenvectors: first FOM rows of each eigenvector
-eigenvectors_pos = result.vectors[1:FOM, :]
+# Extract the position part of eigenvectors (first FOM rows)
+# Ensure FOM is defined and within matrix dimensions
+@assert size(eig_result.vectors, 1) >= FOM "FOM exceeds eigenvector matrix rows"
+eigenvectors_pos = eig_result.vectors[1:FOM, :]
 
 # ------------------------------------------------------------------------------
 # 6. Select master modes and build the reduced-variable structure
 # ------------------------------------------------------------------------------
-ROM   = 2                   # number of master modes
-N_EXT = 1                   # number of external forcing modes
+ROM   = 2          # number of master (dominant) modes
+N_EXT = 1          # number of external forcing modes (for future use)
 NVAR  = ROM + N_EXT
 
-master_eigenvalues = SVector{ROM, ComplexF64}(result.values[1:ROM])
-master_modes       = eigenvectors_pos[:, 1:ROM]   # FOM × ROM
+# Sort eigenvalues and corresponding eigenvectors by increasing magnitude
+# (common choice for mode selection; can be replaced by, e.g., least damping)
+sorted_idx = sortperm(abs.(eig_result.values))
+sorted_vals = eig_result.values[sorted_idx]
+sorted_vecs = eigenvectors_pos[:, sorted_idx]
+
+println("\nAll eigenpairs (eigen):")
+for (i, λ) in enumerate(sorted_vals)
+	println("  mode $i: \t λ = $(round(λ, digits=6)) \t y = ", round.(sorted_vecs[:, i]; digits = 6))
+end
+
+# Select the first ROM eigenvalues/vectors as master modes
+master_eigenvalues = SVector{ROM, ComplexF64}(sorted_vals[1:ROM])
+master_modes       = sorted_vecs[:, 1:ROM]          # size: FOM × ROM
 
 # Left eigenmodes for the master modes (needed for the orthogonality conditions)
 # In a properly implemented pipeline these come from the left eigenproblem;
 # here we use the right eigenmodes as a placeholder for illustration.
 left_eigenmodes = SVector{ROM, Vector{ComplexF64}}([master_modes[:, r] for r in 1:ROM]...)
 
+println("\nSelected eigenpairs:")
+for (i, λ) in enumerate(master_eigenvalues)
+	println("  mode $i: \t λ = $(round(λ, digits=6)) \t y = ", round.(master_modes[:, i]; digits = 6))
+end
+
 # ------------------------------------------------------------------------------
 # 7. Build multiindex set and resonance set
 # ------------------------------------------------------------------------------
+
+outer_eigenvalues = sorted_vals[(ROM+1):end]
+println("\nOuter eigenvalues (non-master modes):")
+for (i, λ) in enumerate(outer_eigenvalues)
+	println("  mode $(ROM + i): \t λ = $(round(λ, digits=6))")
+end
+# super_eigenvalues must cover all NVAR variables: [master | external]
+super_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), Vector{ComplexF64}(external_system.eigenvalues))
+println("\nSuper-eigenvalues (master + external):")
+for (i, λ) in enumerate(super_eigenvalues)
+	println("  var $i: λ = $(round(λ, digits=6))")
+end
+
 max_degree = 3
 mset = all_multiindices_up_to(NVAR, max_degree)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
-outer_eigenvalues = Vector{ComplexF64}()
-# super_eigenvalues must cover all NVAR variables: [master | external]
-super_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), Vector{ComplexF64}(external_system.eigenvalues))
 resonance_set = resonance_set_from_graph_style(
 	ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05,
 )
@@ -141,6 +156,10 @@ for (idx, mi) in enumerate(mset.exponents)
 	isempty(res_str) && (res_str = "none")
 	println("  $mi → [$res_str]")
 end
+
+s = super_eigenvalues[NVAR]
+M = s^2 .* B2 + s .* B1 + B0
+
 
 # ------------------------------------------------------------------------------
 # 8. Solve cohomological equations
