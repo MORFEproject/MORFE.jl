@@ -16,7 +16,7 @@ include(joinpath(@__DIR__, "../../src/MORFE.jl"))
 
 using .MORFE.Eigensolvers: generalised_eigenpairs
 using .MORFE.Multiindices: all_multiindices_up_to
-using .MORFE.Resonance: resonance_set_from_graph_style
+using .MORFE.Resonance: resonance_set_from_graph_style, resonance_set_from_complex_normal_form_style
 using .MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
 using .MORFE.ExternalSystems: ExternalSystem
 using .MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
@@ -53,15 +53,15 @@ term_drag = MultilinearMap(
 	(0, 2),
 )
 
-# External harmonic forcing applied to the first DOF
-F_ext = ComplexF64[1.0, 0.0]
+# External harmonic forcing
+F_ext = ComplexF64[1.0, -2.0]
 term_forcing = MultilinearMap(
 	(res, r) -> (@. res += F_ext * r),
 	(0, 0), 1,   # one external variable
 )
 
 # ExternalSystem: harmonic forcing ṙ = iΩ·r with Ω = 2.5
-external_system = ExternalSystem((ComplexF64(2.5im),))
+external_system = ExternalSystem((ComplexF64(-0.025 + 1.5809411753762381im),))
 
 # ------------------------------------------------------------------------------
 # 3. Build the full-order model
@@ -86,11 +86,10 @@ A_eig, B_eig = linear_first_order_matrices(model)
 # 5. Solve the generalised eigenproblem
 # ------------------------------------------------------------------------------
 # The companion system has size ORD * FOM × ORD * FOM; nev must be < that.
-nev    = 2 * FOM - 1   # request all but one eigenvalue
+nev    = 2 * FOM #- 1   # request all but one eigenvalue
 result = generalised_eigenpairs(
 A_eig, B_eig;
 nev = nev,
-sigma = 0.1 + 1.0im,
 which = :LM,
 tol = 1e-12,
 ncv = max(nev + 10, 20),
@@ -100,7 +99,7 @@ sort_largest_real = true
 
 println("Converged eigenvalues: ", result.nconv)
 println("Eigenvalues (first $(min(nev, result.nconv))):")
-for (i, λ) in enumerate(result.values[1:min(nev, result.nconv)])
+for (i, λ) in enumerate(result.values)
 	println("  $i: ", round(λ; digits = 6))
 end
 
@@ -129,11 +128,11 @@ max_degree = 3
 mset = all_multiindices_up_to(NVAR, max_degree)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
-outer_eigenvalues = Vector{ComplexF64}(external_system.eigenvalues)
+outer_eigenvalues = Vector{ComplexF64}()
 # super_eigenvalues must cover all NVAR variables: [master | external]
-all_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), outer_eigenvalues)
+super_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), Vector{ComplexF64}(external_system.eigenvalues))
 resonance_set = resonance_set_from_graph_style(
-	ROM, mset, all_eigenvalues, outer_eigenvalues, 1e-8,
+	ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05,
 )
 
 println("\nResonance set (graph style):")
@@ -157,15 +156,16 @@ W, R = solve_cohomological_problem(
 # ------------------------------------------------------------------------------
 # 9. Display results
 # ------------------------------------------------------------------------------
-println("\n=== Parametrisation W (first $(min(10, length(mset))) monomials) ===")
-for idx in 1:min(10, length(mset))
+n_monomials = min(20, length(mset))
+println("\n=== Parametrisation W (first $n_monomials monomials) ===")
+for idx in 1:n_monomials
 	pos = W.poly.coefficients[:, 1, idx]
 	vel = W.poly.coefficients[:, 2, idx]
 	println("  $(mset.exponents[idx]) → pos = $pos,  vel = $vel")
 end
 
-println("\n=== Reduced dynamics R (first $(min(10, length(mset))) monomials) ===")
-for idx in 1:min(10, length(mset))
+println("\n=== Reduced dynamics R (first $n_monomials monomials) ===")
+for idx in 1:n_monomials
 	coeffs = R.poly.coefficients[:, idx]
 	println("  $(mset.exponents[idx]) → $coeffs")
 end
