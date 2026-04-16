@@ -67,7 +67,7 @@ result = Eigensolvers.generalized_eigenpairs(
 	A,
 	B;
 	nev = nev,
-	sigma = shift,
+	shift = shift,
 	which = whichs,
 	tol = tolerance,
 	ncv = ncv,
@@ -80,7 +80,7 @@ elapsed = time() - t0
 # print results and diagnostics
 
 println("Converged: ", result.nconv)
-println("which = ", whichs, ", sigma = ", shift)
+println("which = ", whichs, ", shift = ", shift)
 
 fmt_complex(z) = @sprintf("%.5f %+.5fi", real(z), imag(z))
 
