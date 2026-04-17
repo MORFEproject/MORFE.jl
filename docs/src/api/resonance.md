@@ -1,7 +1,8 @@
 # Resonance
 
-Resonance set construction for the parametrisation method.
-Supports graph-style, complex/real normal form, and condition-number–based resonance detection strategies.
+```@docs
+MORFE.Resonance
+```
 
 ```@autodocs
 Modules = [MORFE.Resonance]

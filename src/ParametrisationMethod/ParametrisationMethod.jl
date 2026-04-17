@@ -54,9 +54,9 @@ struct ReducedDynamics{ROM, NVAR, T}
 	external_system_size::Int
 
 	function ReducedDynamics(poly::DensePolynomial{T, NVAR, 2, Matrix{T}}, external_system_size::Int) where {T, NVAR}
-		ROM = size(poly.coefficients, 1)
 		@assert external_system_size >= 0 "external_system_size must be non‑negative"
-		@assert ROM + external_system_size == NVAR "ROM + external_system_size must equal NVAR; got $(ROM + external_system_size) vs $NVAR"
+		ROM = NVAR - external_system_size
+		@assert ROM > 0 "ROM = NVAR - external_system_size must be positive; got $(ROM)"
 		new{ROM, NVAR, T}(poly, external_system_size)
 	end
 end
@@ -96,7 +96,10 @@ function create_parametrisation_method_objects(
 	W = Parametrisation(W_poly, external_system_size)
 
 	# Reduced dynamics coefficients: (ROM, L) matrix
-	R_poly = DensePolynomial(zeros(T, ROM, length(mset)), mset)
+	R_poly = DensePolynomial(zeros(T, NVAR, length(mset)), mset)
+	# THE REDUCED DYNAMICS POLYNOMIAL HAS NVAR VARIABLES, NOT ROM, BECAUSE IT DEPENDS ON ALL REDUCED + EXTERNAL VARS
+	# ADDITIONALLY, THE COEFFICIENTS ARE NVAR-VECTORS, NOT SCALARS, SO THE COEFFICIENT ARRAY HAS SHAPE (NVAR, L)
+	# THE LAST ROWS OF THE COEFFICIENTS CORRESPOND TO THE EXTERNAL SYSTEM TERMS, WHICH ARE DIRECTLY COPIED FROM THE FULL ORDER MODEL
 	R = ReducedDynamics(R_poly, external_system_size)
 
 	return (W, R)
@@ -162,15 +165,15 @@ function compute_higher_derivative_coefficients!(
 	generalised_eigenmodes::AbstractMatrix{T},
 	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
 ) where {T}
-	ORD  = size(param_coeff, 2)
-	ROM  = size(red_coeff, 1)
+	ORD = size(param_coeff, 2)
+	ROM = size(red_coeff, 1)
 	NVAR = size(generalised_eigenmodes, 2)
 	N_EXT = NVAR - ROM
 
 	Rα = view(red_coeff, :, global_index)
 
-	for j in 1:(ORD - 1)
-		Wj  = view(param_coeff, :, j,     global_index)
+	for j in 1:(ORD-1)
+		Wj  = view(param_coeff, :, j, global_index)
 		Wj1 = view(param_coeff, :, j + 1, global_index)
 
 		# W^(j+1)[α] = s·W^(j)[α] + ξ[j]
@@ -181,7 +184,7 @@ function compute_higher_derivative_coefficients!(
 
 		# + Φ_ext · e_dyn  (only if external modes are present)
 		if N_EXT > 0
-			mul!(Wj1, view(generalised_eigenmodes, :, (ROM + 1):NVAR), external_dynamics, one(T), one(T))
+			mul!(Wj1, view(generalised_eigenmodes, :, (ROM+1):NVAR), external_dynamics, one(T), one(T))
 		end
 	end
 

@@ -176,10 +176,12 @@ using LinearAlgebra
 using StaticArrays
 
 export precompute_column_polynomials,
-       evaluate_system_matrix_and_lower_order_rhs!,
-       evaluate_column!,
-       evaluate_external_rhs!,
-       assemble_cohomological_matrix_and_rhs
+	precompute_master_column_polynomials,
+	precompute_external_column_polynomials,
+	evaluate_system_matrix_and_lower_order_rhs!,
+	evaluate_column!,
+	evaluate_external_rhs!,
+	assemble_cohomological_matrix_and_rhs
 
 # =============================================================================
 # 1.  Coefficient pre-computation
@@ -307,6 +309,125 @@ function precompute_column_polynomials(
 	return C_coeffs, E_coeffs
 end
 
+"""
+	precompute_master_column_polynomials(fom_matrices, master_modes, reduced_dynamics_linear)
+	-> (C_coeffs, D_master_steps)
+
+Φ_ext-independent half of [`precompute_column_polynomials`](@ref).  Computes only
+the master-mode column polynomials `C_r(s)` and saves the intermediate FOM×ROM
+Horner buffer at every step for later reuse by
+[`precompute_external_column_polynomials`](@ref).
+
+Because `Λ` is upper-triangular, the master columns of the Horner buffer `D`
+form a closed subsystem under the recurrence `D ← D·Λ + B[j+1]·Y`: for column
+`r ≤ ROM`, `(D·Λ)[:,r] = Σ_{k≤r} D[:,k]·Λ[k,r]` depends only on master columns.
+Therefore `C_coeffs` is independent of the external directions `Φ_ext`.
+
+## Returns
+- `C_coeffs :: Vector{Matrix{T}}` — same layout as from `precompute_column_polynomials`.
+- `D_master_steps :: Vector{Matrix{T}}` — length `ORD`; `D_master_steps[j]` is the
+  FOM×ROM master block of the Horner buffer **at the step that wrote `C_coeffs[:,j]`**.
+  Used by `precompute_external_column_polynomials` to avoid recomputing master work.
+"""
+function precompute_master_column_polynomials(
+	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+	master_modes::AbstractMatrix,           # FOM × ROM
+	reduced_dynamics_linear::AbstractMatrix, # NVAR × NVAR (only 1:ROM,1:ROM block used)
+) where {ORDP1}
+	T = promote_type(eltype(fom_matrices[1]), eltype(master_modes), eltype(reduced_dynamics_linear))
+
+	ORD = ORDP1 - 1
+	FOM = size(fom_matrices[1], 1)
+	ROM = size(master_modes, 2)
+	Λ_master = view(reduced_dynamics_linear, 1:ROM, 1:ROM)  # upper-left block
+
+	C_coeffs       = [Matrix{T}(undef, FOM, ORD) for _ in 1:ROM]
+	D_master_steps = [Matrix{T}(undef, FOM, ROM) for _ in 1:ORD]
+
+	D     = Matrix{T}(undef, FOM, ROM)
+	D_tmp = Matrix{T}(undef, FOM, ROM)
+
+	mul!(D, fom_matrices[ORDP1], master_modes)   # D ← B[ORD+1] · master_modes
+	for r in 1:ROM
+		C_coeffs[r][:, ORD] .= @view D[:, r]
+	end
+	copyto!(D_master_steps[ORD], D)
+
+	for j in (ORD-1):-1:1
+		mul!(D_tmp, D, Λ_master)                                         # D_tmp ← D · Λ_master
+		mul!(D_tmp, fom_matrices[j+1], master_modes, one(T), one(T))     # D_tmp += B[j+1] · master_modes
+		D, D_tmp = D_tmp, D
+		for r in 1:ROM
+			C_coeffs[r][:, j] .= @view D[:, r]
+		end
+		copyto!(D_master_steps[j], D)
+	end
+
+	return C_coeffs, D_master_steps
+end
+
+"""
+	precompute_external_column_polynomials(fom_matrices, external_directions,
+											reduced_dynamics_linear, D_master_steps)
+	-> E_coeffs
+
+Φ_ext-dependent half of [`precompute_column_polynomials`](@ref).  Computes the
+external-mode column polynomials `E_e(s)` reusing the pre-saved master Horner
+intermediates `D_master_steps` (from [`precompute_master_column_polynomials`](@ref))
+instead of recomputing the master-column work.
+
+Pass `external_directions = zeros(FOM, N_EXT)` to obtain the partial (Φ_ext = 0)
+E_coeffs needed for the initial external-forcing solve.
+
+## Arguments
+- `D_master_steps` — from `precompute_master_column_polynomials`; length `ORD`,
+  each `FOM × ROM`.  `D_master_steps[j]` is the master Horner buffer at step `j`.
+"""
+function precompute_external_column_polynomials(
+	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+	external_directions::AbstractMatrix,          # FOM × N_EXT
+	reduced_dynamics_linear::AbstractMatrix,      # NVAR × NVAR
+	D_master_steps::Vector{<:AbstractMatrix},     # length ORD, each FOM × ROM
+) where {ORDP1}
+	T = promote_type(eltype(fom_matrices[1]), eltype(external_directions),
+	                 eltype(reduced_dynamics_linear), eltype(D_master_steps[1]))
+
+	ORD   = ORDP1 - 1
+	FOM   = size(fom_matrices[1], 1)
+	ROM   = size(D_master_steps[1], 2)
+	N_EXT = size(external_directions, 2)
+	NVAR  = ROM + N_EXT
+
+	N_EXT == 0 && return Vector{Matrix{T}}()
+
+	Λ_master_ext = view(reduced_dynamics_linear, 1:ROM, (ROM+1):NVAR)  # ROM × N_EXT
+	Λ_ext        = view(reduced_dynamics_linear, (ROM+1):NVAR, (ROM+1):NVAR)  # N_EXT × N_EXT
+
+	E_coeffs  = [Matrix{T}(undef, FOM, ORD) for _ in 1:N_EXT]
+	D_ext     = Matrix{T}(undef, FOM, N_EXT)
+	D_ext_tmp = Matrix{T}(undef, FOM, N_EXT)
+
+	mul!(D_ext, fom_matrices[ORDP1], external_directions)  # D_ext ← B[ORD+1] · Φ_ext
+	for e in 1:N_EXT
+		E_coeffs[e][:, ORD] .= -@view D_ext[:, e]  # sign flip (LHS → RHS)
+	end
+
+	for j in (ORD-1):-1:1
+		# D_ext ← D_ext · Λ_ext + D_master_steps[j+1] · Λ_master_ext + B[j+1] · Φ_ext
+		# D_master_steps[j+1] is the master buffer at the PREVIOUS step (step j+1),
+		# which is the state of D[:,1:ROM] at the start of this loop iteration.
+		mul!(D_ext_tmp, D_ext, Λ_ext)
+		mul!(D_ext_tmp, D_master_steps[j+1], Λ_master_ext, one(T), one(T))
+		mul!(D_ext_tmp, fom_matrices[j+1], external_directions, one(T), one(T))
+		D_ext, D_ext_tmp = D_ext_tmp, D_ext
+		for e in 1:N_EXT
+			E_coeffs[e][:, j] .= -@view D_ext[:, e]  # sign flip
+		end
+	end
+
+	return E_coeffs
+end
+
 # =============================================================================
 # 2.  Fused Horner pass: parametrisation operator L(s) and lower-order RHS
 # =============================================================================
@@ -375,13 +496,15 @@ lower-order multi-indices associated with each Horner step.
 `O(ORD · FOM²)`, shared with the `L(s)` evaluation.
 """
 function evaluate_system_matrix_and_lower_order_rhs!(
-	parametrisation_operator::AbstractMatrix{T},
-	lower_order_rhs::AbstractVector{T},
-	s::T,
-	lower_order_couplings::SVector{ORD, <:AbstractVector{T}},
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix{T}},
-) where {ORD, ORDP1, T}
-	@assert ORDP1 == ORD + 1 "ORDP1 = length(linear_terms) must equal ORD + 1."
+	parametrisation_operator::AbstractMatrix,
+	lower_order_rhs::AbstractVector,
+	s::Number,
+	lower_order_couplings::AbstractVector{<:AbstractVector},
+	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+) where {ORDP1}
+	T   = eltype(parametrisation_operator)  # output type set by the caller's buffer
+	ORD = ORDP1 - 1
+	@assert length(lower_order_couplings) == ORD "length(lower_order_couplings) must equal ORD = length(linear_terms) - 1."
 
 	copyto!(parametrisation_operator, linear_terms[ORDP1]) # L ← B[ORD+1]
 
@@ -519,38 +642,55 @@ function evaluate_external_rhs!(
 	s::T,
 	external_dynamics::AbstractVector{T},
 	E_coeffs::Vector{<:AbstractMatrix{T}},
+	g::AbstractVector{T},   # pre-allocated FOM buffer; zeroed inside
 ) where {T}
 	N_EXT = length(E_coeffs)
 	@assert length(external_dynamics) == N_EXT "external_dynamics length must equal N_EXT = $(N_EXT)."
 	isempty(E_coeffs) && return rhs
 
 	ORD = size(E_coeffs[1], 2)
-	FOM = length(rhs)
 
-	# Collect active (non-zero) external indices to avoid unnecessary work.
-	active = findall(!iszero, external_dynamics)
-	isempty(active) && return rhs
+	# Check for all-zero external dynamics without allocating (replaces findall).
+	all_zero = true
+	for e in eachindex(external_dynamics)
+		!iszero(external_dynamics[e]) && (all_zero = false; break)
+	end
+	all_zero && return rhs
 
 	# Form the combined coefficient vector for each polynomial degree:
 	#   g[:, L] = Σ_{e active} E_coeffs[e][:, L] · external_dynamics[e],  L = 1…ORD
 	# then evaluate g(s) = Σ_{L=1}^{ORD} g[:, L] · s^{L-1} via a single Horner pass.
-	g = zeros(T, FOM)
+	fill!(g, zero(T))
 
 	# Initialise with the highest-degree combined coefficient (degree ORD-1).
-	for e in active
+	for e in eachindex(external_dynamics)
+		iszero(external_dynamics[e]) && continue
 		@. g += E_coeffs[e][:, ORD] * external_dynamics[e]
 	end
 
 	# Descend through remaining degrees.
 	for L in (ORD-1):-1:1
 		g .*= s
-		for e in active
+		for e in eachindex(external_dynamics)
+			iszero(external_dynamics[e]) && continue
 			@. g += E_coeffs[e][:, L] * external_dynamics[e]
 		end
 	end
 
 	rhs .+= g # addition: the sign flip was already absorbed into the coefficients E_coeffs
 	return rhs
+end
+
+# Backward-compatible overload that allocates its own buffer.
+function evaluate_external_rhs!(
+	rhs::AbstractVector{T},
+	s::T,
+	external_dynamics::AbstractVector{T},
+	E_coeffs::Vector{<:AbstractMatrix{T}},
+) where {T}
+	isempty(E_coeffs) && return rhs
+	g = zeros(T, length(rhs))
+	return evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g)
 end
 
 # =============================================================================
@@ -621,14 +761,15 @@ pass** by [`evaluate_system_matrix_and_lower_order_rhs!`](@ref).
 `(M, rhs)` where `M` is `FOM × (FOM + nR)` and `rhs` is a length-`FOM` vector.
 """
 function assemble_cohomological_matrix_and_rhs(
-	s::T,
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix{T}},
-	C_coeffs::Vector{<:AbstractMatrix{T}},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
+	s::Number,
+	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+	C_coeffs::Vector{<:AbstractMatrix},
+	E_coeffs::Vector{<:AbstractMatrix},
 	resonance::SVector{ROM, Bool},
-	lower_order_couplings::SVector{ORD, <:AbstractVector{T}},
-	external_dynamics::AbstractVector{T},
-) where {T, ROM, ORD, ORDP1}
+	lower_order_couplings::AbstractVector{<:AbstractVector},
+	external_dynamics::AbstractVector,
+) where {ROM, ORDP1}
+	T   = promote_type(typeof(s), eltype(linear_terms[1]))
 	FOM = size(linear_terms[1], 1)
 	nR  = count(resonance)
 	M   = Matrix{T}(undef, FOM, FOM + nR)
@@ -650,6 +791,40 @@ function assemble_cohomological_matrix_and_rhs(
 
 	# Accumulate external-forcing contribution into rhs.
 	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs)
+
+	return M, rhs
+end
+
+# Overload accepting a pre-allocated buffer for evaluate_external_rhs! (no alloc).
+function assemble_cohomological_matrix_and_rhs(
+	s::Number,
+	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+	C_coeffs::Vector{<:AbstractMatrix},
+	E_coeffs::Vector{<:AbstractMatrix},
+	resonance::SVector{ROM, Bool},
+	lower_order_couplings::AbstractVector{<:AbstractVector},
+	external_dynamics::AbstractVector,
+	g_buffer::AbstractVector,   # pre-allocated FOM buffer for external RHS
+) where {ROM, ORDP1}
+	T   = promote_type(typeof(s), eltype(linear_terms[1]))
+	FOM = size(linear_terms[1], 1)
+	nR  = count(resonance)
+	M   = Matrix{T}(undef, FOM, FOM + nR)
+
+	rhs = zeros(T, FOM)
+	evaluate_system_matrix_and_lower_order_rhs!(
+		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
+	)
+
+	col = FOM + 1
+	for j in eachindex(resonance)
+		if resonance[j]
+			evaluate_column!(view(M, :, col), s, j, C_coeffs)
+			col += 1
+		end
+	end
+
+	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
 
 	return M, rhs
 end

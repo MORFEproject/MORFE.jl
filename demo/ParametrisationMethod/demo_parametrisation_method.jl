@@ -121,6 +121,18 @@ master_modes       = sorted_vecs[:, 1:ROM]          # size: FOM × ROM
 # here we use the right eigenmodes as a placeholder for illustration.
 left_eigenmodes = master_modes   # FOM × ROM matrix
 
+# Higher-order master mode derivatives W^(k)[e_r], k = 2 … ORD.
+# For the companion-form eigenproblem with state ẑ = [x; ẋ; …], the k-th
+# block of ẑ (rows (k-1)*FOM+1 : k*FOM) gives W^(k)[e_r] directly.
+ORD_model = length(model.linear_terms) - 1   # = 2 for this second-order system
+master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
+for r in 1:ROM
+    orig_idx = sorted_idx[r]
+    for k in 1:(ORD_model - 1)   # k = 1 only for ORD = 2
+        master_modes_derivatives[:, k, r] .= eig_result.vectors[(k*FOM + 1):((k+1)*FOM), orig_idx]
+    end
+end
+
 println("\nSelected eigenpairs:")
 for (i, λ) in enumerate(master_eigenvalues)
 	println("  mode $i: \t λ = $(round(λ, digits=6)) \t y = ", round.(master_modes[:, i]; digits = 6))
@@ -157,9 +169,6 @@ for (idx, mi) in enumerate(mset.exponents)
 	println("  $mi → [$res_str]")
 end
 
-s = super_eigenvalues[NVAR]
-M = s^2 .* B2 + s .* B1 + B0
-
 
 # ------------------------------------------------------------------------------
 # 8. Solve cohomological equations
@@ -169,7 +178,8 @@ W, R = solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
 	master_modes, left_eigenmodes,
-	resonance_set,
+	resonance_set;
+	master_modes_derivatives = master_modes_derivatives,
 )
 
 # ------------------------------------------------------------------------------

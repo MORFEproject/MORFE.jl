@@ -29,15 +29,17 @@ makedocs(
         MORFE.ParametrisationMethod,
         MORFE.MultilinearTerms,
         MORFE.LowerOrderCouplings,
+        MORFE.CohomologicalEquations,
     ],
     pages = [
         "Home"             => "index.md",
         "Project Overview" => "project-overview.md",
         "Theoretical Background" => [
-            "Multiindices"      => "multiindices.md",
-            "Polynomials"       => "polynomials.md",
-            "Realification"     => "realification.md",
-            "Multilinear Terms" => "multilinear_terms.md",
+            "Multiindices"            => "multiindices.md",
+            "Polynomials"             => "polynomials.md",
+            "Realification"           => "realification.md",
+            "Multilinear Terms"       => "multilinear_terms.md",
+            "Cohomological Equations" => "cohomological_equations.md",
         ],
         "API Reference" => [
             "Multiindices"       => "api/multiindices.md",
@@ -60,6 +62,7 @@ makedocs(
                 "ParametrisationMethod"   => "api/parametrisation_method.md",
                 "MultilinearTerms"        => "api/multilinear_terms.md",
                 "LowerOrderCouplings"     => "api/lower_order_couplings.md",
+                "CohomologicalEquations"  => "api/cohomological_equations.md",
             ],
         ],
     ],
@@ -94,5 +97,5 @@ makedocs(
         size_threshold      = 600 * 1024,   # 600 KiB hard limit
     ),
     doctest  = false,
-    warnonly = [:docs_block, :missing_docs],
+    warnonly = [:docs_block, :missing_docs, :cross_references],
 )
