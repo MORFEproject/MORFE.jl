@@ -281,15 +281,6 @@ unnecessarily. Downstream code uses it in simple indexed access, which works on 
 Remove `CohomologicalContext` from top-level exports (keep it exported within the
 `CohomologicalEquations` submodule for advanced users).
 
-### 5.2 Remove `PropagateEigenmodes` dead stub
-
-**File:** `src/SpectralDecomposition/PropagateEigenmodes.jl`, `src/MORFE.jl:15, 32`
-
-**Problem:** `PropagateEigenmodes` is an empty module (3 lines), included and re-exported,
-contributing nothing.
-
-**Fix:** Delete the file; remove include and export lines from `MORFE.jl`.
-
 ### 5.3 Add resonance-style selection guidance
 
 **File:** `src/ParametrisationMethod/Resonance.jl`
@@ -330,7 +321,6 @@ covering: graph style (default for non-autonomous SSMs), CNF (for autonomous ROM
 | 4.3 | Remove `T.(...)` wrapper                            | 2.1        | trivial |
 | 4.4 | Remove `Vector(eigenvalues)` conversion             | —          | trivial |
 | 5.1 | Fix exports                                         | —          | trivial |
-| 5.2 | Remove PropagateEigenmodes stub                     | —          | trivial |
 | 5.3 | Add resonance style guidance                        | —          | small   |
 | 5.4 | Clean up demo                                       | 4.1, 4.3   | trivial |
 
@@ -367,6 +357,6 @@ regressions before proceeding. The full-pipeline demo is always included as a fi
 | 4.3  | `demo/ParametrisationMethod/demo_multilinear_terms.jl`<br>`demo/ParametrisationMethod/demo_parametrisation_method.jl`       | No type error; results unchanged.                                                                |
 | 4.4  | `demo/ParametrisationMethod/demo_parametrisation_method.jl`                                                                 | No type error; external eigenvalue indexing unchanged.                                           |
 | 5.1  | All demos (exports change affects every `using .MORFE.*`)                                                                    | Demo no longer needs `using .MORFE.Resonance:...`; `CohomologicalContext` not in top namespace. |
-| 5.2  | `demo/Eigensolver/demo_propagation.jl`<br>`demo/ParametrisationMethod/demo_parametrisation_method.jl`                       | No include/export errors after file deletion.                                                    |
+| 5.2  | `demo/Eigensolver/demo_propagation.jl`<br>`demo/ParametrisationMethod/demo_parametrisation_method.jl`                       | No include/export errors                                                |
 | 5.3  | `demo/ParametrisationMethod/demo_resonances.jl`<br>`demo/ParametrisationMethod/demo_parametrisation_method.jl`              | Docstring renders correctly; resonance set unchanged.                                            |
 | 5.4  | `demo/ParametrisationMethod/demo_parametrisation_method.jl`                                                                 | Dead lines removed; `left_eigenmodes = master_modes`; demo output unchanged.                    |

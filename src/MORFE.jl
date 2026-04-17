@@ -41,9 +41,13 @@ export DensePolynomial, evaluate
 export MultilinearMap, ExternalSystem
 export FullOrderModel, FirstOrderModel, NDOrderModel,
 	linear_first_order_matrices, evaluate_nonlinear_terms!
-export SingleResonance, ResonanceSet, resonance_set, resonance_set_from_eigenvalues
+export ResonanceSet,
+	resonance_set_from_graph_style,
+	resonance_set_from_complex_normal_form_style,
+	resonance_set_from_real_normal_form_style,
+	resonance_set_from_condition_number_estimate
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 export compute_multilinear_terms
-export CohomologicalContext, solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
+export solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
 
 end # module

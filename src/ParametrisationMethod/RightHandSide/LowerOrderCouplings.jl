@@ -2,10 +2,10 @@ module LowerOrderCouplings
 
 using LinearAlgebra
 using StaticArrays
-using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree,
-	build_exponent_index_map
+using ..Multiindices: MultiindexSet, build_exponent_index_map, indices_in_box_with_bounded_degree
 using ..Polynomials: nvars
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients, multiindex_set
+using StaticArrays: SVector
 
 export compute_lower_order_couplings
 
@@ -30,7 +30,7 @@ export compute_lower_order_couplings
 		idx_unit = get(multiindex_dict, unit_vec, nothing)
 		idx_unit === nothing && continue
 
-		red_coeff = @view red_coefficients[:, idx_unit]   # length-ROM view
+		red_coeff = @view red_coefficients[:, idx_unit]   # length-NVAR view
 
 		# difference = upper_bound - eⱼ
 		diff = upper_bound - unit_vec   # SVector{NVAR,Int}
@@ -65,10 +65,8 @@ end
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
 	red_coefficients::AbstractMatrix{T},
 	param_coefficients::AbstractArray{T, 3},
-	total_deg_upper::Int) where {NVAR, T}
+	candidate_idxs::AbstractVector{Int}) where {NVAR, T}
 	ORD = size(param_coefficients, 2)
-	candidate_idxs = indices_in_box_with_bounded_degree(
-		mset, collect(upper_bound), 2, total_deg_upper)
 	isempty(candidate_idxs) && return
 
 	# Pre‑compute unit vectors
@@ -106,31 +104,59 @@ end
 
 # -------------------------------------------------------------------
 # Main entry point
+# Accepts pre-allocated resources from CohomologicalContext to avoid per-call
+# heap allocation:
+#   multiindex_dict        – pre-built Dict mapping exponents to linear indices
+#   accumulator            – pre-allocated Vector{Vector{T}} (length ORD, each FOM);
+#                            zeroed by the caller before this call
+#   candidate_idxs         – pre-computed indices of sub-monomials for the
+#                            higher-degree sum (degree in [2, sum(upper_bound)-1],
+#                            componentwise ≤ upper_bound)
 function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
 	parametrisation::Parametrisation{ORD, NVAR, T},
-	reduced_dynamics::ReducedDynamics{ROM, NVAR, T}) where {ORD, NVAR, ROM, T}
-	FOM = size(parametrisation)
+	reduced_dynamics::ReducedDynamics{ROM, NVAR, T},
+	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
+	accumulator::Vector{Vector{T}},
+	candidate_idxs::AbstractVector{Int},
+) where {ORD, NVAR, ROM, T}
 	total_deg_upper = sum(upper_bound)
-	total_deg_upper < 2 && return SVector{ORD, Vector{T}}(ntuple(_ -> zeros(T, FOM), ORD))
+	total_deg_upper < 2 && return accumulator
 
 	mset = multiindex_set(parametrisation)
-	@assert mset.exponents == multiindex_set(reduced_dynamics).exponents
-
-	multiindex_dict = build_exponent_index_map(mset)  # Dict{SVector{NVAR,Int},Int}
 
 	red_coefficients   = coefficients(reduced_dynamics)    # Matrix{T}   (ROM × L)
 	param_coefficients = coefficients(parametrisation)     # Array{T,3}  (FOM × ORD × L)
-
-	# Accumulator: one FOM-vector per order component
-	accumulator = [zeros(T, FOM) for _ in 1:ORD]
 
 	_sum_degree_one_terms!(accumulator, upper_bound,
 		multiindex_dict, red_coefficients, param_coefficients)
 
 	_sum_higher_degree_terms!(accumulator, upper_bound,
-		mset, multiindex_dict, red_coefficients, param_coefficients, total_deg_upper)
+		mset, multiindex_dict, red_coefficients, param_coefficients, candidate_idxs)
 
-	return SVector{ORD, Vector{T}}(tuple(accumulator...))
+	return accumulator
+end
+
+
+# -------------------------------------------------------------------
+# Convenience wrapper (allocating): builds the dictionary, accumulator,
+# and candidate index list internally.  Accepts any AbstractVector{Int}
+# for upper_bound (including plain Vector or SVector).
+# Use the 6-argument form in performance-critical loops.
+function compute_lower_order_couplings(
+	upper_bound::AbstractVector{Int},
+	parametrisation::Parametrisation{ORD, NVAR, T},
+	reduced_dynamics::ReducedDynamics{ROM, NVAR, T},
+) where {ORD, NVAR, ROM, T}
+	mset            = multiindex_set(parametrisation)
+	FOM             = size(coefficients(parametrisation), 1)
+	multiindex_dict = build_exponent_index_map(mset)
+	accumulator     = [zeros(T, FOM) for _ in 1:ORD]
+	total_deg       = sum(upper_bound)
+	candidate_idxs  = total_deg < 2 ? Int[] :
+	indices_in_box_with_bounded_degree(mset, collect(upper_bound), 2, total_deg)
+	ub_svec         = SVector{NVAR, Int}(upper_bound)
+	return compute_lower_order_couplings(ub_svec, parametrisation, reduced_dynamics,
+		multiindex_dict, accumulator, candidate_idxs)
 end
 
 end # module

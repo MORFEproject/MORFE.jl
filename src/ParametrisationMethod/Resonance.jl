@@ -1,3 +1,29 @@
+"""
+Module `Resonance` — resonance detection for the parametrisation method.
+
+## Choosing a resonance style
+
+Four constructors are provided; choose based on the problem type:
+
+- **`resonance_set_from_graph_style`** (default for non-autonomous SSMs):
+  Detects internal resonances relative to the master-mode eigenvalue combination
+  `s = Σ kᵢ λᵢ`, plus autonomous/forced external resonances.  Use for
+  mechanical systems with harmonic forcing or whenever an external eigenvalue
+  (forcing frequency) is present.
+
+- **`resonance_set_from_complex_normal_form_style`** (autonomous ROMs, complex form):
+  Targets only near-identity monomials; suitable for computing autonomous SSMs
+  when all reduced variables are complex conjugate pairs.
+
+- **`resonance_set_from_real_normal_form_style`** (autonomous ROMs, real form):
+  Variant of CNF style operating on real eigenvalue pairs; use when building a
+  real-valued reduced-order model without explicit complex conjugation.
+
+- **`resonance_set_from_condition_number_estimate`** (near-resonance uncertainty):
+  Flags a monomial as resonant when the cohomological operator is nearly singular
+  (condition number exceeds a threshold).  Use when eigenvalues are approximate
+  or when the resonance gap is small and purely geometric criteria are unreliable.
+"""
 module Resonance
 
 using ..Multiindices: MultiindexSet, find_in_set

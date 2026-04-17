@@ -18,12 +18,13 @@ NVAR = 2
 maxdeg = 2
 mset = all_multiindices_up_to(NVAR, maxdeg)   # Grlex order: (0,0), (1,0), (0,1), (2,0), (1,1), (0,2)
 
-# Parametrisation: second‑order system (ORD=2), FOM=3, ROM=NVAR=2
+# Parametrisation: second‑order system (ORD=2), FOM=3, NVAR=2
 ORD = 2
 FOM = 3
-ROM = NVAR
+external_system_size = 1
+ROM = NVAR - external_system_size
 
-W, R = create_parametrisation_method_objects(mset, ORD, FOM, ROM, 0, ComplexF64)
+W, R = create_parametrisation_method_objects(mset, ORD, FOM, ROM, external_system_size, ComplexF64)
 
 # Fill parametrisation coefficients.
 # W.poly.coefficients layout: (FOM=3, ORD=2, L=6)
@@ -39,7 +40,7 @@ W.poly.coefficients[:, 2, :] .= [ # velocity part
 #  (0,0)  (1,0)  (0,1)  (2,0)  (1,1)  (0,2) monomial order
 
 # Fill reduced dynamics coefficients.
-# R.poly.coefficients has shape (ROM, L).
+# R.poly.coefficients has shape (NVAR, L).
 red_data = [
 	ComplexF64[0.0, 0.0],    # (0,0)
 	ComplexF64[1.0im, 0.0],  # (1,0)
@@ -56,7 +57,7 @@ println("\nParametrisation coefficients (position | velocity):")
 for (idx, exp) in enumerate(mset.exponents)
 	pos = W.poly.coefficients[:, 1, idx]
 	vel = W.poly.coefficients[:, 2, idx]
-	println("  exp $exp → pos=$pos  \tvel=$vel")
+	println("  exp $exp → pos=$pos\tvel=$vel")
 end
 println("\nReduced dynamics coefficients:")
 for (idx, exp) in enumerate(mset.exponents)
@@ -84,12 +85,14 @@ println("Result: $result")
 # result = param_(2,0) * 2 * red_multiindex_(0,1)_1
 # = ([4.0, 16.0, -6.0], [4.0, 16.0, -6.0]*im) * 2 * 1.0 = ([8.0, 32.0, -12.0], [8.0im, 32.0im, -12.0im])
 #
-expected1 = SVector{2, Vector{ComplexF64}}(
+expected1 = [
 	ComplexF64[8.0, 32.0, -12.0],          # position part
 	ComplexF64[8.0im, 32.0im, -12.0im],     # velocity part
-)
+]
 println("Expected = $expected1")
-println("Relative error: ", norm(result - expected1)/norm(expected1))
+err1 = sqrt(sum(norm(result[k] - expected1[k])^2 for k in eachindex(result)))
+nrm1 = sqrt(sum(norm(expected1[k])^2 for k in eachindex(expected1)))
+println("Relative error: ", err1 / nrm1)
 
 # ----------------------------------------------------------------------
 # 2. Monomial (2,1)
@@ -100,12 +103,57 @@ upper_bound2 = SVector{2, Int}(2, 1)
 result2 = compute_lower_order_couplings(upper_bound2, W, R)
 println("Result: $result2")
 
-expected2 = SVector{2, Vector{ComplexF64}}(
+# for upper_bound = (2,1) we have:
+#
+# i = 1 and e_1 = (1,0) ---------------------------------------------
+#
+#   red_multiindex = (0,1)
+#       param_multiindex = upper_bound - red_multiindex + e_1 = (3,0)
+#       factor = param_multiindex[1] = 3
+#       -> subtotal = param_(3,0) * 3 * red_multiindex_(0,1)_1 = nothing * 3 * 2.1 = 0.0
+#
+#   red_multiindex = (2,0)
+#       param_multiindex = upper_bound - red_multiindex + e_1 = (1,1)
+#       factor = param_multiindex[1] = 1
+#       -> subtotal = param_(1,1) * 1 * red_multiindex_(2,0)_1 = 
+#          = ([5.0, 32.0, -9.0], [5.0, 32.0, -9.0]*im) * 1 * 3 = ([15, 96, -27], [15im, 96im, -27im])
+#
+#   red_multiindex = (1,1)
+#       param_multiindex = upper_bound - red_multiindex + e_1 = (2,0)
+#       factor = param_multiindex[1] = 2
+#       -> subtotal = param_(2,0) * 2 * red_multiindex_(1,1)_1 = 
+#          = ([4.0, 16.0, -6.0], [4.0, 16.0, -6.0]*im) * 2 * 4 = ([32, 128, -48], [32im, 128im, -48im])
+#
+# i = 2 and e_2 = (0,1) ---------------------------------------------
+#
+#   red_multiindex = (2,0)
+#       param_multiindex = upper_bound - red_multiindex + e_2 = (0,2)
+#       factor = param_multiindex[2] = 2
+#       -> subtotal = param_(0,2) * 2 * red_multiindex_(2,0)_2 = 
+#          = ([6.0, 64.0, -12.0], [6.0, 64.0, -12.0]*im) * 2 * 3im = ([36im, 384im, -72im], [-36, -384, 72])
+#
+#   red_multiindex = (1,1)
+#       param_multiindex = upper_bound - red_multiindex + e_2 = (1,1)
+#       factor = param_multiindex[2] = 1
+#       -> subtotal = param_(1,1) * 1 * red_multiindex_(1,1)_2 = 
+#          = ([5.0, 32.0, -9.0], [5.0, 32.0, -9.0]*im) * 1 * 4im = ([20im, 128im, -36im], [-20, -128, 36])
+#
+# result = 0.0 + 
+#        + ([15,      96,        -27      ], [ 15im,     96im,     -27im    ]) 
+#        + ([32,      128,       -48      ], [ 32im,     128im,    -48im    ]) 
+#        + ([36im,    384im,     -72im    ], [-36,      -384,       72      ])
+#        + ([20im,    128im,     -36im    ], [-20,      -128,       36      ])
+#        = ([47+56im, 224+512im, -75-108im], [-56+47im, -512+224im, 108-75im])
+#
+
+expected2 = [
 	ComplexF64[47.0+56.0im, 224.0+512.0im, -75.0-108.0im],
 	ComplexF64[-56.0+47.0im, -512.0+224.0im, 108.0-75.0im],
-)
+]
 println("Expected = $expected2")
-println("Relative error: ", norm(result2 - expected2)/norm(expected2))
+err2 = sqrt(sum(norm(result2[k] - expected2[k])^2 for k in eachindex(result2)))
+nrm2 = sqrt(sum(norm(expected2[k])^2 for k in eachindex(expected2)))
+println("Relative error: ", err2 / nrm2)
 
 # ----------------------------------------------------------------------
 # 3. Random polynomials

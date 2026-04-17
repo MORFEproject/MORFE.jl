@@ -249,10 +249,11 @@ stored as a column; this is standard Julia `mul!(dest, B', x)`.
 - Storage: `O(ROM · ORD · FOM)`
 """
 function precompute_orthogonality_operator_coefficients(
-	fom_matrices::NTuple{ORDP1, <:AbstractMatrix{T}},
-	left_eigenmodes::AbstractMatrix{T},
-	master_eigenvalues::SVector{ROM, T},
-) where {ORDP1, ROM, T}
+	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+	left_eigenmodes::AbstractMatrix,
+	master_eigenvalues::SVector{ROM},
+) where {ORDP1, ROM}
+	T = promote_type(eltype(fom_matrices[1]), eltype(left_eigenmodes), eltype(master_eigenvalues))
 	ORD = ORDP1 - 1
 	FOM = size(first(fom_matrices), 1)
 
@@ -272,8 +273,8 @@ function precompute_orthogonality_operator_coefficients(
 
 		# Downward recurrence: J_r[j, :] = λ · J_r[j+1, :] + B[j+1]ᵀ · ℓ
 		for j in (ORD-1):-1:1
-			view(J_r, j, :) .= λ .* view(J_r, j+1, :)            # copy and scale
-			mul!(view(J_r, j, :), fom_matrices[j+1]', ℓ, one(T), one(T))  # accumulate
+			view(J_r, j, :) .= λ .* view(J_r, j+1, :)                       # copy and scale
+			mul!(view(J_r, j, :), fom_matrices[j+1]', ℓ, one(T), one(T))     # accumulate
 		end
 
 		result[r] = J_r
@@ -348,10 +349,12 @@ onto the eigenmode basis, and `Λᵀ · q` implements the right-multiply
 - Storage: `O(ROM · ORD · NVAR)`
 """
 function precompute_orthogonality_column_polynomials(
-	J_coeffs::AbstractVector{<:AbstractMatrix{T}},
-	generalised_right_eigenmodes::AbstractMatrix{T},   # FOM × NVAR
-	reduced_dynamics_linear::AbstractMatrix{T},        # NVAR × NVAR
-) where {T}
+	J_coeffs::AbstractVector{<:AbstractMatrix},
+	generalised_right_eigenmodes::AbstractMatrix,   # FOM × NVAR
+	reduced_dynamics_linear::AbstractMatrix,        # NVAR × NVAR
+)
+	T = promote_type(eltype(J_coeffs[1]), eltype(generalised_right_eigenmodes),
+	                 eltype(reduced_dynamics_linear))
 	ROM = length(J_coeffs)
 	ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
 	FOM = size(generalised_right_eigenmodes, 1)
@@ -461,9 +464,10 @@ The scalar lower-order RHS accumulation
 function evaluate_orthogonality_row_and_lower_order_rhs!(
 	row::AbstractVector{T},
 	s::T,
-	lower_order_couplings::SVector{ORD, <:AbstractVector{T}},
+	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
 	J_coeffs_r::AbstractMatrix{T},  # ORD × FOM,  ORD = ORD_M1 + 1
-) where {T, ORD}
+) where {T}
+	ORD = length(lower_order_couplings)
 
 	copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
 
@@ -731,9 +735,9 @@ function assemble_orthogonality_matrix_and_rhs(
 	C_coeffs::Vector{<:AbstractMatrix{T}},
 	E_coeffs::Vector{<:AbstractMatrix{T}},
 	resonance::SVector{ROM, Bool},
-	lower_order_couplings::SVector{ORD_M1, <:AbstractVector{T}},
+	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
 	external_dynamics::AbstractVector{T},
-) where {T, ROM, ORD_M1}
+) where {T, ROM}
 	FOM = size(J_coeffs[1], 2)   # J_coeffs[r] is ORD × FOM
 	nR  = count(resonance)
 	M   = Matrix{T}(undef, nR, FOM + nR)
