@@ -41,7 +41,7 @@ B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 # 2. Nonlinear terms and external system
 # ------------------------------------------------------------------------------
 
-# Cubic stiffness:  β * x³  (Duffing-type, β = 0.5)
+# Cubic stiffness:  β * x³  (Duffing-type, β = 1.0)
 term_cubic = MultilinearMap(
 	(res, x1, x2, x3) -> (@. res += 1.0 * x1 * x2 * x3),
 	(3, 0),
@@ -49,7 +49,7 @@ term_cubic = MultilinearMap(
 
 # Quadratic damping:  γ * ẋ²  (γ = 0.1)
 term_drag = MultilinearMap(
-	(res, xd1, xd2) -> (@. res += 0.1 * xd1 * xd2),
+	(res, v1, v2) -> (@. res += 0.1 * v1 * v2),
 	(0, 2),
 )
 
@@ -70,7 +70,7 @@ external_system = ExternalSystem((ComplexF64(1.0im),))
 # ------------------------------------------------------------------------------
 model = NDOrderModel(
 	(B0, B1, B2),
-	(term_cubic, term_forcing), # term_drag
+	(term_cubic, term_forcing, term_drag), # 
 	external_system,
 )
 
@@ -107,9 +107,9 @@ sorted_idx = sortperm(abs.(eig_result.values))
 sorted_vals = eig_result.values[sorted_idx]
 sorted_vecs = eigenvectors_pos[:, sorted_idx]
 
-println("\nAll eigenpairs (eigen):")
+println("\n--- All eigenpairs (eigen) ---\n")
 for (i, λ) in enumerate(sorted_vals)
-	println("  mode $i: \t λ = $(round(λ, digits=6)) \t y = ", round.(sorted_vecs[:, i]; digits = 6))
+	println("  mode $i →   λ = $λ\n\t     y = $(sorted_vecs[:, i])\n")
 end
 
 # Select the first ROM eigenvalues/vectors as master modes
@@ -127,15 +127,15 @@ left_eigenmodes = master_modes   # FOM × ROM matrix
 ORD_model = length(model.linear_terms) - 1   # = 2 for this second-order system
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
-    orig_idx = sorted_idx[r]
-    for k in 1:(ORD_model - 1)   # k = 1 only for ORD = 2
-        master_modes_derivatives[:, k, r] .= eig_result.vectors[(k*FOM + 1):((k+1)*FOM), orig_idx]
-    end
+	orig_idx = sorted_idx[r]
+	for k in 1:(ORD_model-1)   # k = 1 only for ORD = 2
+		master_modes_derivatives[:, k, r] .= eig_result.vectors[(k*FOM+1):((k+1)*FOM), orig_idx]
+	end
 end
 
-println("\nSelected eigenpairs:")
+println("\n--- Selected master modes ---\n")
 for (i, λ) in enumerate(master_eigenvalues)
-	println("  mode $i: \t λ = $(round(λ, digits=6)) \t y = ", round.(master_modes[:, i]; digits = 6))
+	println("  mode $i →   λ = $(round(λ, digits=6))\n\t     y = $(master_modes[:, i])\n")
 end
 
 # ------------------------------------------------------------------------------
@@ -143,15 +143,15 @@ end
 # ------------------------------------------------------------------------------
 
 outer_eigenvalues = sorted_vals[(ROM+1):end]
-println("\nOuter eigenvalues (non-master modes):")
+println("\n--- Outer eigenvalues (slave modes) ---\n")
 for (i, λ) in enumerate(outer_eigenvalues)
-	println("  mode $(ROM + i): \t λ = $(round(λ, digits=6))")
+	println("  mode $(ROM + i) →   λ = $λ")
 end
 # super_eigenvalues must cover all NVAR variables: [master | external]
 super_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), Vector{ComplexF64}(external_system.eigenvalues))
-println("\nSuper-eigenvalues (master + external):")
+println("\n--- Super-eigenvalues (master + external) ---\n")
 for (i, λ) in enumerate(super_eigenvalues)
-	println("  var $i: λ = $(round(λ, digits=6))")
+	println("  var $i →   λ = $λ")
 end
 
 max_degree = 3
@@ -186,17 +186,12 @@ W, R = solve_cohomological_problem(
 # 9. Display results
 # ------------------------------------------------------------------------------
 n_monomials = min(20, length(mset))
-println("\n=== Parametrisation W (first $n_monomials monomials) ===")
+println("\n=== Solution (first $n_monomials monomials) ===\n")
 for idx in 1:n_monomials
 	pos = W.poly.coefficients[:, 1, idx]
 	vel = W.poly.coefficients[:, 2, idx]
-	println("  $(mset.exponents[idx]) → \tpos = $pos\n\t\tvel = $vel\n")
-end
-
-println("\n=== Reduced dynamics R (first $n_monomials monomials) ===")
-for idx in 1:n_monomials
-	coeffs = R.poly.coefficients[:, idx]
-	println("  $(mset.exponents[idx]) → $coeffs")
+	red = R.poly.coefficients[:, idx]
+	println("  $(mset.exponents[idx]) → \tpos = $pos\n\t\tvel = $vel\n\t\tred = $red\n")
 end
 
 println("\n" * "="^80)
