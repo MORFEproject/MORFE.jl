@@ -47,9 +47,9 @@ The public entry point is `solve_cohomological_problem`, which takes raw spectra
 
 Consider an $N$-th order ODE in $\mathbb{R}^n$:
 
-$$\sum_{k=0}^{N} B_k\, x^{(k)} = F(x, \dot{x}, \ldots) + f_{\text{ext}}(r, t)$$
+$$\sum_{k=0}^{N} B_k\, x^{(k)} = F(x, \dot{x}, \ldots, r)$$
 
-where $r \in \mathbb{C}^{N_\text{ext}}$ satisfies the autonomous linear external system $\dot{r} = \Lambda_\text{ext}\, r$.  The parametrisation method seeks a polynomial map
+where $r \in \mathbb{C}^{N_\text{ext}}$ satisfies the autonomous external ODE $\dot{r} = E(r)$. The parametrisation method seeks a polynomial map
 
 $$x(t) = W(\mathbf{z}(t),\, r(t))$$
 

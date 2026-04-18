@@ -573,18 +573,18 @@ function solve_cohomological_problem(
 		end
 	end
 
-	# ── Build Λ from R (for precompute functions that need the full matrix) ────
-	# R's columns at unit-vector monomials eᵣ hold the r-th column of Λ.
-	# At this point the upper-right block (master↔external coupling) is zero
-	# because external monomials are not resonant and will not be modified.
+	# ── GrLex unit-offset: zero vector (if present) is at index 1 ────────────
 	zero_vec = SVector{NVAR, Int}(ntuple(_ -> 0, Val(NVAR)))
 	has_zero = length(mset) >= 1 && mset.exponents[1] == zero_vec
 	unit_offset = has_zero ? 1 : 0
-	Λ = zeros(ComplexF64, NVAR, NVAR)
-	for r in 1:NVAR
-		Λ[:, r] .= R.poly.coefficients[:, r + unit_offset]
-	end
-	lambda_diag = [Λ[i, i] for i in 1:NVAR]
+
+	# Λ is a view into R.poly.coefficients: column r of Λ is the coefficient of
+	# eᵣ in R, i.e. the r-th column of the Jordan matrix.  Using a view means Λ
+	# always reflects the current state of R — in particular, after the external
+	# monomial solve (step 5) fills the upper-right block (master↔external coupling),
+	# no explicit rebuild is needed.
+	Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
+	lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
 
 	# ── 4. Orthogonality row operators ─────────────────────────────────────────
 	# J_coeffs depend only on linear_terms and left_eigenmodes, not on the
@@ -626,8 +626,9 @@ function solve_cohomological_problem(
 	# ── 5c. Compute master-column invariance polynomials once (Φ_ext-independent)
 	# C_coeffs depend only on master_modes and Λ[1:ROM,1:ROM]; E_coeffs depend on
 	# the external directions Φ_ext and are computed in two separate passes below.
+	Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
 	invariance_C_coeffs, D_master_steps = precompute_master_column_polynomials(
-		linear_terms, master_modes, Λ,
+		linear_terms, master_modes, Λ_master,
 	)
 
 	if initial_W === nothing || initial_R === nothing
