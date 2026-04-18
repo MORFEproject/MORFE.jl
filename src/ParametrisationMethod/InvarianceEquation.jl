@@ -310,7 +310,7 @@ function precompute_column_polynomials(
 end
 
 """
-	precompute_master_column_polynomials(fom_matrices, master_modes, reduced_dynamics_linear)
+	precompute_master_column_polynomials(fom_matrices, master_modes, Λ_master)
 	-> (C_coeffs, D_master_steps)
 
 Φ_ext-independent half of [`precompute_column_polynomials`](@ref).  Computes only
@@ -331,15 +331,14 @@ Therefore `C_coeffs` is independent of the external directions `Φ_ext`.
 """
 function precompute_master_column_polynomials(
 	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
-	master_modes::AbstractMatrix,           # FOM × ROM
-	reduced_dynamics_linear::AbstractMatrix, # NVAR × NVAR (only 1:ROM,1:ROM block used)
+	master_modes::AbstractMatrix,  # FOM × ROM
+	Λ_master::AbstractMatrix,      # ROM × ROM  (master eigenvalue block)
 ) where {ORDP1}
-	T = promote_type(eltype(fom_matrices[1]), eltype(master_modes), eltype(reduced_dynamics_linear))
+	T = promote_type(eltype(fom_matrices[1]), eltype(master_modes), eltype(Λ_master))
 
 	ORD = ORDP1 - 1
 	FOM = size(fom_matrices[1], 1)
 	ROM = size(master_modes, 2)
-	Λ_master = view(reduced_dynamics_linear, 1:ROM, 1:ROM)  # upper-left block
 
 	C_coeffs       = [Matrix{T}(undef, FOM, ORD) for _ in 1:ROM]
 	D_master_steps = [Matrix{T}(undef, FOM, ROM) for _ in 1:ORD]
