@@ -361,7 +361,7 @@ function evaluate(
 	Tv = promote_type(T, eltype(vals))
 	m  = Vector{Tv}(undef, L)
 	_monomial_vector!(m, poly, vals)
-	return mapreduce(*, +, poly.coefficients, m)
+	return mapreduce(*,+,poly.coefficients,m)
 end
 
 """
@@ -425,7 +425,7 @@ function evaluate(
 	Tv = promote_type(T, eltype(vals))
 	m  = Vector{Tv}(undef, L)
 	_monomial_vector!(m, poly, vals)
-	return mapreduce(*, +, @view(poly.coefficients[component, :]), m)
+	return mapreduce(*,+,@view(poly.coefficients[component, :]),m)
 end
 
 # ─────────────────────────────────────────────────────────────────────────────

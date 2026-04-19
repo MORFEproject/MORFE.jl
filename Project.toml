@@ -5,6 +5,7 @@ authors = ["MORFEproject <https://github.com/MORFE.jl>"]
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
 Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -14,6 +15,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 Arpack = "0.5"
+HDF5 = "0.17.3"
 LinearMaps = "3"
 StaticArrays = "1"
 julia = "1.10"

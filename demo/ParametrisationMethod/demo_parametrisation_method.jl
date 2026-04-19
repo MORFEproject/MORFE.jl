@@ -15,13 +15,15 @@
 include(joinpath(@__DIR__, "../../src/MORFE.jl"))
 
 using .MORFE.Eigensolvers: generalised_eigenpairs
-using .MORFE.Multiindices: all_multiindices_up_to
+using .MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
+using .MORFE.Polynomials: DensePolynomial
 using .MORFE.Resonance: resonance_set_from_graph_style, resonance_set_from_complex_normal_form_style
 using .MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
 using .MORFE.ExternalSystems: ExternalSystem
 using .MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
 using .MORFE.CohomologicalEquations: solve_cohomological_problem
 
+using HDF5
 using LinearAlgebra
 using Random
 using StaticArrays
@@ -43,13 +45,13 @@ B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 
 # Cubic stiffness:  β * x³  (Duffing-type, β = 1.0)
 term_cubic = MultilinearMap(
-	(res, x1, x2, x3) -> (@. res += 1.0 * x1 * x2 * x3),
+	(res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), # minus because it is on the right-hand side
 	(3, 0),
 )
 
 # Quadratic damping:  γ * ẋ²  (γ = 0.1)
 term_drag = MultilinearMap(
-	(res, v1, v2) -> (@. res += 0.1 * v1 * v2),
+	(res, v1, v2) -> (@. res += -0.1 * v1 * v2), # minus because it is on the right-hand side
 	(0, 2),
 )
 
@@ -60,8 +62,19 @@ term_forcing = MultilinearMap(
 	(0, 0), 1,   # one external variable
 )
 
-# ExternalSystem: harmonic forcing ṙ = iΩ·r with Ω = 2.5
-external_system = ExternalSystem((ComplexF64(1.0im),))
+# External harmonic forcing with twice the frequency
+term_forcing_quadratic = MultilinearMap(
+	(res, r1, r2) -> (@. res += F_ext * r1 * r2),
+	(0, 0), 2,   # one external variable
+)
+
+# ExternalSystem: harmonic forcing ṙ = iΩ·r + 0.1 r² with Ω = 2.5
+external_system = ExternalSystem(
+	DensePolynomial(
+		ComplexF64[1.0im 0.1+0.0im], # 1×2 matrix: coefficients for r and r² terms
+		MultiindexSet([[1], [2]]),
+	),
+)
 
 # ------------------------------------------------------------------------------
 # 3. Build the full-order model
@@ -70,7 +83,7 @@ external_system = ExternalSystem((ComplexF64(1.0im),))
 # ------------------------------------------------------------------------------
 model = NDOrderModel(
 	(B0, B1, B2),
-	(term_cubic, term_forcing, term_drag), # 
+	(term_cubic, term_forcing, term_drag, term_forcing_quadratic),
 	external_system,
 )
 
@@ -196,3 +209,17 @@ end
 
 println("\n" * "="^80)
 println("Demo finished successfully.")
+
+# ------------------------------------------------------------------------------
+# 10. Export results to HDF5 for external validation (e.g. Python/h5py)
+# ------------------------------------------------------------------------------
+output_path = joinpath(@__DIR__, "output.h5")
+h5open(output_path, "w") do f
+	f["W_coefficients"] = W.poly.coefficients
+	f["R_coefficients"] = R.poly.coefficients
+	f["multiindex_exponents"] = hcat([collect(Int64, e) for e in mset.exponents]...)
+	f["master_eigenvalues"] = collect(master_eigenvalues)
+	f["super_eigenvalues"] = super_eigenvalues
+	f["outer_eigenvalues"] = outer_eigenvalues
+end
+println("Results exported to: $output_path")
