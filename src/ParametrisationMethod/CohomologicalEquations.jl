@@ -60,6 +60,7 @@ External forcing modes are *known* and appear only on the right-hand side.
 module CohomologicalEquations
 
 using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree, build_exponent_index_map
+using ..Polynomials: DensePolynomial
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics,
 	create_parametrisation_method_objects, compute_higher_derivative_coefficients!,
 	multiindex_set
@@ -211,19 +212,18 @@ end
 # resonant), so placing them here once is sufficient.
 function _embed_external_dynamics!(
 	R::ReducedDynamics{ROM, NVAR, T},
-	ext_poly,
+	ext_poly::DensePolynomial{T, N_EXT, 2},
 	mset::MultiindexSet{NVAR},
-) where {ROM, NVAR, T}
-	N_EXT = NVAR - ROM
+) where {ROM, NVAR, T, N_EXT}
 	N_EXT > 0 || return nothing
 	ext_coeffs = ext_poly.coefficients
 	for (j, α_ext) in enumerate(ext_poly.multiindex_set.exponents)
-		α_full = SVector{NVAR, Int}(ntuple(i -> i <= ROM ? 0 : α_ext[i - ROM], Val(NVAR)))
+		α_full = SVector{NVAR, Int}(ntuple(i -> i <= ROM ? 0 : α_ext[i-ROM], Val(NVAR)))
 		idx_full = findfirst(==(α_full), mset.exponents)
 		idx_full === nothing && continue
 		for e in 1:N_EXT
 			coeff = T(ext_coeffs[e, j])
-			iszero(coeff) || (R.poly.coefficients[ROM + e, idx_full] = coeff)
+			iszero(coeff) || (R.poly.coefficients[ROM+e, idx_full] = coeff)
 		end
 	end
 	return nothing
@@ -583,8 +583,8 @@ function solve_cohomological_problem(
 	# always reflects the current state of R — in particular, after the external
 	# monomial solve (step 5) fills the upper-right block (master↔external coupling),
 	# no explicit rebuild is needed.
-	Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
-	lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
+	Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset+1):(unit_offset+NVAR))
+	lambda_diag = [R.poly.coefficients[i, i+unit_offset] for i in 1:NVAR]
 
 	# ── 4. Orthogonality row operators ─────────────────────────────────────────
 	# J_coeffs depend only on linear_terms and left_eigenmodes, not on the
@@ -626,7 +626,7 @@ function solve_cohomological_problem(
 	# ── 5c. Compute master-column invariance polynomials once (Φ_ext-independent)
 	# C_coeffs depend only on master_modes and Λ[1:ROM,1:ROM]; E_coeffs depend on
 	# the external directions Φ_ext and are computed in two separate passes below.
-	Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
+	Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset+1):(unit_offset+ROM))
 	invariance_C_coeffs, D_master_steps = precompute_master_column_polynomials(
 		linear_terms, master_modes, Λ_master,
 	)

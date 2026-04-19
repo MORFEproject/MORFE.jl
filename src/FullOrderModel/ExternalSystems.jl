@@ -36,7 +36,7 @@ the linear matrix, and its eigenvalues.
    Construct a purely linear system `dx/dt = diag(eigenvalues) * x`, i.e., decoupled linear dynamics.
 """
 struct ExternalSystem{N_EXT, T, EigenvalueType}
-	first_order_dynamics::DensePolynomial{T, N_EXT}
+	first_order_dynamics::DensePolynomial{T, N_EXT, 2}
 	linear_matrix::SMatrix{N_EXT, N_EXT, T}
 	eigenvalues::SVector{N_EXT, EigenvalueType}
 end
@@ -46,7 +46,7 @@ _evtype(::Type{T}) where {T <: Real} = Complex{T}
 _evtype(::Type{T}) where {T <: Complex} = T
 
 # Constructor from polynomial only; eigenvalues computed automatically
-function ExternalSystem(first_order_dynamics::DensePolynomial{SVector{N_EXT, T}, N_EXT}) where {N_EXT, T}
+function ExternalSystem(first_order_dynamics::DensePolynomial{T, N_EXT, 2}) where {N_EXT, T}
 	linear_matrix = SMatrix{N_EXT, N_EXT, T}(linear_matrix_of_polynomial(first_order_dynamics))
 
 	# Compute eigenvalues of the linear matrix
@@ -59,7 +59,7 @@ end
 
 # Constructor from polynomial and eigenvalues; compute linear matrix 
 function ExternalSystem(
-	first_order_dynamics::DensePolynomial{SVector{N_EXT, T}, N_EXT},
+	first_order_dynamics::DensePolynomial{T, N_EXT, 2},
 	eigenvalues::SVector{N_EXT, EigenvalueType};
 	check::Bool = true,
 	rtol::Real = 1e-10,
@@ -83,7 +83,7 @@ end
 # Constructor for purely linear, decoupled system: dx/dt = diag(eigenvalues) * x
 function ExternalSystem(eigenvalues::NTuple{N_EXT, E}) where {N_EXT, E}
 	# Build the polynomial: each coordinate gets its own linear term
-	coeffs = [SVector{N_EXT, E}(ntuple(k -> k == j ? eigenvalues[j] : zero(E), Val(N_EXT))) for j in 1:N_EXT]
+	coeffs = [ntuple(k -> k == j ? eigenvalues[j] : zero(E), Val(N_EXT)) for j in 1:N_EXT]
 	# Multi-index set containing all monomials of degree ≤ 1
 	multiindex_set = all_multiindices_up_to(N_EXT, 1)
 	deleteat!(multiindex_set.exponents, 1)  # remove zero exponent (constant term)
