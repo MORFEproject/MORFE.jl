@@ -3,11 +3,11 @@ from numpy import block, conj, array, hstack, diag, block, vstack, dot, kron
 from numpy.linalg import norm
 import numpy as np
 
-M = array([[2.0, -1.0],[-1.0, 2.0]])  # stiffness
+K = array([[2.0, -1.0],[-1.0, 2.0]])  # stiffness
 C = array([[0.01, 0.0],[0.0, 0.01]])  # light damping
-K = array([[1.0, 0.0],[0.0, 1.0]])    # mass (highest-order coefficient)
+M = array([[1.0, 0.0],[0.0, 1.0]])    # mass (highest-order coefficient)
 
-Id = array([[1.0, 0.0],[0.0, 1.0]])    # identity matrix
+Id = np.eye(2)    # identity matrix
 n = 3
 I_red = np.eye(n)       # identity matrix for the reduced space
 Zz = np.zeros((2, 2))   # zero matrix
