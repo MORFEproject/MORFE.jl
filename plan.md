@@ -68,6 +68,59 @@ These one-time (per external-mode loop iteration) allocations can be folded into
 
 ---
 
+## RHS of the Cohomological Equations — Specific Inefficiencies
+
+The RHS `g_α` assembled for each monomial α has two sources: the **multilinear nonlinear terms** (evaluation of f(W(z)) at order α) and the **lower-order couplings** (the DW·R term). Both are computed in the hot loop.
+
+### RHS-A — External Unit Vectors Recreated Per Monomial in Cached Path *(HIGH)*
+**Location:** `MultilinearTerms.jl:375`  
+```julia
+unit_vectors = [SVector(ntuple(k -> k == j ? 1 : 0, external_system_size)) for j in 1:external_system_size]
+```
+This is inside `compute_multilinear_terms` (cached overload) and allocates a fresh vector every monomial, independently of the NVAR unit vectors already discussed. Should be stored in `CohomologicalContext` alongside the multilinear result/scratch/temp buffers (see change A).
+
+### RHS-B — Scalar Inner Loop in Lower-Order Couplings Instead of BLAS `axpy!` *(HIGH)*
+**Location:** `LowerOrderCouplings.jl:51-55` and `LowerOrderCouplings.jl:95-99`  
+```julia
+for k in 1:ORD
+    acc_vec = accumulator[k]
+    @inbounds for l in eachindex(acc_vec)
+        acc_vec[l] += factor * param_coeff[l, k]
+    end
+end
+```
+This manual scalar loop is equivalent to `axpy!(factor, view(param_coeff, :, k), accumulator[k])` for each `k`. Using BLAS `axpy!` lets the runtime exploit SIMD and cache-blocking, especially for larger FOM. This is the innermost loop of the lower-order coupling computation, called for every candidate sub-monomial of every monomial.
+
+### RHS-C — `fill! + t.f! + axpy!` Triple Per Factorisation Entry *(MEDIUM)*
+**Location:** `MultilinearTerms.jl:342-348` (`_replay_split!`, symmetric branches)  
+```julia
+for entry in split.entries
+    fill!(scratch, 0)               # zero FOM-vector
+    args = ntuple(...)
+    t.f!(scratch, args...)          # write into scratch
+    axpy!(entry.multiplier, scratch, accum)  # accumulate
+end
+```
+Each factorisation entry requires three passes over a FOM-length vector (zero, evaluate, add). If the `MultilinearMap` calling convention were extended to accept a scalar multiplier — i.e., `t.f!(accum, args...; alpha=multiplier)` adding `alpha * f(args)` directly to `accum` — the `fill!` and `axpy!` calls would be eliminated for symmetric terms. This halves the number of passes over the FOM-length accumulation buffer per entry.
+
+This is a **calling-convention change** for `MultilinearMap.f!` and would need to propagate to all user-defined maps, but the asymmetric branch already writes directly into the accumulator without scratch, proving the pattern is sound.
+
+### RHS-D — Closure-Based Multilinear Maps Prevent BLAS Batching *(STRUCTURAL)*
+**Location:** `MultilinearTerms.jl` — `_accumulate_split!` family  
+
+The multilinear maps are stored as opaque closures `t.f!(result, x1, x2, ..., xk)`. This prevents the solver from inspecting the tensor structure and batching multiple factorisation entries into a single BLAS call.
+
+For example, a cubic term `res += c * x1 .* x2 .* x3` applied to `n_entries` factorisations currently makes `n_entries` separate element-wise calls. If the nonlinear map were instead represented as a **sparse coefficient tensor** (the standard format in analytical continuation frameworks), all entries could be contracted in one vectorised pass:
+
+```
+result += sum_over_entries( entry.multiplier * W[:, i1] .* W[:, i2] .* W[:, i3] )
+        = BLAS-fused Hadamard product
+```
+
+This is an architectural decision — the current closure API is flexible and user-friendly but not introspectable. A future-facing design would offer a structured sparse tensor path alongside the closure path, activated when all terms fit the required form.
+
+---
+
 ## Recommended Architecture Changes
 
 ### A — Expand `CohomologicalContext` to Hold All Reusable Buffers
