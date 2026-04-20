@@ -2,12 +2,8 @@
 Demonstration of the usage of NDOrderModel and FirstOrderModel
 """
 
-include(joinpath(@__DIR__, "../../src/MORFE.jl"))
-using .MORFE.Multiindices: MultiindexSet
-using .MORFE.Polynomials: DensePolynomial
-using .MORFE.MultilinearMaps: MultilinearMap, evaluate_term!
-using .MORFE.FullOrderModel: NDOrderModel, FirstOrderModel,
-                             linear_first_order_matrices, evaluate_nonlinear_terms!
+using MORFE
+using MORFE.MultilinearMaps: MultilinearMap, evaluate_term!
 using LinearAlgebra
 using StaticArrays: SVector
 
