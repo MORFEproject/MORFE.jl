@@ -2,11 +2,7 @@
 # Demonstrates the usage of ExternalSystem for representing polynomial dynamical systems.
 
 using StaticArrays, LinearAlgebra
-include(joinpath(@__DIR__, "../../src/MORFE.jl"))  # adjust path as needed
-
-using .MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
-using .MORFE.Polynomials: DensePolynomial, evaluate
-using .MORFE.ExternalSystems: ExternalSystem
+using MORFE
 
 # -------------------------------------------------------------------
 # 1. Build a purely linear, decoupled system from eigenvalues
