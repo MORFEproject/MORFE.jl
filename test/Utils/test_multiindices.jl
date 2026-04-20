@@ -2,9 +2,8 @@ using Test
 
 using StaticArrays: SVector
 
-include(joinpath(@__DIR__, "../../src/MORFE.jl"))
-using .MORFE.Multiindices
-using .Multiindices: grlex_precede, num_multiindices_up_to, monomial_rank, multiindex
+using MORFE.Multiindices
+using MORFE.Multiindices: grlex_precede, num_multiindices_up_to, monomial_rank, multiindex
 
 # ============================================================================
 # Helper functions for testing
@@ -19,9 +18,9 @@ function is_grlex_sorted(set::MultiindexSet)
     exps = set.exponents
     n = length(exps)
     n ≤ 1 && return true
-    for i in 1:n-1
+    for i in 1:(n - 1)
         a = exps[i]
-        b = exps[i+1]
+        b = exps[i + 1]
         if !grlex_precede(a, b) && a != b
             return false
         end
@@ -48,30 +47,30 @@ end
 # ============================================================================
 @testset "grlex_precede" begin
     # Deg 0
-    a = [0,0,0]
-    b = [0,0,0]
+    a = [0, 0, 0]
+    b = [0, 0, 0]
     @test !grlex_precede(a, b)
 
     # Different degrees
-    a = [1,0,0]   # deg 1
-    b = [0,1,1]   # deg 2
+    a = [1, 0, 0]   # deg 1
+    b = [0, 1, 1]   # deg 2
     @test grlex_precede(a, b)   # lower degree first
     @test !grlex_precede(b, a)
 
     # Same degree, lexicographic tie‑break
-    a = [2,0,1]   # deg 3
-    b = [1,2,0]   # deg 3
+    a = [2, 0, 1]   # deg 3
+    b = [1, 2, 0]   # deg 3
     # Lex order: compare first component: 2 > 1 → a precedes b
     @test grlex_precede(a, b)
     @test !grlex_precede(b, a)
 
-    a = [1,2,0]   # deg 3
-    b = [1,0,2]   # deg 3
+    a = [1, 2, 0]   # deg 3
+    b = [1, 0, 2]   # deg 3
     # First components equal (1), second: 2 > 0 → a precedes b
     @test grlex_precede(a, b)
 
-    a = [1,0,2]   # deg 3
-    b = [1,0,2]   # equal
+    a = [1, 0, 2]   # deg 3
+    b = [1, 0, 2]   # equal
     @test !grlex_precede(a, b) && !grlex_precede(b, a)
 
     # Additional random tests: compare with explicit sorting
@@ -79,9 +78,9 @@ end
         nvars = rand(2:5)
         max_deg = rand(1:5)
         exps = [random_exponent(nvars, max_deg) for _ in 1:10]
-        sorted = sort(exps; lt=grlex_precede)
-        for i in 1:length(sorted)-1
-            @test grlex_precede(sorted[i], sorted[i+1]) || sorted[i] == sorted[i+1]
+        sorted = sort(exps; lt = grlex_precede)
+        for i in 1:(length(sorted) - 1)
+            @test grlex_precede(sorted[i], sorted[i + 1]) || sorted[i] == sorted[i + 1]
         end
     end
 end
@@ -97,15 +96,16 @@ end
     @test set isa MultiindexSet
     @test is_grlex_sorted(set)
     # Expected Grlex order: (1,0) deg1, (0,1) deg1, (2,1) deg3
-    expected = [SVector(1,0), SVector(0,1), SVector(2,1)]
+    expected = [SVector(1, 0), SVector(0, 1), SVector(2, 1)]
     @test set.exponents == expected
 
     # From a vector of vectors
-    vecs = [[1,0], [2,1], [0,1], [1,1], [1,2], [3,0]]
+    vecs = [[1, 0], [2, 1], [0, 1], [1, 1], [1, 2], [3, 0]]
     set_vec = MultiindexSet(vecs)
     @test is_grlex_sorted(set_vec)
     # Expected: deg1: [1,0] < [0,1]; deg2: [1,1]; deg3: [3,0] < [2,1] < [1,2]
-    expected_vec = [SVector(1,0), SVector(0,1), SVector(1,1), SVector(3,0), SVector(2,1), SVector(1,2)]
+    expected_vec = [SVector(1, 0), SVector(0, 1), SVector(1, 1),
+        SVector(3, 0), SVector(2, 1), SVector(1, 2)]
     @test set_vec.exponents == expected_vec
 
     # Empty set (zero variables)
@@ -114,15 +114,15 @@ end
     @test isempty(set_empty.exponents)
 
     # Single element
-    set_single = MultiindexSet([[5,5,5]])
+    set_single = MultiindexSet([[5, 5, 5]])
     @test is_grlex_sorted(set_single)
-    @test set_single[1] == SVector(5,5,5)
+    @test set_single[1] == SVector(5, 5, 5)
 
     # Sorted order should not keep duplicates
-    dup = [[1,0], [1,0], [0,1]]
+    dup = [[1, 0], [1, 0], [0, 1]]
     set_dup = MultiindexSet(dup)
     @test is_grlex_sorted(set_dup)
-    expected_dup = [SVector(1,0), SVector(0,1)]
+    expected_dup = [SVector(1, 0), SVector(0, 1)]
     @test set_dup.exponents == expected_dup
 end
 
@@ -139,28 +139,28 @@ end
     @test is_grlex_sorted(set)
 
     # Manually check first few
-    @test set[1] == SVector(0,0,0)                 # deg 0
-    @test set[2] == SVector(1,0,0)                 # deg 1
-    @test set[3] == SVector(0,1,0)                 # deg 1
-    @test set[4] == SVector(0,0,1)                 # deg 1
-    @test set[5] == SVector(2,0,0)                 # deg 2
-    @test set[6] == SVector(1,1,0)                 # deg 2
-    @test set[7] == SVector(1,0,1)                 # deg 2
-    @test set[8] == SVector(0,2,0)                 # deg 2
-    @test set[9] == SVector(0,1,1)                 # deg 2
-    @test set[10] == SVector(0,0,2)                # deg 2
+    @test set[1] == SVector(0, 0, 0)                 # deg 0
+    @test set[2] == SVector(1, 0, 0)                 # deg 1
+    @test set[3] == SVector(0, 1, 0)                 # deg 1
+    @test set[4] == SVector(0, 0, 1)                 # deg 1
+    @test set[5] == SVector(2, 0, 0)                 # deg 2
+    @test set[6] == SVector(1, 1, 0)                 # deg 2
+    @test set[7] == SVector(1, 0, 1)                 # deg 2
+    @test set[8] == SVector(0, 2, 0)                 # deg 2
+    @test set[9] == SVector(0, 1, 1)                 # deg 2
+    @test set[10] == SVector(0, 0, 2)                # deg 2
 
     # Edge: nvars = 0
     set0 = all_multiindices_up_to(0, 5)
     @test length(set0) == 1                # only the empty exponent
-    @test set0[1] == SVector{0,Int}()
+    @test set0[1] == SVector{0, Int}()
     set0_neg = all_multiindices_up_to(0, -1)
     @test length(set0_neg) == 0
 
     # Edge: max_deg = 0
     set_deg0 = all_multiindices_up_to(3, 0)
     @test length(set_deg0) == 1
-    @test set_deg0[1] == SVector(0,0,0)
+    @test set_deg0[1] == SVector(0, 0, 0)
 end
 
 @testset "Generation: multiindices_with_total_degree" begin
@@ -174,37 +174,39 @@ end
 
     # Within fixed degree, order is lexicographic (larger first components first)
     # All vectors of deg 2 in lex order: [2,0,0], [1,1,0], [1,0,1], [0,2,0], [0,1,1], [0,0,2]
-    expected = [SVector(2,0,0), SVector(1,1,0), SVector(1,0,1), SVector(0,2,0), SVector(0,1,1), SVector(0,0,2)]
+    expected = [SVector(2, 0, 0), SVector(1, 1, 0), SVector(1, 0, 1),
+        SVector(0, 2, 0), SVector(0, 1, 1), SVector(0, 0, 2)]
     @test set.exponents == expected
 
     # Edge: nvars = 0
     set0 = multiindices_with_total_degree(0, 0)
     @test length(set0) == 1
-    @test set0[1] == SVector{0,Int}()
+    @test set0[1] == SVector{0, Int}()
     set0_deg1 = multiindices_with_total_degree(0, 1)
     @test length(set0_deg1) == 0
 end
 
 @testset "Generation: all_multiindices_in_box" begin
-    bound = [1,2]
+    bound = [1, 2]
     set = all_multiindices_in_box(bound)
     @test length(set) == prod(bound .+ 1) == 6
     @test is_grlex_sorted(set)
 
     # Expected vectors: (0,0),(1,0),(0,1),(1,1),(0,2),(1,2) sorted by Grlex.
-    expected = [SVector(0,0), SVector(1,0), SVector(0,1), SVector(1,1), SVector(0,2), SVector(1,2)]
+    expected = [SVector(0, 0), SVector(1, 0), SVector(0, 1),
+        SVector(1, 1), SVector(0, 2), SVector(1, 2)]
     @test set.exponents == expected
 
     # Edge: empty bound (zero variables)
     set_empty = all_multiindices_in_box(Int[])
     @test length(set_empty) == 1
-    @test set_empty[1] == SVector{0,Int}()
+    @test set_empty[1] == SVector{0, Int}()
 
     # Edge: zero bound components
-    bound3 = [0,2,0]
+    bound3 = [0, 2, 0]
     set3 = all_multiindices_in_box(bound3)
     @test length(set3) == 3
-    expected3 = [SVector(0,0,0), SVector(0,1,0), SVector(0,2,0)]
+    expected3 = [SVector(0, 0, 0), SVector(0, 1, 0), SVector(0, 2, 0)]
     @test set3.exponents == expected3
 end
 
@@ -214,33 +216,34 @@ end
 @testset "Basic operations: length, getindex, iteration" begin
     set = all_multiindices_up_to(2, 2)
     @test length(set) == 6
-    @test set[1] == SVector(0,0)
-    @test set[2] == SVector(1,0)
-    @test set[3] == SVector(0,1)
-    @test set[4] == SVector(2,0)
-    @test set[5] == SVector(1,1)
-    @test set[6] == SVector(0,2)
+    @test set[1] == SVector(0, 0)
+    @test set[2] == SVector(1, 0)
+    @test set[3] == SVector(0, 1)
+    @test set[4] == SVector(2, 0)
+    @test set[5] == SVector(1, 1)
+    @test set[6] == SVector(0, 2)
 
     collected = collect(set)
-    @test collected == [[0,0],[1,0],[0,1],[2,0],[1,1],[0,2]]
-    @test [v for v in set] == [SVector(0,0), SVector(1,0), SVector(0,1), SVector(2,0), SVector(1,1), SVector(0,2)]
+    @test collected == [[0, 0], [1, 0], [0, 1], [2, 0], [1, 1], [0, 2]]
+    @test [v for v in set] == [SVector(0, 0), SVector(1, 0), SVector(0, 1),
+        SVector(2, 0), SVector(1, 1), SVector(0, 2)]
 end
 
 @testset "find_in_set" begin
     set = all_multiindices_up_to(2, 2)
-    @test find_in_set(set, [1,1]) == 5
-    @test find_in_set(set, [2,0]) == 4
-    @test find_in_set(set, [0,0]) == 1
-    @test find_in_set(set, [3,0]) === nothing
+    @test find_in_set(set, [1, 1]) == 5
+    @test find_in_set(set, [2, 0]) == 4
+    @test find_in_set(set, [0, 0]) == 1
+    @test find_in_set(set, [3, 0]) === nothing
 
     # Empty set
     empty = MultiindexSet(Matrix{Int}(undef, 0, 0))
-    @test find_in_set(empty, [1,2]) === nothing
+    @test find_in_set(empty, [1, 2]) === nothing
 
     # Single element
-    single = MultiindexSet([[5,5]])
-    @test find_in_set(single, [5,5]) == 1
-    @test find_in_set(single, [0,0]) === nothing
+    single = MultiindexSet([[5, 5]])
+    @test find_in_set(single, [5, 5]) == 1
+    @test find_in_set(single, [0, 0]) === nothing
 
     # Binary search correctness: random tests
     for _ in 1:50
@@ -258,20 +261,20 @@ end
     # indices: 1:[0,0] deg0, 2:[1,0] deg1, 3:[0,1] deg1, 4:[2,0] deg2, 5:[1,1] deg2,
     #          6:[0,2] deg2, 7:[3,0] deg3, 8:[2,1] deg3, 9:[1,2] deg3, 10:[0,3] deg3
 
-    box = [2,2]
+    box = [2, 2]
     # Find indices with 1 ≤ total degree ≤ 2 and within box
     result = indices_in_box_with_bounded_degree(set, box, 1, 3)   # total_deg_upper = 3 → degree <3
-    @test result == [2,3,4,5,6]   # indices 2..6 have degree 1 or 2, all inside box
+    @test result == [2, 3, 4, 5, 6]   # indices 2..6 have degree 1 or 2, all inside box
 
     # degree_lower_bound = 2, total_deg_upper = 3 → degree exactly 2
     result2 = indices_in_box_with_bounded_degree(set, box, 2, 3)
-    @test result2 == [4,5,6]   # indices 4,5,6 have degree 2, all inside box
+    @test result2 == [4, 5, 6]   # indices 4,5,6 have degree 2, all inside box
 
     # box that excludes some
-    box_small = [1,1]
+    box_small = [1, 1]
     result3 = indices_in_box_with_bounded_degree(set, box_small, 0, 3)   # all degrees <3
     # Inside [1,1]: [0,0](1), [1,0](2), [0,1](3), [1,1](5) → indices 1,2,3,5
-    @test result3 == [1,2,3,5]
+    @test result3 == [1, 2, 3, 5]
 
     # Empty set – must use empty box because set has zero variables
     empty = MultiindexSet(Matrix{Int}(undef, 0, 0))
@@ -283,20 +286,20 @@ end
 # ============================================================================
 @testset "Predicates" begin
     # divides
-    @test divides([1,0], [2,1]) == true
-    @test divides([2,0], [1,1]) == false
-    @test divides([0,0], [1,1]) == true
+    @test divides([1, 0], [2, 1]) == true
+    @test divides([2, 0], [1, 1]) == false
+    @test divides([0, 0], [1, 1]) == true
 
     # is_constant
-    @test is_constant([0,0,0]) == true
-    @test is_constant([0,1,0]) == false
+    @test is_constant([0, 0, 0]) == true
+    @test is_constant([0, 1, 0]) == false
 end
 
 # ============================================================================
 # Test factorisations
 # ============================================================================
 @testset "factorisations" begin
-    exp = [2,1]
+    exp = [2, 1]
     N = 2
 
     # Full set containing all vectors in box 0..exp
@@ -317,7 +320,7 @@ end
     end
 
     # Set with missing vectors
-    small_set = MultiindexSet([[0,0],[0,1],[2,0],[2,1]])
+    small_set = MultiindexSet([[0, 0], [0, 1], [2, 0], [2, 1]])
     candidate_indices = indices_in_box_with_bounded_degree(small_set, exp, 0, sum(exp))
     facs_small = factorisations_asymmetric(small_set, exp, N, candidate_indices)
     @test length(facs_small) == 2   # [0,1]+[2,0] and [2,0]+[0,1]
@@ -353,11 +356,10 @@ end
 # Test combinatorial ranking
 # ============================================================================
 @testset "num_multiindices_up_to" begin
-    @test num_multiindices_up_to(2, 3) == binomial(5,2) == 10
-    @test num_multiindices_up_to(3, 2) == binomial(5,3) == 10
-    println("num_multiindices_up_to(0, 5) =", num_multiindices_up_to(0, 5))
+    @test num_multiindices_up_to(2, 3) == binomial(5, 2) == 10
+    @test num_multiindices_up_to(3, 2) == binomial(5, 3) == 10
     @test num_multiindices_up_to(0, 5) == 1
-    @test num_multiindices_up_to(1, 5) == binomial(6,1) == 6
+    @test num_multiindices_up_to(1, 5) == binomial(6, 1) == 6
 end
 
 @testset "monomial_rank" begin
@@ -372,8 +374,8 @@ end
 
     # Edge: max_deg = 0
     set0 = all_multiindices_up_to(2, 0)
-    @test monomial_rank([0,0], 2, 0) == 1
-    @test_throws AssertionError monomial_rank([1,0], 2, 0)   # degree exceeds max
+    @test monomial_rank([0, 0], 2, 0) == 1
+    @test_throws AssertionError monomial_rank([1, 0], 2, 0)   # degree exceeds max
 
     # Random tests
     for _ in 1:50
@@ -414,10 +416,8 @@ end
 # Test zero_multiindex and multiindex convenience constructors
 # ============================================================================
 @testset "Convenience constructors" begin
-    @test zero_multiindex(3) == [0,0,0]
+    @test zero_multiindex(3) == [0, 0, 0]
     @test zero_multiindex(0) == Int[]
-    @test multiindex(1,2,3) == [1,2,3]
+    @test multiindex(1, 2, 3) == [1, 2, 3]
     @test multiindex() == Int[]
 end
-
-println("All tests passed.")
