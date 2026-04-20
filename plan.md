@@ -91,33 +91,109 @@ end
 ```
 This manual scalar loop is equivalent to `axpy!(factor, view(param_coeff, :, k), accumulator[k])` for each `k`. Using BLAS `axpy!` lets the runtime exploit SIMD and cache-blocking, especially for larger FOM. This is the innermost loop of the lower-order coupling computation, called for every candidate sub-monomial of every monomial.
 
-### RHS-C — `fill! + t.f! + axpy!` Triple Per Factorisation Entry *(MEDIUM)*
-**Location:** `MultilinearTerms.jl:342-348` (`_replay_split!`, symmetric branches)  
+### RHS-C — n_entries FEM Assemblies Per Monomial *(CRITICAL — large FOM / FEM)*
+**Location:** `MultilinearTerms.jl` — `_accumulate_split!` / `_replay_split!`
+
+When `t.f!` is a FEM assembly routine, each call traverses the entire mesh. The current design calls it once per factorisation entry — `n_entries` separate mesh traversals per (monomial, term, split):
+
 ```julia
-for entry in split.entries
-    fill!(scratch, 0)               # zero FOM-vector
-    args = ntuple(...)
-    t.f!(scratch, args...)          # write into scratch
-    axpy!(entry.multiplier, scratch, accum)  # accumulate
+for entry in split.entries          # n_entries mesh traversals
+    t.f!(scratch, W[:,i1], W[:,i2], W[:,i3])
+    axpy!(entry.multiplier, scratch, accum)
 end
 ```
-Each factorisation entry requires three passes over a FOM-length vector (zero, evaluate, add). If the `MultilinearMap` calling convention were extended to accept a scalar multiplier — i.e., `t.f!(accum, args...; alpha=multiplier)` adding `alpha * f(args)` directly to `accum` — the `fill!` and `axpy!` calls would be eliminated for symmetric terms. This halves the number of passes over the FOM-length accumulation buffer per entry.
 
-This is a **calling-convention change** for `MultilinearMap.f!` and would need to propagate to all user-defined maps, but the asymmetric branch already writes directly into the accumulator without scratch, proving the pattern is sound.
+`n_entries` grows combinatorially with polynomial degree. Total cost: `O(L × n_entries_avg × n_elem × n_qp)`.
 
-### RHS-D — Closure-Based Multilinear Maps Prevent BLAS Batching *(STRUCTURAL)*
-**Location:** `MultilinearTerms.jl` — `_accumulate_split!` family  
+**Fix: restructure around element-local evaluation.**
 
-The multilinear maps are stored as opaque closures `t.f!(result, x1, x2, ..., xk)`. This prevents the solver from inspecting the tensor structure and batching multiple factorisation entries into a single BLAS call.
-
-For example, a cubic term `res += c * x1 .* x2 .* x3` applied to `n_entries` factorisations currently makes `n_entries` separate element-wise calls. If the nonlinear map were instead represented as a **sparse coefficient tensor** (the standard format in analytical continuation frameworks), all entries could be contracted in one vectorised pass:
+In FEM the assembly is element-local:
+```
+result[r] += Σ_e Σ_q  w_q · |J_e| · φ_r(ξ_q)  · g(u_e(ξ_q), v_e(ξ_q), w_e(ξ_q))
+```
+where `u_e(ξ_q) = Σ_{a ∈ dofs(e)} u_a · φ_a(ξ_q)` is the local interpolation at the quadrature point. The sum over all factorisation entries can be pulled inside the element/quadrature loop:
 
 ```
-result += sum_over_entries( entry.multiplier * W[:, i1] .* W[:, i2] .* W[:, i3] )
-        = BLAS-fused Hadamard product
+field_e(ξ_q) = Σ_entries mult · g(W_{i1,e}(ξ_q), W_{i2,e}(ξ_q), W_{i3,e}(ξ_q))
 ```
 
-This is an architectural decision — the current closure API is flexible and user-friendly but not introspectable. A future-facing design would offer a structured sparse tensor path alongside the closure path, activated when all terms fit the required form.
+This scalar field is then assembled once:
+```
+result[r] += Σ_e Σ_q  w_q · |J_e| · φ_r(ξ_q) · field_e(ξ_q)
+```
+
+The element loop runs **once per (monomial, term, split)** instead of `n_entries` times.
+
+**New interface: `FEMMultilinearMap`**
+
+Replace the single opaque `t.f!(result, args...)` with four primitive operations:
+
+```julia
+abstract type FEMMultilinearMap <: AbstractMultilinearMap end
+
+# Iterate over elements
+elements(t::FEMMultilinearMap)                         # → element iterator
+
+# Scatter a DOF vector to quadrature-point values for one element
+# Writes: W_qp[q] = Σ_{a ∈ dofs(e)} W_global[a] · φ_a(ξ_q)
+scatter_to_qp!(W_qp::AbstractVector, W_global::AbstractVector,
+               element, t::FEMMultilinearMap)
+
+# Evaluate the pointwise nonlinear function at one quadrature point
+# Returns a scalar: g(vals[1], vals[2], ..., vals[deg])
+pointwise(vals::NTuple, element, qp::Int, t::FEMMultilinearMap) → Number
+
+# Assemble a scalar field back to global DOFs for one element
+# Adds: result[r] += Σ_q  w_q · |J_e| · φ_r(ξ_q) · field_qp[q]
+assemble_element!(result::AbstractVector, field_qp::AbstractVector,
+                  element, t::FEMMultilinearMap)
+```
+
+**Batched accumulation loop (replaces `_accumulate_split!` for FEM terms):**
+
+```julia
+function _accumulate_split_fem!(accum, W, t::FEMMultilinearMap,
+                                  split, unique_cols, W_local_qp, field_qp)
+    # unique_cols: pre-computed list of (order_k, monomial_idx_k) for this split
+    # W_local_qp:  pre-allocated Matrix{T}(n_unique_cols, n_qp_per_elem)  [context buffer]
+    # field_qp:    pre-allocated Vector{T}(n_qp_per_elem)                  [context buffer]
+
+    for element in elements(t)
+
+        # 1. Scatter each unique W column to quadrature-point values (element-local)
+        for (k, (ord, col)) in enumerate(unique_cols)
+            scatter_to_qp!(@view(W_local_qp[k, :]), @view(W[:, ord, col]), element, t)
+        end
+
+        # 2. Accumulate scalar field: all factorisation entries, all quadrature points
+        fill!(field_qp, 0)
+        for entry in split.entries
+            local_indices = entry.local_unique_col_indices  # pre-computed in cache (see below)
+            for q in eachindex(field_qp)
+                vals = ntuple(k -> W_local_qp[local_indices[k], q], Val(deg))
+                field_qp[q] += entry.multiplier * pointwise(vals, element, q, t)
+            end
+        end
+
+        # 3. Assemble scalar field into global result (one element-level assembly)
+        assemble_element!(accum, field_qp, element, t)
+    end
+end
+```
+
+**Cache change required:** `CachedSplit.entries` currently stores global monomial indices. Add `local_unique_col_indices::NTuple` to each `FactorisationEntry` (or a parallel field in `CachedSplit`) mapping each factor slot to its position in `unique_cols`. This is computed once during `build_multilinear_terms_cache`.
+
+**Pre-allocated context buffers (added to `CohomologicalContext`):**
+- `fem_W_local_qp::Matrix{T}(max_unique_cols, max_qp_per_elem)` — element-local mode values
+- `fem_field_qp::Vector{T}(max_qp_per_elem)` — scalar field at quadrature points
+
+**Backward compatibility:** `MultilinearMap` (the current closure type) retains the existing per-entry path unchanged. `FEMMultilinearMap` opts into the batched path.
+
+**Expected gain:** FEM mesh traversal count drops from `n_entries` to `1` per split. For degree ≥ 3 with typical `n_entries = 10–100`, this is a **10–100× speedup** on the RHS evaluation, which is the dominant cost for large FOM.
+
+### RHS-D — Fallback: Closure Maps Without Elemental Access *(STRUCTURAL)*
+
+The current opaque `t.f!(result, x1, ..., xk)` cannot be batched because the solver has no access to element-level operations. For small FOM (analytical / toy systems), this path remains and should be kept as the default. The `FEMMultilinearMap` interface (RHS-C) is opt-in; users who do not implement it continue using the existing closure path with no changes.
 
 ---
 
