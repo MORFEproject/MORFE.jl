@@ -5,6 +5,7 @@ include("Polynomials.jl")
 include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
+include("SpectralDecomposition/EigenProblems.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
 include("SpectralDecomposition/JordanChain.jl")
 include("Realification.jl")
@@ -23,6 +24,7 @@ using .Polynomials: DensePolynomial, evaluate
 using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
+using .EigenProblems
 using .Eigensolvers
 using .JordanChain
 using .Resonance
@@ -34,18 +36,34 @@ using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 using .CohomologicalEquations
 
+# Multiindices
 export MultiindexSet, zero_multiindex,
-	all_multiindices_up_to, multiindices_with_total_degree,
-	all_multiindices_in_box, indices_in_box_with_bounded_degree
+       all_multiindices_up_to, multiindices_with_total_degree,
+       all_multiindices_in_box, indices_in_box_with_bounded_degree
+
+# Polynomials
 export DensePolynomial, evaluate
+
+# MultilinearMaps
 export MultilinearMap, ExternalSystem
+
+# FullOrderModel
 export FullOrderModel, FirstOrderModel, NDOrderModel,
-	linear_first_order_matrices, evaluate_nonlinear_terms!
+       linear_first_order_matrices, evaluate_nonlinear_terms!
+
+# EigenProblems
+export AbstractEigenSolver, DefaultEigenSolver, ArpackEigenSolver, solve, solve_left,
+       EigenProblem, compute_eigen_problem, get_eigenpairs, select_master_modes_by_hand,
+       select_master_modes_by_sorting, select_master_modes_by_sorting
+
+#Resonance
 export ResonanceSet,
-	resonance_set_from_graph_style,
-	resonance_set_from_complex_normal_form_style,
-	resonance_set_from_real_normal_form_style,
-	resonance_set_from_condition_number_estimate
+       resonance_set_from_graph_style,
+       resonance_set_from_complex_normal_form_style,
+       resonance_set_from_real_normal_form_style,
+       resonance_set_from_condition_number_estimate
+
+# ParametrisationMethod
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 export compute_multilinear_terms
 export solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
