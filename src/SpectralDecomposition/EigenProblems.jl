@@ -14,7 +14,7 @@ using Arpack
 
 export AbstractEigenSolver, DefaultEigenSolver, ArpackEigenSolver, solve, solve_left
 export EigenProblem, compute_eigen_problem, get_eigenpairs, select_master_modes_by_hand,
-       select_master_modes_by_sorting, select_master_modes_by_sorting
+       select_master_modes_by_sorting, select_master_modes_by_target_frequency
 
 """
     EigenSolver
@@ -118,7 +118,7 @@ mutable struct EigenProblem{T}
         @assert size(eigenvalues, 1)==size(eigenmodes, 2) "Size of eigenvalues and eigenmodes doesnt match!"
         @assert size(eigenmodes)==size(left_eigenmodes) "Size of left and right eigenmodes must be the same!"
         @assert size(eigenmodes, 1)==FOM "Eigenmode has wrong size!"
-        new{T}(model, solver, eigenvalues, eigenmodes, nothing, nothing)
+        new{T}(model, solver, eigenvalues, eigenmodes, left_eigenmodes, nothing)
     end
 end
 
@@ -201,7 +201,7 @@ function sort_left_eigenmodes!(eigenvalues, left_eigenvalues, left_eigenmodes)
         used[j] = true
     end
     left_eigenvalues .= left_eigenvalues[perm]
-    left_eigenmodes .= left_eigenmodes[perm]
+    left_eigenmodes .= left_eigenmodes[:, perm]
 end
 
 """
@@ -253,7 +253,8 @@ end
 
 Defines master_modes as the first nev eigenpairs. Sorting was done in compute_eigen_problem.
 """
-function select_master_modes_by_sorting(ep::EigenProblem, nev::UInt64)
+function select_master_modes_by_sorting(ep::EigenProblem, nev::Int64)
+    @assert nev>0 "nev must be bigger then zero"
     n = size(ep.eigenmodes, 2)
     ep.master_modes = [i <= nev for i in 1:n]
 end
@@ -266,11 +267,11 @@ All eigenvalues that are of distance of one target value smaller than `tol` are 
 Distance used:
     dist(a, b) = abs(real(a - b)) + abs(imag(a - b)).
 """
-function select_master_modes_by_sorting(
+function select_master_modes_by_target_frequency(
         ep::EigenProblem,
         target_frequencies::Vector,
         tol::Float64)
-    n = lenght(ep.eigenvalues)
+    n = length(ep.eigenvalues)
     if length(target_frequencies) > n
         @warn "target_frequencies has more entries than calculated eigenvalues. Everything after index $n is neglected!"
     end
@@ -292,8 +293,7 @@ function select_master_modes_by_sorting(
             println("No eigenvalue found for target $target_frequency. Closest distance = $(dists[j]) at eigenvalue $j")
         end
     end
-    println("Chosen mastermodes:")
-    println(master_modes)
+    println("Chosen mastermodes: ", master_modes)
     ep.master_modes = master_modes
 end
 

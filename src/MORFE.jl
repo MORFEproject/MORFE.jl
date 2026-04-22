@@ -54,7 +54,7 @@ export FullOrderModel, FirstOrderModel, NDOrderModel,
 # EigenProblems
 export AbstractEigenSolver, DefaultEigenSolver, ArpackEigenSolver, solve, solve_left,
        EigenProblem, compute_eigen_problem, get_eigenpairs, select_master_modes_by_hand,
-       select_master_modes_by_sorting, select_master_modes_by_sorting
+       select_master_modes_by_sorting, select_master_modes_by_target_frequency
 
 #Resonance
 export ResonanceSet,
