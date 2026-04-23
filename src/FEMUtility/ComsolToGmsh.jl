@@ -344,15 +344,41 @@ function comsol_to_gmsh(comsol_file::String, gmsh_file::String)
         [e2nP18]
     )
 
-    if (length(e2nH27)) == 0
-        @warn "Elements of the type H27 are not implemented"
-    elseif (length(e2nT10)) == 0
-        @warn "Elements of the type T10 are not implemented"
+    # Comsol:T10 (tet2) -> Gmsh:11
+    if length(e2nT10) > 0
+        elemType = 11
+        elemTags = e2gT10
+        # COMSOL edge-mid order: mid(01),mid(12),mid(23),mid(03),mid(02),mid(13)
+        # Gmsh type-11 order:    mid(12),mid(23),mid(13),mid(14),mid(24),mid(34)
+        perm_T10 = [1, 2, 3, 4, 5, 6, 9, 8, 10, 7]
+        ne = length(e2nT10) ÷ T10n
+        for i in 1:ne
+            idx = ((i - 1) * T10n + 1):(i * T10n)
+            elem = e2nT10[idx]
+            e2nT10[idx] = elem[perm_T10]
+        end
+        gmsh.model.mesh.addElements(dim_vol, vol_tag, [elemType], [elemTags], [e2nT10])
     end
 
-    # if !("-nopopup" in ARGS)
-    #     gmsh.fltk.run()
-    # end
+    # Comsol:H27 (hex2) -> Gmsh:12
+    if length(e2nH27) > 0
+        elemType = 12
+        elemTags = e2gH27
+        # Corners (1-8) and edge mids (9-20) match between COMSOL and Gmsh.
+        # Face centers differ: COMSOL orders bottom/top/front/back/left/right
+        # (z-,z+,y-,y+,x-,x+) while Gmsh orders x-,x+,y-,y+,z-,z+.
+        perm_H27 = [1, 2, 3, 4, 5, 6, 7, 8,
+                    9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                    25, 26, 23, 24, 21, 22,
+                    27]
+        ne = length(e2nH27) ÷ H27n
+        for i in 1:ne
+            idx = ((i - 1) * H27n + 1):(i * H27n)
+            elem = e2nH27[idx]
+            e2nH27[idx] = elem[perm_H27]
+        end
+        gmsh.model.mesh.addElements(dim_vol, vol_tag, [elemType], [elemTags], [e2nH27])
+    end
 
     gmsh.write(gmsh_file)
     gmsh.finalize()
@@ -470,15 +496,33 @@ function comsol_to_gmsh_linear(comsol_file::String, gmsh_file::String)
         [e2nP6]
     )
 
-    if (length(e2nH27)) == 0
-        @warn "Elements of the type H27 are not implemented"
-    elseif (length(e2nT10)) == 0
-        @warn "Elements of the type T10 are not implemented"
+    # Comsol:T10 (tet2) -> Gmsh:4 (linear tet, corners only)
+    if length(e2nT10) > 0
+        elemType = 4
+        elemTags = e2gT10
+        ne = length(e2nT10) ÷ T10n
+        e2nT4 = Vector{Int64}(undef, ne * 4)
+        for i in 1:ne
+            idx10 = ((i - 1) * T10n + 1):(i * T10n)
+            idx4  = ((i - 1) * 4 + 1):(i * 4)
+            e2nT4[idx4] = e2nT10[idx10][1:4]
+        end
+        gmsh.model.mesh.addElements(dim_vol, vol_tag, [elemType], [elemTags], [e2nT4])
     end
 
-    # if !("-nopopup" in ARGS)
-    #     gmsh.fltk.run()
-    # end
+    # Comsol:H27 (hex2) -> Gmsh:5 (linear hex, corners only)
+    if length(e2nH27) > 0
+        elemType = 5
+        elemTags = e2gH27
+        ne = length(e2nH27) ÷ H27n
+        e2nH8 = Vector{Int64}(undef, ne * 8)
+        for i in 1:ne
+            idx27 = ((i - 1) * H27n + 1):(i * H27n)
+            idx8  = ((i - 1) * 8 + 1):(i * 8)
+            e2nH8[idx8] = e2nH27[idx27][1:8]
+        end
+        gmsh.model.mesh.addElements(dim_vol, vol_tag, [elemType], [elemTags], [e2nH8])
+    end
 
     gmsh.write(gmsh_file)
     gmsh.finalize()
