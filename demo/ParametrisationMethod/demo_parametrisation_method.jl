@@ -12,15 +12,16 @@
 #   7. Solve cohomological equations → W (parametrisation) and R (reduced dynamics)
 # ==============================================================================
 
-using MORFE.Eigensolvers: generalised_eigenpairs
-using MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
-using MORFE.Polynomials: DensePolynomial
-using MORFE.Resonance: resonance_set_from_graph_style,
-                       resonance_set_from_complex_normal_form_style
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
-using MORFE.ExternalSystems: ExternalSystem
-using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
-using MORFE.CohomologicalEquations: solve_cohomological_problem
+include(joinpath(@__DIR__, "../../src/MORFE.jl"))
+
+using .MORFE.Eigensolvers: generalised_eigenpairs
+using .MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
+using .MORFE.Polynomials: DensePolynomial
+using .MORFE.Resonance: resonance_set_from_graph_style, resonance_set_from_complex_normal_form_style
+using .MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
+using .MORFE.ExternalSystems: ExternalSystem
+using .MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
+using .MORFE.CohomologicalEquations: solve_cohomological_problem
 
 using HDF5
 using LinearAlgebra
@@ -34,8 +35,8 @@ using StaticArrays
 FOM = 2
 
 # NDOrderModel stores linear terms as (B₀, B₁, …, B_ORD)
-B0 = [2.0 -1.0; -1.0 2.0]   # stiffness
-B1 = [0.01 0.0; 0.0 0.01]   # light damping
+B0 = [2.0 -1.0; -1.0 2.0] # stiffness
+B1 = [0.01 0.0; 0.0 0.01] # light damping
 B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 
 # ------------------------------------------------------------------------------
@@ -44,35 +45,35 @@ B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 
 # Cubic stiffness:  β * x³  (Duffing-type, β = 1.0)
 term_cubic = MultilinearMap(
-    (res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), # minus because it is on the right-hand side
-    (3, 0)
+	(res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), # minus because it is on the right-hand side
+	(3, 0),
 )
 
 # Quadratic damping:  γ * ẋ²  (γ = 0.1)
 term_drag = MultilinearMap(
-    (res, v1, v2) -> (@. res += -0.1 * v1 * v2), # minus because it is on the right-hand side
-    (0, 2)
+	(res, v1, v2) -> (@. res += -0.1 * v1 * v2), # minus because it is on the right-hand side
+	(0, 2),
 )
 
 # External harmonic forcing
 F_ext = ComplexF64[1.0, 1.0]
 term_forcing = MultilinearMap(
-    (res, r) -> (@. res += F_ext * r),
-    (0, 0), 1   # one external variable
+	(res, r) -> (@. res += F_ext * r),
+	(0, 0), 1,   # one external variable
 )
 
 # External harmonic forcing with twice the frequency
 term_forcing_quadratic = MultilinearMap(
-    (res, r1, r2) -> (@. res += F_ext * r1 * r2),
-    (0, 0), 2   # one external variable
+	(res, r1, r2) -> (@. res += F_ext * r1 * r2),
+	(0, 0), 2,   # one external variable
 )
 
 # ExternalSystem: harmonic forcing ṙ = iΩ·r + 0.1 r² with Ω = 2.5
 external_system = ExternalSystem(
-    DensePolynomial(
-    ComplexF64[1.0im 0.1 + 0.0im], # 1×2 matrix: coefficients for r and r² terms
-    MultiindexSet([[1], [2]])
-),
+	DensePolynomial(
+		ComplexF64[1.0im 0.1+0.0im], # 1×2 matrix: coefficients for r and r² terms
+		MultiindexSet([[1], [2]]),
+	),
 )
 
 # ------------------------------------------------------------------------------
@@ -81,9 +82,9 @@ external_system = ExternalSystem(
 #    external eigenvalues directly from model.external_system.eigenvalues.
 # ------------------------------------------------------------------------------
 model = NDOrderModel(
-    (B0, B1, B2),
-    (term_cubic, term_forcing, term_drag, term_forcing_quadratic),
-    external_system
+	(B0, B1, B2),
+	(term_cubic, term_forcing, term_drag, term_forcing_quadratic),
+	external_system,
 )
 
 # ------------------------------------------------------------------------------
@@ -103,15 +104,15 @@ eig_result = eigen(A_eig, B_eig)
 
 # Extract the position part of eigenvectors (first FOM rows)
 # Ensure FOM is defined and within matrix dimensions
-@assert size(eig_result.vectors, 1)>=FOM "FOM exceeds eigenvector matrix rows"
+@assert size(eig_result.vectors, 1) >= FOM "FOM exceeds eigenvector matrix rows"
 eigenvectors_pos = eig_result.vectors[1:FOM, :]
 
 # ------------------------------------------------------------------------------
 # 6. Select master modes and build the reduced-variable structure
 # ------------------------------------------------------------------------------
-ROM = 2          # number of master (dominant) modes
+ROM   = 2          # number of master (dominant) modes
 N_EXT = 1          # number of external forcing modes (for future use)
-NVAR = ROM + N_EXT
+NVAR  = ROM + N_EXT
 
 # Sort eigenvalues and corresponding eigenvectors by increasing magnitude
 # (common choice for mode selection; can be replaced by, e.g., least damping)
@@ -121,12 +122,12 @@ sorted_vecs = eigenvectors_pos[:, sorted_idx]
 
 println("\n--- All eigenpairs (eigen) ---\n")
 for (i, λ) in enumerate(sorted_vals)
-    println("  mode $i →   λ = $λ\n\t     y = $(sorted_vecs[:, i])\n")
+	println("  mode $i →   λ = $λ\n\t     y = $(sorted_vecs[:, i])\n")
 end
 
 # Select the first ROM eigenvalues/vectors as master modes
 master_eigenvalues = SVector{ROM, ComplexF64}(sorted_vals[1:ROM])
-master_modes = sorted_vecs[:, 1:ROM]          # size: FOM × ROM
+master_modes       = sorted_vecs[:, 1:ROM]          # size: FOM × ROM
 
 # Left eigenmodes for the master modes (needed for the orthogonality conditions)
 # In a properly implemented pipeline these come from the left eigenproblem;
@@ -139,33 +140,31 @@ left_eigenmodes = master_modes   # FOM × ROM matrix
 ORD_model = length(model.linear_terms) - 1   # = 2 for this second-order system
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
-    orig_idx = sorted_idx[r]
-    for k in 1:(ORD_model - 1)   # k = 1 only for ORD = 2
-        master_modes_derivatives[:, k, r] .= eig_result.vectors[
-            (k * FOM + 1):((k + 1) * FOM), orig_idx]
-    end
+	orig_idx = sorted_idx[r]
+	for k in 1:(ORD_model-1)   # k = 1 only for ORD = 2
+		master_modes_derivatives[:, k, r] .= eig_result.vectors[(k*FOM+1):((k+1)*FOM), orig_idx]
+	end
 end
 
 println("\n--- Selected master modes ---\n")
 for (i, λ) in enumerate(master_eigenvalues)
-    println("  mode $i →   λ = $(round(λ, digits=6))\n\t     y = $(master_modes[:, i])\n")
+	println("  mode $i →   λ = $(round(λ, digits=6))\n\t     y = $(master_modes[:, i])\n")
 end
 
 # ------------------------------------------------------------------------------
 # 7. Build multiindex set and resonance set
 # ------------------------------------------------------------------------------
 
-outer_eigenvalues = sorted_vals[(ROM + 1):end]
+outer_eigenvalues = sorted_vals[(ROM+1):end]
 println("\n--- Outer eigenvalues (slave modes) ---\n")
 for (i, λ) in enumerate(outer_eigenvalues)
-    println("  mode $(ROM + i) →   λ = $λ")
+	println("  mode $(ROM + i) →   λ = $λ")
 end
 # super_eigenvalues must cover all NVAR variables: [master | external]
-super_eigenvalues = vcat(
-    Vector{ComplexF64}(master_eigenvalues), Vector{ComplexF64}(external_system.eigenvalues))
+super_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), Vector{ComplexF64}(external_system.eigenvalues))
 println("\n--- Super-eigenvalues (master + external) ---\n")
 for (i, λ) in enumerate(super_eigenvalues)
-    println("  var $i →   λ = $λ")
+	println("  var $i →   λ = $λ")
 end
 
 max_degree = 3
@@ -173,26 +172,27 @@ mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
 resonance_set = resonance_set_from_graph_style(
-    ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05
+	ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05,
 )
 
 println("\nResonance set (graph style):")
 for (idx, mi) in enumerate(mset.exponents)
-    res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
-    isempty(res_str) && (res_str = "none")
-    println("  $mi → [$res_str]")
+	res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
+	isempty(res_str) && (res_str = "none")
+	println("  $mi → [$res_str]")
 end
+
 
 # ------------------------------------------------------------------------------
 # 8. Solve cohomological equations
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
 W, R = solve_cohomological_problem(
-    model, mset,
-    master_eigenvalues,
-    master_modes, left_eigenmodes,
-    resonance_set;
-    master_modes_derivatives = master_modes_derivatives
+	model, mset,
+	master_eigenvalues,
+	master_modes, left_eigenmodes,
+	resonance_set;
+	master_modes_derivatives = master_modes_derivatives,
 )
 
 # ------------------------------------------------------------------------------
@@ -201,10 +201,10 @@ W, R = solve_cohomological_problem(
 n_monomials = min(20, length(mset))
 println("\n=== Solution (first $n_monomials monomials) ===\n")
 for idx in 1:n_monomials
-    pos = W.poly.coefficients[:, 1, idx]
-    vel = W.poly.coefficients[:, 2, idx]
-    red = R.poly.coefficients[:, idx]
-    println("  $(mset.exponents[idx]) → \tpos = $pos\n\t\tvel = $vel\n\t\tred = $red\n")
+	pos = W.poly.coefficients[:, 1, idx]
+	vel = W.poly.coefficients[:, 2, idx]
+	red = R.poly.coefficients[:, idx]
+	println("  $(mset.exponents[idx]) → \tpos = $pos\n\t\tvel = $vel\n\t\tred = $red\n")
 end
 
 println("\n" * "="^80)
@@ -215,11 +215,11 @@ println("Demo finished successfully.")
 # ------------------------------------------------------------------------------
 output_path = joinpath(@__DIR__, "output.h5")
 h5open(output_path, "w") do f
-    f["W_coefficients"] = W.poly.coefficients
-    f["R_coefficients"] = R.poly.coefficients
-    f["multiindex_exponents"] = hcat([collect(Int64, e) for e in mset.exponents]...)
-    f["master_eigenvalues"] = collect(master_eigenvalues)
-    f["super_eigenvalues"] = super_eigenvalues
-    f["outer_eigenvalues"] = outer_eigenvalues
+	f["W_coefficients"] = W.poly.coefficients
+	f["R_coefficients"] = R.poly.coefficients
+	f["multiindex_exponents"] = hcat([collect(Int64, e) for e in mset.exponents]...)
+	f["master_eigenvalues"] = collect(master_eigenvalues)
+	f["super_eigenvalues"] = super_eigenvalues
+	f["outer_eigenvalues"] = outer_eigenvalues
 end
 println("Results exported to: $output_path")
