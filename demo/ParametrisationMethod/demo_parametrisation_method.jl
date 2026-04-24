@@ -167,7 +167,7 @@ for (i, λ) in enumerate(super_eigenvalues)
 	println("  var $i →   λ = $λ")
 end
 
-max_degree = 3
+max_degree = 7
 mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
@@ -198,7 +198,7 @@ W, R = solve_cohomological_problem(
 # ------------------------------------------------------------------------------
 # 9. Display results
 # ------------------------------------------------------------------------------
-n_monomials = min(20, length(mset))
+n_monomials = min(200, length(mset))
 println("\n=== Solution (first $n_monomials monomials) ===\n")
 for idx in 1:n_monomials
 	pos = W.poly.coefficients[:, 1, idx]
