@@ -34,13 +34,18 @@ makedocs(
     pages = [
         "Home"             => "index.md",
         "Project Overview" => "project-overview.md",
-        "Theoretical Background" => [
+
+        # ── Mathematical background ──────────────────────────────────────────
+        "Mathematical Background" => [
+            "DPIM Theory"             => "theory/dpim.md",
             "Multiindices"            => "multiindices.md",
             "Polynomials"             => "polynomials.md",
             "Realification"           => "realification.md",
             "Multilinear Terms"       => "multilinear_terms.md",
             "Cohomological Equations" => "cohomological_equations.md",
         ],
+
+        # ── API reference ────────────────────────────────────────────────────
         "API Reference" => [
             "Multiindices"       => "api/multiindices.md",
             "Polynomials"        => "api/polynomials.md",

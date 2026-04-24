@@ -111,9 +111,8 @@ Wmorfe[4,2] = 1.0 # add the external forcing component
 R1 = Rmorfe[:, 0:3]
 W1 = Wmorfe[:, 0:3]
 
-# left eigenvectors, biorthogonal: X.H @ B @ W1 = I
-                               # ROM x FOM  (complex transpose form)
-X = W1.conj().T                    # ROM x ROM
+# left eigenvectors, biorthogonal: X @ B @ W1 = I_red
+X = W1.conj().T                    # placeholder; shape (ROM, FOM)
 
 # Reshape each tensor into standard Kronecker form (FOM, FOM^k)
 
@@ -196,7 +195,7 @@ def normal_form_style(order, superharmonics, eigenvalues, tolerance_resonance):
     return is_resonant.ravel()   # boolean, length ROM**(order+1)
 
 def graph_style(order, **param_kwargs):
-    # graph style: keep all higher‑order reduced dynamics *zero*
+    # graph style: all R_p entries are free; uniqueness enforced by X @ B @ W_p = 0
     return np.ones(ROM**(order+1), dtype=bool)
 
 # ------------------------------------------------------------
