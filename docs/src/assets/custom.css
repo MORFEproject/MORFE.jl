@@ -3,6 +3,8 @@
     --font-size-base: 16px;
     --line-height-base: 1.65;
     --content-max-width: 900px;
+    --color-brand: #9558B2;
+    --color-brand-light: #f8f4fc;
 }
 
 body {
@@ -110,9 +112,18 @@ tr:hover td {
 }
 
 /* ─── Badges / shields in headings ──────────────────────────────── */
-p img[src*="shields.io"] {
+p img[src*="shields.io"],
+p img[src*="img.shields.io"] {
     vertical-align: middle;
     margin-right: 0.25rem;
+}
+
+/* Binder / launch badge row — give it a bit of vertical breathing room */
+p img[src*="shields.io"][alt*="Pluto"],
+p img[src*="shields.io"][alt*="Binder"],
+p img[src*="mybinder.org"] {
+    margin-top: 0.6rem;
+    margin-bottom: 0.6rem;
 }
 
 /* ─── Horizontal rules ───────────────────────────────────────────── */
@@ -124,10 +135,10 @@ article.content hr {
 
 /* ─── Blockquotes ────────────────────────────────────────────────── */
 blockquote {
-    border-left: 4px solid #9558B2;
+    border-left: 4px solid var(--color-brand);
     margin: 1.2rem 0;
     padding: 0.6rem 1rem;
-    background: #f8f4fc;
+    background: var(--color-brand-light);
     border-radius: 0 4px 4px 0;
     color: #444;
 }
@@ -136,9 +147,75 @@ blockquote p {
     margin: 0;
 }
 
+/* ─── Documenter admonitions ─────────────────────────────────────── */
+/* note  ── purple (brand) */
+.admonition.is-note {
+    border-color: var(--color-brand);
+}
+.admonition.is-note > .admonition-header {
+    background-color: var(--color-brand);
+}
+
+/* tip  ── teal */
+.admonition.is-tip {
+    border-color: #1abc9c;
+}
+.admonition.is-tip > .admonition-header {
+    background-color: #1abc9c;
+}
+
+/* info  ── blue */
+.admonition.is-info {
+    border-color: #3498db;
+}
+.admonition.is-info > .admonition-header {
+    background-color: #3498db;
+}
+
+/* warning  ── amber */
+.admonition.is-warning {
+    border-color: #f39c12;
+}
+.admonition.is-warning > .admonition-header {
+    background-color: #f39c12;
+}
+
+/* danger  ── red */
+.admonition.is-danger {
+    border-color: #e74c3c;
+}
+.admonition.is-danger > .admonition-header {
+    background-color: #e74c3c;
+}
+
+/* Shared admonition layout */
+.admonition {
+    border-radius: 4px;
+    border-left-width: 4px;
+    margin: 1.4rem 0;
+}
+
+.admonition > .admonition-header {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.88rem;
+    letter-spacing: 0.03em;
+    padding: 0.35rem 0.8rem;
+    border-radius: 0 4px 0 0;
+}
+
+.admonition > .admonition-body {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.admonition > .admonition-body p:last-child {
+    margin-bottom: 0;
+}
+
 /* ─── API docstring entries ──────────────────────────────────────── */
 .docstring {
-    border-left: 3px solid #9558B2;
+    border-left: 3px solid var(--color-brand);
     padding-left: 0.8rem;
     margin-bottom: 2rem;
 }
@@ -157,4 +234,11 @@ blockquote p {
 .docs-header {
     border-bottom: 1px solid #eee;
     padding-bottom: 0.5rem;
+}
+
+/* ─── Math display blocks ─────────────────────────────────────────── */
+/* Give display-mode MathJax a little more vertical space */
+mjx-container[display="true"] {
+    margin: 1.1rem 0;
+    overflow-x: auto;
 }
