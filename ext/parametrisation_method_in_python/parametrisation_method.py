@@ -10,14 +10,14 @@ import numpy as np
 # ------------------------------------------------------------
 FOM = 5          # full order model dimension
 ROM = 3          # reduced order model dimension
-max_expansion_order = 3   # highest polynomial degree kept
+max_expansion_order = 4   # highest polynomial degree kept
 
 # ------------------------------------------------------------
 #  Define problem
 # ------------------------------------------------------------
 K = array([[2.0, -1.0],[-1.0, 2.0]])  # stiffness
-C = array([[0.01, 0.0],[0.0, 0.01]])  # light damping
 M = array([[1.0, 0.0],[0.0, 1.0]])    # mass (highest-order coefficient)
+C = 0.001 * M  # light damping
 
 Id = np.eye(2)    # identity matrix
 n = 3
@@ -95,8 +95,8 @@ A_raw = [A1, A2, A3]
 # ------------------------------------------------------------
 # choose simple diagonal linear part for testing
 
-import h5py
-with h5py.File(Path(__file__).parent / "output.h5", "r") as file:
+import h5py # Path(__file__).parent / 
+with h5py.File(Path(__file__).parent / "../../demo/ParametrisationMethod/output.h5", "r") as file:
     mset = file["multiindex_exponents"][:] 
     Wmorfe = file["W_coefficients"][:].reshape(len(mset), 4).T
     Rmorfe = file["R_coefficients"][:].T
@@ -168,23 +168,27 @@ def compute_rhs(order: int):
     tensor = np.sum([A[k] @ Xi[order-1][k] for k in range(1, min(order, len(A)))], axis=0)
     tensor -= np.sum([B @ Wkron[k] @ Gamma[order-1][k] for k in range(1, order-1)], axis=0)
 
-    return tensor.ravel()           # FOM * ROM**order vector
+    return tensor.reshape((FOM * ROM**order, 1))           # FOM * ROM**order vector
 
 # ------------------------------------------------------------
 #  Linear operators used in the bordered system
 # ------------------------------------------------------------
 def compute_L_W(order: int):
-    return kron(Gamma[order-1][order-1].T, B) - kron(np.eye(ROM**order), A[0])
+    # rvec(B@W@Γ) = kron(B, Γᵀ) @ rvec(W)   (row-major convention)
+    # rvec(A₀@W)  = kron(A₀, I)  @ rvec(W)
+    return kron(B, Gamma[order-1][order-1].T) - kron(A[0], np.eye(ROM**order))
 
 def compute_L_R(order: int, param_style: callable, **param_kwargs):
-    aux = kron(np.eye(ROM**order), B @ W1)           # (FOM*ROM**order, ROM**(order+1))
+    # rvec(B@W1@R) = kron(B@W1, I) @ rvec(R)
+    aux = kron(B @ W1, np.eye(ROM**order))           # (FOM*ROM**order, ROM**(order+1))
     is_resonant = param_style(order, **param_kwargs) # boolean mask, length ROM**(order+1)
     L_R = aux[:, is_resonant]                        # keep only resonant columns
     return L_R, is_resonant
 
 def compute_C_W(order: int, is_resonant):
-    aux = kron(np.eye(ROM**order), X @ B)           # (ROM**(order+1), FOM*ROM**order)
-    return aux[is_resonant, :]                      # keep only resonant rows
+    # rvec(X@B@W) = kron(X@B, I) @ rvec(W)
+    aux = kron(X @ B, np.eye(ROM**order))            # (ROM**(order+1), FOM*ROM**order)
+    return aux[is_resonant, :]                       # keep only resonant rows
 
 # ------------------------------------------------------------
 #  Style definitions for the reduced dynamics
@@ -206,7 +210,7 @@ Rkron[0] = R1
 Wkron[0] = W1
 Gamma[0][0] = Rkron[0]
 Xi[0][0] = Wkron[0]
-assert norm(compute_residue(1)) < tolerance_order1, "Linear solution inaccurate"
+assert norm(compute_residue(1)) < tolerance_order1, "Linear solution is inaccurate"
 
 # ------------------------------------------------------------
 #  Loop over higher orders
@@ -214,7 +218,7 @@ assert norm(compute_residue(1)) < tolerance_order1, "Linear solution inaccurate"
 superharmonics = eigenvalues  # will be updated to eigenvalues ⊗ eigenvalues ⊗ ...
 
 # choose style and parameters
-param_style = normal_form_style # graph_style     # or normal_form_style
+param_style = graph_style     # or normal_form_style
 param_kwargs_base = {
     "eigenvalues": eigenvalues,
     "tolerance_resonance": 1e-6,   # large value for testing
@@ -242,7 +246,7 @@ for order in range(2, max_expansion_order + 1):
         # Bordered linear system
         M = np.block([[L_W, L_R],
                       [C_W, np.zeros((num_resonant, num_resonant))]])
-        rhs_ext = np.concatenate([rhs, np.zeros(num_resonant)])
+        rhs_ext = np.concatenate([rhs, np.zeros((num_resonant, 1))])
         sol = solve(M, rhs_ext)
         w = sol[:FOM * ROM**order]
         r_res = sol[FOM * ROM**order:]
@@ -252,7 +256,7 @@ for order in range(2, max_expansion_order + 1):
 
     # Store reduced dynamics R (resonant terms placed, non‑resonant zero)
     R_full = np.zeros(ROM**(order+1), dtype=complex)
-    R_full[is_resonant] = r_res
+    R_full[is_resonant] = r_res.ravel()
     Rkron[order-1] = R_full.reshape(ROM, ROM**order)
 
 Gamma[order-1][0] = Rkron[order-1]
@@ -262,3 +266,9 @@ for order in range(1, max_expansion_order+1):
     print(f"order {order} error =", norm(compute_residue(order)))
 
 print("SSM Kronecker computation finished successfully.")
+
+order = 3
+term = 2
+n_permutations = 3
+print(f"\nTerm {term} of R @ order {order} =\n", Rkron[order-1][:,term] * n_permutations)
+

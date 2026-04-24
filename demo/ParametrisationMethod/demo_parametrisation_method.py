@@ -4,8 +4,8 @@ from numpy.linalg import norm
 import numpy as np
 
 K = array([[2.0, -1.0],[-1.0, 2.0]])  # stiffness
-C = array([[0.01, 0.0],[0.0, 0.01]])  # light damping
 M = array([[1.0, 0.0],[0.0, 1.0]])    # mass (highest-order coefficient)
+C = 0.001 * M  # light damping
 
 Id = np.eye(2)    # identity matrix
 n = 3
