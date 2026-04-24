@@ -113,7 +113,7 @@ end
 # Parser helpers
 # ---------------------------------------------------------------------------
 
-function _parse_keyword(line::String)
+function _parse_keyword(line::AbstractString)
     parts = split(line, ",")
     kw = uppercase(strip(parts[1]))
     opts = Dict{String,String}()
@@ -127,7 +127,7 @@ function _parse_keyword(line::String)
 end
 
 # Read one logical Abaqus data record, following trailing-comma continuations.
-function _read_tokens(io::IO, first_line::String)
+function _read_tokens(io::IO, first_line::AbstractString)
     tokens = String[]
     line = first_line
     while true
