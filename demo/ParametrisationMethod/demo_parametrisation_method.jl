@@ -36,8 +36,8 @@ FOM = 2
 
 # NDOrderModel stores linear terms as (B₀, B₁, …, B_ORD)
 B0 = [2.0 -1.0; -1.0 2.0] # stiffness
-B1 = [0.01 0.0; 0.0 0.01] # light damping
 B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
+B1 = 0.001 * B2 # light damping
 
 # ------------------------------------------------------------------------------
 # 2. Nonlinear terms and external system
