@@ -348,9 +348,9 @@ function comsol_to_gmsh(comsol_file::String, gmsh_file::String)
     if length(e2nT10) > 0
         elemType = 11
         elemTags = e2gT10
-        # COMSOL edge-mid order: mid(01),mid(12),mid(23),mid(03),mid(02),mid(13)
-        # Gmsh type-11 order:    mid(12),mid(23),mid(13),mid(14),mid(24),mid(34)
-        perm_T10 = [1, 2, 3, 4, 5, 6, 9, 8, 10, 7]
+        # COMSOL tet2: corners 3↔4 swapped and edge-mids 6↔7 swapped vs Gmsh type 11.
+        # Derived from FEconv module_utils_mphtxt.f90 and verified against Gmsh API coords.
+        perm_T10 = [1, 2, 4, 3, 5, 7, 6, 8, 9, 10]
         ne = length(e2nT10) ÷ T10n
         for i in 1:ne
             idx = ((i - 1) * T10n + 1):(i * T10n)
@@ -364,13 +364,12 @@ function comsol_to_gmsh(comsol_file::String, gmsh_file::String)
     if length(e2nH27) > 0
         elemType = 12
         elemTags = e2gH27
-        # Corners (1-8) and edge mids (9-20) match between COMSOL and Gmsh.
-        # Face centers differ: COMSOL orders bottom/top/front/back/left/right
-        # (z-,z+,y-,y+,x-,x+) while Gmsh orders x-,x+,y-,y+,z-,z+.
-        perm_H27 = [1, 2, 3, 4, 5, 6, 7, 8,
-                    9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-                    25, 26, 23, 24, 21, 22,
-                    27]
+        # COMSOL hex2: corners 3↔4 and 7↔8 swapped, edge-mids and face-centers
+        # completely reordered vs Gmsh type 12.
+        # Derived from FEconv (inverse of PMH→COMSOL map) and verified vs Gmsh API coords.
+        perm_H27 = [1, 2, 4, 3, 5, 6, 8, 7,
+                    9, 12, 21, 10, 11, 13, 23, 14, 22, 27, 25, 16,
+                    26, 15, 17, 20, 24, 18, 19]
         ne = length(e2nH27) ÷ H27n
         for i in 1:ne
             idx = ((i - 1) * H27n + 1):(i * H27n)
