@@ -89,16 +89,15 @@ def fill_in_Gamma_Xi(order:int):
         
     Xi[order-1][0] = Wkron[order-1]
         
-    for k in range(1, order):
+    for k in range(1, min(order, len(A))):
         Xi[order-1][k] = np.sum([kron(Wkron[order-sh-2], Xi[sh][k-1]) for sh in range(k-1, order-1)], axis=0)
 
 def compute_residue(order:int):
     if order == 1:
         return A[0] @ Wkron[0] - B @ Wkron[0] @ Rkron[0]
     
-    return np.sum([
-        B @ Wkron[k] @ Gamma[order-1][k] - A[k] @ Xi[order-1][k] 
-        for k in range(order)], axis=0)
+    return np.sum([ B @ Wkron[k] @ Gamma[order-1][k] for k in range(order)], axis=0) \
+         - np.sum([A[k] @ Xi[order-1][k] for k in range(min(order, len(A)))], axis=0)
     
 import h5py
 with h5py.File(Path(__file__).parent / "output.h5", "r") as file:
