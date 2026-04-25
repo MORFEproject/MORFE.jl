@@ -5,17 +5,29 @@
 //
 // This script loads Mermaid.js from the jsDelivr CDN, locates those elements,
 // swaps them for <div class="mermaid"> containers, and calls mermaid.run().
+//
+// Documenter.jl embeds RequireJS, whose global `define` is detected by
+// Mermaid's UMD bundle.  When that happens the bundle registers itself as an
+// AMD module instead of setting window.mermaid, so the onload callback fails.
+// We temporarily hide `define` while the CDN script loads to force the bundle
+// into browser-global mode.
 
 (function () {
     "use strict";
 
     function init() {
+        // Hide RequireJS's define so Mermaid's UMD bundle falls through to
+        // browser-global mode and sets window.mermaid.
+        var savedDefine = window.define;
+        window.define = undefined;
+
         var script = document.createElement("script");
         script.type = "text/javascript";
         // Pin to a specific minor version for reproducibility.
         script.src =
             "https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js";
         script.onload = function () {
+            window.define = savedDefine; // restore RequireJS
             mermaid.initialize({
                 startOnLoad: false,
                 theme: "default",
