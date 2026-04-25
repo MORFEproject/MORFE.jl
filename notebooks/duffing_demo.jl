@@ -8,218 +8,181 @@ using InteractiveUtils
 # It demonstrates the Direct Parametrisation of Invariant Manifolds (DPIM)
 # on a 2-DOF Duffing oscillator with harmonic forcing.
 #
-# Running on Binder:
+# ── Running on Binder (no local install required) ──────────────────────────────
 #   https://binder.plutojl.org/v2/gh/MORFEproject/MORFE.jl/main?path=notebooks%2Fduffing_demo.jl
 #
-# Running locally (requires Julia + Pluto):
+# ── Running locally ────────────────────────────────────────────────────────────
 #   julia> import Pkg; Pkg.add("Pluto")
 #   julia> import Pluto; Pluto.run()
 #   Then open this file from the Pluto interface.
+#
+# The notebook activates the notebooks/Project.toml environment, which lists
+# MORFE as a local path dependency (resolves to the repo root automatically).
 
-# ╔═╡ 00000000-0000-0000-0000-000000000001
+# ╔═╡ f3a1c2d4-1111-4abc-8def-aabbccddeeff
 begin
 	import Pkg
-	# Install MORFE from the GitHub repository.
-	# On Binder the repo is already cloned, so we develop from the local path.
-	# Locally you can replace this with Pkg.develop(PackageSpec(path=".."))
-	if isdir(joinpath(@__DIR__, "..", "src"))
-		Pkg.develop(PackageSpec(path = joinpath(@__DIR__, "..")))
-	else
-		Pkg.add(url = "https://github.com/MORFEproject/MORFE.jl.git")
-	end
-	Pkg.add(["Plots", "PlutoUI", "StaticArrays", "HDF5", "LinearAlgebra"])
+	# Activate the notebooks/ environment, which contains MORFE as a
+	# local path source (see notebooks/Project.toml).
+	Pkg.activate(@__DIR__)
 	Pkg.instantiate()
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000002
+# ╔═╡ a2b3c4d5-2222-4bcd-9ef0-bbccddeeff00
 begin
 	using MORFE
-	using MORFE.Eigensolvers: generalised_eigenpairs
-	using MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
+	using MORFE.Multiindices: all_multiindices_up_to
 	using MORFE.Polynomials: DensePolynomial
 	using MORFE.Resonance: resonance_set_from_graph_style
 	using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
 	using MORFE.ExternalSystems: ExternalSystem
-	using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics
 	using MORFE.CohomologicalEquations: solve_cohomological_problem
 
 	using LinearAlgebra, StaticArrays
 	using Plots, PlutoUI
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000010
+# ╔═╡ e1f2a3b4-3333-4cde-a0f1-ccddeeff0011
 md"""
 # MORFE.jl — DPIM Demo: 2-DOF Duffing Oscillator
 
-**Direct Parametrisation of Invariant Manifolds** for a two-degree-of-freedom Duffing system
-with harmonic excitation.
+**Direct Parametrisation of Invariant Manifolds** applied to a two-degree-of-freedom
+Duffing system with harmonic excitation.
 
-This notebook walks through the full MORFE.jl pipeline:
-
-1. Define system matrices
-2. Solve the generalised eigenproblem
+Full pipeline:
+1. Define system matrices (K, C, M) and nonlinear terms
+2. Solve the generalised eigenproblem (4×4)
 3. Select master modes and build the multiindex set
-4. Solve the cohomological equations → SSM parametrisation W and reduced dynamics R
-5. Visualise the SSM and the frequency-response curve
+4. Solve the cohomological equations → SSM parametrisation **W** and reduced dynamics **R**
+5. Visualise the SSM geometry and the backbone curve
 
-> **Reference**: Jain & Haller (2022), *Nonlinear Dynamics* 107, 1417–1450.
+> **Reference:** Opreni, Vizzaccaro, Touzé & Frangi (2021), *npj Comput. Mater.* 7, 161.
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000020
+# ╔═╡ b4c5d6e7-4444-4def-b102-ddeeff001122
 md"""
-## 1. System Definition
-
-We study the two coupled Duffing oscillators:
+## 1. System Parameters
 
 $$M\ddot{x} + C\dot{x} + Kx + \beta x_1^3 \mathbf{e}_1 = \hat{f}\,e^{i\Omega t}$$
 
-with
+with $M = I_2$, $K = \begin{pmatrix}2&-1\\-1&2\end{pmatrix}$, $C = \varepsilon I_2$,
+$\hat{f} = (1,\,1)^\top$.
 
-$$M = I_2, \quad C = \varepsilon I_2, \quad K = \begin{pmatrix}2 & -1 \\ -1 & 2\end{pmatrix},
-\quad \hat{f} = \begin{pmatrix}1 \\ 1\end{pmatrix}.$$
-
-Use the sliders below to set the **damping** ε and **nonlinearity** β before solving.
+Adjust the sliders — changing any parameter re-runs the entire pipeline automatically.
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000021
-@bind epsilon Slider(0.001:0.001:0.05, default=0.01, show_value=true)
+# ╔═╡ c5d6e7f8-5555-4ef0-c213-eeff00112233
+@bind epsilon Slider(0.005:0.005:0.05, default=0.01, show_value=true)
 
-# ╔═╡ 00000000-0000-0000-0000-000000000022
-@bind beta Slider(0.0:0.1:2.0, default=1.0, show_value=true)
+# ╔═╡ d6e7f809-6666-4f01-d324-ff0011223344
+@bind beta Slider(0.0:0.2:2.0, default=1.0, show_value=true)
 
-# ╔═╡ 00000000-0000-0000-0000-000000000023
+# ╔═╡ e7f80910-7777-4012-e435-001122334455
 @bind max_degree Slider(3:1:7, default=5, show_value=true)
 
-# ╔═╡ 00000000-0000-0000-0000-000000000024
+# ╔═╡ f8091011-8888-4123-f546-112233445566
 md"""
-*Damping coefficient* ε = **$(epsilon)** | *Cubic coefficient* β = **$(beta)** | *Polynomial degree* p = **$(max_degree)**
+**ε** (damping) = $(epsilon) | **β** (cubic stiffness) = $(beta) | **p** (polynomial degree) = $(max_degree)
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000030
-md"""
-## 2. System Matrices
-"""
+# ╔═╡ 09101112-9999-4234-0657-223344556677
+md"""## 2. Full-Order Model"""
 
-# ╔═╡ 00000000-0000-0000-0000-000000000031
+# ╔═╡ 10111213-aaaa-4345-1768-334455667788
 begin
-	n_dof = 2   # degrees of freedom
+	n_dof = 2
 
-	B0 = [2.0 -1.0; -1.0 2.0]           # stiffness K
-	B1 = [epsilon 0.0; 0.0 epsilon]      # damping C  (ε·I)
-	B2 = [1.0 0.0; 0.0 1.0]             # mass M = I
+	B0 = [2.0 -1.0; -1.0 2.0]                       # stiffness K
+	B1 = epsilon .* Matrix{Float64}(I, n_dof, n_dof) # damping C = ε I
+	B2 = Matrix{Float64}(I, n_dof, n_dof)            # mass M = I
 
-	md"""System matrices set: n = $n_dof DOF, ε = $epsilon, β = $beta."""
-end
-
-# ╔═╡ 00000000-0000-0000-0000-000000000040
-md"""
-## 3. Nonlinear Terms and External Forcing
-
-The cubic stiffness $\beta x_1^3$ is a *fully symmetric* trilinear map acting on the
-position slot of the first DOF.
-
-Harmonic forcing $\hat{f}e^{i\Omega t}$ is encoded as an autonomous external variable
-$r(t) = e^{i\Omega t}$ with $\dot r = i\Omega\,r$.  The forcing frequency $\Omega$ is a
-parameter of the external system — the DPIM polynomial is computed *once* and is valid for
-all $\Omega$.
-"""
-
-# ╔═╡ 00000000-0000-0000-0000-000000000041
-begin
-	# Cubic stiffness  −β x₁³  (minus: force on right-hand side)
+	# Cubic stiffness  −β x₁³  (minus sign: force is on the RHS)
 	term_cubic = MultilinearMap(
 		(res, x1, x2, x3) -> (@. res += -beta * x1 * x2 * x3),
 		(3, 0),
 	)
 
-	# External forcing:  F·r  (linear in r)
+	# Harmonic forcing  F̂·r  (linear in the external variable r)
 	F_ext = ComplexF64[1.0, 1.0]
 	term_forcing = MultilinearMap(
 		(res, r) -> (@. res += F_ext * r),
 		(0, 0), 1,
 	)
 
-	# External system: ṙ = iΩ·r  (Ω is a symbol; set Ω = 1.0 as placeholder)
-	Omega_placeholder = 1.0
-	external_system = ExternalSystem(
-		DensePolynomial(
-			ComplexF64[1.0im * Omega_placeholder],
-			MultiindexSet([[1]]),
-		),
-	)
+	# External system: ṙ = iΩ₀·r  (Ω₀ is a symbolic placeholder;
+	# the DPIM polynomial covers all forcing amplitudes at this frequency)
+	Omega0 = 1.0
+	external_system = ExternalSystem((ComplexF64(im * Omega0),))
 
 	model = NDOrderModel((B0, B1, B2), (term_cubic, term_forcing), external_system)
 
-	md"""Model assembled: cubic stiffness β=$(beta), harmonic forcing."""
+	md"""Model assembled: n=$(n_dof) DOF, ε=$(epsilon), β=$(beta), Ω₀=$(Omega0)."""
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000050
+# ╔═╡ 11121314-bbbb-4456-2879-445566778899
 md"""
-## 4. Spectral Decomposition
+## 3. Spectral Decomposition
 
-Solve the generalised eigenproblem $(A - \lambda B)\varphi = 0$ for the
-first-order companion matrices.  The 2-DOF second-order system gives a $4 \times 4$
-eigenproblem with two conjugate pairs.
+The second-order system with 2 DOF gives a 4×4 first-order generalised eigenproblem
+$(A - \lambda B)\varphi = 0$, yielding two conjugate pairs.
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000051
+# ╔═╡ 12131415-cccc-4567-398a-5566778899aa
 begin
 	A_eig, B_eig = linear_first_order_matrices(model)
 	eig_result   = eigen(A_eig, B_eig)
 
+	# Sort eigenvalues by magnitude (least-damped first)
 	sorted_idx  = sortperm(abs.(eig_result.values))
 	sorted_vals = eig_result.values[sorted_idx]
 	sorted_vecs = eig_result.vectors[:, sorted_idx]
 
-	eigvec_pos  = sorted_vecs[1:n_dof, :]   # position part
+	eigvec_pos  = sorted_vecs[1:n_dof, :]   # position block of each eigenvector
 
 	md"""
-	Eigenvalues (sorted by magnitude):
-	- λ₁ = $(round(sorted_vals[1], digits=6))
-	- λ₂ = $(round(sorted_vals[2], digits=6))
-	- λ₃ = $(round(sorted_vals[3], digits=6))
-	- λ₄ = $(round(sorted_vals[4], digits=6))
+	Eigenvalues (sorted by |λ|):
+	- λ₁ = $(round(sorted_vals[1], digits=5))
+	- λ₂ = $(round(sorted_vals[2], digits=5))
+	- λ₃ = $(round(sorted_vals[3], digits=5))
+	- λ₄ = $(round(sorted_vals[4], digits=5))
 	"""
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000052
-begin
-	# Eigenvalue plot
-	p_eig = scatter(
+# ╔═╡ 13141516-dddd-4678-4a9b-6677889900bb
+let
+	p = scatter(
 		real.(sorted_vals), imag.(sorted_vals);
-		xlabel = "Re(λ)",
-		ylabel = "Im(λ)",
-		title  = "Eigenvalues in the complex plane",
-		label  = "eigenvalues",
-		markershape = :circle,
-		markersize  = 8,
-		markercolor = :purple,
-		legend      = :topright,
-		framestyle  = :box,
+		xlabel     = "Re(λ)",
+		ylabel     = "Im(λ)",
+		title      = "Eigenvalues",
+		label      = "eigenvalues",
+		markersize = 8,
+		color      = :purple,
+		framestyle = :box,
 	)
 	vline!([0.0]; linestyle = :dash, color = :gray, label = "Im axis")
-	p_eig
+	p
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000060
+# ╔═╡ 14151617-eeee-4789-5bac-7788990011cc
 md"""
-## 5. Master Mode Selection
+## 4. Master Mode Selection
 
-We select the **first conjugate pair** (least damped) as master modes.  The external
-forcing variable adds one more reduced variable, giving NVAR = ROM + 1 = 3.
+We take the first conjugate pair (least damped) as the **master modes** (ROM = 2).
+One external variable (the forcing r) gives NVAR = 3.
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000061
+# ╔═╡ 15161718-ffff-4890-6cbd-8899001122dd
 begin
 	ROM   = 2
 	N_EXT = 1
 	NVAR  = ROM + N_EXT
 
 	master_eigenvalues = SVector{ROM, ComplexF64}(sorted_vals[1:ROM])
-	master_modes       = eigvec_pos[:, 1:ROM]          # n × ROM
-	left_eigenmodes    = master_modes                  # placeholder (same as right)
+	master_modes       = eigvec_pos[:, 1:ROM]        # n_dof × ROM
+	left_eigenmodes    = master_modes                # placeholder (same as right)
 
-	ORD_model = length(model.linear_terms) - 1
+	ORD_model = length(model.linear_terms) - 1       # = 2 for second-order system
 	master_modes_derivatives = zeros(ComplexF64, n_dof, ORD_model - 1, ROM)
 	for r in 1:ROM
 		orig_idx = sorted_idx[r]
@@ -229,23 +192,17 @@ begin
 		end
 	end
 
-	md"""
-	Master eigenvalues:
-	- λ₁ = $(round(master_eigenvalues[1], digits=6))
-	- λ₂ = $(round(master_eigenvalues[2], digits=6))
-
-	External eigenvalue: λ_ext = $(round(complex(1.0im * Omega_placeholder), digits=4))
-	"""
+	md"""Master eigenvalues: λ₁ = $(round(master_eigenvalues[1], digits=5)), λ₂ = $(round(master_eigenvalues[2], digits=5))"""
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000070
+# ╔═╡ 16171819-0000-4901-7dce-990011223300
 md"""
-## 6. Multiindex Set and Resonance Set
+## 5. Multiindex Set & Resonance Set
 
-Build all monomials in NVAR = $NVAR variables up to degree $max_degree.
+All monomials in NVAR = $(NVAR) variables up to degree **$(max_degree)**.
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000071
+# ╔═╡ 17181920-1111-4012-8edf-001122330011
 begin
 	mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 
@@ -259,24 +216,21 @@ begin
 		ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05,
 	)
 
-	n_resonant = sum(resonance_set.resonances)
-	md"""
-	Multiindex set: $(length(mset)) monomials (NVAR=$NVAR, degree ≤ $max_degree).
-	Resonant monomials: $n_resonant.
-	"""
+	n_res = sum(any(resonance_set.resonances[:, l]) for l in 1:length(mset))
+	md"""Multiindex set: $(length(mset)) monomials. Resonant monomials: $(n_res)."""
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000080
+# ╔═╡ 18192021-2222-4123-9ef0-1122334400aa
 md"""
-## 7. Solve the Cohomological Equations
+## 6. DPIM Solve
 
-This is the main DPIM computation.  For each monomial α in graded-lex order, MORFE.jl:
-1. computes the superharmonic s = ⟨λ, α⟩
-2. evaluates the nonlinear right-hand side Nα from lower-order coefficients
-3. solves the stacked cohomological system for W[α] and (if resonant) R[α]
+For each monomial α in GrLex order:
+1. Compute superharmonic s = ⟨λ, α⟩
+2. Evaluate nonlinear RHS Nα from already-solved lower-order coefficients
+3. Solve the (augmented) cohomological system for **W[α]** and (if resonant) **R[α]**
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000081
+# ╔═╡ 19202122-3333-4234-af01-2233445511bb
 begin
 	W, R = solve_cohomological_problem(
 		model, mset,
@@ -285,169 +239,163 @@ begin
 		resonance_set;
 		master_modes_derivatives = master_modes_derivatives,
 	)
-
-	md"""✓ Cohomological equations solved. Parametrisation W: shape $(size(W.poly.coefficients)), Reduced dynamics R: shape $(size(R.poly.coefficients))."""
+	md"""✓ Done. W: $(size(W.poly.coefficients)), R: $(size(R.poly.coefficients))."""
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000090
+# ╔═╡ 20212223-4444-4345-b012-3344556622cc
 md"""
-## 8. Visualise the SSM
+## 7. SSM Geometry
 
-Evaluate $W(z_1, \bar z_1, 0)$ over a grid of reduced coordinates $(z_1, \bar z_1)$ on the
-unit circle to trace the manifold geometry in physical space.
+Evaluate **W(a e^{iθ}, a e^{-iθ}, 0)** over a polar grid of reduced coordinates
+to trace the 2D manifold embedded in the 4D state space.
+(r = 0 → autonomous part of the SSM, independent of forcing amplitude.)
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000091
+# ╔═╡ 21222324-5555-4456-c123-4455667733dd
 begin
-	# Parametric evaluation: sweep amplitude a ∈ [0, 0.5] and phase θ ∈ [0, 2π)
-	# Reduced coordinate: z₁ = a·e^{iθ},  z₂ = conj(z₁),  r = 0 (autonomous part)
-	n_amp   = 8
-	n_theta = 60
-	amps    = LinRange(0.0, 0.4, n_amp)
-	thetas  = LinRange(0.0, 2π, n_theta)
+	exponents_list = mset.exponents   # Vector{SVector{NVAR, Int}}
 
-	# Build the exponents list once
-	exponents_list = mset.exponents
-
-	function eval_W(W_coeffs, z1, z2, r_val)
-		# Evaluate the position component (k=1) of W at (z1, z2, r_val)
-		result = zeros(ComplexF64, n_dof)
-		for (l, alpha) in enumerate(exponents_list)
-			mono_val = z1^alpha[1] * z2^alpha[2] * r_val^alpha[3]
-			for i in 1:n_dof
-				result[i] += W_coeffs[i, 1, l] * mono_val
+	function eval_W_pos(W_coeffs, exps, z1::ComplexF64, z2::ComplexF64, r::ComplexF64)
+		n = size(W_coeffs, 1)
+		result = zeros(ComplexF64, n)
+		for (l, alpha) in enumerate(exps)
+			mono = z1^alpha[1] * z2^alpha[2] * r^alpha[3]
+			for i in 1:n
+				result[i] += W_coeffs[i, 1, l] * mono
 			end
 		end
 		return result
 	end
 
-	# Collect SSM surface points
-	surf_x1 = Float64[]
-	surf_x2 = Float64[]
-	surf_z1r = Float64[]
+	n_amp, n_th = 7, 50
+	amps_surf   = LinRange(0.0, 0.4, n_amp)
+	thetas_surf = LinRange(0.0, 2π, n_th)
 
-	for a in amps
-		for θ in thetas
-			z1 = a * exp(im * θ)
-			z2 = conj(z1)
-			pt = eval_W(W.poly.coefficients, z1, z2, 0.0 + 0.0im)
-			push!(surf_x1,  real(pt[1]))
-			push!(surf_x2,  real(pt[2]))
-			push!(surf_z1r, real(z1))
-		end
+	pts_z1r = Float64[]
+	pts_x1  = Float64[]
+	pts_x2  = Float64[]
+
+	for a in amps_surf, θ in thetas_surf
+		z1 = a * exp(im * θ)
+		pt = eval_W_pos(W.poly.coefficients, exponents_list, z1, conj(z1), 0.0 + 0im)
+		push!(pts_z1r, real(z1))
+		push!(pts_x1,  real(pt[1]))
+		push!(pts_x2,  real(pt[2]))
 	end
 
-	p_ssm = scatter3d(
-		surf_z1r, surf_x1, surf_x2;
+	scatter3d(
+		pts_z1r, pts_x1, pts_x2;
 		xlabel     = "Re(z₁)",
 		ylabel     = "x₁",
 		zlabel     = "x₂",
-		title      = "SSM: physical state vs reduced coordinate",
-		markersize = 1.5,
-		color      = :viridis,
-		marker_z   = surf_z1r,
+		title      = "SSM geometry (autonomous, r=0)",
+		markersize = 1.2,
+		marker_z   = pts_z1r,
 		colorbar   = false,
 		label      = false,
 	)
-	p_ssm
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000100
+# ╔═╡ 22232425-6666-4567-d234-5566778844ee
 md"""
-## 9. Amplitude-Frequency Response (Backbone Curve)
+## 8. Backbone Curve
 
-The **backbone curve** of the SSM is obtained by evaluating the autonomous reduced dynamics
-$\dot z = R_{\text{auto}}(z)$ on the unit-amplitude circle $z_1 = a e^{i\theta}$ and reading
-off the instantaneous frequency $\dot\theta = \text{Im}(\dot z_1 / z_1)$.
+The backbone curve tracks the instantaneous frequency
+$\omega(a) = \operatorname{Im}(\dot z_1 / z_1)$
+of the autonomous SSM dynamics as a function of amplitude $a = |z_1|$.
+
+Only monomials with $\alpha_r = 0$ (the autonomous part of **R**) contribute here.
 """
 
-# ╔═╡ 00000000-0000-0000-0000-000000000101
+# ╔═╡ 23242526-7777-4678-e345-6677889955ff
 begin
-	function backbone(R_coeffs, exponents_list, amps_bb)
-		freqs = Float64[]
-		for a in amps_bb
-			# average phase velocity over the circle
+	function backbone_curve(R_coeffs, exps, amps)
+		freqs = Vector{Float64}(undef, length(amps))
+		n_avg = 64
+		thetas_bb = LinRange(0.0, 2π * (1 - 1 / n_avg), n_avg)
+
+		for (k, a) in enumerate(amps)
 			freq_sum = 0.0
-			for θ in LinRange(0.0, 2π - 2π / 64, 64)
+			for θ in thetas_bb
 				z1 = a * exp(im * θ)
 				z2 = conj(z1)
+				# Evaluate ż₁ = R₁(z₁, z₂, r=0) — only autonomous monomials contribute
 				zdot1 = zero(ComplexF64)
-				for (l, alpha) in enumerate(exponents_list)
-					mono = z1^alpha[1] * z2^alpha[2]
+				for (l, alpha) in enumerate(exps)
+					alpha[3] != 0 && continue           # skip forced monomials (r≠0 terms)
+					mono   = z1^alpha[1] * z2^alpha[2]
 					zdot1 += R_coeffs[1, l] * mono
 				end
-				if abs(z1) > 1e-12
-					freq_sum += imag(zdot1 / z1)
-				end
+				abs(z1) > 1e-14 && (freq_sum += imag(zdot1 / z1))
 			end
-			push!(freqs, freq_sum / 64)
+			freqs[k] = freq_sum / n_avg
 		end
 		return freqs
 	end
 
-	amps_bb = LinRange(0.001, 0.5, 80)
-	freqs_bb = backbone(R.poly.coefficients, exponents_list, amps_bb)
+	amps_bb  = LinRange(1e-3, 0.45, 100)
+	freqs_bb = backbone_curve(R.poly.coefficients, exponents_list, amps_bb)
 
-	omega1_linear = sqrt(1.0)  # approximate first natural frequency for K=[[2,-1],[-1,2]]
+	# Linear natural frequency of the first mode: eigenvalues of K w.r.t. M
+	omega1_lin = abs(imag(master_eigenvalues[1]))
 
 	p_bb = plot(
-		freqs_bb, amps_bb;
-		xlabel    = "Frequency  ω / (rad s⁻¹)",
-		ylabel    = "Amplitude  |z₁|",
-		title     = "SSM backbone curve  (β=$(beta), ε=$(epsilon))",
-		label     = "backbone",
-		linewidth = 2,
-		color     = :purple,
+		freqs_bb, collect(amps_bb);
+		xlabel     = "ω  (rad/s)",
+		ylabel     = "|z₁|  (amplitude)",
+		title      = "Backbone curve  (β=$(beta), ε=$(epsilon), p=$(max_degree))",
+		label      = "backbone",
+		linewidth  = 2,
+		color      = :purple,
 		framestyle = :box,
 	)
-	vline!([omega1_linear]; linestyle = :dash, color = :gray, label = "ω₁ (linear)")
+	vline!([omega1_lin]; linestyle = :dash, color = :gray, label = "ω₁ (linear)")
 	p_bb
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000110
+# ╔═╡ 24252627-8888-4789-f456-7788990066aa
 md"""
-## 10. Key Takeaways
+## Summary
 
-- The SSM parametrisation **W** maps the 2D reduced coordinates $(z_1, \bar z_1)$ to the
-  4D full state $(x_1, x_2, \dot x_1, \dot x_2)$ with a polynomial of degree $max_degree.
-- The backbone curve shows the frequency shift due to the cubic nonlinearity β = $(beta):
-  - β > 0 (hardening): frequency increases with amplitude
-  - β < 0 (softening): frequency decreases with amplitude
-- Increasing the polynomial degree *p* improves accuracy at higher amplitudes.
-- The reduced dynamics **R** is a 2D polynomial ODE that can be continued or integrated
-  in microseconds, compared to hours for the full FOM.
+| Symbol | Shape | Contents |
+|--------|-------|----------|
+| W.poly.coefficients | $(size(W.poly.coefficients)) | SSM embedding: full state vs reduced coordinates |
+| R.poly.coefficients | $(size(R.poly.coefficients)) | Reduced dynamics on the SSM |
 
-### Next Steps
+**Interpretation of the backbone curve:**
+- β > 0 (hardening): frequency *increases* with amplitude
+- β < 0 (softening): frequency *decreases* with amplitude
+- Increasing polynomial degree p improves accuracy at larger amplitudes
+- The forced response curve (FRC) can be traced by evaluating R with r ≠ 0
 
-- Add quasi-periodic forcing with multiple frequencies
-- Connect to a continuation package (e.g., BifurcationKit.jl) to trace forced-response curves
-- Export W and R to MATLAB/Python for post-processing via the `HDF5` output in the demo scripts
+**Next steps** from this reduced-order model:
+- Pass R to a continuation solver (e.g. BifurcationKit.jl) for the FRC
+- Export W, R to HDF5 for post-processing in Python/MATLAB
+- Increase p for higher accuracy near turning points
 """
 
 # ╔═╡ Cell order:
-# ╟─00000000-0000-0000-0000-000000000010
-# ╠═00000000-0000-0000-0000-000000000001
-# ╠═00000000-0000-0000-0000-000000000002
-# ╟─00000000-0000-0000-0000-000000000020
-# ╠═00000000-0000-0000-0000-000000000021
-# ╠═00000000-0000-0000-0000-000000000022
-# ╠═00000000-0000-0000-0000-000000000023
-# ╟─00000000-0000-0000-0000-000000000024
-# ╟─00000000-0000-0000-0000-000000000030
-# ╠═00000000-0000-0000-0000-000000000031
-# ╟─00000000-0000-0000-0000-000000000040
-# ╠═00000000-0000-0000-0000-000000000041
-# ╟─00000000-0000-0000-0000-000000000050
-# ╠═00000000-0000-0000-0000-000000000051
-# ╠═00000000-0000-0000-0000-000000000052
-# ╟─00000000-0000-0000-0000-000000000060
-# ╠═00000000-0000-0000-0000-000000000061
-# ╟─00000000-0000-0000-0000-000000000070
-# ╠═00000000-0000-0000-0000-000000000071
-# ╟─00000000-0000-0000-0000-000000000080
-# ╠═00000000-0000-0000-0000-000000000081
-# ╟─00000000-0000-0000-0000-000000000090
-# ╠═00000000-0000-0000-0000-000000000091
-# ╟─00000000-0000-0000-0000-000000000100
-# ╠═00000000-0000-0000-0000-000000000101
-# ╟─00000000-0000-0000-0000-000000000110
+# ╟─e1f2a3b4-3333-4cde-a0f1-ccddeeff0011
+# ╟─b4c5d6e7-4444-4def-b102-ddeeff001122
+# ╠═c5d6e7f8-5555-4ef0-c213-eeff00112233
+# ╠═d6e7f809-6666-4f01-d324-ff0011223344
+# ╠═e7f80910-7777-4012-e435-001122334455
+# ╟─f8091011-8888-4123-f546-112233445566
+# ╟─09101112-9999-4234-0657-223344556677
+# ╠═10111213-aaaa-4345-1768-334455667788
+# ╟─11121314-bbbb-4456-2879-445566778899
+# ╠═12131415-cccc-4567-398a-5566778899aa
+# ╠═13141516-dddd-4678-4a9b-6677889900bb
+# ╟─14151617-eeee-4789-5bac-7788990011cc
+# ╠═15161718-ffff-4890-6cbd-8899001122dd
+# ╟─16171819-0000-4901-7dce-990011223300
+# ╠═17181920-1111-4012-8edf-001122330011
+# ╟─18192021-2222-4123-9ef0-1122334400aa
+# ╠═19202122-3333-4234-af01-2233445511bb
+# ╟─20212223-4444-4345-b012-3344556622cc
+# ╠═21222324-5555-4456-c123-4455667733dd
+# ╟─22232425-6666-4567-d234-5566778844ee
+# ╠═23242526-7777-4678-e345-6677889955ff
+# ╟─24252627-8888-4789-f456-7788990066aa
+# ╠═f3a1c2d4-1111-4abc-8def-aabbccddeeff
+# ╠═a2b3c4d5-2222-4bcd-9ef0-bbccddeeff00
