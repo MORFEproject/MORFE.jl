@@ -86,8 +86,9 @@ makedocs(
         repolink   = "https://github.com/MORFEproject/MORFE.jl",
 
         # custom.css for improved typography and layout.
+        # mermaid.js loads Mermaid.js from CDN and renders ```mermaid blocks.
         # logo.svg in assets/ is auto-detected by Documenter and shown in the sidebar.
-        assets = ["assets/custom.css"],
+        assets = ["assets/custom.css", "assets/mermaid.js"],
 
         # Collapse the sidebar to depth 2 so API sub-sections start expanded.
         collapselevel = 2,
