@@ -338,7 +338,7 @@ flowchart TD
     J --> K["fill!(scratch, 0)\nt.f!(scratch, args…)\naccum += total_count * scratch"]
 ```
 
-The `FullyAsymmetric` path is the fastest: it never touches `scratch` and does not scale by a count.
+The `FullyAsymmetric` path is the simplest: it never touches `scratch` and does not scale by a count.
 
 ---
 

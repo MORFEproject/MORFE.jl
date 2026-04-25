@@ -93,7 +93,7 @@ result  = eigen(A, B)
 
 ## 4. Invariant Manifolds and the Spectral Gap
 
-!!! info "Existence of a smooth invariant manifold (Cabré, de la Llave & Jorba 2003)"
+!!! info "Existence of a smooth invariant manifold (Cabré, Fontich & de la Llave 2003)"
     Let $E_m$ be a spectral subspace of $A$ associated with eigenvalues
     $\Lambda_m = \{\lambda_1,\ldots,\lambda_m\}$.  If the **non-resonance** (spectral gap)
     condition holds for all slave eigenvalues $\lambda_j$, then there exists a unique smooth
@@ -113,7 +113,7 @@ well-separated mode pairs.
 **Why invariant manifolds are useful.**  The restriction of the full $Nn$-dimensional flow to the
 $m$-dimensional invariant manifold $\mathcal{W}(E_m)$ is an *exact* reduced-order model — it
 captures all orbits that start on the manifold forever, without projection error.  The
-*parametrisation method* (Cabré, de la Llave & Jorba 2003; see also §5–7) computes a polynomial
+*parametrisation method* (Cabré, Fontich & de la Llave 2003; see also §5–7) computes a polynomial
 approximation to this manifold up to user-chosen order $p$.
 
 ---
@@ -348,40 +348,15 @@ The DPIM then produces:
 The frequency-response curve near $\Omega \approx \omega_1$ is obtained by continuing equilibria of
 $\dot{\mathbf{z}} = R(\mathbf{z}, e^{i\Omega t})$ in the forcing amplitude or frequency.
 
-!!! tip "Interactive notebook"
-    The full computation for this system is implemented as a Pluto.jl notebook in
-    `notebooks/duffing_demo.jl`.  Launch it interactively via:
-
-    [![Open in Pluto on Binder](https://img.shields.io/badge/launch-Pluto%20notebook-4063D8?logo=julia)](https://binder.plutojl.org/v2/gh/MORFEproject/MORFE.jl/main?path=notebooks%2Fduffing_demo.jl)
+!!! tip "Demo script"
+    The full computation for this system is in
+    [`demo/ParametrisationMethod/demo_parametrisation_method.jl`](https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl).
 
 ---
 
 ## 12. References
 
-1. **Cabré, de la Llave & Jorba** (2003a). *The parameterization method for invariant manifolds I:
+1. **Cabré, Fontich & de la Llave** (2003). *The parameterization method for invariant manifolds I:
    Manifolds associated to non-resonant subspaces.* Indiana University Mathematics Journal 52(2),
    283–328.
    [doi:10.1512/iumj.2003.52.2245](https://doi.org/10.1512/iumj.2003.52.2245)
-
-2. **Cabré, de la Llave & Jorba** (2003b). *The parameterization method for invariant manifolds II:
-   Regularity with respect to parameters.* Indiana University Mathematics Journal 52(2), 329–360.
-   [doi:10.1512/iumj.2003.52.2346](https://doi.org/10.1512/iumj.2003.52.2346)
-
-3. **Cabré, de la Llave & Jorba** (2005). *The parameterization method for invariant manifolds III:
-   Overview and applications.* Journal of Differential Equations 218(2), 444–515.
-   [doi:10.1016/j.jde.2004.12.003](https://doi.org/10.1016/j.jde.2004.12.003)
-
-4. **Opreni, Vizzaccaro, Touzé & Frangi** (2021). *Model order reduction based on direct normal
-   form: application to large finite element MEMS structures vibrating at resonance.*
-   npj Computational Materials 7, 161.
-   [doi:10.1038/s41524-021-00630-9](https://doi.org/10.1038/s41524-021-00630-9)
-
-5. **Vizzaccaro, Opreni, Salles, Frangi & Touzé** (2022). *High order direct parametrisation of
-   invariant manifolds for model order reduction of mechanical systems: application to generic
-   types of nonlinearity.* Nonlinear Dynamics 110, 1941–2023.
-   [doi:10.1007/s11071-022-07651-9](https://doi.org/10.1007/s11071-022-07651-9)
-
-6. **Opreni, Vizzaccaro, Frangi & Touzé** (2023). *High-order direct parametrisation of invariant
-   manifolds for model order reduction of finite element structures: application to generic
-   mechanical systems.* Journal of Sound and Vibration 567, 117813.
-   [doi:10.1016/j.jsv.2023.117813](https://doi.org/10.1016/j.jsv.2023.117813)
