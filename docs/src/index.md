@@ -31,10 +31,10 @@ MORFE.jl resolves this by computing a **polynomial parametrisation** of a low-di
     See [DPIM Theory](theory/dpim.md) for a self-contained derivation of the invariance equation,
     cohomological equations, and the DPIM algorithm.
 
-!!! tip "Run a demo interactively"
-    Launch the Duffing oscillator demo as a live Pluto notebook — no local installation needed:
-
-    [![Open in Pluto on Binder](https://img.shields.io/badge/launch-Pluto%20notebook-4063D8?logo=julia&logoColor=white)](https://binder.plutojl.org/v2/gh/MORFEproject/MORFE.jl/main?path=notebooks%2Fduffing_demo.jl)
+!!! tip "Demo scripts"
+    Ready-to-run Julia scripts are in the [`demo/`](https://github.com/MORFEproject/MORFE.jl/tree/main/demo) folder.
+    Start with the full parametrisation pipeline:
+    [`demo/ParametrisationMethod/demo_parametrisation_method.jl`](https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl).
 
 ---
 
@@ -119,8 +119,8 @@ using MORFE.CohomologicalEquations: solve_cohomological_problem
 
 ## Features
 
-- **DPIM implementation** — Direct Parametrisation of Invariant Manifolds (Cabré, de la Llave &
-  Jorba 2003; Opreni, Vizzaccaro, Touzé & Frangi 2021)
+- **DPIM implementation** — Direct Parametrisation of Invariant Manifolds (Cabré, Fontich &
+  de la Llave 2003; Opreni, Vizzaccaro, Touzé & Frangi 2021)
 - **N-th order ODEs** — native support for second-order (and higher) structural ODE systems
 - **External forcing** — polynomial external forcing handled autonomously in the invariance equation
 - **Resonance handling** — graph-style, complex/real normal form, and condition-number strategies
