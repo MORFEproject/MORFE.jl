@@ -33,7 +33,6 @@ makedocs(
     ],
     pages = [
         "Home"             => "index.md",
-        "Project Overview" => "project-overview.md",
 
         # ── Theory ──────────────────────────────────────────────────────────
         "Theory" => [
@@ -41,7 +40,6 @@ makedocs(
             "Multiindices"            => "theory/multiindices.md",
             "Polynomials"             => "theory/polynomials.md",
             "Realification"           => "theory/realification.md",
-            "Multilinear Terms"       => "theory/multilinear_terms.md",
             "Cohomological Equations" => "theory/cohomological_equations.md",
         ],
 
