@@ -34,6 +34,11 @@ makedocs(
     pages = [
         "Home"             => "index.md",
 
+        # ── Tutorials ───────────────────────────────────────────────────────
+        "Tutorials" => [
+            "MultilinearTerms" => "tutorials/multilinear_terms.md",
+        ],
+
         # ── Theory ──────────────────────────────────────────────────────────
         "Theory" => [
             "DPIM Theory"             => "theory/dpim.md",
