@@ -56,13 +56,14 @@ Use Arpack eigs for sparse matrices. Computes nev eigenpairs.
 
 """
 struct ArpackEigenSolver <: AbstractEigenSolver
-    nev::Union{Nothing, UInt64}
+    nev::Union{Nothing, Int64}
 
-    function DefaultEigenSolver()
-        new{nothing}
+    function ArpackEigenSolver()
+        new(nothing)
     end
-    function DefaultEigenSolver(nev::UInt64)
-        new{nev}
+    function ArpackEigenSolver(nev::Int64)
+        @assert nev>0 "nev must be greater than zero!"
+        new(nev)
     end
 end
 
@@ -150,9 +151,8 @@ function compute_eigen_problem(
 
     # normalize eigenpairs
     normalizer!(model, eigenmodes, left_eigenmodes)
-
     # Construct EigenProblem
-    EigenProblem(model, solver, eigenvalues, eigenmodes, left_eigenmodes)
+    return EigenProblem(model, solver, eigenvalues, eigenmodes, left_eigenmodes)
 end
 
 """
