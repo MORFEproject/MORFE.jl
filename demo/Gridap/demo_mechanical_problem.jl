@@ -1,0 +1,231 @@
+"""
+Structural mechanical problem without forcing using Gridap.jl as FEM
+
+This script demonstrates the formulation and discretization of a structural mechanics 
+problem using finite element methods, followed by conversion to a first-order system.
+"""
+
+using MORFE
+
+using Gridap
+using GridapGmsh
+using WriteVTK
+using Gmsh
+using SparseArrays
+using Arpack
+using LinearAlgebra
+
+# print test results to confirm correct relations
+test = false
+
+# ------------------------------------------------------------------------------
+# 1. Define NDOrderModel
+# Structural mechanical problem without forcing.
+# First build second order ODE:
+# M*d_t² U + C*d_tU + K*U + n(U) = 0
+# ------------------------------------------------------------------------------
+
+# Load GMSH-Mesh
+gmsh.initialize()
+# gmsh.option.setNumber("General.Verbosity", 0)
+model = GmshDiscreteModel("demo/Gridap/clamped_clamped_beam.msh")
+
+# Define FEM Space
+order = 2
+degree = 2 * order
+Ω = Triangulation(model)
+dΩ = Measure(Ω, degree)
+Γ = BoundaryTriangulation(model, tags = "Neumann")
+Γ_D = BoundaryTriangulation(model, tags = "Dirichlet")
+dΓ = Measure(Γ, degree)
+reffe = ReferenceFE(lagrangian, VectorValue{3, Float64}, order)
+V = TestFESpace(model, reffe; conformity = :H1, dirichlet_tags = ["Dirichlet"],
+    dirichlet_masks = [(true, true, true)])
+g(x) = VectorValue(0.0, 0.0, 0.0)
+U = TrialFESpace(V, g)
+
+# Material properties and constitutive relations
+sym(u) = 1 / 2 * (u + u')
+E = 160e3
+ν = 0.22
+ρ = 2.32e-3
+λ = (E * ν) / ((1 + ν) * (1 - 2 * ν))
+μ = E / (2 * (1 + ν))
+σ(ε) = λ * tr(ε) * one(ε) + 2 * μ * ε
+
+#Linear forms
+a(u, v) = ∫(ε(v) ⊙ (σ ∘ ε(u)))dΩ
+m(dt2u, v) = ∫(ρ * dt2u ⋅ v)dΩ
+E_nl(u1, u2) = 0.25 * ((∇(u1)') ⋅ ∇(u2) + (∇(u2)') ⋅ ∇(u1))
+E_nl_grad(∇u1, ∇u2) = 0.25 * ((∇u1') ⋅ ∇u2 + (∇u2') ⋅ ∇u1)
+σ_nln(ε) = λ * tr(ε) * one(TensorValue{3, 3, Float64}) + 2 * μ * ε
+
+#Quadratic nonlinear terms
+function g_quad(u1, u2, v)
+    ∫(ε(v) ⊙ (σ_nln(E_nl(u1, u2))) +
+      0.5 * (sym(∇(u1)' ⋅ ∇(v)) ⊙ σ_nln(ε(u2))
+             +
+             sym(∇(u2)' ⋅ ∇(v)) ⊙ σ_nln(ε(u1))))dΩ
+end
+
+#Cubic nonlinear terms
+function h_cube(u1, u2, u3, v)
+    1 / 3 *
+    ∫(sym(∇(u1)' ⋅ ∇(v)) ⊙ (σ_nln(E_nl(u2, u3))) +
+      sym(∇(u2)' ⋅ ∇(v)) ⊙ (σ_nln(E_nl(u1, u3))) +
+      sym(∇(u3)' ⋅ ∇(v)) ⊙ (σ_nln(E_nl(u1, u2))))dΩ
+end
+
+# Assemble matrices of second order system
+stiffness_matrix = assemble_matrix((u, v) -> a(u, v), U, V)
+println("Stiffness:", size(stiffness_matrix))
+mass_matrix = assemble_matrix((u, v) -> m(u, v), U, V)
+α = 0.5370828278264171 / (100.0)
+β = 1.0 / (0.5370828278264171 * 100.0)
+damping_matrix = α * mass_matrix + β * stiffness_matrix
+
+# Define nonlinear terms for FullOrderModel of First Order
+# Note: Current implementation needs fe space to be available in scope and is not efficiently implemented for complex values
+function quadratic_nonlinearity!(res, vec1, vec2)
+    N = length(vec1)
+    N2 = N / 2
+    u1r = FEFunction(V, real(vec1[N2 + 1, :]))
+    u1i = FEFunction(V, imag(vec1[N2 + 1, :]))
+    u2r = FEFunction(V, real(vec2[N2 + 1, :]))
+    u2i = FEFunction(V, imag(vec2[N2 + 1, :]))
+    res .+= [
+        assemble_vector(v -> (g_quad(u1r, u2r, v) - g_quad(u1i, u2i, v)), V), zeros(N2)]
+    res .+= [
+        assemble_vector(v -> (g_quad(u1r, u2i, v) + g_quad(u1i, u2r, v)), V), zeros(N2)] *
+            im
+end
+term_quad = MultilinearMap(quadratic_nonlinearity!, (2, 0))
+function cubic_nonlinearity!(res, vec1, vec2, vec3)
+    N = length(vec1)
+    N2 = N / 2
+    u1r = FEFunction(V, real(vec1[N2 + 1, :]))
+    u2r = FEFunction(V, real(vec2[N2 + 1, :]))
+    u3r = FEFunction(V, real(vec3[N2 + 1, :]))
+    u1i = FEFunction(V, imag(vec1[N2 + 1, :]))
+    u2i = FEFunction(V, imag(vec2[N2 + 1, :]))
+    u3i = FEFunction(V, imag(vec3[N2 + 1, :]))
+    res .+= [
+        assemble_vector(
+            v -> (h_cube(u1r, u2r, u3r, v) - h_cube(u1r, u2i, u3i, v) -
+                  h_cube(u1i, u2r, u3i, v) - h_cube(u1i, u2i, u3r, v)),
+            V),
+        zeros(N2)]
+    res .+= [
+        assemble_vector(
+            v -> (h_cube(u1i, u2r, u3r, v) + h_cube(u1r, u2i, u3r, v) +
+                  h_cube(u1r, u2r, u3i, v) - h_cube(u1i, u2i, u3i, v)),
+            V),
+        zeros(N2)] * im
+end
+term_cubic = MultilinearMap(cubic_nonlinearity!, (3, 0))
+
+model = NDOrderModel(
+    (stiffness_matrix, damping_matrix, mass_matrix),# B0, B1, B2
+    (term_quad, term_cubic)
+)
+
+# ------------------------------------------------------------------------------
+# 2. EigenProblem
+# ------------------------------------------------------------------------------
+
+"""
+    Mechanical_Problem_Solver <: AbstractEigenSolver
+
+solves eigenproblem of the mechanical 2nd order problem:
+    M*d_t² U + C*d_tU + K*U + n(U) = 0
+with C = α*M + β*K under the assumption that M and K are spd matrices.
+ 
+1) calculate eigenpairs of: (K-ωₖ^2)ϕₖ=0
+2) calculate: ξₖ=0.5(α/ωₖ +β*ωₖ)
+3) calculate eigenvalues: λₖ=-ξₖ*ωₖ ± i*ωₖ√(1-ξₖ^2) 
+
+Attributes:
+- right_eig_result: saves right eigenvectors in solve() to use in solve_left
+- eigenvalues: saves eigenvalues in solve() to use in solve_left
+- nev: number of eigenvalues/vectors to compute
+- α: damping coefficient
+- β: damping coefficient
+
+"""
+mutable struct Mechanical_Problem_Solver <: AbstractEigenSolver
+    right_eig_result::Union{Nothing, Matrix}
+    eigenvalues::Union{Nothing, Vector}
+    nev::Int64
+    α::Float64
+    β::Float64
+end
+function MORFE.EigenProblems.solve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
+    # ω2, ϕ = eigs(model.linear_terms[1], model.linear_terms[3], nev = solver.nev, which = :SM)
+    @time ω2, ϕ = eigen(Matrix(model.linear_terms[1]), Matrix(model.linear_terms[3]))
+    idx = sortperm(real(ω2))[1:(solver.nev)]
+    ω2 = ω2[idx]
+    ϕ = ϕ[:, idx]
+    FOM = length(ϕ[:, 1]) * 2
+    FOM2 = length(ϕ[:, 1])
+    ω = sqrt.(real(ω2))
+    ϕ = real(ϕ)
+    λ = zeros(ComplexF64, solver.nev * 2)
+    for i in 1:(solver.nev)
+        ξ = 0.5 * (solver.α / ω[i] + solver.β * ω[i])
+        λ[2 * i - 1] = ω[i] * (-ξ + sqrt(Complex(1.0 - ξ^2)) * im)
+        λ[2 * i] = ω[i] * (-ξ - sqrt(Complex(1.0 - ξ^2)) * im)
+    end
+    eigenvectors = Matrix{ComplexF64}(undef, FOM, solver.nev * 2)
+    for i in 1:(solver.nev)
+        eigenvectors[1:FOM2, (i * 2 - 1)] .= ϕ[:, i]
+        eigenvectors[1:FOM2, (i * 2)] .= ϕ[:, i]
+        #velocity part
+        eigenvectors[(FOM2 + 1):end, (i * 2 - 1)] .= λ[(i * 2 - 1)] * ϕ[:, i]
+        eigenvectors[(FOM2 + 1):end, (i * 2)] .= λ[(i * 2)] * ϕ[:, i]
+    end
+    # store results in solver for left eigen_vectors
+    solver.right_eig_result = eigenvectors
+    solver.eigenvalues = λ
+    return λ, eigenvectors
+end
+
+function MORFE.EigenProblems.solve_left(
+        model::NDOrderModel, solver::Mechanical_Problem_Solver)
+    @assert solver.right_eig_result!==nothing "First run solve()"
+    left_eigenvectors = similar(solver.right_eig_result)
+    FOM = length(left_eigenvectors[:, 1])
+    FOM2 = Int(0.5 * FOM)
+    for i in 1:Int(0.5 * size(left_eigenvectors, 2))
+        left_eigenvectors[(FOM2 + 1):end, (i * 2 - 1)] = solver.right_eig_result[
+            1:FOM2, (i * 2)]
+        left_eigenvectors[(FOM2 + 1):end, (i * 2)] = solver.right_eig_result[
+            1:FOM2, (i * 2 - 1)]
+    end
+    for (i, λ) in enumerate(solver.eigenvalues)
+        # left_eigenvectors[(FOM2 + 1):end, i] = solver.right_eig_result[1:FOM2, i]
+        left_eigenvectors[1:FOM2, i] = -(1 / conj(λ)) * model.linear_terms[1]' *
+                                       left_eigenvectors[(FOM2 + 1):end, i]
+    end
+    return solver.eigenvalues, left_eigenvectors
+end
+
+# Compute left and right eigenpairs using the default solver and store it in EigenProblem
+eigenproblem = compute_eigen_problem(
+    model, solver = Mechanical_Problem_Solver(nothing, nothing, 10, α, β),
+    normalizer! = (args...) -> nothing,
+    sorter! = (args...) -> nothing)
+(eigs, Y, X) = get_eigenpairs(eigenproblem)
+for (i, λ) in enumerate(eigs)
+    println("  mode $i →   λ = $λ\n")
+end
+
+# test residuual of left and right eigenvectors
+if test == true
+    A, B = linear_first_order_matrices(model)
+    FOM2 = Int(size(Y, 1) / 2)
+    for (i, λ) in enumerate(eigs)
+        res_y = norm(A * Y[:, i] - λ * B * Y[:, i])
+        res_x = norm(A' * X[:, i] - conj(λ) * B' * X[:, i])
+        println("mode $i:", res_x, " ", res_y)
+    end
+end
