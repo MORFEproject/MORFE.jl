@@ -27,6 +27,7 @@ using .FullOrderModel
 using .EigenProblems
 using .Eigensolvers
 using .JordanChain
+using .Realification
 using .Resonance
 using .InvarianceEquation
 using .MasterModeOrthogonality
@@ -55,6 +56,9 @@ export FullOrderModel, FirstOrderModel, NDOrderModel,
 export AbstractEigenSolver, DefaultEigenSolver, ArpackEigenSolver, solve, solve_left,
        EigenProblem, compute_eigen_problem, get_eigenpairs, select_master_modes_by_hand,
        select_master_modes_by_sorting, select_master_modes_by_target_frequency
+
+# Realification
+export realify, compose_linear, realify_via_linear
 
 #Resonance
 export ResonanceSet,

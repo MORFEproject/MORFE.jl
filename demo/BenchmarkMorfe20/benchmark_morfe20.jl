@@ -1,23 +1,47 @@
 """
-Structural mechanical problem without forcing using Gridap.jl as FEM
-
-This script demonstrates the formulation and discretization of a structural mechanics 
-problem using finite element methods, followed by conversion to a first-order system.
+Implementation of the MORFE module to reproduce and compare the system from Morfe2.0
+Different Morfe2.0 examples can be used by exchanging 'info_file' and 'mesh_file'.
 """
 
 using MORFE
+include("Morfe_2_0/Morfe_2_0.jl")
+using .Morfe_2_0
 
-using Gridap
-using GridapGmsh
-using WriteVTK
-using Gmsh
-using SparseArrays
-using Arpack
 using LinearAlgebra
+using SparseArrays
 using StaticArrays
+using Arpack
 
-# print test results to confirm correct relations
-test = false
+#Make info
+info = Infostruct()
+info_file = "beam_damp.jl"
+include(info_file)
+
+#Import mesh
+mesh_file = "./demo/BenchmarkMorfe20/beam.mphtxt"
+mesh = read_mesh(mesh_file, domains_list, materials_list, materials_dict,
+    boundaries_list, constrained_dof, bc_vals)
+
+# initialise a dummy field to store dofs ordering and static solutions
+U = Field(mesh, Morfe_2_0.dim)
+
+info.nm = length(info.Φ)   # master modes
+info.nz = 2 * info.nm
+info.nzforce = 2  # imposes only two nonautonomous
+if info.Ffreq == 0
+    info.nzforce = 0
+end
+info.nrom = info.nz + info.nzforce
+info.nK = U.neq   # dim of FEM problem
+info.nA = 2 * info.nK  # dim of first order sys
+info.nMat = info.nA + info.nz  # dim of system to be solved
+
+colptr, rowval = Morfe_2_0.assembler_dummy_MK(mesh, U)
+val = zeros(Float64, length(rowval))
+K = SparseMatrixCSC(U.neq, U.neq, colptr, rowval, val)
+M = deepcopy(K)
+Morfe_2_0.assembler_MK!(mesh, U, K, M)
+C = info.α * M + info.β * K
 
 # ------------------------------------------------------------------------------
 # 1. Define NDOrderModel
@@ -26,104 +50,23 @@ test = false
 # M*d_t² U + C*d_tU + K*U = F(U)
 # ------------------------------------------------------------------------------
 
-# Load GMSH-Mesh
-gmsh.initialize()
-# gmsh.option.setNumber("General.Verbosity", 0)
-model = GmshDiscreteModel("demo/Gridap/clamped_clamped_beam.msh")
-
-# Define FEM Space
-order = 2
-degree = 2 * order
-Ω = Triangulation(model)
-dΩ = Measure(Ω, degree)
-Γ = BoundaryTriangulation(model, tags = "Neumann")
-Γ_D = BoundaryTriangulation(model, tags = "Dirichlet")
-dΓ = Measure(Γ, degree)
-reffe = ReferenceFE(lagrangian, VectorValue{3, Float64}, order)
-V = TestFESpace(model, reffe; conformity = :H1, dirichlet_tags = ["Dirichlet"],
-    dirichlet_masks = [(true, true, true)])
-g(x) = VectorValue(0.0, 0.0, 0.0)
-U = TrialFESpace(V, g)
-
-# Material properties and constitutive relations
-sym(u) = 1 / 2 * (u + u')
-E = 160e3
-ν = 0.22
-ρ = 2.32e-3
-λ = (E * ν) / ((1 + ν) * (1 - 2 * ν))
-μ = E / (2 * (1 + ν))
-σ(ε) = λ * tr(ε) * one(ε) + 2 * μ * ε
-
-#Linear forms
-a(u, v) = ∫(ε(v) ⊙ (σ ∘ ε(u)))dΩ
-m(dt2u, v) = ∫(ρ * dt2u ⋅ v)dΩ
-E_nl(u1, u2) = 0.25 * ((∇(u1)') ⋅ ∇(u2) + (∇(u2)') ⋅ ∇(u1))
-E_nl_grad(∇u1, ∇u2) = 0.25 * ((∇u1') ⋅ ∇u2 + (∇u2') ⋅ ∇u1)
-σ_nln(ε) = λ * tr(ε) * one(TensorValue{3, 3, Float64}) + 2 * μ * ε
-
-#Quadratic nonlinear terms
-function g_quad(u1, u2, v)
-    ∫(ε(v) ⊙ (σ_nln(E_nl(u1, u2))) +
-      0.5 * (sym(∇(u1)' ⋅ ∇(v)) ⊙ σ_nln(ε(u2))
-             +
-             sym(∇(u2)' ⋅ ∇(v)) ⊙ σ_nln(ε(u1))))dΩ
+function quadratic!(res, Ψ₁, Ψ₂)
+    Morfe_2_0.assembly_G!(res, Ψ₁, Ψ₂, mesh, U)
 end
-
-#Cubic nonlinear terms
-function h_cube(u1, u2, u3, v)
-    1 / 3 *
-    ∫(sym(∇(u1)' ⋅ ∇(v)) ⊙ (σ_nln(E_nl(u2, u3))) +
-      sym(∇(u2)' ⋅ ∇(v)) ⊙ (σ_nln(E_nl(u1, u3))) +
-      sym(∇(u3)' ⋅ ∇(v)) ⊙ (σ_nln(E_nl(u1, u2))))dΩ
+quadratic_term = MultilinearMap(quadratic!, (2, 0))
+function cubic!(res, Ψ₁, Ψ₂, Ψ₃)
+    Morfe_2_0.assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh, U)
 end
+cubic_term = MultilinearMap(cubic!, (3, 0))
+model = NDOrderModel((K, C, M), (quadratic_term, cubic_term))
 
-# Assemble matrices of second order system
-stiffness_matrix = assemble_matrix((u, v) -> a(u, v), U, V)
-mass_matrix = assemble_matrix((u, v) -> m(u, v), U, V)
-α = 0.5370828278264171 / (100.0)
-β = 1.0 / (0.5370828278264171 * 100.0)
-damping_matrix = α * mass_matrix + β * stiffness_matrix
-
-FOM = size(stiffness_matrix, 1)
+A, B = FullOrderModel.linear_first_order_matrices(model)
+FOM = size(K, 1)
 println("FOM:", FOM)
-
-# Define nonlinear terms for FullOrderModel of First Order
-# Note: Current implementation needs fe space to be available in scope and is not
-# efficiently implemented for complex values
-function quadratic_nonlinearity!(res, vec1, vec2)
-    u1r = FEFunction(V, real(vec1))
-    u1i = FEFunction(V, imag(vec1))
-    u2r = FEFunction(V, real(vec2))
-    u2i = FEFunction(V, imag(vec2))
-    res .+= assemble_vector(v -> (g_quad(u1r, u2r, v) - g_quad(u1i, u2i, v)), V)
-    res .+= assemble_vector(v -> (g_quad(u1r, u2i, v) + g_quad(u1i, u2r, v)), V) * im
-end
-term_quad = MultilinearMap(quadratic_nonlinearity!, (2, 0))
-function cubic_nonlinearity!(res, vec1, vec2, vec3)
-    u1r = FEFunction(V, real(vec1))
-    u2r = FEFunction(V, real(vec2))
-    u3r = FEFunction(V, real(vec3))
-    u1i = FEFunction(V, imag(vec1))
-    u2i = FEFunction(V, imag(vec2))
-    u3i = FEFunction(V, imag(vec3))
-    res .+= assemble_vector(
-        v -> (h_cube(u1r, u2r, u3r, v) - h_cube(u1r, u2i, u3i, v) -
-              h_cube(u1i, u2r, u3i, v) - h_cube(u1i, u2i, u3r, v)), V)
-    res .+= assemble_vector(
-        v -> (h_cube(u1i, u2r, u3r, v) + h_cube(u1r, u2i, u3r, v) +
-              h_cube(u1r, u2r, u3i, v) - h_cube(u1i, u2i, u3i, v)), V)
-end
-term_cubic = MultilinearMap(cubic_nonlinearity!, (3, 0))
-
-model = NDOrderModel(
-    (stiffness_matrix, damping_matrix, mass_matrix),# B0, B1, B2
-    (term_quad, term_cubic)
-)
 
 # ------------------------------------------------------------------------------
 # 2. EigenProblem
 # ------------------------------------------------------------------------------
-
 """
     Mechanical_Problem_Solver <: AbstractEigenSolver
 
@@ -151,7 +94,7 @@ mutable struct Mechanical_Problem_Solver <: AbstractEigenSolver
     β::Float64
 end
 function MORFE.EigenProblems.solve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
-    ω2, ϕ = eigs(
+    @time ω2, ϕ = eigs(
         model.linear_terms[1], model.linear_terms[3], nev = solver.nev, which = :SM)
     # @time ω2, ϕ = eigen(Matrix(model.linear_terms[1]), Matrix(model.linear_terms[3]))
     idx = sortperm(real(ω2))[1:(solver.nev)]
@@ -201,22 +144,11 @@ end
 
 # Compute left and right eigenpairs using the default solver and store it in EigenProblem
 eigenproblem = compute_eigen_problem(
-    model, solver = Mechanical_Problem_Solver(nothing, nothing, 10, α, β),
+    model, solver = Mechanical_Problem_Solver(nothing, nothing, 10, info.α, info.β),
     sorter! = (args...) -> nothing)
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigenvalues)
     println("  mode $i →   λ = $λ\n")
-end
-
-# test residuual of left and right eigenvectors
-if test == true
-    A, B = linear_first_order_matrices(model)
-    FOM2 = Int(size(Y, 1) / 2)
-    for (i, λ) in enumerate(eigenvalues)
-        res_y = norm(A * Y[:, i] - λ * B * Y[:, i])
-        res_x = norm(A' * X[:, i] - conj(λ) * B' * X[:, i])
-        println("mode $i:", res_x, " ", res_y)
-    end
 end
 # ------------------------------------------------------------------------------
 # 3. Select master modes and build the reduced-variable structure
@@ -248,7 +180,7 @@ end
 # 4. Build multiindex set and resonance set
 # ------------------------------------------------------------------------------
 
-outer_eigenvalues = eigenvalues[(ROM + 1):end] # ROM...2*10
+outer_eigenvalues = eigenvalues[(ROM + 1):end] # 2*10-FOM
 # no external system 
 super_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
 target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
@@ -272,7 +204,7 @@ for (idx, mi) in enumerate(mset.exponents)
 end
 
 # ------------------------------------------------------------------------------
-# 5. Solve cohomological equations
+# 5. Solve cohomological equationseigs
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
 @time W, R = solve_cohomological_problem(
@@ -317,7 +249,7 @@ function write_rdyn(R::ReducedDynamics{ROM, NVAR, T}) where {ROM, NVAR, T}
         end
         for d in 1:Int(NVAR * 0.5)
             rcoeff = real(coeff[2 * d - 1, m])
-            icoeff = -1 * imag(coeff[2 * d - 1, m])
+            icoeff = -imag(coeff[2 * d - 1, m])
             if abs(rcoeff) > 1e-20
                 rdyn[2 * d - 1] *= " + " * string(rcoeff) * monomial
             end
