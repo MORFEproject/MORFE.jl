@@ -49,7 +49,7 @@ end
 
 """
 struct ArpackEigenSolver <: AbstractEigenSolver
-    nev::Union{Nothing, UInt64}
+    nev::Union{Nothing, Int64}
 end
 
 Use Arpack eigs for sparse matrices. Computes nev eigenpairs.
@@ -93,7 +93,7 @@ mutable struct EigenProblem{T}
     solver::AbstractEigenSolver
     eigenvalues::Vector{Complex{T}}
     eigenmodes::Matrix{Complex{T}}
-    master_modes::Union{Nothing, Vector{UInt64}}
+    master_modes::Union{Nothing, Vector{Int64}}
     left_eigenvectors::Union{Nothing, Matrix{Complex{T}}}
 
 Struct to save sorted and matched left and right eigenpairs.
@@ -249,7 +249,7 @@ function select_master_modes_by_hand(ep::EigenProblem, mastermodes::Vector{Bool}
 end
 
 """
-    select_master_modes_by_sorting(ep::EigenProblem, nev::UInt64)
+    select_master_modes_by_sorting(ep::EigenProblem, nev::Int64)
 
 Defines master_modes as the first nev eigenpairs. Sorting was done in compute_eigen_problem.
 """
