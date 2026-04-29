@@ -263,7 +263,7 @@ Gamma[order-1][0] = Rkron[order-1]
 Xi[order-1][0] = Wkron[order-1]
     
 for order in range(1, max_expansion_order+1):
-    print(f"order {order} error =", norm(compute_residue(order)))
+    print(f"order {order} invariance error =", norm(compute_residue(order)))
 
 print("SSM Kronecker computation finished successfully.")
 

@@ -6,7 +6,7 @@ using .Multiindices
 nvars, max_degree = 4, 20
 multiindex_set = all_multiindices_up_to(nvars, max_degree)
 
-exp = [2, 2, 0, 0]   # exponent vector to factorise
+exp = [2, 2, 1, 0]   # exponent vector to factorise
 total_deg = sum(exp)
 candidate_indices = indices_in_box_with_bounded_degree(multiindex_set, exp, 1, total_deg)
 
