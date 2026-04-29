@@ -130,9 +130,6 @@ It assemblies quadratic nonlinearities operator
 function assembly_G!(res, Ψ₁, Ψ₂, mesh::Grid, U::Field, mult = 1.0; one_d = false)
     #
     neq = U.neq
-    if neq == info.nk
-        println("Gleich")
-    end
     X = zeros(Float64, nne_max * dim)
     dofs = zeros(Int64, nne_max * dim)
     Fₑ = zeros(ComplexF64, nne_max * dim)
@@ -190,7 +187,7 @@ function assembly_G!(res, Ψ₁, Ψ₂, mesh::Grid, U::Field, mult = 1.0; one_d 
                     N, ∂N∂a, ∂N∂x, Jac, Jac⁻¹,
                     ∇U₁, ∇U₂, sym∇U₁, sym∇U₂, e₁₂,
                     εᵛ₁, εᵛ₂, eᵛ₁₂, σᵛ₁, σᵛ₂, σᵛ₁₂,
-                    sycolptrm∇, sym∇ⁿˡ₁, sym∇ⁿˡ₂,
+                    sym∇, sym∇ⁿˡ₁, sym∇ⁿˡ₂,
                     nn, etype, qr)
                 #
                 for i in 1:(nn * dim)
