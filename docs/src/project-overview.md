@@ -133,6 +133,10 @@ The FE formulation allows different physics on different mesh domains.
 - [ ] Design output file format for coefficient matrices
 - [ ] Define solver interface
 - [ ] Add ParaView export
+- [ ] PETSc https://github.com/gridap/GridapPETSc.jl
+- [ ] Pardiso https://github.com/gridap/GridapPardiso.jl
+- [ ] Optimise FEM integration per fatorisation on RHS
+- [ ] Parallel solving Cohomolgical Equations (maybe Ferrite)
 
 ---
 

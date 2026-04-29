@@ -51,7 +51,7 @@ A2[2, 4, 4] = 1.0 # force on v1 with monomial r²
 A2[3, 4, 4] = 1.0 # force on v2 with monomial r²
 
 """
-# ExternalSystem: harmonic forcing ṙ = iΩ·r + 0.1 r² with Ω = 2.5
+# ExternalSystem: harmonic forcing ṙ = iΩ·r + 0.1 r² with Ω = 1.0
 external_system = ExternalSystem(
 	DensePolynomial(
 		ComplexF64[1.0im 0.1+0.0im], # 1×2 matrix: coefficients for r and r² terms
