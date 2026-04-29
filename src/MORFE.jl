@@ -5,7 +5,7 @@ include("Polynomials.jl")
 include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
-include("SpectralDecomposition/EigenProblems.jl")
+include("SpectralDecomposition/Eigenproblems.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
 include("SpectralDecomposition/JordanChain.jl")
 include("Realification.jl")
@@ -24,7 +24,7 @@ using .Polynomials: DensePolynomial, evaluate
 using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
-using .EigenProblems
+using .Eigenproblems
 using .Eigensolvers
 using .JordanChain
 using .Resonance
@@ -38,8 +38,8 @@ using .CohomologicalEquations
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
-       all_multiindices_up_to, multiindices_with_total_degree,
-       all_multiindices_in_box, indices_in_box_with_bounded_degree
+	all_multiindices_up_to, multiindices_with_total_degree,
+	all_multiindices_in_box, indices_in_box_with_bounded_degree
 
 # Polynomials
 export DensePolynomial, evaluate
@@ -49,19 +49,19 @@ export MultilinearMap, ExternalSystem
 
 # FullOrderModel
 export FullOrderModel, FirstOrderModel, NDOrderModel,
-       linear_first_order_matrices, evaluate_nonlinear_terms!
+	linear_first_order_matrices, evaluate_nonlinear_terms!
 
-# EigenProblems
-export AbstractEigenSolver, DefaultEigenSolver, ArpackEigenSolver, solve, solve_left,
-       EigenProblem, compute_eigen_problem, get_eigenpairs, select_master_modes_by_hand,
-       select_master_modes_by_sorting, select_master_modes_by_target_frequency
+# Eigenproblems
+export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, solve, solve_left,
+	Eigenproblem, compute_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
+	select_master_modes_by_sorting, select_master_modes_by_target_frequency
 
 #Resonance
 export ResonanceSet,
-       resonance_set_from_graph_style,
-       resonance_set_from_complex_normal_form_style,
-       resonance_set_from_real_normal_form_style,
-       resonance_set_from_condition_number_estimate
+	resonance_set_from_graph_style,
+	resonance_set_from_complex_normal_form_style,
+	resonance_set_from_real_normal_form_style,
+	resonance_set_from_condition_number_estimate
 
 # ParametrisationMethod
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
