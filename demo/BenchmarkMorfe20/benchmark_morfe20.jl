@@ -11,6 +11,8 @@ using LinearAlgebra
 using SparseArrays
 using StaticArrays
 using Arpack
+using Profile
+# using ProfileView
 
 #Make info
 info = Infostruct()
@@ -68,7 +70,7 @@ println("FOM:", FOM)
 # 2. EigenProblem
 # ------------------------------------------------------------------------------
 """
-    Mechanical_Problem_Solver <: AbstractEigenSolver
+    Mechanical_Problem_Solver <: AbstractEigensolver
 
 solves eigenproblem of the mechanical 2nd order problem:
     M*d_t² U + C*d_tU + K*U + n(U) = 0
@@ -86,20 +88,32 @@ Attributes:
 - β: damping coefficient
 
 """
-mutable struct Mechanical_Problem_Solver <: AbstractEigenSolver
+mutable struct Mechanical_Problem_Solver <: AbstractEigensolver
     right_eig_result::Union{Nothing, Matrix}
     eigenvalues::Union{Nothing, Vector}
     nev::Int64
     α::Float64
     β::Float64
 end
-function MORFE.EigenProblems.solve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
+function mass_normalization!(ϕ, M, neig)
+    #
+    for i in 1:neig
+        c = transpose(ϕ[:, i]) * M * ϕ[:, i]
+        for j in 1:(M.m)
+            ϕ[j, i] /= sqrt(c)
+        end
+    end
+    #
+    return nothing
+end
+function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
     @time ω2, ϕ = eigs(
         model.linear_terms[1], model.linear_terms[3], nev = solver.nev, which = :SM)
     # @time ω2, ϕ = eigen(Matrix(model.linear_terms[1]), Matrix(model.linear_terms[3]))
-    idx = sortperm(real(ω2))[1:(solver.nev)]
-    ω2 = ω2[idx]
-    ϕ = ϕ[:, idx]
+    # idx = sortperm(real(ω2))[1:(solver.nev)]
+    # ω2 = ω2[idx]
+    # ϕ = ϕ[:, idx]
+    mass_normalization!(ϕ, model.linear_terms[3], solver.nev)
     FOM = length(ϕ[:, 1])
     ω = sqrt.(real(ω2))
     ϕ = real(ϕ)
@@ -123,7 +137,7 @@ function MORFE.EigenProblems.solve(model::NDOrderModel, solver::Mechanical_Probl
     return λ, eigenvectors
 end
 
-function MORFE.EigenProblems.solve_left(
+function MORFE.Eigenproblems.solve_left(
         model::NDOrderModel, solver::Mechanical_Problem_Solver)
     @assert solver.right_eig_result!==nothing "First run solve()"
     left_eigenvectors = similar(solver.right_eig_result)
@@ -143,9 +157,10 @@ function MORFE.EigenProblems.solve_left(
 end
 
 # Compute left and right eigenpairs using the default solver and store it in EigenProblem
-eigenproblem = compute_eigen_problem(
+eigenproblem = compute_eigenproblem(
     model, solver = Mechanical_Problem_Solver(nothing, nothing, 10, info.α, info.β),
-    sorter! = (args...) -> nothing)
+    sorter! = (args...) -> nothing,
+    normalizer! = (args...) -> nothing)
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigenvalues)
     println("  mode $i →   λ = $λ\n")
@@ -207,7 +222,8 @@ end
 # 5. Solve cohomological equationseigs
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
-@time W, R = solve_cohomological_problem(
+Profile.clear()
+W, R = solve_cohomological_problem(
     model, mset,
     master_eigenvalues,
     master_modes, left_eigenmodes,
@@ -215,18 +231,25 @@ end
     master_modes_derivatives = master_modes_derivatives
 )
 
-# ------------------------------------------------------------------------------
-# 6. Realify
-# ------------------------------------------------------------------------------
-conj_map = zeros(Int64, NVAR)
-for i in 1:NVAR
-    if i % 2 == 1
-        conj_map[i] = i + 1
-    else
-        conj_map[i] = i - 1
-    end
-end
-Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
+@profview W, R = solve_cohomological_problem(
+    model, mset,
+    master_eigenvalues,
+    master_modes, left_eigenmodes,
+    resonance_set;
+    master_modes_derivatives = master_modes_derivatives
+)
+# # ------------------------------------------------------------------------------
+# # 6. Realify
+# # ------------------------------------------------------------------------------
+# conj_map = zeros(Int64, NVAR)
+# for i in 1:NVAR
+#     if i % 2 == 1
+#         conj_map[i] = i + 1
+#     else
+#         conj_map[i] = i - 1
+#     end
+# end
+# Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
 
 # ------------------------------------------------------------------------------
 # 7. Write real dynamics to compare to Morfe 2.0
@@ -265,4 +288,13 @@ function write_rdyn(R::ReducedDynamics{ROM, NVAR, T}) where {ROM, NVAR, T}
     end
     close(ofile)
 end
-write_rdyn(Rr)
+# write_rdyn(Rr)
+
+# # print values
+# mset = R.poly.multiindex_set
+# coefficients = R.poly.coefficients
+# for m in 1:length(mset.exponents)
+#     multiindex = mset.exponents[m]
+#     coeff = coefficients[:, m]
+#     println(multiindex, " ", coeff)
+# end

@@ -24,7 +24,7 @@ It assemblies cubic nonlinearities operator
 - U : displacement field
 - mult : integral multiplier
 """
-function assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh::Grid, U::Field, mult = 1.0; one_d = false)
+function assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh::Grid, U::Field; mult = 1.0)
     #
     neq = U.neq
     X = zeros(Float64, nne_max * dim)
@@ -97,11 +97,7 @@ function assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh::Grid, U::Field, mult = 1.0;
                 for i in 1:(nn * dim)
                     if (dofs[i] > 0)
                         # in Morfe2.0 -=
-                        if one_d
-                            @inbounds res[neq + dofs[i]] += Fₑ[i] * mult
-                        else
-                            @inbounds res[dofs[i]] += Fₑ[i] * mult
-                        end
+                        @inbounds res[dofs[i]] -= Fₑ[i] * mult
                     end
                 end
                 #
@@ -127,7 +123,7 @@ It assemblies quadratic nonlinearities operator
 - U : displacement field
 - mult : integral multiplier
 """
-function assembly_G!(res, Ψ₁, Ψ₂, mesh::Grid, U::Field, mult = 1.0; one_d = false)
+function assembly_G!(res, Ψ₁, Ψ₂, mesh::Grid, U::Field; mult = 1.0)
     #
     neq = U.neq
     X = zeros(Float64, nne_max * dim)
@@ -193,11 +189,7 @@ function assembly_G!(res, Ψ₁, Ψ₂, mesh::Grid, U::Field, mult = 1.0; one_d 
                 for i in 1:(nn * dim)
                     if (dofs[i] > 0)
                         # in Morfe2.0 -=
-                        if one_d
-                            @inbounds res[neq + dofs[i]] += Fₑ[i] * mult
-                        else
-                            @inbounds res[dofs[i]] += Fₑ[i] * mult
-                        end
+                        @inbounds res[dofs[i]] -= Fₑ[i] * mult
                     end
                 end
                 #
