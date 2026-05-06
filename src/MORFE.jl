@@ -46,7 +46,10 @@ export MultiindexSet, zero_multiindex,
 export DensePolynomial, evaluate
 
 # MultilinearMaps
-export MultilinearMap, ExternalSystem
+export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, ExternalSystem
+# FEMMultilinearMap interface methods (to be extended by FEM backends)
+export fem_elements, fem_n_qp, fem_ndofs_per_cell,
+       scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer
 
 # FullOrderModel
 export FullOrderModel, FirstOrderModel, NDOrderModel,

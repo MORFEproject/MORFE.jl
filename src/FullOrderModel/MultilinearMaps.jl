@@ -1,6 +1,48 @@
 module MultilinearMaps
 
-export MultilinearMap, evaluate_term!
+export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, evaluate_term!,
+       fem_elements, fem_n_qp, fem_ndofs_per_cell,
+       scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer
+
+"""
+	AbstractMultilinearMap{ORD}
+
+Abstract supertype for all multilinear terms accepted by `NDOrderModel`.
+
+Every concrete subtype must expose the fields `multiindex`, `multiplicity_external`, and `deg`
+with the same semantics as `MultilinearMap`.
+"""
+abstract type AbstractMultilinearMap{ORD} end
+
+"""
+	FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD}
+
+Abstract type for FEM-backed multilinear terms that expose element-level primitives.
+
+Implementing the interface below enables the RHS-C batched accumulation path in
+`MultilinearTerms.jl`: the mesh is traversed exactly once per (monomial, term, split)
+rather than once per factorisation entry.
+
+Required methods (extend `MORFE.*`):
+- `fem_elements(t)`                                              → element iterator
+- `fem_n_qp(t)`                                                 → quadrature points per element
+- `fem_ndofs_per_cell(t)`                                       → DOFs per element
+- `scatter_qp!(∇W_col, W_global, element, t)`                   → fill qp field values for one unique W column
+- `accumulate_qp!(Fe, ∇W_args::NTuple, mult, element, q, dΩ, t)` → add integrand at one qp
+- `assemble_element!(accum, Fe, element, t)`                    → scatter element residual to global
+- `fem_getdetJdV(element, q, t)`                                → integration weight at qp q
+"""
+abstract type FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD} end
+
+# Interface stubs — extend these in your concrete FEM type.
+function fem_elements end
+function fem_n_qp end
+function fem_ndofs_per_cell end
+function scatter_qp! end
+function accumulate_qp! end
+function assemble_element! end
+function fem_getdetJdV end
+function fem_qp_buffer end
 
 """
 	MultilinearMap{ORD, F}
@@ -31,7 +73,7 @@ During evaluation the multilinear map is called as
 	f!(res, x^(1)_1, x^(1)_2, ...) = f!(res, x^(1)_2, x^(1)_1, ...)
 
 """
-struct MultilinearMap{ORD,F}
+struct MultilinearMap{ORD,F} <: AbstractMultilinearMap{ORD}
     f!::F
     multiindex::NTuple{ORD,Int}
     multiplicity_external::Int

@@ -5,7 +5,7 @@ using SparseArrays
 using StaticArrays: SVector
 
 using ..Polynomials: DensePolynomial
-using ..MultilinearMaps: MultilinearMap, evaluate_term!
+using ..MultilinearMaps: AbstractMultilinearMap, MultilinearMap, evaluate_term!
 using ..ExternalSystems: ExternalSystem
 
 export NDOrderModel, FirstOrderModel, linear_first_order_matrices, evaluate_nonlinear_terms!
@@ -62,7 +62,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 	   AbstractFullOrderModel
 	n_fom::Int
 	linear_terms::NTuple{ORDP1, MT}
-	nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}}
+	nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}}
 	external_system::Union{Nothing, ExternalSystem{N_EXT}}
 
 	"""
@@ -77,7 +77,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 	# Constructor accepting an ExternalSystem object directly
 	function NDOrderModel(
 		linear_terms::NTuple{ORDP1, MT},
-		nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}},
+		nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
 		external_system::ExternalSystem{N_EXT},
 	) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}}
 		@assert ORDP1 == ORD + 1
@@ -91,7 +91,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 	# Constructor accepting the external dynamics polynomial directly
 	function NDOrderModel(
 		linear_terms::NTuple{ORDP1, MT},
-		nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}},
+		nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
 		external_dynamics::DensePolynomial{TE, N_EXT},
 	) where {ORD, ORDP1, N_NL, N_EXT, T, TE, MT <: AbstractMatrix{T}}
 		@assert ORDP1 == ORD + 1
@@ -105,7 +105,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 	# Constructor without external system
 	function NDOrderModel(
 		linear_terms::NTuple{ORDP1, MT},
-		nonlinear_terms::NTuple{N_NL, MultilinearMap{ORD}},
+		nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
 	) where {ORD, ORDP1, N_NL, T, MT <: AbstractMatrix{T}}
 		@assert ORDP1 == ORD + 1
 		n_fom = size(linear_terms[1], 1)
