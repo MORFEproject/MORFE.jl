@@ -128,15 +128,25 @@ The FE formulation allows different physics on different mesh domains.
 
 ## Next Steps
 
+- [X] Prototype DPIM — FEM-agnostic API
+
 - [ ] Evaluate FEM backends (Gridap vs Ferrite vs wrapped MORFE2.0)
-- [ ] Prototype DPIM — FEM-agnostic API
-- [ ] Design output file format for coefficient matrices
+
+- [ ] Optimise FEM integration per fatorisation on RHS
+      
+      MORFE.jl currently accepts nonlinear terms only as opaque MultilinearMap closures (f!(res, x1, ..., xk)). Each closure is called once per factorisation entry during cohomological solve, so a FEM-backed term traverses the entire mesh n_entries times per monomial — 10–100× redundant work at high polynomial degree (see plan.md §RHS-C).
+
+      Ferrite.jl's explicit element-loop API can eliminate this: scatter all needed W columns to quadrature-point gradients once per element, accumulate contributions from all factorisation entries at the quadrature-point level, then assemble once. This is plan.md §RHS-C, and it is the highest-priority goal of this work.
+
+      The Gridap demo and any other closure-based backend remain fully supported via the existing MultilinearMap path (plan.md §RHS-D fallback).
+
 - [ ] Define solver interface
+- [ ] Parallel solving Cohomological Equations (maybe Ferrite)
+- [ ] Design output file format for coefficient matrices
 - [ ] Add ParaView export
 - [ ] PETSc https://github.com/gridap/GridapPETSc.jl
 - [ ] Pardiso https://github.com/gridap/GridapPardiso.jl
-- [ ] Optimise FEM integration per fatorisation on RHS
-- [ ] Parallel solving Cohomolgical Equations (maybe Ferrite)
+
 
 ---
 

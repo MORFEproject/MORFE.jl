@@ -8,6 +8,9 @@ using ..Multiindices: indices_in_box_with_bounded_degree,
 	bounded_index_tuples, FactorisationEntry
 using ..ParametrisationMethod: Parametrisation
 using ..FullOrderModel: NDOrderModel, MultilinearMap
+using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap,
+	fem_elements, fem_n_qp, fem_ndofs_per_cell,
+	scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV
 
 export compute_multilinear_terms, compute_multilinear_terms!, build_multilinear_terms_cache, MultilinearTermsCache
 
@@ -33,7 +36,7 @@ struct FullyAsymmetric    <: SymmetryType end
 struct FullySymmetric     <: SymmetryType end
 struct GroupwiseSymmetric <: SymmetryType end
 
-function symmetry_type(t::MultilinearMap)
+function symmetry_type(t::AbstractMultilinearMap)
 	all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
 	count(>(0), t.multiindex) == 1  && return FullySymmetric()
 	return GroupwiseSymmetric()
@@ -49,7 +52,7 @@ end
 Map each factor slot to its 1-based derivative index.
 Example: `multiindex = (2, 1)` → `(1, 1, 2)`.
 """
-function _derivative_orders(t::MultilinearMap)
+function _derivative_orders(t::AbstractMultilinearMap)
 	deg = sum(t.multiindex)
 	return ntuple(deg) do slot
 		cumulative = 0
@@ -241,10 +244,56 @@ multiindex set and the model structure are unchanged (i.e. across all solve step
 """
 struct MultilinearTermsCache{T}
 	splits::Vector{Vector{Vector{CachedSplit}}}
+	# FEM-batched splits: fem_splits[l][t_idx] is Vector{FEMCachedSplit{DEG}} for FEM terms,
+	# or an empty Vector for closure terms. Element type is Any because DEG varies per term.
+	fem_splits::Vector{Vector{Vector{Any}}}
 	result_buffer::Vector{T}
 	scratch_buffer::Vector{T}
 	temp_buffer::Vector{T}
 	unit_vectors::Vector   # Vector of SVector{N_EXT, Int}; empty when N_EXT == 0
+	# Pre-allocated element-local residual buffer, shared across all FEM terms.
+	# The qp-level field buffer (∇W_qp) is type-specific and owned by each FEMMultilinearMap
+	# via fem_qp_buffer(t) — see MultilinearMaps.jl interface.
+	fem_Fe::Vector{T}     # size: max_ndofs_per_cell
+end
+
+# -----------------------------------------------------------------------
+# FEM-specific cache structs
+# -----------------------------------------------------------------------
+
+"""
+	FEMFactorisationEntry{DEG}
+
+One factorisation entry for the FEM-batched path.
+
+- `multiplier`           — symmetry count (same as FactorisationEntry.multiplier).
+- `local_factor_indices` — NTuple of length DEG: for each factor slot, the index into
+                           `FEMCachedSplit.unique_cols` for the enclosing split.
+                           NTuple (not Vector) so that `ntuple(k->..., Val(DEG))` in the
+                           hot loop is unrolled at compile time.
+"""
+struct FEMFactorisationEntry{DEG}
+	multiplier::Int
+	local_factor_indices::NTuple{DEG, Int}
+end
+
+"""
+	FEMCachedSplit{DEG}
+
+Precomputed bookkeeping for one (monomial, FEM-term, external-split) triple.
+
+- `ext_count`        — external multiplicity (1 when me = 0).
+- `args_ext_indices` — unit vector indices for external args (empty when me = 0).
+- `unique_cols`      — deduplicated list of (derivative_order, W_col_idx) pairs across all
+                       entries in this split.  Scattered to qp-level gradients once per element.
+- `fem_entries`      — one FEMFactorisationEntry{DEG} per factorisation, with local indices
+                       into unique_cols.
+"""
+struct FEMCachedSplit{DEG}
+	ext_count::Int
+	args_ext_indices::Vector{Int}
+	unique_cols::Vector{Tuple{Int,Int}}
+	fem_entries::Vector{FEMFactorisationEntry{DEG}}
 end
 
 # -----------------------------------------------------------------------
@@ -261,6 +310,32 @@ _collect_entries(::FullyAsymmetric,    t, mset, rem, deg, cands) = factorisation
 _collect_entries(::FullySymmetric,     t, mset, rem, deg, cands) = factorisations_fully_symmetric(mset, rem, deg, cands)
 _collect_entries(::GroupwiseSymmetric, t, mset, rem, deg, cands) = factorisations_groupwise_symmetric(mset, rem, t.multiindex, cands)
 
+# Build a FEMCachedSplit{DEG} from an already-constructed CachedSplit.
+# Called once per split at cache-build time; zero allocation in the hot path.
+function _build_fem_cached_split(::Val{DEG}, cs::CachedSplit) where {DEG}
+	# 1. Enumerate unique (derivative_order, W_col_idx) pairs across all entries.
+	unique_cols  = Tuple{Int,Int}[]
+	col_to_local = Dict{Tuple{Int,Int}, Int}()
+	for entry in cs.entries
+		for k in 1:DEG
+			oc = (cs.orders[k], entry.factor_indices[k])
+			if !haskey(col_to_local, oc)
+				push!(unique_cols, oc)
+				col_to_local[oc] = length(unique_cols)
+			end
+		end
+	end
+	# 2. Map each entry's factor slots to local indices in unique_cols.
+	fem_entries = [
+		FEMFactorisationEntry{DEG}(
+			entry.multiplier,
+			ntuple(k -> col_to_local[(cs.orders[k], entry.factor_indices[k])], Val(DEG))
+		)
+		for entry in cs.entries
+	]
+	return FEMCachedSplit{DEG}(cs.ext_count, cs.args_ext_indices, unique_cols, fem_entries)
+end
+
 """
 	build_multilinear_terms_cache(model, parametrisation) → MultilinearTermsCache
 
@@ -276,7 +351,8 @@ function build_multilinear_terms_cache(
 	external_system_size = parametrisation.external_system_size
 	ROM     = NVAR - external_system_size
 
-	all_splits = Vector{Vector{Vector{CachedSplit}}}(undef, L)
+	all_splits     = Vector{Vector{Vector{CachedSplit}}}(undef, L)
+	all_fem_splits = Vector{Vector{Vector{Any}}}(undef, L)
 
 	for l in 1:L
 		exp     = mset.exponents[l]
@@ -284,46 +360,80 @@ function build_multilinear_terms_cache(
 		candidate_indices = indices_in_box_with_bounded_degree(mset, exp, 1, deg_max)
 		external_exp      = SVector(ntuple(i -> exp[ROM + i], external_system_size))
 
-		term_splits = Vector{Vector{CachedSplit}}(undef, n_terms)
+		term_splits     = Vector{Vector{CachedSplit}}(undef, n_terms)
+		fem_term_splits = Vector{Vector{Any}}(undef, n_terms)
 
 		for (t_idx, t) in enumerate(model.nonlinear_terms)
 			if t.deg > deg_max
-				term_splits[t_idx] = CachedSplit[]
+				term_splits[t_idx]     = CachedSplit[]
+				fem_term_splits[t_idx] = []
 				continue
 			end
 
 			me      = t.multiplicity_external
 			deg     = t.deg - me
-			sym     = symmetry_type(t)
-			is_asym = sym isa FullyAsymmetric
-			orders  = _orders_for_cache(sym, t, deg)
-			splits  = CachedSplit[]
 
-			if me == 0
-				entries = _collect_entries(sym, t, mset, exp, deg, candidate_indices)
-				push!(splits, CachedSplit(1, Int[], is_asym, orders, entries))
-			else
-				for (ext_idx, ext_multiindex_external, ext_count) in bounded_index_tuples(me, external_exp)
-					ext_multiindex = SVector(ntuple(i -> i <= ROM ? 0 : ext_multiindex_external[i - ROM], Val(NVAR)))
-					rem     = exp - ext_multiindex
-					entries = _collect_entries(sym, t, mset, rem, deg, candidate_indices)
-					push!(splits, CachedSplit(ext_count, collect(Int, ext_idx), is_asym, orders, entries))
+			if t isa FEMMultilinearMap
+				# Build CachedSplit first (to reuse factorisation logic), then convert to FEMCachedSplit.
+				sym     = symmetry_type(t)
+				is_asym = sym isa FullyAsymmetric
+				orders  = _orders_for_cache(sym, t, deg)
+				raw_splits = CachedSplit[]
+				if me == 0
+					entries = _collect_entries(sym, t, mset, exp, deg, candidate_indices)
+					push!(raw_splits, CachedSplit(1, Int[], is_asym, orders, entries))
+				else
+					for (ext_idx, ext_multiindex_external, ext_count) in bounded_index_tuples(me, external_exp)
+						ext_multiindex = SVector(ntuple(i -> i <= ROM ? 0 : ext_multiindex_external[i - ROM], Val(NVAR)))
+						rem     = exp - ext_multiindex
+						entries = _collect_entries(sym, t, mset, rem, deg, candidate_indices)
+						push!(raw_splits, CachedSplit(ext_count, collect(Int, ext_idx), is_asym, orders, entries))
+					end
 				end
+				term_splits[t_idx] = raw_splits  # kept for reference / fallback
+				fem_term_splits[t_idx] = [_build_fem_cached_split(Val(deg), cs) for cs in raw_splits]
+			else
+				sym     = symmetry_type(t)
+				is_asym = sym isa FullyAsymmetric
+				orders  = _orders_for_cache(sym, t, deg)
+				splits  = CachedSplit[]
+				if me == 0
+					entries = _collect_entries(sym, t, mset, exp, deg, candidate_indices)
+					push!(splits, CachedSplit(1, Int[], is_asym, orders, entries))
+				else
+					for (ext_idx, ext_multiindex_external, ext_count) in bounded_index_tuples(me, external_exp)
+						ext_multiindex = SVector(ntuple(i -> i <= ROM ? 0 : ext_multiindex_external[i - ROM], Val(NVAR)))
+						rem     = exp - ext_multiindex
+						entries = _collect_entries(sym, t, mset, rem, deg, candidate_indices)
+						push!(splits, CachedSplit(ext_count, collect(Int, ext_idx), is_asym, orders, entries))
+					end
+				end
+				term_splits[t_idx]     = splits
+				fem_term_splits[t_idx] = []
 			end
-
-			term_splits[t_idx] = splits
 		end
 
-		all_splits[l] = term_splits
+		all_splits[l]     = term_splits
+		all_fem_splits[l] = fem_term_splits
 	end
 
 	T    = eltype(parametrisation.poly)
 	FOM  = size(parametrisation)
 	unit_vectors = [SVector(ntuple(k -> k == j ? 1 : 0, external_system_size))
 	                for j in 1:external_system_size]
-	return MultilinearTermsCache{T}(all_splits,
+
+	# Compute the element-residual buffer size from the FEM terms in the model.
+	# The qp gradient buffer (∇W_qp) is term-specific and lives inside each FEMMultilinearMap.
+	max_ndofs = 0
+	for t in model.nonlinear_terms
+		t isa FEMMultilinearMap || continue
+		max_ndofs = max(max_ndofs, fem_ndofs_per_cell(t))
+	end
+	fem_Fe = zeros(T, max_ndofs)
+
+	return MultilinearTermsCache{T}(all_splits, all_fem_splits,
 	                                zeros(T, FOM), zeros(T, FOM), zeros(T, FOM),
-	                                unit_vectors)
+	                                unit_vectors, fem_Fe)
 end
 
 # -----------------------------------------------------------------------
@@ -358,6 +468,53 @@ function _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
 	end
 
 	isempty(split.args_ext_indices) || axpy!(split.ext_count, temp, result)
+end
+
+# Replay one FEMCachedSplit using a single element-loop (RHS-C batched path).
+# Fe is the pre-allocated element-residual buffer from MultilinearTermsCache.
+# The qp-level gradient buffer ∇W_qp is obtained from the term via fem_qp_buffer(t),
+# which allows each FEMMultilinearMap subtype to use its own concrete element type.
+function _replay_fem_split!(result, t::FEMMultilinearMap, W, fem_split::FEMCachedSplit{DEG},
+		Fe) where {DEG}
+
+	∇W_qp = fem_qp_buffer(t)   # Matrix{QP_TYPE}(max_unique, n_qp) — owned by the term
+
+	if isempty(fem_split.args_ext_indices)
+		accum = result
+	else
+		# External-forcing case: accumulate into a temporary slice of Fe, then axpy!.
+		# (Handling is analogous to _replay_split! for the me>0 branch.)
+		fill!(Fe, zero(eltype(Fe)))
+		accum = Fe   # will be axpy!-ed into result after the loop
+	end
+
+	n_qp   = fem_n_qp(t)
+	n_dofs = fem_ndofs_per_cell(t)
+	n_uniq = length(fem_split.unique_cols)
+
+	for element in fem_elements(t)
+
+		# 1. Scatter each unique (order, col) W column to qp-level field quantities.
+		for i in 1:n_uniq
+			(order, col) = fem_split.unique_cols[i]
+			scatter_qp!(@view(∇W_qp[i, 1:n_qp]), @view(W[:, order, col]), element, t)
+		end
+
+		# 2. Accumulate contributions from ALL fem_entries at each quadrature point.
+		fill!(@view(Fe[1:n_dofs]), zero(eltype(Fe)))
+		for q in 1:n_qp
+			dΩ = fem_getdetJdV(element, q, t)
+			for fem_entry in fem_split.fem_entries
+				@inbounds ∇W_args = ntuple(k -> ∇W_qp[fem_entry.local_factor_indices[k], q], Val(DEG))
+				accumulate_qp!(@view(Fe[1:n_dofs]), ∇W_args, fem_entry.multiplier, element, q, dΩ, t)
+			end
+		end
+
+		# 3. Scatter element residual to global accumulator.
+		assemble_element!(accum, @view(Fe[1:n_dofs]), element, t)
+	end
+
+	isempty(fem_split.args_ext_indices) || axpy!(fem_split.ext_count, Fe, result)
 end
 
 """
@@ -417,8 +574,15 @@ function compute_multilinear_terms!(
 	for (t_idx, t) in enumerate(model.nonlinear_terms)
 		t.deg > deg_max && continue
 		deg = t.deg - t.multiplicity_external
-		for split in cache.splits[exp_index][t_idx]
-			_replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
+		if t isa FEMMultilinearMap
+			# RHS-C batched path: one element-loop per split instead of n_entries loops.
+			for fem_split in cache.fem_splits[exp_index][t_idx]
+				_replay_fem_split!(result, t, W, fem_split, cache.fem_Fe)
+			end
+		else
+			for split in cache.splits[exp_index][t_idx]
+				_replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
+			end
 		end
 	end
 	return nothing
