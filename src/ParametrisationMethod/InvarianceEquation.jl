@@ -173,6 +173,7 @@ polynomial evaluation structure of the main operator `L(s)`.
 module InvarianceEquation
 
 using LinearAlgebra
+using SparseArrays
 using StaticArrays
 
 export precompute_column_polynomials,
@@ -181,7 +182,10 @@ export precompute_column_polynomials,
 	evaluate_system_matrix_and_lower_order_rhs!,
 	evaluate_column!,
 	evaluate_external_rhs!,
-	assemble_cohomological_matrix_and_rhs
+	assemble_cohomological_matrix_and_rhs,
+	assemble_cohomological_matrix_and_rhs!,
+	build_sparse_L_and_rhs!,
+	precompute_sparse_L_template
 
 # =============================================================================
 # 1.  Coefficient pre-computation
@@ -826,6 +830,149 @@ function assemble_cohomological_matrix_and_rhs(
 	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
 
 	return M, rhs
+end
+
+"""
+	assemble_cohomological_matrix_and_rhs!(M, rhs, s, linear_terms, C_coeffs, E_coeffs,
+	                                        resonance, lower_order_couplings,
+	                                        external_dynamics, g_buffer) → nothing
+
+In-place variant: writes the invariance-equation system matrix and RHS directly into
+the caller-supplied `M` and `rhs` buffers.  No heap allocation occurs.
+
+`M`   must have size `FOM × n_sys` where `n_sys = FOM + nR`.
+`rhs` must have length `FOM`.  Both are overwritten on entry.
+`g_buffer` is the pre-allocated `FOM`-length scratch buffer for the external RHS.
+"""
+function assemble_cohomological_matrix_and_rhs!(
+	M::AbstractMatrix,
+	rhs::AbstractVector,
+	s::Number,
+	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+	C_coeffs::Vector{<:AbstractMatrix},
+	E_coeffs::Vector{<:AbstractMatrix},
+	resonance::SVector{ROM, Bool},
+	lower_order_couplings::AbstractVector{<:AbstractVector},
+	external_dynamics::AbstractVector,
+	g_buffer::AbstractVector,
+) where {ROM, ORDP1}
+	FOM = size(linear_terms[1], 1)
+	fill!(rhs, zero(eltype(rhs)))
+	evaluate_system_matrix_and_lower_order_rhs!(
+		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
+	)
+	col = FOM + 1
+	for j in eachindex(resonance)
+		if resonance[j]
+			evaluate_column!(view(M, :, col), s, j, C_coeffs)
+			col += 1
+		end
+	end
+	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
+	return nothing
+end
+
+# =============================================================================
+# 6.  Sparse Horner evaluation of L(s) with simultaneous RHS accumulation
+# =============================================================================
+
+"""
+	precompute_sparse_L_template(linear_terms) -> (L_template, mappings)
+
+Pre-allocate a `SparseMatrixCSC{ComplexF64}` with the **union** sparsity pattern of
+all `linear_terms`, and compute index mappings so that each entry of `linear_terms[k]`
+can be accumulated into the correct position of the template's `nzval` array.
+
+Returns `(L_template, mappings)` where `mappings[k][i]` is the index into
+`L_template.nzval` that corresponds to position `i` of `linear_terms[k].nzval`.
+
+Used once at context construction; the template is reused across all monomials by
+the in-place `build_sparse_L_and_rhs!` overload, eliminating per-monomial sparse
+arithmetic allocations even when the input matrices do not share a common pattern
+(e.g. when the damping matrix is `C = α*M + β*K` and Julia's sparse addition drops
+entries that cancel to exactly zero).
+"""
+function precompute_sparse_L_template(
+	linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
+) where {ORDP1}
+	n = size(linear_terms[1], 1)
+
+	# Build union pattern by summing all-ones matrices — positive values cannot
+	# cancel, so every structural nonzero from every Bk is preserved.
+	L_ones = spzeros(Int, n, n)
+	for Bk in linear_terms
+		L_ones = L_ones + SparseMatrixCSC(
+			Bk.m, Bk.n, copy(Bk.colptr), copy(Bk.rowval), ones(Int, nnz(Bk)),
+		)
+	end
+
+	# Allocate template: union pattern, zero ComplexF64 nzval (overwritten per monomial).
+	L_template = SparseMatrixCSC(
+		n, n, copy(L_ones.colptr), copy(L_ones.rowval), zeros(ComplexF64, nnz(L_ones)),
+	)
+
+	# For each term Bk, map its nzval positions into L_template.nzval positions.
+	mappings = Vector{Vector{Int}}(undef, ORDP1)
+	for k in 1:ORDP1
+		Bk = linear_terms[k]
+		mapping_k = Vector{Int}(undef, nnz(Bk))
+		for col in 1:n
+			for pos_k in Bk.colptr[col]:(Bk.colptr[col+1] - 1)
+				row = Bk.rowval[pos_k]
+				lo = L_template.colptr[col]
+				hi = L_template.colptr[col+1] - 1
+				pos_L = searchsortedfirst(L_template.rowval, row, lo, hi, Base.Order.Forward)
+				mapping_k[pos_k] = pos_L
+			end
+		end
+		mappings[k] = mapping_k
+	end
+
+	return L_template, mappings
+end
+
+"""
+	build_sparse_L_and_rhs!(rhs, L_template, mappings, linear_terms, s, lower_order_couplings)
+	-> L_template
+
+In-place Horner evaluation of the parametrisation operator using a pre-allocated
+union-pattern template and index mappings from [`precompute_sparse_L_template`](@ref).
+
+Avoids ALL per-monomial sparse arithmetic allocations regardless of whether the
+`linear_terms` share a common sparsity pattern.  The template's `nzval` is overwritten
+on each call; its `colptr`/`rowval` are never modified.
+"""
+function build_sparse_L_and_rhs!(
+	rhs::AbstractVector,
+	L_template::SparseMatrixCSC,
+	mappings::Vector{Vector{Int}},
+	linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
+	s,
+	lower_order_couplings::AbstractVector{<:AbstractVector},
+) where {ORDP1}
+	T   = eltype(rhs)
+	T_L = eltype(L_template)
+	ORD = ORDP1 - 1
+
+	# Horner init: L_template ← linear_terms[ORDP1], mapped into union positions.
+	fill!(L_template.nzval, zero(T_L))
+	nzval_last = linear_terms[ORDP1].nzval
+	map_last   = mappings[ORDP1]
+	@inbounds for i in eachindex(nzval_last)
+		L_template.nzval[map_last[i]] = T_L(nzval_last[i])
+	end
+
+	@inbounds for j in ORD:-1:1
+		mul!(rhs, L_template, lower_order_couplings[j], -one(T), one(T))  # rhs -= L · ξ[j]
+		L_template.nzval .*= s                                              # L ← L · s
+		nzval_j = linear_terms[j].nzval
+		map_j   = mappings[j]
+		for i in eachindex(nzval_j)
+			L_template.nzval[map_j[i]] += T_L(nzval_j[i])                  # L ← L + B[j]
+		end
+	end
+
+	return L_template
 end
 
 end # module InvarianceEquation

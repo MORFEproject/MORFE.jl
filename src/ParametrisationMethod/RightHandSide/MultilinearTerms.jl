@@ -9,7 +9,7 @@ using ..Multiindices: indices_in_box_with_bounded_degree,
 using ..ParametrisationMethod: Parametrisation
 using ..FullOrderModel: NDOrderModel, MultilinearMap
 
-export compute_multilinear_terms, build_multilinear_terms_cache, MultilinearTermsCache
+export compute_multilinear_terms, compute_multilinear_terms!, build_multilinear_terms_cache, MultilinearTermsCache
 
 # -----------------------------------------------------------------------
 # Symmetry classification
@@ -239,8 +239,12 @@ and it contributes nothing.
 `compute_multilinear_terms` inside the loop.  The cache is valid as long as the
 multiindex set and the model structure are unchanged (i.e. across all solve steps).
 """
-struct MultilinearTermsCache
+struct MultilinearTermsCache{T}
 	splits::Vector{Vector{Vector{CachedSplit}}}
+	result_buffer::Vector{T}
+	scratch_buffer::Vector{T}
+	temp_buffer::Vector{T}
+	unit_vectors::Vector   # Vector of SVector{N_EXT, Int}; empty when N_EXT == 0
 end
 
 # -----------------------------------------------------------------------
@@ -313,7 +317,13 @@ function build_multilinear_terms_cache(
 		all_splits[l] = term_splits
 	end
 
-	return MultilinearTermsCache(all_splits)
+	T    = eltype(parametrisation.poly)
+	FOM  = size(parametrisation)
+	unit_vectors = [SVector(ntuple(k -> k == j ? 1 : 0, external_system_size))
+	                for j in 1:external_system_size]
+	return MultilinearTermsCache{T}(all_splits,
+	                                zeros(T, FOM), zeros(T, FOM), zeros(T, FOM),
+	                                unit_vectors)
 end
 
 # -----------------------------------------------------------------------
@@ -382,6 +392,36 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp_index::Int,
 		end
 	end
 	return result
+end
+
+"""
+	compute_multilinear_terms!(result, model, exp_index, parametrisation, cache) → nothing
+
+In-place variant: zeros `result` then accumulates all nonlinear contributions into it.
+Uses `cache.scratch_buffer`, `cache.temp_buffer`, and `cache.unit_vectors` so that no
+heap allocation occurs during the inner solve loop.
+"""
+function compute_multilinear_terms!(
+		result::AbstractVector,
+		model::NDOrderModel{ORD}, exp_index::Int,
+		parametrisation::Parametrisation{ORD, NVAR},
+		cache::MultilinearTermsCache) where {ORD, NVAR}
+
+	fill!(result, zero(eltype(result)))
+	W       = parametrisation.poly.coefficients
+	deg_max = sum(parametrisation.poly.multiindex_set.exponents[exp_index])
+	scratch = cache.scratch_buffer
+	temp    = cache.temp_buffer
+	unit_vectors = cache.unit_vectors
+
+	for (t_idx, t) in enumerate(model.nonlinear_terms)
+		t.deg > deg_max && continue
+		deg = t.deg - t.multiplicity_external
+		for split in cache.splits[exp_index][t_idx]
+			_replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
+		end
+	end
+	return nothing
 end
 
 end # module

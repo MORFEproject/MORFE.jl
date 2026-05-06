@@ -54,24 +54,31 @@ term_drag = MultilinearMap(
 	(0, 2),
 )
 
-# External harmonic forcing
+# External forcing (linear)
 F_ext = ComplexF64[1.0, 1.0]
 term_forcing = MultilinearMap(
 	(res, r) -> (@. res += F_ext * r),
 	(0, 0), 1,   # one external variable
 )
 
-# External harmonic forcing with twice the frequency
+# External forcing (quadratic)
 term_forcing_quadratic = MultilinearMap(
 	(res, r1, r2) -> (@. res += F_ext * r1 * r2),
 	(0, 0), 2,   # one external variable
 )
 
-# ExternalSystem: harmonic forcing ṙ = iΩ·r + 0.1 r² with Ω = 1.0
+# High-order mixed term
+F_ext2 = ComplexF64[3.0, 3.0]
+term_forcing_mixed = MultilinearMap(
+	(res, x1, x2, v, r) -> (@. res += F_ext2 * x1 * x2 * v * r),
+	(2, 1), 1,   # one external variable
+)
+
+# ExternalSystem: harmonic forcing ṙ = iΩ·r + 0.1 r² + 2.0 r³ with Ω = 1.0
 external_system = ExternalSystem(
 	DensePolynomial(
-		ComplexF64[1.0im 0.1 + 0.0im], # 1×2 matrix: coefficients for r and r² terms
-		MultiindexSet([[1], [2]]),
+		ComplexF64[1.0im 0.1 2.0], # 1×2 matrix: coefficients for r and r² terms
+		MultiindexSet([[1], [2], [3]]),
 	),
 )
 
@@ -82,7 +89,7 @@ external_system = ExternalSystem(
 # ------------------------------------------------------------------------------
 model = NDOrderModel(
 	(B0, B1, B2),
-	(term_cubic, term_forcing, term_drag, term_forcing_quadratic),
+	(term_cubic, term_forcing, term_drag, term_forcing_quadratic, term_forcing_mixed),
 	external_system,
 )
 
