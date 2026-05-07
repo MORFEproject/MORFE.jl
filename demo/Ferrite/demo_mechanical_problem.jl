@@ -61,10 +61,9 @@ K_full = allocate_matrix(dh)
 M_full = allocate_matrix(dh)
 
 assemble_KM!(K_full, M_full, dh, cv, λ, μ, ρ)
-apply!(K_full, ch)
-apply!(M_full, ch)
 
-free          = free_dofs(ch)
+# Free DOFs = all DOFs minus the prescribed (Dirichlet) ones.
+free          = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
 free_to_local = Dict(d => i for (i, d) in enumerate(free))
 n_free        = length(free)
 

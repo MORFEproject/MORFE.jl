@@ -51,13 +51,14 @@ function propagate_left_jordan_vector(
 	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
 	eigenvectors::Array{T2, 3},
 	λ::Number,
-	index::Int,
+	index::Int;
+	scratch::Union{Nothing, AbstractMatrix} = nothing,
 ) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT}
 	linear_terms = model.linear_terms
 	fom = size(eigenvectors, 1)
 
 	# Build the matrix polynomial P(λ) = B₁ + λ B₂ + ... + λ^ORD B_{ORD+1}
-	tmp_mat = copy(linear_terms[1])
+	tmp_mat = scratch !== nothing ? copyto!(scratch, linear_terms[1]) : copy(linear_terms[1])
 	λ_pow = one(λ)
 	for i in 2:ORDP1
 		λ_pow *= λ
@@ -125,14 +126,15 @@ function propagate_right_jordan_vector(
 	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
 	param::Parametrisation{ORD, NVAR, T2},
 	λ::Number,
-	index::Int,
+	index::Int;
+	scratch::Union{Nothing, AbstractMatrix} = nothing,
 ) where {ORD, ORDP1, N_NL, N_EXT, T, T2, MT, NVAR}
 	linear_terms = model.linear_terms
 	coeff = param.poly.coefficients
 	fom = size(coeff, 1)
 
 	# Build P(λ) as before
-	tmp_mat = copy(linear_terms[1])
+	tmp_mat = scratch !== nothing ? copyto!(scratch, linear_terms[1]) : copy(linear_terms[1])
 	λ_pow = one(λ)
 	for i in 2:ORDP1
 		λ_pow *= λ

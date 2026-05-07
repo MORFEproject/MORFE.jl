@@ -203,6 +203,7 @@ struct CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT <: AbstractMatrix{L
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int}
 	lower_order_buffer::Vector{Vector{T}}              # length ORD, each FOM; zeroed before each call
 	candidate_indices_by_monomial::Vector{Vector{Int}} # length L; candidates for _sum_higher_degree_terms!
+	unit_vectors::Vector{SVector{NVAR, Int}}           # NVAR unit basis vectors; built once, shared
 	# ── Stacked system pre-allocated buffers ────────────────────────────────────
 	# Dense path: (FOM+ROM)×(FOM+ROM); sparse path: (ROM+1)×(ROM+1) for Schur complement only.
 	system_matrix_buffer::Matrix{T}
@@ -292,15 +293,51 @@ end
 
 _sparse_solve(::Nothing, ::Nothing, A, B) = lu(A) \ B  # dense-path fallback
 
-# Sparse-path helper: solve the bordered cohomological system
-#
-#   [ L(s)   C_r(s) ] [ W_α ]   [ f ]
-#   [ J_r(s) Ĉ_r(s) ] [ r_α ] = [ g ]
-#
-# using Pardiso for the FOM×FOM L(s) block and dense Schur complement for the
-# small nR×nR block.  Results are written into rhs_buffer[1:FOM+nR] so that
-# the extraction code in solve_single_monomial! is identical for both paths.
-function _solve_sparse_monomial!(
+# Solve the bordered cohomological system for the dense path.
+# Assembles the full (FOM+nR)×(FOM+nR) system into ctx.system_matrix_buffer,
+# factors in-place with lu!, and writes the solution into ctx.rhs_buffer[1:FOM+nR].
+function _solve_monomial!(
+	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+	s, nR,
+	resonance,
+	lower_order_couplings,
+	external_dynamics,
+) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}
+	n_sys = FOM + nR
+	assemble_cohomological_matrix_and_rhs!(
+		view(ctx.system_matrix_buffer, 1:FOM, 1:n_sys),
+		view(ctx.rhs_buffer, 1:FOM),
+		s,
+		ctx.linear_terms,
+		ctx.invariance_C_coeffs,
+		ctx.invariance_E_coeffs,
+		resonance,
+		lower_order_couplings,
+		external_dynamics,
+		ctx.external_rhs_buffer,
+	)
+	view(ctx.rhs_buffer, 1:FOM) .+= ctx.ml_result_buffer
+
+	assemble_orthogonality_matrix_and_rhs!(
+		view(ctx.system_matrix_buffer, (FOM+1):n_sys, 1:n_sys),
+		view(ctx.rhs_buffer, (FOM+1):n_sys),
+		s,
+		ctx.orthogonality_J_coeffs,
+		ctx.orthogonality_C_coeffs,
+		ctx.orthogonality_E_coeffs,
+		resonance,
+		lower_order_couplings,
+		external_dynamics,
+	)
+
+	F = lu!(view(ctx.system_matrix_buffer, 1:n_sys, 1:n_sys), check = false)
+	ldiv!(F, view(ctx.rhs_buffer, 1:n_sys))
+	return
+end
+
+# Sparse path: solve via Pardiso/KLU for the FOM×FOM block and a dense Schur
+# complement for the resonant modes.  Results land in ctx.rhs_buffer[1:FOM+nR].
+function _solve_monomial!(
 	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
 	s, nR,
 	resonance,
@@ -430,6 +467,7 @@ function solve_single_monomial!(
 		ctx.multiindex_dict,
 		ctx.lower_order_buffer,
 		ctx.candidate_indices_by_monomial[idx],
+		ctx.unit_vectors,
 	)
 
 	# ── 4. Nonlinear model terms at this monomial ─────────────────────────────
@@ -444,43 +482,7 @@ function solve_single_monomial!(
 	nR    = count(resonance)
 	n_sys = FOM + nR
 
-	if MT <: SparseMatrixCSC
-		# Sparse path: build L(s) as SparseMatrixCSC, solve via Pardiso + Schur.
-		# Results land in ctx.rhs_buffer[1:n_sys] (same layout as dense path).
-		_solve_sparse_monomial!(
-			ctx, s, nR, resonance, lower_order_couplings, external_dynamics,
-		)
-	else
-		# Dense path: assemble full (FOM+nR)×(FOM+nR) system and factor with lu!.
-		assemble_cohomological_matrix_and_rhs!(
-			view(ctx.system_matrix_buffer, 1:FOM, 1:n_sys),
-			view(ctx.rhs_buffer, 1:FOM),
-			s,
-			ctx.linear_terms,
-			ctx.invariance_C_coeffs,
-			ctx.invariance_E_coeffs,
-			resonance,
-			lower_order_couplings,
-			external_dynamics,
-			ctx.external_rhs_buffer,
-		)
-		view(ctx.rhs_buffer, 1:FOM) .+= ctx.ml_result_buffer
-
-		assemble_orthogonality_matrix_and_rhs!(
-			view(ctx.system_matrix_buffer, (FOM+1):n_sys, 1:n_sys),
-			view(ctx.rhs_buffer, (FOM+1):n_sys),
-			s,
-			ctx.orthogonality_J_coeffs,
-			ctx.orthogonality_C_coeffs,
-			ctx.orthogonality_E_coeffs,
-			resonance,
-			lower_order_couplings,
-			external_dynamics,
-		)
-
-		F = lu!(view(ctx.system_matrix_buffer, 1:n_sys, 1:n_sys), check = false)
-		ldiv!(F, view(ctx.rhs_buffer, 1:n_sys))
-	end
+	_solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
 	sol = view(ctx.rhs_buffer, 1:n_sys)
 
 	# ── 6a. Parametrisation coefficients (zeroth time-derivative order) ───────
@@ -769,12 +771,13 @@ function solve_cohomological_problem(
 	klu_cache = pardiso_solver === nothing ? _alloc_klu_cache(MT) : nothing
 	external_rhs_buffer = zeros(ComplexF64, FOM)
 	ml_result_buffer = zeros(ComplexF64, FOM)
+	unit_vectors = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR))) for j in 1:NVAR]
 	candidate_indices_by_monomial = Vector{Vector{Int}}(undef, L)
 	for i in 1:L
 		multi_i = mset[i]
 		tdeg = sum(multi_i)
 		candidate_indices_by_monomial[i] = tdeg < 2 ? Int[] :
-										   indices_in_box_with_bounded_degree(mset, collect(multi_i), 2, tdeg)
+										   indices_in_box_with_bounded_degree(mset, multi_i, 2, tdeg)
 	end
 
 	# ── 5c. Compute master-column invariance polynomials once (Φ_ext-independent)
@@ -802,6 +805,7 @@ function solve_cohomological_problem(
 			partial_orth_C_coeffs, partial_orth_E_coeffs,
 			resonance_set, linear_skip_set,
 			multiindex_dict, lower_order_buffer, candidate_indices_by_monomial,
+			unit_vectors,
 			system_matrix_buffer, rhs_buffer, external_rhs_buffer, ml_result_buffer,
 			sparse_L_template, sparse_L_mappings, pardiso_solver, klu_cache,
 		)
@@ -844,6 +848,7 @@ function solve_cohomological_problem(
 		resonance_set,
 		linear_skip_set,
 		multiindex_dict, lower_order_buffer, candidate_indices_by_monomial,
+		unit_vectors,
 		system_matrix_buffer, rhs_buffer, external_rhs_buffer, ml_result_buffer,
 		sparse_L_template, sparse_L_mappings, pardiso_solver, klu_cache,
 	)
