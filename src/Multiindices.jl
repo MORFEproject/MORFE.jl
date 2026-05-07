@@ -135,17 +135,20 @@ multiindex(components::Int...) = collect(Int, components)
 function _generate_ascending_lex_fixed!(
         exponents::AbstractMatrix{Int}, n::Int, total_degree::Int)
     col = 1
-    function recurse(prefix::Vector{Int}, remaining_vars::Int, remaining_deg::Int)
-        if remaining_vars == 1
-            @inbounds exponents[:, col] = vcat(prefix, remaining_deg)
+    buf = Vector{Int}(undef, n)
+    function recurse(depth::Int, remaining_deg::Int)
+        if depth == n
+            @inbounds buf[depth] = remaining_deg
+            @inbounds exponents[:, col] .= buf
             col += 1
         else
             for e in remaining_deg:-1:0
-                recurse(vcat(prefix, e), remaining_vars - 1, remaining_deg - e)
+                @inbounds buf[depth] = e
+                recurse(depth + 1, remaining_deg - e)
             end
         end
     end
-    recurse(Int[], n, total_degree)
+    recurse(1, total_degree)
     return exponents
 end
 

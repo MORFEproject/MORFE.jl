@@ -214,9 +214,6 @@ for idx in 1:n_monomials
 	println("  $(mset.exponents[idx]) → \tpos = $pos\n\t\tvel = $vel\n\t\tred = $red\n")
 end
 
-println("\n" * "="^80)
-println("Demo finished successfully.")
-
 # ------------------------------------------------------------------------------
 # 10. Export results to HDF5 for external validation (e.g. Python/h5py)
 # ------------------------------------------------------------------------------
@@ -230,3 +227,6 @@ h5open(output_path, "w") do f
 	f["outer_eigenvalues"] = outer_eigenvalues
 end
 println("Results exported to: $output_path")
+
+println("\n" * "="^80)
+println("Demo finished successfully.")

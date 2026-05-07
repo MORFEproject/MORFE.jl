@@ -17,11 +17,9 @@ export compute_lower_order_couplings
 	upper_bound::SVector{NVAR, Int},
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
 	red_coefficients::AbstractMatrix{T},
-	param_coefficients::AbstractArray{T, 3}) where {NVAR, T}
+	param_coefficients::AbstractArray{T, 3},
+	unit_vectors::AbstractVector{SVector{NVAR, Int}}) where {NVAR, T}
 	ORD = size(param_coefficients, 2)
-	# Pre‑compute all unit vectors as SVector
-	unit_vectors = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR)))
-					for j in 1:NVAR]
 
 	for j in 1:NVAR
 		upper_bound[j] < 1 && continue
@@ -49,10 +47,7 @@ export compute_lower_order_couplings
 
 			factor = param_exp[i] * red_val
 			for k in 1:ORD
-				acc_vec = accumulator[k]
-				@inbounds for l in eachindex(acc_vec)
-					acc_vec[l] += factor * param_coeff[l, k]
-				end
+				axpy!(factor, @view(param_coeff[:, k]), accumulator[k])
 			end
 		end
 	end
@@ -65,13 +60,10 @@ end
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
 	red_coefficients::AbstractMatrix{T},
 	param_coefficients::AbstractArray{T, 3},
-	candidate_idxs::AbstractVector{Int}) where {NVAR, T}
+	candidate_idxs::AbstractVector{Int},
+	unit_vectors::AbstractVector{SVector{NVAR, Int}}) where {NVAR, T}
 	ORD = size(param_coefficients, 2)
 	isempty(candidate_idxs) && return
-
-	# Pre‑compute unit vectors
-	unit_vectors = [SVector{NVAR, Int}(ntuple(k -> k == i ? 1 : 0, Val(NVAR)))
-					for i in 1:NVAR]
 
 	exps = mset.exponents
 	@inbounds for idx in candidate_idxs
@@ -93,10 +85,7 @@ end
 
 			factor = param_exp[i] * red_val
 			for k in 1:ORD
-				acc_vec = accumulator[k]
-				@inbounds for l in eachindex(acc_vec)
-					acc_vec[l] += factor * param_coeff[l, k]
-				end
+				axpy!(factor, @view(param_coeff[:, k]), accumulator[k])
 			end
 		end
 	end
@@ -118,6 +107,7 @@ function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
 	accumulator::Vector{Vector{T}},
 	candidate_idxs::AbstractVector{Int},
+	unit_vectors::AbstractVector{SVector{NVAR, Int}},
 ) where {ORD, NVAR, ROM, T}
 	total_deg_upper = sum(upper_bound)
 	total_deg_upper < 2 && return accumulator
@@ -128,10 +118,11 @@ function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
 	param_coefficients = coefficients(parametrisation)     # Array{T,3}  (FOM × ORD × L)
 
 	_sum_degree_one_terms!(accumulator, upper_bound,
-		multiindex_dict, red_coefficients, param_coefficients)
+		multiindex_dict, red_coefficients, param_coefficients, unit_vectors)
 
 	_sum_higher_degree_terms!(accumulator, upper_bound,
-		mset, multiindex_dict, red_coefficients, param_coefficients, candidate_idxs)
+		mset, multiindex_dict, red_coefficients, param_coefficients, candidate_idxs,
+		unit_vectors)
 
 	return accumulator
 end
@@ -153,10 +144,11 @@ function compute_lower_order_couplings(
 	accumulator     = [zeros(T, FOM) for _ in 1:ORD]
 	total_deg       = sum(upper_bound)
 	candidate_idxs  = total_deg < 2 ? Int[] :
-	indices_in_box_with_bounded_degree(mset, collect(upper_bound), 2, total_deg)
+		indices_in_box_with_bounded_degree(mset, upper_bound, 2, total_deg)
 	ub_svec         = SVector{NVAR, Int}(upper_bound)
+	unit_vectors    = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR))) for j in 1:NVAR]
 	return compute_lower_order_couplings(ub_svec, parametrisation, reduced_dynamics,
-		multiindex_dict, accumulator, candidate_idxs)
+		multiindex_dict, accumulator, candidate_idxs, unit_vectors)
 end
 
 end # module
