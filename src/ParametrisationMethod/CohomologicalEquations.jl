@@ -59,28 +59,31 @@ External forcing modes are *known* and appear only on the right-hand side.
 """
 module CohomologicalEquations
 
-using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree, build_exponent_index_map
+using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree,
+                      build_exponent_index_map
 using ..Polynomials: DensePolynomial
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics,
-	create_parametrisation_method_objects, compute_higher_derivative_coefficients!,
-	multiindex_set
+                               create_parametrisation_method_objects,
+                               compute_higher_derivative_coefficients!,
+                               multiindex_set
 using ..LowerOrderCouplings: compute_lower_order_couplings
 using ..InvarianceEquation: assemble_cohomological_matrix_and_rhs,
-	assemble_cohomological_matrix_and_rhs!,
-	precompute_column_polynomials,
-	precompute_master_column_polynomials,
-	precompute_external_column_polynomials,
-	build_sparse_L_and_rhs!,
-	precompute_sparse_L_template,
-	evaluate_column!,
-	evaluate_external_rhs!
+                            assemble_cohomological_matrix_and_rhs!,
+                            precompute_column_polynomials,
+                            precompute_master_column_polynomials,
+                            precompute_external_column_polynomials,
+                            build_sparse_L_and_rhs!,
+                            precompute_sparse_L_template,
+                            evaluate_column!,
+                            evaluate_external_rhs!
 using ..MasterModeOrthogonality: assemble_orthogonality_matrix_and_rhs,
-	assemble_orthogonality_matrix_and_rhs!,
-	precompute_orthogonality_operator_coefficients,
-	precompute_orthogonality_column_polynomials
+                                 assemble_orthogonality_matrix_and_rhs!,
+                                 precompute_orthogonality_operator_coefficients,
+                                 precompute_orthogonality_column_polynomials
 using ..FullOrderModel: NDOrderModel
 
-using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!, build_multilinear_terms_cache, MultilinearTermsCache
+using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
+                          build_multilinear_terms_cache, MultilinearTermsCache
 using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using SparseArrays
@@ -89,9 +92,9 @@ using Pardiso: AbstractPardisoSolver, MKLPardisoSolver, solve as pardiso_solve
 using StaticArrays: SVector
 
 export CohomologicalContext,
-	solve_cohomological_equations!,
-	solve_single_monomial!,
-	solve_cohomological_problem
+       solve_cohomological_equations!,
+       solve_single_monomial!,
+       solve_cohomological_problem
 
 # ==============================================================================
 # 1.  Context struct
@@ -184,37 +187,37 @@ and
   (`e_1, …, e_NVAR`); these are initialised before the main loop and skipped.
 """
 struct CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT <: AbstractMatrix{LT}}
-	# ── Full-order linear operators ────────────────────────────────────────────
-	linear_terms::NTuple{ORDP1, MT}
-	generalised_eigenmodes::Matrix{T}
-	lambda_diag::Vector{T}                       # length NVAR; diagonal of Λ from R
-	# ── Invariance-equation operators ─────────────────────────────────────────
-	invariance_C_coeffs::Vector{Matrix{T}}   # length ROM,   each FOM × ORD
-	invariance_E_coeffs::Vector{Matrix{T}}   # length N_EXT, each FOM × ORD
-	# ── Orthogonality-condition operators ─────────────────────────────────────
-	orthogonality_J_coeffs::Vector{Matrix{T}}   # length ROM, each ORD × FOM
-	orthogonality_C_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × ROM
-	orthogonality_E_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × N_EXT
-	# ── Resonance set ──────────────────────────────────────────────────────────
-	resonance_set::ResonanceSet
-	# ── Skip set (linear monomials, pre-computed) ──────────────────────────────
-	linear_monomial_skip_set::Set{Int}
-	# ── Lower-order coupling pre-allocated resources ────────────────────────────
-	multiindex_dict::Dict{SVector{NVAR, Int}, Int}
-	lower_order_buffer::Vector{Vector{T}}              # length ORD, each FOM; zeroed before each call
-	candidate_indices_by_monomial::Vector{Vector{Int}} # length L; candidates for _sum_higher_degree_terms!
-	unit_vectors::Vector{SVector{NVAR, Int}}           # NVAR unit basis vectors; built once, shared
-	# ── Stacked system pre-allocated buffers ────────────────────────────────────
-	# Dense path: (FOM+ROM)×(FOM+ROM); sparse path: (ROM+1)×(ROM+1) for Schur complement only.
-	system_matrix_buffer::Matrix{T}
-	rhs_buffer::Vector{T}             # length FOM+ROM; holds rhs, then solution after ldiv!
-	external_rhs_buffer::Vector{T}    # length FOM; scratch buffer for evaluate_external_rhs!
-	ml_result_buffer::Vector{T}       # length FOM; output buffer for compute_multilinear_terms!
-	# ── Sparse-path buffers (nothing for dense inputs) ──────────────────────────
-	sparse_L_template::Union{Nothing, SparseMatrixCSC{T}}   # union-pattern buffer for Horner; nzval overwritten per monomial
-	sparse_L_mappings::Union{Nothing, Vector{Vector{Int}}}  # nzval index mappings: linear_terms[k][i] → L_template[mappings[k][i]]
-	pardiso_solver::Union{Nothing, AbstractPardisoSolver}        # priority 1: MKL/standalone Pardiso
-	klu_cache::Union{Nothing, Ref{Any}}  # priority 2: lazy KLU symbolic cache (Ref(nothing) → Ref(KLUFactorization))
+    # ── Full-order linear operators ────────────────────────────────────────────
+    linear_terms::NTuple{ORDP1, MT}
+    generalised_eigenmodes::Matrix{T}
+    lambda_diag::Vector{T}                       # length NVAR; diagonal of Λ from R
+    # ── Invariance-equation operators ─────────────────────────────────────────
+    invariance_C_coeffs::Vector{Matrix{T}}   # length ROM,   each FOM × ORD
+    invariance_E_coeffs::Vector{Matrix{T}}   # length N_EXT, each FOM × ORD
+    # ── Orthogonality-condition operators ─────────────────────────────────────
+    orthogonality_J_coeffs::Vector{Matrix{T}}   # length ROM, each ORD × FOM
+    orthogonality_C_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × ROM
+    orthogonality_E_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × N_EXT
+    # ── Resonance set ──────────────────────────────────────────────────────────
+    resonance_set::ResonanceSet
+    # ── Skip set (linear monomials, pre-computed) ──────────────────────────────
+    linear_monomial_skip_set::Set{Int}
+    # ── Lower-order coupling pre-allocated resources ────────────────────────────
+    multiindex_dict::Dict{SVector{NVAR, Int}, Int}
+    lower_order_buffer::Vector{Vector{T}}              # length ORD, each FOM; zeroed before each call
+    candidate_indices_by_monomial::Vector{Vector{Int}} # length L; candidates for _sum_higher_degree_terms!
+    unit_vectors::Vector{SVector{NVAR, Int}}           # NVAR unit basis vectors; built once, shared
+    # ── Stacked system pre-allocated buffers ────────────────────────────────────
+    # Dense path: (FOM+ROM)×(FOM+ROM); sparse path: (ROM+1)×(ROM+1) for Schur complement only.
+    system_matrix_buffer::Matrix{T}
+    rhs_buffer::Vector{T}             # length FOM+ROM; holds rhs, then solution after ldiv!
+    external_rhs_buffer::Vector{T}    # length FOM; scratch buffer for evaluate_external_rhs!
+    ml_result_buffer::Vector{T}       # length FOM; output buffer for compute_multilinear_terms!
+    # ── Sparse-path buffers (nothing for dense inputs) ──────────────────────────
+    sparse_L_template::Union{Nothing, SparseMatrixCSC{T}}   # union-pattern buffer for Horner; nzval overwritten per monomial
+    sparse_L_mappings::Union{Nothing, Vector{Vector{Int}}}  # nzval index mappings: linear_terms[k][i] → L_template[mappings[k][i]]
+    pardiso_solver::Union{Nothing, AbstractPardisoSolver}        # priority 1: MKL/standalone Pardiso
+    klu_cache::Union{Nothing, Ref{Any}}  # priority 2: lazy KLU symbolic cache (Ref(nothing) → Ref(KLUFactorization))
 end
 
 # ==============================================================================
@@ -228,22 +231,22 @@ end
 # The cohomological equations never modify these rows (external modes are not
 # resonant), so placing them here once is sufficient.
 function _embed_external_dynamics!(
-	R::ReducedDynamics{ROM, NVAR, T},
-	ext_poly::DensePolynomial{T, N_EXT, 2},
-	mset::MultiindexSet{NVAR},
+        R::ReducedDynamics{ROM, NVAR, T},
+        ext_poly::DensePolynomial{T, N_EXT, 2},
+        mset::MultiindexSet{NVAR}
 ) where {ROM, NVAR, T, N_EXT}
-	N_EXT > 0 || return nothing
-	ext_coeffs = ext_poly.coefficients
-	for (j, α_ext) in enumerate(ext_poly.multiindex_set.exponents)
-		α_full = SVector{NVAR, Int}(ntuple(i -> i <= ROM ? 0 : α_ext[i-ROM], Val(NVAR)))
-		idx_full = findfirst(==(α_full), mset.exponents)
-		idx_full === nothing && continue
-		for e in 1:N_EXT
-			coeff = T(ext_coeffs[e, j])
-			iszero(coeff) || (R.poly.coefficients[ROM+e, idx_full] = coeff)
-		end
-	end
-	return nothing
+    N_EXT > 0 || return nothing
+    ext_coeffs = ext_poly.coefficients
+    for (j, α_ext) in enumerate(ext_poly.multiindex_set.exponents)
+        α_full = SVector{NVAR, Int}(ntuple(i -> i <= ROM ? 0 : α_ext[i - ROM], Val(NVAR)))
+        idx_full = findfirst(==(α_full), mset.exponents)
+        idx_full === nothing && continue
+        for e in 1:N_EXT
+            coeff = T(ext_coeffs[e, j])
+            iszero(coeff) || (R.poly.coefficients[ROM + e, idx_full] = coeff)
+        end
+    end
+    return nothing
 end
 
 # Return the positions in `mset` of ALL unit-vector monomials eᵣ for r = 1 … NVAR.
@@ -251,25 +254,25 @@ end
 # r (no zero vector) or r+1 (zero vector included).  Searching only the first NVAR+1
 # entries is sufficient.
 function _linear_monomial_indices(mset::MultiindexSet{NVAR}) where {NVAR}
-	indices = Int[]
-	n_search = min(NVAR + 1, length(mset))
-	for r in 1:NVAR
-		e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
-		idx = findfirst(==(e_r), view(mset.exponents, 1:n_search))
-		idx !== nothing && push!(indices, idx)
-	end
-	return indices
+    indices = Int[]
+    n_search = min(NVAR + 1, length(mset))
+    for r in 1:NVAR
+        e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
+        idx = findfirst(==(e_r), view(mset.exponents, 1:n_search))
+        idx !== nothing && push!(indices, idx)
+    end
+    return indices
 end
 
 # Return a compile-time-sized SVector{ROM, Bool} indicating which master modes
 # r = 1 … ROM are resonant with the monomial at position `monomial_idx` in the
 # multiindex set.  Using Val(ROM) makes the SVector size a compile-time constant.
 @inline function _resonance_vector(
-	resonance_set::ResonanceSet,
-	monomial_idx::Int,
-	::Val{ROM},
+        resonance_set::ResonanceSet,
+        monomial_idx::Int,
+        ::Val{ROM}
 ) where {ROM}
-	return SVector{ROM, Bool}(ntuple(r -> is_resonant(resonance_set, monomial_idx, r), Val(ROM)))
+    return SVector{ROM, Bool}(ntuple(r -> is_resonant(resonance_set, monomial_idx, r), Val(ROM)))
 end
 
 # ==============================================================================
@@ -282,13 +285,13 @@ end
 _sparse_solve(ps::AbstractPardisoSolver, ::Any, A, B) = pardiso_solve(ps, A, B)
 
 function _sparse_solve(::Nothing, klu_cache::Ref{Any}, A::SparseMatrixCSC, B)
-	if klu_cache[] === nothing
-		F = klu(A)
-		klu_cache[] = F
-	else
-		klu!(klu_cache[], A)  # numeric-only refactorize: reuses symbolic factor
-	end
-	return klu_cache[] \ B
+    if klu_cache[] === nothing
+        F = klu(A)
+        klu_cache[] = F
+    else
+        klu!(klu_cache[], A)  # numeric-only refactorize: reuses symbolic factor
+    end
+    return klu_cache[] \ B
 end
 
 _sparse_solve(::Nothing, ::Nothing, A, B) = lu(A) \ B  # dense-path fallback
@@ -297,108 +300,109 @@ _sparse_solve(::Nothing, ::Nothing, A, B) = lu(A) \ B  # dense-path fallback
 # Assembles the full (FOM+nR)×(FOM+nR) system into ctx.system_matrix_buffer,
 # factors in-place with lu!, and writes the solution into ctx.rhs_buffer[1:FOM+nR].
 function _solve_monomial!(
-	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-	s, nR,
-	resonance,
-	lower_order_couplings,
-	external_dynamics,
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        s, nR,
+        resonance,
+        lower_order_couplings,
+        external_dynamics
 ) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}
-	n_sys = FOM + nR
-	assemble_cohomological_matrix_and_rhs!(
-		view(ctx.system_matrix_buffer, 1:FOM, 1:n_sys),
-		view(ctx.rhs_buffer, 1:FOM),
-		s,
-		ctx.linear_terms,
-		ctx.invariance_C_coeffs,
-		ctx.invariance_E_coeffs,
-		resonance,
-		lower_order_couplings,
-		external_dynamics,
-		ctx.external_rhs_buffer,
-	)
-	view(ctx.rhs_buffer, 1:FOM) .+= ctx.ml_result_buffer
+    n_sys = FOM + nR
+    assemble_cohomological_matrix_and_rhs!(
+        view(ctx.system_matrix_buffer, 1:FOM, 1:n_sys),
+        view(ctx.rhs_buffer, 1:FOM),
+        s,
+        ctx.linear_terms,
+        ctx.invariance_C_coeffs,
+        ctx.invariance_E_coeffs,
+        resonance,
+        lower_order_couplings,
+        external_dynamics,
+        ctx.external_rhs_buffer
+    )
+    view(ctx.rhs_buffer, 1:FOM) .+= ctx.ml_result_buffer
 
-	assemble_orthogonality_matrix_and_rhs!(
-		view(ctx.system_matrix_buffer, (FOM+1):n_sys, 1:n_sys),
-		view(ctx.rhs_buffer, (FOM+1):n_sys),
-		s,
-		ctx.orthogonality_J_coeffs,
-		ctx.orthogonality_C_coeffs,
-		ctx.orthogonality_E_coeffs,
-		resonance,
-		lower_order_couplings,
-		external_dynamics,
-	)
+    assemble_orthogonality_matrix_and_rhs!(
+        view(ctx.system_matrix_buffer, (FOM + 1):n_sys, 1:n_sys),
+        view(ctx.rhs_buffer, (FOM + 1):n_sys),
+        s,
+        ctx.orthogonality_J_coeffs,
+        ctx.orthogonality_C_coeffs,
+        ctx.orthogonality_E_coeffs,
+        resonance,
+        lower_order_couplings,
+        external_dynamics
+    )
 
-	F = lu!(view(ctx.system_matrix_buffer, 1:n_sys, 1:n_sys), check = false)
-	ldiv!(F, view(ctx.rhs_buffer, 1:n_sys))
-	return
+    F = lu!(view(ctx.system_matrix_buffer, 1:n_sys, 1:n_sys), check = false)
+    ldiv!(F, view(ctx.rhs_buffer, 1:n_sys))
+    return
 end
 
 # Sparse path: solve via Pardiso/KLU for the FOM×FOM block and a dense Schur
 # complement for the resonant modes.  Results land in ctx.rhs_buffer[1:FOM+nR].
 function _solve_monomial!(
-	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-	s, nR,
-	resonance,
-	lower_order_couplings,
-	external_dynamics,
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        s, nR,
+        resonance,
+        lower_order_couplings,
+        external_dynamics
 ) where {T, ORD, ORDP1, NVAR, FOM, LT, MT <: SparseMatrixCSC}
 
-	# ── 1. Build L(s) as SparseMatrixCSC AND accumulate lower-order RHS ────────
-	rhs = view(ctx.rhs_buffer, 1:FOM)
-	fill!(rhs, zero(T))
-	L_s = build_sparse_L_and_rhs!(
-		rhs, ctx.sparse_L_template, ctx.sparse_L_mappings, ctx.linear_terms, s, lower_order_couplings,
-	)
+    # ── 1. Build L(s) as SparseMatrixCSC AND accumulate lower-order RHS ────────
+    rhs = view(ctx.rhs_buffer, 1:FOM)
+    fill!(rhs, zero(T))
+    L_s = build_sparse_L_and_rhs!(
+        rhs, ctx.sparse_L_template, ctx.sparse_L_mappings,
+        ctx.linear_terms, s, lower_order_couplings
+    )
 
-	# ── 2. Add external forcing and nonlinear contributions to RHS ─────────────
-	evaluate_external_rhs!(rhs, s, external_dynamics, ctx.invariance_E_coeffs,
-		ctx.external_rhs_buffer)
-	rhs .+= ctx.ml_result_buffer
+    # ── 2. Add external forcing and nonlinear contributions to RHS ─────────────
+    evaluate_external_rhs!(rhs, s, external_dynamics, ctx.invariance_E_coeffs,
+        ctx.external_rhs_buffer)
+    rhs .+= ctx.ml_result_buffer
 
-	if nR == 0
-		# ── 3a. Non-resonant: L * W_α = rhs  (single sparse solve) ────────────
-		view(ctx.rhs_buffer, 1:FOM) .= _sparse_solve(ctx.pardiso_solver, ctx.klu_cache, L_s, Vector(rhs))
-		return
-	end
+    if nR == 0
+        # ── 3a. Non-resonant: L * W_α = rhs  (single sparse solve) ────────────
+        view(ctx.rhs_buffer, 1:FOM) .= _sparse_solve(ctx.pardiso_solver, ctx.klu_cache, L_s, Vector(rhs))
+        return
+    end
 
-	# ── 3b. Resonant: bordered system via Pardiso + Schur complement ────────────
-	# Assemble C_r columns: FOM × nR (dense — one column per resonant mode)
-	C_r = Matrix{T}(undef, FOM, nR)
-	col = 1
-	for r in eachindex(resonance)
-		resonance[r] || continue
-		evaluate_column!(view(C_r, :, col), s, r, ctx.invariance_C_coeffs)
-		col += 1
-	end
+    # ── 3b. Resonant: bordered system via Pardiso + Schur complement ────────────
+    # Assemble C_r columns: FOM × nR (dense — one column per resonant mode)
+    C_r = Matrix{T}(undef, FOM, nR)
+    col = 1
+    for r in eachindex(resonance)
+        resonance[r] || continue
+        evaluate_column!(view(C_r, :, col), s, r, ctx.invariance_C_coeffs)
+        col += 1
+    end
 
-	# One Pardiso factorization, (1+nR) solves: X = L \ [rhs | C_r]
-	RHS_mat = hcat(Vector(rhs), C_r)   # FOM × (1+nR), dense copy
-	X = _sparse_solve(ctx.pardiso_solver, ctx.klu_cache, L_s, RHS_mat)
-	W_prime = view(X, :, 1)            # FOM-vector
-	C_prime = view(X, :, 2:(nR+1))      # FOM × nR
+    # One Pardiso factorization, (1+nR) solves: X = L \ [rhs | C_r]
+    RHS_mat = hcat(Vector(rhs), C_r)   # FOM × (1+nR), dense copy
+    X = _sparse_solve(ctx.pardiso_solver, ctx.klu_cache, L_s, RHS_mat)
+    W_prime = view(X, :, 1)            # FOM-vector
+    C_prime = view(X, :, 2:(nR + 1))      # FOM × nR
 
-	# Assemble orthogonality rows: nR × (FOM+nR) matrix and nR-vector g
-	M_orth = Matrix{T}(undef, nR, FOM + nR)
-	g      = view(ctx.rhs_buffer, (FOM+1):(FOM+nR))
-	assemble_orthogonality_matrix_and_rhs!(
-		M_orth, g, s,
-		ctx.orthogonality_J_coeffs,
-		ctx.orthogonality_C_coeffs,
-		ctx.orthogonality_E_coeffs,
-		resonance, lower_order_couplings, external_dynamics,
-	)
-	J_r    = view(M_orth, :, 1:FOM)
-	Cbar_r = view(M_orth, :, (FOM+1):(FOM+nR))
+    # Assemble orthogonality rows: nR × (FOM+nR) matrix and nR-vector g
+    M_orth = Matrix{T}(undef, nR, FOM + nR)
+    g = view(ctx.rhs_buffer, (FOM + 1):(FOM + nR))
+    assemble_orthogonality_matrix_and_rhs!(
+        M_orth, g, s,
+        ctx.orthogonality_J_coeffs,
+        ctx.orthogonality_C_coeffs,
+        ctx.orthogonality_E_coeffs,
+        resonance, lower_order_couplings, external_dynamics
+    )
+    J_r = view(M_orth, :, 1:FOM)
+    Cbar_r = view(M_orth, :, (FOM + 1):(FOM + nR))
 
-	# Schur complement: S = J_r * C' - Ĉ_r  (nR × nR, dense)
-	S = J_r * C_prime - Matrix{T}(Cbar_r)
-	r_α = S \ (J_r * W_prime .- g)
+    # Schur complement: S = J_r * C' - Ĉ_r  (nR × nR, dense)
+    S = J_r * C_prime - Matrix{T}(Cbar_r)
+    r_α = S \ (J_r * W_prime .- g)
 
-	view(ctx.rhs_buffer, 1:FOM)            .= W_prime .- C_prime * r_α
-	view(ctx.rhs_buffer, (FOM+1):(FOM+nR)) .= r_α
-	return
+    view(ctx.rhs_buffer, 1:FOM) .= W_prime .- C_prime * r_α
+    view(ctx.rhs_buffer, (FOM + 1):(FOM + nR)) .= r_α
+    return
 end
 
 """
@@ -442,77 +446,76 @@ Solve the cohomological equations for the monomial with multiindex‑set positio
 - `ml_cache :: MultilinearTermsCache` — precomputed factorisation cache; built once before the solve loop.
 """
 function solve_single_monomial!(
-	W::Parametrisation{ORD, NVAR, T},
-	R::ReducedDynamics{ROM, NVAR, T},
-	idx::Int,
-	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-	model::NDOrderModel,
-	ml_cache::MultilinearTermsCache,
+        W::Parametrisation{ORD, NVAR, T},
+        R::ReducedDynamics{ROM, NVAR, T},
+        idx::Int,
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        model::NDOrderModel,
+        ml_cache::MultilinearTermsCache
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
+    multi = multiindex_set(W)[idx]
 
-	multi = multiindex_set(W)[idx]
+    # ── 1. Superharmonic frequency s = ⟨λ, α⟩ ────────────────────────────────
+    s = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
 
-	# ── 1. Superharmonic frequency s = ⟨λ, α⟩ ────────────────────────────────
-	s = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
+    # ── 2. Resonance bitmask ──────────────────────────────────────────────────
+    resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
 
-	# ── 2. Resonance bitmask ──────────────────────────────────────────────────
-	resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
+    # ── 3. Lower-order coupling vectors ξ[j] (length FOM each) ───────────────
+    for v in ctx.lower_order_buffer
+        fill!(v, zero(T))
+    end
+    lower_order_couplings = compute_lower_order_couplings(
+        multi, W, R,
+        ctx.multiindex_dict,
+        ctx.lower_order_buffer,
+        ctx.candidate_indices_by_monomial[idx],
+        ctx.unit_vectors
+    )
 
-	# ── 3. Lower-order coupling vectors ξ[j] (length FOM each) ───────────────
-	for v in ctx.lower_order_buffer
-		fill!(v, zero(T))
-	end
-	lower_order_couplings = compute_lower_order_couplings(
-		multi, W, R,
-		ctx.multiindex_dict,
-		ctx.lower_order_buffer,
-		ctx.candidate_indices_by_monomial[idx],
-		ctx.unit_vectors,
-	)
+    # ── 4. Nonlinear model terms at this monomial ─────────────────────────────
+    # In-place into ctx.ml_result_buffer — no allocation.
+    compute_multilinear_terms!(ctx.ml_result_buffer, model, idx, W, ml_cache)
 
-	# ── 4. Nonlinear model terms at this monomial ─────────────────────────────
-	# In-place into ctx.ml_result_buffer — no allocation.
-	compute_multilinear_terms!(ctx.ml_result_buffer, model, idx, W, ml_cache)
+    # ── 5. Known external dynamics at this monomial ───────────────────────────
+    # External dynamics live in the last N_EXT rows of R (rows ROM+1:NVAR).
+    external_dynamics = view(R.poly.coefficients, (ROM + 1):NVAR, idx)
 
-	# ── 5. Known external dynamics at this monomial ───────────────────────────
-	# External dynamics live in the last N_EXT rows of R (rows ROM+1:NVAR).
-	external_dynamics = view(R.poly.coefficients, (ROM+1):NVAR, idx)
+    # ── 6. Assemble and solve the stacked cohomological system ────────────────
+    nR = count(resonance)
+    n_sys = FOM + nR
 
-	# ── 6. Assemble and solve the stacked cohomological system ────────────────
-	nR    = count(resonance)
-	n_sys = FOM + nR
+    _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+    sol = view(ctx.rhs_buffer, 1:n_sys)
 
-	_solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
-	sol = view(ctx.rhs_buffer, 1:n_sys)
+    # ── 6a. Parametrisation coefficients (zeroth time-derivative order) ───────
+    W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
 
-	# ── 6a. Parametrisation coefficients (zeroth time-derivative order) ───────
-	W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
+    # ── 6b. Reduced dynamics — non-zero only for resonant master modes ─────────
+    rr = 1
+    for r in 1:ROM
+        if resonance[r]
+            R.poly.coefficients[r, idx] = sol[FOM + rr]
+            rr += 1
+        else
+            R.poly.coefficients[r, idx] = zero(T)
+        end
+    end
 
-	# ── 6b. Reduced dynamics — non-zero only for resonant master modes ─────────
-	rr = 1
-	for r in 1:ROM
-		if resonance[r]
-			R.poly.coefficients[r, idx] = sol[FOM+rr]
-			rr += 1
-		else
-			R.poly.coefficients[r, idx] = zero(T)
-		end
-	end
+    # ── 7. Higher time-derivative coefficients W^(j)[α], j = 1 … ORD-1 ───────
+    # Pass only the master-mode rows of R (1:ROM) as the reduced-dynamics matrix;
+    # external dynamics are already supplied separately via `external_dynamics`.
+    compute_higher_derivative_coefficients!(
+        W.poly.coefficients,
+        view(R.poly.coefficients, 1:ROM, :),
+        external_dynamics,
+        s,
+        idx,
+        ctx.generalised_eigenmodes,
+        lower_order_couplings
+    )
 
-	# ── 7. Higher time-derivative coefficients W^(j)[α], j = 1 … ORD-1 ───────
-	# Pass only the master-mode rows of R (1:ROM) as the reduced-dynamics matrix;
-	# external dynamics are already supplied separately via `external_dynamics`.
-	compute_higher_derivative_coefficients!(
-		W.poly.coefficients,
-		view(R.poly.coefficients, 1:ROM, :),
-		external_dynamics,
-		s,
-		idx,
-		ctx.generalised_eigenmodes,
-		lower_order_couplings,
-	)
-
-	return nothing
+    return nothing
 end
 
 # ==============================================================================
@@ -540,23 +543,22 @@ data beforehand and are skipped.
 - `ml_cache :: MultilinearTermsCache` — precomputed factorisation cache built once before the loop.
 """
 function solve_cohomological_equations!(
-	W::Parametrisation{ORD, NVAR, T},
-	R::ReducedDynamics{ROM, NVAR, T},
-	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-	model::NDOrderModel,
-	ml_cache::MultilinearTermsCache,
+        W::Parametrisation{ORD, NVAR, T},
+        R::ReducedDynamics{ROM, NVAR, T},
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        model::NDOrderModel,
+        ml_cache::MultilinearTermsCache
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
+    nterms = length(multiindex_set(W))
 
-	nterms = length(multiindex_set(W))
+    # The multiindex set is stored in GrLex order, so iterating 1:nterms is
+    # already in ascending-total-degree (causal) order — no sort needed.
+    for idx in 1:nterms
+        idx in ctx.linear_monomial_skip_set && continue
+        solve_single_monomial!(W, R, idx, ctx, model, ml_cache)
+    end
 
-	# The multiindex set is stored in GrLex order, so iterating 1:nterms is
-	# already in ascending-total-degree (causal) order — no sort needed.
-	for idx in 1:nterms
-		idx in ctx.linear_monomial_skip_set && continue
-		solve_single_monomial!(W, R, idx, ctx, model, ml_cache)
-	end
-
-	return nothing
+    return nothing
 end
 
 # ==============================================================================
@@ -564,20 +566,22 @@ end
 # ==============================================================================
 
 # Dense path: full (FOM+ROM)×(FOM+ROM) buffer for the stacked bordered system.
-_alloc_system_buffer(::Type{<:AbstractMatrix}, FOM, ROM) =
-	Matrix{ComplexF64}(undef, FOM + ROM, FOM + ROM)
+function _alloc_system_buffer(::Type{<:AbstractMatrix}, FOM, ROM)
+    Matrix{ComplexF64}(undef, FOM + ROM, FOM + ROM)
+end
 
 # Sparse path: only the small (ROM+1)×(ROM+1) Schur-complement buffer is needed;
 # the FOM×FOM block is solved via Pardiso without materialising a dense matrix.
-_alloc_system_buffer(::Type{<:SparseMatrixCSC}, FOM, ROM) =
-	Matrix{ComplexF64}(undef, ROM + 1, ROM + 1)
+function _alloc_system_buffer(::Type{<:SparseMatrixCSC}, FOM, ROM)
+    Matrix{ComplexF64}(undef, ROM + 1, ROM + 1)
+end
 
 # Sparse path: pre-allocate union-pattern L_template and compute nzval index mappings.
 # Both are computed once at context construction and reused across all monomials to
 # avoid per-monomial sparse arithmetic allocations in the Horner evaluation of L(s).
 _alloc_sparse_L_data(::Type{<:AbstractMatrix}, _linear_terms) = (nothing, nothing)
 function _alloc_sparse_L_data(::Type{<:SparseMatrixCSC}, linear_terms)
-	return precompute_sparse_L_template(linear_terms)
+    return precompute_sparse_L_template(linear_terms)
 end
 
 # Dense path: no Pardiso solver needed.
@@ -586,17 +590,17 @@ _alloc_pardiso_solver(::Type{<:AbstractMatrix}) = nothing
 # Sparse path: try MKLPardisoSolver first, fall back to PardisoSolver, then to nothing
 # (nothing → use Julia's built-in sparse LU via SuiteSparse).
 function _alloc_pardiso_solver(::Type{<:SparseMatrixCSC})
-	try
-		return MKLPardisoSolver()
-	catch
-	end
-	try
-		return Pardiso.PardisoSolver()
-	catch
-	end
-	@warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
-		  "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
-	return nothing
+    try
+        return MKLPardisoSolver()
+    catch
+    end
+    try
+        return Pardiso.PardisoSolver()
+    catch
+    end
+    @warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
+          "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
+    return nothing
 end
 
 # Sparse path: KLU lazy-init cache. Ref(nothing) until the first sparse solve,
@@ -670,192 +674,198 @@ linear‑operator tuple is read from `model.linear_terms`.
 `(W, R)` — the solved [`Parametrisation`](@ref) and [`ReducedDynamics`](@ref).
 """
 function solve_cohomological_problem(
-	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
-	mset::MultiindexSet{NVAR},
-	master_eigenvalues::SVector{ROM, ComplexF64},
-	master_modes::Matrix{ComplexF64},
-	left_eigenmodes::AbstractMatrix{ComplexF64},
-	resonance_set::ResonanceSet;
-	initial_W::Union{Nothing, Parametrisation} = nothing,
-	initial_R::Union{Nothing, ReducedDynamics} = nothing,
-	# Caller-supplied higher-derivative master-mode coefficients.
-	# Shape: FOM × (ORD-1) × ROM, where slice [:, k, r] = W^(k+1)[e_r].
-	master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
+        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
+        mset::MultiindexSet{NVAR},
+        master_eigenvalues::SVector{ROM, ComplexF64},
+        master_modes::Matrix{ComplexF64},
+        left_eigenmodes::AbstractMatrix{ComplexF64},
+        resonance_set::ResonanceSet;
+        initial_W::Union{Nothing, Parametrisation} = nothing,
+        initial_R::Union{Nothing, ReducedDynamics} = nothing,
+        # Caller-supplied higher-derivative master-mode coefficients.
+        # Shape: FOM × (ORD-1) × ROM, where slice [:, k, r] = W^(k+1)[e_r].
+        master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
 
-	# ── 1. Dimensions and consistency checks ──────────────────────────────────
-	@assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
-	FOM = size(master_modes, 1)
-	@assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
+    # ── 1. Dimensions and consistency checks ──────────────────────────────────
+    @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
+    FOM = size(master_modes, 1)
+    @assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
 
-	# Use the model's linear terms directly; downstream functions accept mixed
-	# real/complex input and Julia promotes automatically at each multiply site.
-	linear_terms = model.linear_terms
+    # Use the model's linear terms directly; downstream functions accept mixed
+    # real/complex input and Julia promotes automatically at each multiply site.
+    linear_terms = model.linear_terms
 
-	L = length(mset)
+    L = length(mset)
 
-	# GrLex order: zero vector (if present) is at index 1, so eᵣ is at index
-	# r (no zero vector) or r+1.  Only the first NVAR+1 entries need checking.
-	zero_vec    = SVector{NVAR, Int}(ntuple(_ -> 0, Val(NVAR)))
-	has_zero    = length(mset) >= 1 && mset.exponents[1] == zero_vec
-	unit_offset = has_zero ? 1 : 0
+    # GrLex order: zero vector (if present) is at index 1, so eᵣ is at index
+    # r (no zero vector) or r+1.  Only the first NVAR+1 entries need checking.
+    zero_vec = SVector{NVAR, Int}(ntuple(_ -> 0, Val(NVAR)))
+    has_zero = length(mset) >= 1 && mset.exponents[1] == zero_vec
+    unit_offset = has_zero ? 1 : 0
 
-	# ── 2. Parametrisation and reduced-dynamics objects ────────────────────────
-	if initial_W !== nothing && initial_R !== nothing
-		W = initial_W
-		R = initial_R
-	else
-		@assert ORD == 1 || master_modes_derivatives !== nothing """
-		master_modes_derivatives must be provided for ORD > 1 systems.
-		Supply a FOM × (ORD-1) × ROM array whose slice [:, k, r] = W^(k+1)[e_r].
-		"""
+    # ── 2. Parametrisation and reduced-dynamics objects ────────────────────────
+    if initial_W !== nothing && initial_R !== nothing
+        W = initial_W
+        R = initial_R
+    else
+        @assert ORD == 1 || master_modes_derivatives !== nothing """
+        master_modes_derivatives must be provided for ORD > 1 systems.
+        Supply a FOM × (ORD-1) × ROM array whose slice [:, k, r] = W^(k+1)[e_r].
+        """
 
-		W, R = create_parametrisation_method_objects(
-			mset, ORD, FOM, ROM, N_EXT, ComplexF64,
-		)
+        W, R = create_parametrisation_method_objects(
+            mset, ORD, FOM, ROM, N_EXT, ComplexF64
+        )
 
-		# Initialise linear monomials for master modes in W and R.
-		for r in 1:ROM
-			idx_er = r + unit_offset
-			W.poly.coefficients[:, 1, idx_er] .= view(master_modes, :, r)
-			for k in 2:ORD
-				W.poly.coefficients[:, k, idx_er] .= view(master_modes_derivatives, :, k - 1, r)
-			end
-			R.poly.coefficients[r, idx_er] = master_eigenvalues[r]
-		end
+        # Initialise linear monomials for master modes in W and R.
+        for r in 1:ROM
+            idx_er = r + unit_offset
+            W.poly.coefficients[:, 1, idx_er] .= view(master_modes, :, r)
+            for k in 2:ORD
+                W.poly.coefficients[:, k, idx_er] .= view(
+                    master_modes_derivatives, :, k -
+                                                 1, r)
+            end
+            R.poly.coefficients[r, idx_er] = master_eigenvalues[r]
+        end
 
-		# ── 3. External dynamics: copy from model into the last N_EXT rows of R ──
-		if model.external_system !== nothing
-			_embed_external_dynamics!(R, model.external_system.first_order_dynamics, mset)
-		end
-	end
+        # ── 3. External dynamics: copy from model into the last N_EXT rows of R ──
+        if model.external_system !== nothing
+            _embed_external_dynamics!(R, model.external_system.first_order_dynamics, mset)
+        end
+    end
 
-	# Λ is a view into R.poly.coefficients: column r of Λ is the coefficient of
-	# eᵣ in R, i.e. the r-th column of the Jordan matrix.  Using a view means Λ
-	# always reflects the current state of R — in particular, after the external
-	# monomial solve (step 5) fills the upper-right block (master↔external coupling),
-	# no explicit rebuild is needed.
-	Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset+1):(unit_offset+NVAR))
-	lambda_diag = [R.poly.coefficients[i, i+unit_offset] for i in 1:NVAR]
+    # Λ is a view into R.poly.coefficients: column r of Λ is the coefficient of
+    # eᵣ in R, i.e. the r-th column of the Jordan matrix.  Using a view means Λ
+    # always reflects the current state of R — in particular, after the external
+    # monomial solve (step 5) fills the upper-right block (master↔external coupling),
+    # no explicit rebuild is needed.
+    Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
+    lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
 
-	# ── 4. Orthogonality row operators ─────────────────────────────────────────
-	# J_coeffs depend only on linear_terms and left_eigenmodes, not on the
-	# external directions, so they are computed once and reused in both passes.
-	orthogonality_J_coeffs = precompute_orthogonality_operator_coefficients(
-		linear_terms, left_eigenmodes, master_eigenvalues,
-	)
+    # ── 4. Orthogonality row operators ─────────────────────────────────────────
+    # J_coeffs depend only on linear_terms and left_eigenmodes, not on the
+    # external directions, so they are computed once and reused in both passes.
+    orthogonality_J_coeffs = precompute_orthogonality_operator_coefficients(
+        linear_terms, left_eigenmodes, master_eigenvalues
+    )
 
-	# ── 5. Solve external linear monomials via a temporary context ─────────────
-	# The external forcing directions Φ_ext[:, e] = W[e_ext] solve the same
-	# cohomological equation (invariance + orthogonality rows) as every other
-	# monomial.  We therefore call solve_single_monomial! for each e_ext using a
-	# temporary context in which the external columns of generalised_right_eigenmodes
-	# are set to zero.  Since the E_e column polynomials are linear in Φ_ext,
-	# setting Φ_ext = 0 zeroes all E_coeffs and reduces the invariance equation to
-	#   L(s_ext) W_ext = F_nl[e_ext] + orthogonality correction,
-	# which is the correct first-pass equation for the forced-response direction.
-	# After this loop, generalised_right_eigenmodes is built from the results and
-	# the full C/E operators are precomputed for the main solve.
-	# ── 5a. Build the multilinear-terms cache (valid for the full solve) ─────────
-	ml_cache = build_multilinear_terms_cache(model, W)
+    # ── 5. Solve external linear monomials via a temporary context ─────────────
+    # The external forcing directions Φ_ext[:, e] = W[e_ext] solve the same
+    # cohomological equation (invariance + orthogonality rows) as every other
+    # monomial.  We therefore call solve_single_monomial! for each e_ext using a
+    # temporary context in which the external columns of generalised_right_eigenmodes
+    # are set to zero.  Since the E_e column polynomials are linear in Φ_ext,
+    # setting Φ_ext = 0 zeroes all E_coeffs and reduces the invariance equation to
+    #   L(s_ext) W_ext = F_nl[e_ext] + orthogonality correction,
+    # which is the correct first-pass equation for the forced-response direction.
+    # After this loop, generalised_right_eigenmodes is built from the results and
+    # the full C/E operators are precomputed for the main solve.
+    # ── 5a. Build the multilinear-terms cache (valid for the full solve) ─────────
+    ml_cache = build_multilinear_terms_cache(model, W)
 
-	# ── 5b. Precompute skip set and lower-order coupling resources ────────────
-	# All three are computed once and shared between both context objects.
-	linear_skip_set = Set(_linear_monomial_indices(mset))
-	multiindex_dict = build_exponent_index_map(mset)
-	lower_order_buffer = [zeros(ComplexF64, FOM) for _ in 1:ORD]
-	system_matrix_buffer = _alloc_system_buffer(MT, FOM, ROM)
-	rhs_buffer = Vector{ComplexF64}(undef, FOM + ROM)
-	sparse_L_template, sparse_L_mappings = _alloc_sparse_L_data(MT, linear_terms)
-	pardiso_solver = _alloc_pardiso_solver(MT)
-	klu_cache = pardiso_solver === nothing ? _alloc_klu_cache(MT) : nothing
-	external_rhs_buffer = zeros(ComplexF64, FOM)
-	ml_result_buffer = zeros(ComplexF64, FOM)
-	unit_vectors = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR))) for j in 1:NVAR]
-	candidate_indices_by_monomial = Vector{Vector{Int}}(undef, L)
-	for i in 1:L
-		multi_i = mset[i]
-		tdeg = sum(multi_i)
-		candidate_indices_by_monomial[i] = tdeg < 2 ? Int[] :
-										   indices_in_box_with_bounded_degree(mset, multi_i, 2, tdeg)
-	end
+    # ── 5b. Precompute skip set and lower-order coupling resources ────────────
+    # All three are computed once and shared between both context objects.
+    linear_skip_set = Set(_linear_monomial_indices(mset))
+    multiindex_dict = build_exponent_index_map(mset)
+    lower_order_buffer = [zeros(ComplexF64, FOM) for _ in 1:ORD]
+    system_matrix_buffer = _alloc_system_buffer(MT, FOM, ROM)
+    rhs_buffer = Vector{ComplexF64}(undef, FOM + ROM)
+    sparse_L_template, sparse_L_mappings = _alloc_sparse_L_data(MT, linear_terms)
+    pardiso_solver = _alloc_pardiso_solver(MT)
+    klu_cache = pardiso_solver === nothing ? _alloc_klu_cache(MT) : nothing
+    external_rhs_buffer = zeros(ComplexF64, FOM)
+    ml_result_buffer = zeros(ComplexF64, FOM)
+    unit_vectors = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR)))
+                    for j in 1:NVAR]
+    candidate_indices_by_monomial = Vector{Vector{Int}}(undef, L)
+    for i in 1:L
+        multi_i = mset[i]
+        tdeg = sum(multi_i)
+        candidate_indices_by_monomial[i] = tdeg < 2 ? Int[] :
+                                           indices_in_box_with_bounded_degree(mset, multi_i, 2, tdeg)
+    end
 
-	# ── 5c. Compute master-column invariance polynomials once (Φ_ext-independent)
-	# C_coeffs depend only on master_modes and Λ[1:ROM,1:ROM]; E_coeffs depend on
-	# the external directions Φ_ext and are computed in two separate passes below.
-	Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset+1):(unit_offset+ROM))
-	invariance_C_coeffs, D_master_steps = precompute_master_column_polynomials(
-		linear_terms, master_modes, Λ_master,
-	)
+    # ── 5c. Compute master-column invariance polynomials once (Φ_ext-independent)
+    # C_coeffs depend only on master_modes and Λ[1:ROM,1:ROM]; E_coeffs depend on
+    # the external directions Φ_ext and are computed in two separate passes below.
+    Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
+    invariance_C_coeffs,
+    D_master_steps = precompute_master_column_polynomials(
+        linear_terms, master_modes, Λ_master
+    )
 
-	if initial_W === nothing || initial_R === nothing
-		# E_coeffs for the partial context: external directions = 0 (Φ_ext unknown).
-		# D_master_steps is reused — no master-column work repeated.
-		partial_E_coeffs = precompute_external_column_polynomials(
-			linear_terms, zeros(ComplexF64, FOM, N_EXT), Λ, D_master_steps,
-		)
-		partial_eigenmodes = hcat(master_modes, zeros(ComplexF64, FOM, N_EXT))
-		partial_orth_C_coeffs, partial_orth_E_coeffs = precompute_orthogonality_column_polynomials(
-			orthogonality_J_coeffs, partial_eigenmodes, Λ,
-		)
-		partial_ctx = CohomologicalContext{ComplexF64, ORD, ORDP1, NVAR, FOM, LT, MT}(
-			linear_terms, partial_eigenmodes, lambda_diag,
-			invariance_C_coeffs, partial_E_coeffs,
-			orthogonality_J_coeffs,
-			partial_orth_C_coeffs, partial_orth_E_coeffs,
-			resonance_set, linear_skip_set,
-			multiindex_dict, lower_order_buffer, candidate_indices_by_monomial,
-			unit_vectors,
-			system_matrix_buffer, rhs_buffer, external_rhs_buffer, ml_result_buffer,
-			sparse_L_template, sparse_L_mappings, pardiso_solver, klu_cache,
-		)
-		for e in 1:N_EXT
-			idx_ext = ROM + e + unit_offset
-			solve_single_monomial!(W, R, idx_ext, partial_ctx, model, ml_cache)
-		end
-	end
+    if initial_W === nothing || initial_R === nothing
+        # E_coeffs for the partial context: external directions = 0 (Φ_ext unknown).
+        # D_master_steps is reused — no master-column work repeated.
+        partial_E_coeffs = precompute_external_column_polynomials(
+            linear_terms, zeros(ComplexF64, FOM, N_EXT), Λ, D_master_steps
+        )
+        partial_eigenmodes = hcat(master_modes, zeros(ComplexF64, FOM, N_EXT))
+        partial_orth_C_coeffs,
+        partial_orth_E_coeffs = precompute_orthogonality_column_polynomials(
+            orthogonality_J_coeffs, partial_eigenmodes, Λ
+        )
+        partial_ctx = CohomologicalContext{ComplexF64, ORD, ORDP1, NVAR, FOM, LT, MT}(
+            linear_terms, partial_eigenmodes, lambda_diag,
+            invariance_C_coeffs, partial_E_coeffs,
+            orthogonality_J_coeffs,
+            partial_orth_C_coeffs, partial_orth_E_coeffs,
+            resonance_set, linear_skip_set,
+            multiindex_dict, lower_order_buffer, candidate_indices_by_monomial,
+            unit_vectors,
+            system_matrix_buffer, rhs_buffer, external_rhs_buffer, ml_result_buffer,
+            sparse_L_template, sparse_L_mappings, pardiso_solver, klu_cache
+        )
+        for e in 1:N_EXT
+            idx_ext = ROM + e + unit_offset
+            solve_single_monomial!(W, R, idx_ext, partial_ctx, model, ml_cache)
+        end
+    end
 
-	# ── 6. Build generalised_right_eigenmodes = [master_modes | Φ_ext] ─────────
-	# Recover the external directions from W at the external unit-vector monomials
-	# (solved above, or already set by the caller via initial_W/initial_R).
-	external_directions = zeros(ComplexF64, FOM, N_EXT)
-	for e in 1:N_EXT
-		idx_ext = ROM + e + unit_offset
-		external_directions[:, e] .= W.poly.coefficients[:, 1, idx_ext]
-	end
-	generalised_right_eigenmodes = hcat(master_modes, external_directions)
+    # ── 6. Build generalised_right_eigenmodes = [master_modes | Φ_ext] ─────────
+    # Recover the external directions from W at the external unit-vector monomials
+    # (solved above, or already set by the caller via initial_W/initial_R).
+    external_directions = zeros(ComplexF64, FOM, N_EXT)
+    for e in 1:N_EXT
+        idx_ext = ROM + e + unit_offset
+        external_directions[:, e] .= W.poly.coefficients[:, 1, idx_ext]
+    end
+    generalised_right_eigenmodes = hcat(master_modes, external_directions)
 
-	# ── 7. Full invariance- and orthogonality-equation operator columns ────────
-	# E_coeffs now computed efficiently using saved D_master_steps (no repeated
-	# master-column Horner work).
-	invariance_E_coeffs = precompute_external_column_polynomials(
-		linear_terms, external_directions, Λ, D_master_steps,
-	)
-	orthogonality_C_coeffs, orthogonality_E_coeffs = precompute_orthogonality_column_polynomials(
-		orthogonality_J_coeffs, generalised_right_eigenmodes, Λ,
-	)
+    # ── 7. Full invariance- and orthogonality-equation operator columns ────────
+    # E_coeffs now computed efficiently using saved D_master_steps (no repeated
+    # master-column Horner work).
+    invariance_E_coeffs = precompute_external_column_polynomials(
+        linear_terms, external_directions, Λ, D_master_steps
+    )
+    orthogonality_C_coeffs,
+    orthogonality_E_coeffs = precompute_orthogonality_column_polynomials(
+        orthogonality_J_coeffs, generalised_right_eigenmodes, Λ
+    )
 
-	# ── 8. Build full context and solve all remaining monomials ────────────────
-	ctx = CohomologicalContext{ComplexF64, ORD, ORDP1, NVAR, FOM, LT, MT}(
-		linear_terms,
-		generalised_right_eigenmodes,
-		lambda_diag,
-		invariance_C_coeffs,
-		invariance_E_coeffs,
-		orthogonality_J_coeffs,
-		orthogonality_C_coeffs,
-		orthogonality_E_coeffs,
-		resonance_set,
-		linear_skip_set,
-		multiindex_dict, lower_order_buffer, candidate_indices_by_monomial,
-		unit_vectors,
-		system_matrix_buffer, rhs_buffer, external_rhs_buffer, ml_result_buffer,
-		sparse_L_template, sparse_L_mappings, pardiso_solver, klu_cache,
-	)
+    # ── 8. Build full context and solve all remaining monomials ────────────────
+    ctx = CohomologicalContext{ComplexF64, ORD, ORDP1, NVAR, FOM, LT, MT}(
+        linear_terms,
+        generalised_right_eigenmodes,
+        lambda_diag,
+        invariance_C_coeffs,
+        invariance_E_coeffs,
+        orthogonality_J_coeffs,
+        orthogonality_C_coeffs,
+        orthogonality_E_coeffs,
+        resonance_set,
+        linear_skip_set,
+        multiindex_dict, lower_order_buffer, candidate_indices_by_monomial,
+        unit_vectors,
+        system_matrix_buffer, rhs_buffer, external_rhs_buffer, ml_result_buffer,
+        sparse_L_template, sparse_L_mappings, pardiso_solver, klu_cache
+    )
 
-	solve_cohomological_equations!(W, R, ctx, model, ml_cache)
+    solve_cohomological_equations!(W, R, ctx, model, ml_cache)
 
-	return W, R
+    return W, R
 end
 
 end # module CohomologicalEquations

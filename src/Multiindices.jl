@@ -612,9 +612,11 @@ end
 Return the number of exponent vectors of length `nvars` with total degree ≤ `max_degree`.
 For `nvars = 0` the set contains one element if `max_degree ≥ 0`, otherwise zero.
 """
-num_multiindices_up_to(nvars::Int, max_degree::Int) = nvars == 0 ?
-                                                      (max_degree >= 0 ? 1 : 0) :
-                                                      binomial(max_degree + nvars, nvars)
+function num_multiindices_up_to(nvars::Int, max_degree::Int)
+    nvars == 0 ?
+    (max_degree >= 0 ? 1 : 0) :
+    binomial(max_degree + nvars, nvars)
+end
 
 """
 	monomial_rank(exp::AbstractVector{Int}, nvars::Int, max_degree::Int) -> Int

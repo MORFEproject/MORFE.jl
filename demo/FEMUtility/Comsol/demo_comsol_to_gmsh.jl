@@ -28,14 +28,21 @@ const OUTDIR = @__DIR__
 # COMSOL hex2 (H27) node offsets from element fine-grid origin (I,J,K).
 # Derived from INV_PERM_H27 (the COMSOL→Gmsh permutation inverse) and
 # the Gmsh type-12 reference-element coordinates.
-const H27_OFFSETS = NTuple{3,Int}[
-    (0,0,0),(2,0,0),(0,2,0),(2,2,0),   # corners 1-4  (COMSOL: 3↔4 swapped vs Gmsh)
-    (0,0,2),(2,0,2),(0,2,2),(2,2,2),   # corners 5-8  (COMSOL: 7↔8 swapped vs Gmsh)
-    (1,0,0),(2,1,0),(2,0,1),(0,1,0),   # edge mids 9-12
-    (1,2,0),(0,2,1),(1,0,1),(1,2,2),   # edge mids 13-16
-    (0,1,1),(1,1,2),(1,1,1),(2,1,1),   # face/body 17-20 (x−,z+,body,x+)
-    (0,0,1),(1,0,2),(2,2,1),(1,2,1),   # 21-24 (edge mid, edge mid, edge mid, y+ face)
-    (2,1,2),(1,1,0),(0,1,2),           # 25-27 (edge mid, z− face, edge mid)
+const H27_OFFSETS = NTuple{3, Int}[
+(0, 0, 0), (2, 0, 0), (
+    0, 2, 0), (2, 2, 0),   # corners 1-4  (COMSOL: 3↔4 swapped vs Gmsh)
+(0, 0, 2), (2, 0, 2), (
+    0, 2, 2), (2, 2, 2),   # corners 5-8  (COMSOL: 7↔8 swapped vs Gmsh)
+(1, 0, 0), (2, 1, 0), (
+    2, 0, 1), (0, 1, 0),   # edge mids 9-12
+(1, 2, 0), (0, 2, 1), (
+    1, 0, 1), (1, 2, 2),   # edge mids 13-16
+(0, 1, 1), (1, 1, 2), (
+    1, 1, 1), (2, 1, 1),   # face/body 17-20 (x−,z+,body,x+)
+(0, 0, 1), (1, 0, 2), (
+    2, 2, 1), (1, 2, 1),   # 21-24 (edge mid, edge mid, edge mid, y+ face)
+(2, 1, 2), (1, 1, 0), (
+    0, 1, 2)           # 25-27 (edge mid, z− face, edge mid)
 ]
 
 """
@@ -45,11 +52,11 @@ The node layout uses the full 3×3×3 Lagrange grid per element (corners,
 edge midpoints, face centres, body centre).  Nodes are shared between
 adjacent elements.
 """
-function write_h27_mphtxt(path, nx, ny, nz; Lx=1.0, Ly=1.0, Lz=1.0)
+function write_h27_mphtxt(path, nx, ny, nz; Lx = 1.0, Ly = 1.0, Lz = 1.0)
     hx, hy, hz = Lx/(2nx), Ly/(2ny), Lz/(2nz)
 
     # All grid points: i ∈ 0..2nx, j ∈ 0..2ny, k ∈ 0..2nz (full Lagrange)
-    nid(i,j,k) = i + j*(2nx+1) + k*(2nx+1)*(2ny+1)   # 0-indexed
+    nid(i, j, k) = i + j*(2nx+1) + k*(2nx+1)*(2ny+1)   # 0-indexed
 
     nn = (2nx+1)*(2ny+1)*(2nz+1)
     ne = nx*ny*nz
@@ -97,9 +104,9 @@ function write_h27_mphtxt(path, nx, ny, nz; Lx=1.0, Ly=1.0, Lz=1.0)
         println(io, "# number of elements")
         println(io, "$ne")
         println(io, "# Elements")
-        for k in 0:nz-1, j in 0:ny-1, i in 0:nx-1
+        for k in 0:(nz - 1), j in 0:(ny - 1), i in 0:(nx - 1)
             I, J, K = 2i, 2j, 2k
-            ns = [nid(I + di, J + dj, K + dk) for (di,dj,dk) in H27_OFFSETS]
+            ns = [nid(I + di, J + dj, K + dk) for (di, dj, dk) in H27_OFFSETS]
             println(io, join(ns, " "))
         end
         println(io, "# number of parameter values per element")
@@ -130,7 +137,7 @@ function write_t10_single_mphtxt(path)
         (0.5, 0.5, 0.0),    # COMSOL 7  = mid(2,4) in COMSOL = Gmsh mid(2,3)
         (0.0, 0.0, 0.5),    # COMSOL 8  = mid(1,3) in COMSOL = Gmsh mid(1,4)
         (0.0, 0.5, 0.5),    # COMSOL 9  = mid(3,4) in COMSOL = Gmsh mid(3,4)
-        (0.5, 0.0, 0.5),    # COMSOL 10 = mid(2,3) in COMSOL = Gmsh mid(2,4)
+        (0.5, 0.0, 0.5)    # COMSOL 10 = mid(2,3) in COMSOL = Gmsh mid(2,4)
     ]
     nn, ne = 10, 1
 
@@ -160,7 +167,7 @@ function write_t10_single_mphtxt(path)
         println(io, "0 # lowest mesh vertex index")
         println(io)
         println(io, "# Mesh vertex coordinates")
-        for (x,y,z) in coords
+        for (x, y, z) in coords
             @printf(io, "%.6g %.6g %.6g\n", x, y, z)
         end
         println(io)
@@ -190,10 +197,10 @@ end
 const GMSH_TYPE_NAMES = Dict(
     1=>"Line2", 8=>"Line3", 2=>"Tri3", 9=>"Tri6",
     3=>"Quad4", 16=>"Quad8", 4=>"Tet4", 11=>"Tet10",
-    5=>"Hex8",  12=>"Hex27", 6=>"Wed6", 13=>"Wed18",
+    5=>"Hex8", 12=>"Hex27", 6=>"Wed6", 13=>"Wed18"
 )
 
-function convert_and_report(inp, out, label; linear=false)
+function convert_and_report(inp, out, label; linear = false)
     println("\n", "─"^60)
     println("  $label")
     println("  Input:  $(basename(inp))")
@@ -208,7 +215,7 @@ function convert_and_report(inp, out, label; linear=false)
     for et in elem_types
         _, node_flat = gmsh.model.mesh.getElementsByType(et)
         _, _, _, npe, _, _ = gmsh.model.mesh.getElementProperties(et)
-        ne   = length(node_flat) ÷ npe
+        ne = length(node_flat) ÷ npe
         name = get(GMSH_TYPE_NAMES, Int(et), "type$(et)")
         @printf("  Elements: %d × %s (%d nodes/elem)\n", ne, name, npe)
     end
@@ -225,9 +232,9 @@ println("="^60)
 
 # --- H27: 3×3×2 quadratic hex mesh --------------------------------
 comsol_h27 = joinpath(OUTDIR, "cube_h27.mphtxt")
-gmsh_h27   = joinpath(OUTDIR, "cube_h27.msh")
+gmsh_h27 = joinpath(OUTDIR, "cube_h27.msh")
 
-nn, ne = write_h27_mphtxt(comsol_h27, 3, 3, 2; Lx=3.0, Ly=3.0, Lz=2.0)
+nn, ne = write_h27_mphtxt(comsol_h27, 3, 3, 2; Lx = 3.0, Ly = 3.0, Lz = 2.0)
 @printf("\nGenerated H27 mphtxt: %d nodes, %d elements\n", nn, ne)
 convert_and_report(comsol_h27, gmsh_h27,
     "COMSOL hex2 → Gmsh type 12 (Hex27)")
@@ -236,11 +243,11 @@ convert_and_report(comsol_h27, gmsh_h27,
 gmsh_h27_lin = joinpath(OUTDIR, "cube_h27_linear.msh")
 convert_and_report(comsol_h27, gmsh_h27_lin,
     "COMSOL hex2 → comsol_to_gmsh_linear → Gmsh type 5 (Hex8)";
-    linear=true)
+    linear = true)
 
 # --- T10: single quadratic tet element ----------------------------
 comsol_t10 = joinpath(OUTDIR, "single_t10.mphtxt")
-gmsh_t10   = joinpath(OUTDIR, "single_t10.msh")
+gmsh_t10 = joinpath(OUTDIR, "single_t10.msh")
 
 nn, ne = write_t10_single_mphtxt(comsol_t10)
 @printf("\nGenerated T10 mphtxt: %d nodes, %d elements\n", nn, ne)
@@ -264,7 +271,7 @@ println("\n", "─"^60)
 println("  Geometric verification: single H27 unit-cube element")
 
 comsol_h27_1 = joinpath(OUTDIR, "single_h27.mphtxt")
-gmsh_h27_1   = joinpath(OUTDIR, "single_h27.msh")
+gmsh_h27_1 = joinpath(OUTDIR, "single_h27.msh")
 write_h27_mphtxt(comsol_h27_1, 1, 1, 1)
 comsol_to_gmsh(comsol_h27_1, gmsh_h27_1)
 
@@ -272,9 +279,9 @@ gmsh.initialize()
 gmsh.open(gmsh_h27_1)
 
 all_tags, all_coords, _ = gmsh.model.mesh.getNodes(-1, -1)
-tag_to_coord = Dict{Int64,NTuple{3,Float64}}(
-    Int64(all_tags[i]) => (all_coords[3i-2], all_coords[3i-1], all_coords[3i])
-    for i in eachindex(all_tags)
+tag_to_coord = Dict{Int64, NTuple{3, Float64}}(
+    Int64(all_tags[i]) => (all_coords[3i - 2], all_coords[3i - 1], all_coords[3i])
+for i in eachindex(all_tags)
 )
 _, node_flat = gmsh.model.mesh.getElementsByType(12)
 @assert length(node_flat) == 27 "Expected 27 nodes for single Hex27"
@@ -287,7 +294,8 @@ err = maximum(abs(got[k] - expected[k]) for k in 1:3)
 @assert err < 1e-12 "H27 node-ordering mismatch"
 println("  Node-ordering check passed ✓")
 
-_, dets, _ = gmsh.model.mesh.getJacobian(
+_, dets,
+_ = gmsh.model.mesh.getJacobian(
     Int(gmsh.model.mesh.getElementsByType(12)[1][1]), [0.0, 0.0, 0.0])
 @assert dets[1] > 0 "Negative Jacobian — element orientation wrong"
 @printf("  Jacobian at centroid: %.6g  (must be > 0) ✓\n", dets[1])
@@ -303,16 +311,16 @@ gmsh.initialize()
 gmsh.open(gmsh_t10)
 
 all_tags, all_coords, _ = gmsh.model.mesh.getNodes(-1, -1)
-tag_to_coord = Dict{Int64,NTuple{3,Float64}}(
-    Int64(all_tags[i]) => (all_coords[3i-2], all_coords[3i-1], all_coords[3i])
-    for i in eachindex(all_tags)
+tag_to_coord = Dict{Int64, NTuple{3, Float64}}(
+    Int64(all_tags[i]) => (all_coords[3i - 2], all_coords[3i - 1], all_coords[3i])
+for i in eachindex(all_tags)
 )
 _, node_flat = gmsh.model.mesh.getElementsByType(11)
 @assert length(node_flat) == 10 "Expected 10 nodes for single Tet10"
 
-checks = [(3, (0.0,1.0,0.0), "corner 3 (Gmsh) = COMSOL[4]"),
-          (4, (0.0,0.0,1.0), "corner 4 (Gmsh) = COMSOL[3]"),
-          (6, (0.5,0.5,0.0), "mid(2,3) (Gmsh) = COMSOL[7]")]
+checks = [(3, (0.0, 1.0, 0.0), "corner 3 (Gmsh) = COMSOL[4]"),
+    (4, (0.0, 0.0, 1.0), "corner 4 (Gmsh) = COMSOL[3]"),
+    (6, (0.5, 0.5, 0.0), "mid(2,3) (Gmsh) = COMSOL[7]")]
 for (pos, exp, desc) in checks
     local got = tag_to_coord[Int64(node_flat[pos])]
     local err = maximum(abs(got[k] - exp[k]) for k in 1:3)
@@ -330,11 +338,11 @@ gmsh.finalize()
 println("\n", "─"^60)
 println("  Round-trip: H27  COMSOL → Gmsh → COMSOL → Gmsh")
 
-comsol_rt   = joinpath(OUTDIR, "rt_h27.mphtxt")
-gmsh_rt     = joinpath(OUTDIR, "rt_h27.msh")
+comsol_rt = joinpath(OUTDIR, "rt_h27.mphtxt")
+gmsh_rt = joinpath(OUTDIR, "rt_h27.msh")
 
 gmsh_to_comsol(gmsh_h27_1, comsol_rt)       # Gmsh → COMSOL
-comsol_to_gmsh(comsol_rt,  gmsh_rt)         # COMSOL → Gmsh
+comsol_to_gmsh(comsol_rt, gmsh_rt)         # COMSOL → Gmsh
 
 gmsh.initialize()
 gmsh.open(gmsh_rt)
@@ -355,7 +363,7 @@ println("  Element connectivity preserved across round-trip ✓")
 println("\n", "="^60)
 println("  Output files written to demo/FEMUtility/Comsol/:")
 for f in [comsol_h27, gmsh_h27, gmsh_h27_lin, comsol_t10, gmsh_t10,
-          comsol_h27_1, gmsh_h27_1, comsol_rt, gmsh_rt]
+    comsol_h27_1, gmsh_h27_1, comsol_rt, gmsh_rt]
     println("    ", basename(f))
 end
 println("="^60)

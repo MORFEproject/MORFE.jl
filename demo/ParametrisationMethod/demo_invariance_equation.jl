@@ -45,7 +45,8 @@ end
 # -------------------------------------------------------------------
 # 2.  Precompute coefficient arrays C_coeffs and E_coeffs
 # -------------------------------------------------------------------
-C_coeffs, E_coeffs = precompute_column_polynomials(
+C_coeffs,
+E_coeffs = precompute_column_polynomials(
     linear_terms, generalised_eigenmodes, reduced_dynamics_linear, ROM
 )
 
@@ -79,7 +80,8 @@ external_dynamics = [-1000.0 + 0.0im]   # only one external mode
 # -------------------------------------------------------------------
 # 4.  Assemble the cohomological matrix and right‑hand side
 # -------------------------------------------------------------------
-M, rhs = assemble_cohomological_matrix_and_rhs(
+M,
+rhs = assemble_cohomological_matrix_and_rhs(
     s, linear_terms, C_coeffs, E_coeffs,
     resonance, lower_order_couplings, external_dynamics
 )

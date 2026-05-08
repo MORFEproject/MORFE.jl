@@ -250,37 +250,37 @@ stored as a column; this is standard Julia `mul!(dest, B', x)`.
 - Storage: `O(ROM · ORD · FOM)`
 """
 function precompute_orthogonality_operator_coefficients(
-	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
-	left_eigenmodes::AbstractMatrix,
-	master_eigenvalues::SVector{ROM},
+        fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+        left_eigenmodes::AbstractMatrix,
+        master_eigenvalues::SVector{ROM}
 ) where {ORDP1, ROM}
-	T = promote_type(eltype(fom_matrices[1]), eltype(left_eigenmodes), eltype(master_eigenvalues))
-	ORD = ORDP1 - 1
-	FOM = size(first(fom_matrices), 1)
+    T = promote_type(eltype(fom_matrices[1]), eltype(left_eigenmodes), eltype(master_eigenvalues))
+    ORD = ORDP1 - 1
+    FOM = size(first(fom_matrices), 1)
 
-	@assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
-	@assert ROM ≥ 1 "ROM must be ≥ 1."
-	@assert size(left_eigenmodes) == (FOM, ROM) "left_eigenmodes must be FOM × ROM ($(FOM) × $(ROM))."
+    @assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
+    @assert ROM ≥ 1 "ROM must be ≥ 1."
+    @assert size(left_eigenmodes) == (FOM, ROM) "left_eigenmodes must be FOM × ROM ($(FOM) × $(ROM))."
 
-	result = Vector{Matrix{T}}(undef, ROM)
-	for r in 1:ROM
-		ℓ = view(left_eigenmodes, :, r)    # length-FOM left eigenmode
-		λ = master_eigenvalues[r]
+    result = Vector{Matrix{T}}(undef, ROM)
+    for r in 1:ROM
+        ℓ = view(left_eigenmodes, :, r)    # length-FOM left eigenmode
+        λ = master_eigenvalues[r]
 
-		J_r = Matrix{T}(undef, ORD, FOM)
+        J_r = Matrix{T}(undef, ORD, FOM)
 
-		# Highest degree: J_r[ORD, :] = B[ORDP1]ᵀ · ℓ  (= ℓᵀ · B[ORDP1] as a row)
-		mul!(view(J_r, ORD, :), fom_matrices[ORDP1]', ℓ)
+        # Highest degree: J_r[ORD, :] = B[ORDP1]ᵀ · ℓ  (= ℓᵀ · B[ORDP1] as a row)
+        mul!(view(J_r, ORD, :), fom_matrices[ORDP1]', ℓ)
 
-		# Downward recurrence: J_r[j, :] = λ · J_r[j+1, :] + B[j+1]ᵀ · ℓ
-		for j in (ORD-1):-1:1
-			view(J_r, j, :) .= λ .* view(J_r, j+1, :)                       # copy and scale
-			mul!(view(J_r, j, :), fom_matrices[j+1]', ℓ, one(T), one(T))     # accumulate
-		end
+        # Downward recurrence: J_r[j, :] = λ · J_r[j+1, :] + B[j+1]ᵀ · ℓ
+        for j in (ORD - 1):-1:1
+            view(J_r, j, :) .= λ .* view(J_r, j+1, :)                       # copy and scale
+            mul!(view(J_r, j, :), fom_matrices[j + 1]', ℓ, one(T), one(T))     # accumulate
+        end
 
-		result[r] = J_r
-	end
-	return result
+        result[r] = J_r
+    end
+    return result
 end
 
 # =============================================================================
@@ -350,55 +350,55 @@ onto the eigenmode basis, and `Λᵀ · q` implements the right-multiply
 - Storage: `O(ROM · ORD · NVAR)`
 """
 function precompute_orthogonality_column_polynomials(
-	J_coeffs::AbstractVector{<:AbstractMatrix},
-	generalised_right_eigenmodes::AbstractMatrix,   # FOM × NVAR
-	reduced_dynamics_linear::AbstractMatrix,        # NVAR × NVAR
+        J_coeffs::AbstractVector{<:AbstractMatrix},
+        generalised_right_eigenmodes::AbstractMatrix,   # FOM × NVAR
+        reduced_dynamics_linear::AbstractMatrix        # NVAR × NVAR
 )
-	T = promote_type(eltype(J_coeffs[1]), eltype(generalised_right_eigenmodes),
-	                 eltype(reduced_dynamics_linear))
-	ROM = length(J_coeffs)
-	ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
-	FOM = size(generalised_right_eigenmodes, 1)
-	NVAR = size(generalised_right_eigenmodes, 2)
-	N_EXT = NVAR - ROM
+    T = promote_type(eltype(J_coeffs[1]), eltype(generalised_right_eigenmodes),
+        eltype(reduced_dynamics_linear))
+    ROM = length(J_coeffs)
+    ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
+    FOM = size(generalised_right_eigenmodes, 1)
+    NVAR = size(generalised_right_eigenmodes, 2)
+    N_EXT = NVAR - ROM
 
-	@assert size(J_coeffs[1], 2) == FOM "J_coeffs rows must have length FOM = $(FOM)."
-	@assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
-	@assert ROM ≥ 1 && ROM ≤ NVAR "ROM must satisfy 1 ≤ ROM ≤ NVAR = $(NVAR)."
+    @assert size(J_coeffs[1], 2) == FOM "J_coeffs rows must have length FOM = $(FOM)."
+    @assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
+    @assert ROM ≥ 1 && ROM ≤ NVAR "ROM must satisfy 1 ≤ ROM ≤ NVAR = $(NVAR)."
 
-	# C_coeffs[r] : (ORD-1) × ROM   — row j = degree-(j-1) coeff of C_r(s)
-	# E_coeffs[r] : (ORD-1) × N_EXT — row j = degree-(j-1) coeff of E_r(s)
-	C_coeffs = [Matrix{T}(undef, ORD - 1, ROM) for _ in 1:ROM]
-	E_coeffs = [Matrix{T}(undef, ORD - 1, N_EXT) for _ in 1:ROM]
+    # C_coeffs[r] : (ORD-1) × ROM   — row j = degree-(j-1) coeff of C_r(s)
+    # E_coeffs[r] : (ORD-1) × N_EXT — row j = degree-(j-1) coeff of E_r(s)
+    C_coeffs = [Matrix{T}(undef, ORD - 1, ROM) for _ in 1:ROM]
+    E_coeffs = [Matrix{T}(undef, ORD - 1, N_EXT) for _ in 1:ROM]
 
-	# Two alternating NVAR-length buffers for the current and previous Q_r step.
-	q     = Vector{T}(undef, NVAR)
-	q_tmp = Vector{T}(undef, NVAR)
+    # Two alternating NVAR-length buffers for the current and previous Q_r step.
+    q = Vector{T}(undef, NVAR)
+    q_tmp = Vector{T}(undef, NVAR)
 
-	for r in 1:ROM
-		Jr = J_coeffs[r]   # ORD × FOM
+    for r in 1:ROM
+        Jr = J_coeffs[r]   # ORD × FOM
 
-		if ORD == 1
-			# No Q_r terms exist; C_coeffs[r] and E_coeffs[r] are 0×… (already allocated).
-			continue
-		end
+        if ORD == 1
+            # No Q_r terms exist; C_coeffs[r] and E_coeffs[r] are 0×… (already allocated).
+            continue
+        end
 
-		# ── Step j = ORD-1: Q_r[ORD-1] = Yᵀ · J_r[ORD, :] ─────────────────
-		mul!(q, generalised_right_eigenmodes', view(Jr, ORD, :))
-		C_coeffs[r][ORD-1, :] .= @view q[1:ROM]
-		N_EXT > 0 && (E_coeffs[r][ORD-1, :] .= @view q[(ROM+1):NVAR])
+        # ── Step j = ORD-1: Q_r[ORD-1] = Yᵀ · J_r[ORD, :] ─────────────────
+        mul!(q, generalised_right_eigenmodes', view(Jr, ORD, :))
+        C_coeffs[r][ORD - 1, :] .= @view q[1:ROM]
+        N_EXT > 0 && (E_coeffs[r][ORD - 1, :] .= @view q[(ROM + 1):NVAR])
 
-		# ── Steps j = ORD-2, …, 1: Q_r[j] = Yᵀ · J_r[j+1,:] + Λᵀ · Q_r[j+1] ──
-		for j in (ORD-2):-1:1
-			mul!(q_tmp, generalised_right_eigenmodes', view(Jr, j+1, :))  # q_tmp = Yᵀ · J_r[j+1,:]
-			mul!(q_tmp, reduced_dynamics_linear', q, one(T), one(T))       # q_tmp += Λᵀ · Q_r[j+1]
-			q, q_tmp = q_tmp, q                                            # swap buffers (no copy)
-			C_coeffs[r][j, :] .= @view q[1:ROM]
-			N_EXT > 0 && (E_coeffs[r][j, :] .= @view q[(ROM+1):NVAR])
-		end
-	end
+        # ── Steps j = ORD-2, …, 1: Q_r[j] = Yᵀ · J_r[j+1,:] + Λᵀ · Q_r[j+1] ──
+        for j in (ORD - 2):-1:1
+            mul!(q_tmp, generalised_right_eigenmodes', view(Jr, j+1, :))  # q_tmp = Yᵀ · J_r[j+1,:]
+            mul!(q_tmp, reduced_dynamics_linear', q, one(T), one(T))       # q_tmp += Λᵀ · Q_r[j+1]
+            q, q_tmp = q_tmp, q                                            # swap buffers (no copy)
+            C_coeffs[r][j, :] .= @view q[1:ROM]
+            N_EXT > 0 && (E_coeffs[r][j, :] .= @view q[(ROM + 1):NVAR])
+        end
+    end
 
-	return C_coeffs, E_coeffs
+    return C_coeffs, E_coeffs
 end
 
 # =============================================================================
@@ -463,27 +463,27 @@ The scalar lower-order RHS accumulation
 `O(ORD · FOM)`, shared with the `L_r(s)` evaluation.
 """
 function evaluate_orthogonality_row_and_lower_order_rhs!(
-	row::AbstractVector{T},
-	s::T,
-	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
-	J_coeffs_r::AbstractMatrix{T},  # ORD × FOM,  ORD = ORD_M1 + 1
+        row::AbstractVector{T},
+        s::T,
+        lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+        J_coeffs_r::AbstractMatrix{T}  # ORD × FOM,  ORD = ORD_M1 + 1
 ) where {T}
-	ORD = length(lower_order_couplings)
+    ORD = length(lower_order_couplings)
 
-	copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
+    copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
 
-	scalar_rhs = zero(T)
-	for j in (ORD-1):-1:1
-		# row = L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
-		# Accumulate scalar dot: scalar_rhs -= row · ξ[j]
-		scalar_rhs -= dot(row, lower_order_couplings[j])
-		row .*= s
-		row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
-		# row = L_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
-	end
-	# On exit: row = L_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
+    scalar_rhs = zero(T)
+    for j in (ORD - 1):-1:1
+        # row = L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
+        # Accumulate scalar dot: scalar_rhs -= row · ξ[j]
+        scalar_rhs -= dot(row, lower_order_couplings[j])
+        row .*= s
+        row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
+        # row = L_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
+    end
+    # On exit: row = L_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
 
-	return scalar_rhs
+    return scalar_rhs
 end
 
 # =============================================================================
@@ -535,34 +535,34 @@ so each per-column Horner pass is cache-friendly.
 `O((ORD-1) · |R|)`, with no heap allocation.
 """
 function evaluate_orthogonality_column_row!(
-	c::AbstractVector{T},
-	s::T,
-	r::Int,
-	C_coeffs::Vector{<:AbstractMatrix{T}},
-	resonance::SVector{ROM, Bool},
+        c::AbstractVector{T},
+        s::T,
+        r::Int,
+        C_coeffs::Vector{<:AbstractMatrix{T}},
+        resonance::SVector{ROM, Bool}
 ) where {T, ROM}
-	Cr = C_coeffs[r]       # (ORD-1) × ROM
-	ORD_M1 = size(Cr, 1)      # ORD - 1
+    Cr = C_coeffs[r]       # (ORD-1) × ROM
+    ORD_M1 = size(Cr, 1)      # ORD - 1
 
-	if ORD_M1 == 0
-		fill!(c, zero(T))
-		return c
-	end
+    if ORD_M1 == 0
+        fill!(c, zero(T))
+        return c
+    end
 
-	# Evaluate each resonant column of Cr independently via a scalar Horner pass.
-	# Column j of Cr is C_coeffs[r][:, j], which is contiguous in memory.
-	col = 1
-	for j in eachindex(resonance)
-		if resonance[j]
-			val = Cr[ORD_M1, j]                  # highest-degree coefficient
-			for L in (ORD_M1-1):-1:1
-				val = val * s + Cr[L, j]
-			end
-			c[col] = val
-			col += 1
-		end
-	end
-	return c
+    # Evaluate each resonant column of Cr independently via a scalar Horner pass.
+    # Column j of Cr is C_coeffs[r][:, j], which is contiguous in memory.
+    col = 1
+    for j in eachindex(resonance)
+        if resonance[j]
+            val = Cr[ORD_M1, j]                  # highest-degree coefficient
+            for L in (ORD_M1 - 1):-1:1
+                val = val * s + Cr[L, j]
+            end
+            c[col] = val
+            col += 1
+        end
+    end
+    return c
 end
 
 # =============================================================================
@@ -623,37 +623,37 @@ The scalar `RHS_ext_r = -g(s)`.
 single Horner evaluation.
 """
 function evaluate_orthogonality_external_rhs(
-	s::T,
-	r::Int,
-	external_dynamics::AbstractVector{T},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
+        s::T,
+        r::Int,
+        external_dynamics::AbstractVector{T},
+        E_coeffs::Vector{<:AbstractMatrix{T}}
 ) where {T}
-	Er    = E_coeffs[r]
-	N_EXT = length(external_dynamics)
-	@assert size(Er, 2) == N_EXT "E_coeffs[r] must have N_EXT = $(N_EXT) columns."
+    Er = E_coeffs[r]
+    N_EXT = length(external_dynamics)
+    @assert size(Er, 2) == N_EXT "E_coeffs[r] must have N_EXT = $(N_EXT) columns."
 
-	ORD_M1 = size(Er, 1)   # ORD - 1
+    ORD_M1 = size(Er, 1)   # ORD - 1
 
-	ORD_M1 == 0 && return zero(T)
+    ORD_M1 == 0 && return zero(T)
 
-	# Collect active (non-zero) external indices.
-	active = findall(!iszero, external_dynamics)
-	isempty(active) && return zero(T)
+    # Collect active (non-zero) external indices.
+    active = findall(!iszero, external_dynamics)
+    isempty(active) && return zero(T)
 
-	# Combine active external contributions into a single scalar polynomial g(s),
-	# then evaluate via a single Horner pass.
-	g = zero(T)
-	for e in active
-		g += Er[ORD_M1, e] * external_dynamics[e]
-	end
-	for L in (ORD_M1-1):-1:1
-		g *= s
-		for e in active
-			g += Er[L, e] * external_dynamics[e]
-		end
-	end
+    # Combine active external contributions into a single scalar polynomial g(s),
+    # then evaluate via a single Horner pass.
+    g = zero(T)
+    for e in active
+        g += Er[ORD_M1, e] * external_dynamics[e]
+    end
+    for L in (ORD_M1 - 1):-1:1
+        g *= s
+        for e in active
+            g += Er[L, e] * external_dynamics[e]
+        end
+    end
 
-	return -g   # sign flip: term moved from LHS to RHS
+    return -g   # sign flip: term moved from LHS to RHS
 end
 
 # =============================================================================
@@ -731,81 +731,81 @@ computed by [`evaluate_orthogonality_external_rhs`](@ref) and added.
 `(M, rhs)` where `M` is `nR × (FOM + nR)` and `rhs` is a length-`nR` vector.
 """
 function assemble_orthogonality_matrix_and_rhs(
-	s::T,
-	J_coeffs::AbstractVector{<:AbstractMatrix{T}},
-	C_coeffs::Vector{<:AbstractMatrix{T}},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
-	resonance::SVector{ROM, Bool},
-	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
-	external_dynamics::AbstractVector{T},
+        s::T,
+        J_coeffs::AbstractVector{<:AbstractMatrix{T}},
+        C_coeffs::Vector{<:AbstractMatrix{T}},
+        E_coeffs::Vector{<:AbstractMatrix{T}},
+        resonance::SVector{ROM, Bool},
+        lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+        external_dynamics::AbstractVector{T}
 ) where {T, ROM}
-	FOM = size(J_coeffs[1], 2)   # J_coeffs[r] is ORD × FOM
-	nR  = count(resonance)
-	M   = Matrix{T}(undef, nR, FOM + nR)
-	rhs = Vector{T}(undef, nR)
+    FOM = size(J_coeffs[1], 2)   # J_coeffs[r] is ORD × FOM
+    nR = count(resonance)
+    M = Matrix{T}(undef, nR, FOM + nR)
+    rhs = Vector{T}(undef, nR)
 
-	row = 1
-	for r in eachindex(resonance)
-		if resonance[r]
-			# Fill L_r(s) into columns 1:FOM of row `row`, accumulate scalar lower-order RHS.
-			rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
-				view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r],
-			)
+    row = 1
+    for r in eachindex(resonance)
+        if resonance[r]
+            # Fill L_r(s) into columns 1:FOM of row `row`, accumulate scalar lower-order RHS.
+            rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
+                view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r]
+            )
 
-			# Fill the resonant block of C_r(s) into columns FOM+1:FOM+nR of row `row`.
-			evaluate_orthogonality_column_row!(
-				view(M, row, (FOM+1):(FOM+nR)), s, r, C_coeffs, resonance,
-			)
+            # Fill the resonant block of C_r(s) into columns FOM+1:FOM+nR of row `row`.
+            evaluate_orthogonality_column_row!(
+                view(M, row, (FOM + 1):(FOM + nR)), s, r, C_coeffs, resonance
+            )
 
-			# Accumulate scalar external-forcing contribution.
-			rhs[row] += evaluate_orthogonality_external_rhs(
-				s, r, external_dynamics, E_coeffs,
-			)
+            # Accumulate scalar external-forcing contribution.
+            rhs[row] += evaluate_orthogonality_external_rhs(
+                s, r, external_dynamics, E_coeffs
+            )
 
-			row += 1
-		end
-	end
+            row += 1
+        end
+    end
 
-	return M, rhs
+    return M, rhs
 end
 
 """
 	assemble_orthogonality_matrix_and_rhs!(M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
-	                                        resonance, lower_order_couplings,
-	                                        external_dynamics) → nothing
+											resonance, lower_order_couplings,
+											external_dynamics) → nothing
 
 In-place variant: writes the orthogonality block and its RHS directly into the
 caller-supplied `M` (`nR × n_sys`) and `rhs` (length `nR`) buffers.  Returns
 immediately when `nR == 0` (non-resonant monomial).  No heap allocation occurs.
 """
 function assemble_orthogonality_matrix_and_rhs!(
-	M::AbstractMatrix,
-	rhs::AbstractVector,
-	s::T,
-	J_coeffs::AbstractVector{<:AbstractMatrix{T}},
-	C_coeffs::Vector{<:AbstractMatrix{T}},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
-	resonance::SVector{ROM, Bool},
-	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
-	external_dynamics::AbstractVector{T},
+        M::AbstractMatrix,
+        rhs::AbstractVector,
+        s::T,
+        J_coeffs::AbstractVector{<:AbstractMatrix{T}},
+        C_coeffs::Vector{<:AbstractMatrix{T}},
+        E_coeffs::Vector{<:AbstractMatrix{T}},
+        resonance::SVector{ROM, Bool},
+        lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+        external_dynamics::AbstractVector{T}
 ) where {T, ROM}
-	isempty(rhs) && return nothing
-	FOM = size(J_coeffs[1], 2)
-	nR  = count(resonance)
-	row = 1
-	for r in eachindex(resonance)
-		if resonance[r]
-			rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
-				view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r],
-			)
-			evaluate_orthogonality_column_row!(
-				view(M, row, (FOM+1):(FOM+nR)), s, r, C_coeffs, resonance,
-			)
-			rhs[row] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
-			row += 1
-		end
-	end
-	return nothing
+    isempty(rhs) && return nothing
+    FOM = size(J_coeffs[1], 2)
+    nR = count(resonance)
+    row = 1
+    for r in eachindex(resonance)
+        if resonance[r]
+            rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
+                view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r]
+            )
+            evaluate_orthogonality_column_row!(
+                view(M, row, (FOM + 1):(FOM + nR)), s, r, C_coeffs, resonance
+            )
+            rhs[row] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
+            row += 1
+        end
+    end
+    return nothing
 end
 
 end # module MasterModeOrthogonality

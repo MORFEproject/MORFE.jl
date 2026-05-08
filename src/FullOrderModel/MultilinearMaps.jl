@@ -73,9 +73,9 @@ During evaluation the multilinear map is called as
 	f!(res, x^(1)_1, x^(1)_2, ...) = f!(res, x^(1)_2, x^(1)_1, ...)
 
 """
-struct MultilinearMap{ORD,F} <: AbstractMultilinearMap{ORD}
+struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
     f!::F
-    multiindex::NTuple{ORD,Int}
+    multiindex::NTuple{ORD, Int}
     multiplicity_external::Int
     deg::Int
 end
@@ -89,7 +89,7 @@ Create a multilinear term for a system of order ORD without external dynamics.
 - `f!`: in-place evaluation function
 - `multiindex`: tuple specifying which derivatives are used
 """
-function MultilinearMap(f!, multiindex::NTuple{ORD,Int}) where {ORD}
+function MultilinearMap(f!, multiindex::NTuple{ORD, Int}) where {ORD}
     @assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
     deg = sum(multiindex)
     # Check if input arguments of f matches deg
@@ -98,7 +98,7 @@ function MultilinearMap(f!, multiindex::NTuple{ORD,Int}) where {ORD}
     @assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
     @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
 
-    return MultilinearMap{ORD,typeof(f!)}(f!, multiindex, 0, deg)
+    return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg)
 end
 
 # Create a multilinear term for a first order system.
@@ -108,11 +108,11 @@ function MultilinearMap(f!)
     deg = ms[1].nargs - 2 # subtract the function itself and `res`
     @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
     multiindex = (UInt8(deg),)
-    return MultilinearMap{1,typeof(f!)}(f!, multiindex, 0, deg)
+    return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg)
 end
 
 function MultilinearMap(
-    f!, multiindex::NTuple{ORD,Int}, multiplicity_external::Int) where {ORD}
+        f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int) where {ORD}
     @assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
     @assert multiplicity_external >= 0 "The argument multiplicity_external cannot be negative, but multiplicity_external=$multiplicity_external"
     deg = sum(multiindex) + multiplicity_external
@@ -123,7 +123,7 @@ function MultilinearMap(
     @assert (deg >= 2) || (multiplicity_external >= 1)
     "Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
 
-    return MultilinearMap{ORD,typeof(f!)}(f!, multiindex, multiplicity_external, deg)
+    return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg)
 end
 
 """

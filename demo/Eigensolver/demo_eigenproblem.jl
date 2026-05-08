@@ -28,16 +28,16 @@ model = NDOrderModel((B0, B1, B2))
 eigenproblem = compute_eigenproblem(model)# , normalizer! = (args...) -> nothing)
 (eigs, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigs)
-	println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
+    println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
 end
 
 # Test left and right eigenvectors
 A, B = linear_first_order_matrices(model)
 for (i, λ) in enumerate(eigs)
-	res_y = norm(A * Y[:, i] - λ * B * Y[:, i])
-	res_x = norm(X[:, i]' * A - λ * X[:, i]' * B)
-	@assert res_y<1e-8 "eigenvectors doesnt match: i=$i, res_y = $res_y"
-	@assert res_x<1e-8 "eigenvectors doesnt match: i=$i, res_x = $res_x"
+    res_y = norm(A * Y[:, i] - λ * B * Y[:, i])
+    res_x = norm(X[:, i]' * A - λ * X[:, i]' * B)
+    @assert res_y<1e-8 "eigenvectors doesnt match: i=$i, res_y = $res_y"
+    @assert res_x<1e-8 "eigenvectors doesnt match: i=$i, res_x = $res_x"
 end
 
 # Choose master_modes
@@ -61,36 +61,36 @@ model = NDOrderModel((B0, B1, B2))
 
 #Add new solver that uses that X'=Y
 mutable struct My_Own_Solver <: AbstractEigenSolver
-	right_eig_result::Any
+    right_eig_result::Any
 end
 # need to implement left and right solve functions
 function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::My_Own_Solver)
-	A, B = linear_first_order_matrices(model)
-	eig_result = eigen(A, B)
-	solver.right_eig_result = eig_result
-	println(solver.right_eig_result)
-	return eig_result.values, eig_result.vectors
+    A, B = linear_first_order_matrices(model)
+    eig_result = eigen(A, B)
+    solver.right_eig_result = eig_result
+    println(solver.right_eig_result)
+    return eig_result.values, eig_result.vectors
 end
 
 function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::My_Own_Solver)
-	@assert solver.right_eig_result!==nothing "First run solve()"
-	eig_result = solver.right_eig_result
-	return eig_result.values, (eig_result.vectors)
+    @assert solver.right_eig_result!==nothing "First run solve()"
+    eig_result = solver.right_eig_result
+    return eig_result.values, (eig_result.vectors)
 end
 
 # Compute left and right eigenpairs using the default solver and store it in Eigenproblem
 eigenproblem = compute_eigenproblem(
-	model, solver = My_Own_Solver(nothing), normalizer! = (args...) -> nothing)
+    model, solver = My_Own_Solver(nothing), normalizer! = (args...) -> nothing)
 (eigs, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigs)
-	println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
+    println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
 end
 
 # Test left and right eigenvectors
 A, B = linear_first_order_matrices(model)
 for (i, λ) in enumerate(eigs)
-	res_y = norm(A * Y[:, i] - λ * B * Y[:, i])
-	res_x = norm(X[:, i]' * A - λ * X[:, i]' * B)
-	@assert res_y<1e-8 "eigenvectors doesnt match: i=$i, res_y = $res_y"
-	@assert res_x<1e-8 "eigenvectors doesnt match: i=$i, res_x = $res_x"
+    res_y = norm(A * Y[:, i] - λ * B * Y[:, i])
+    res_x = norm(X[:, i]' * A - λ * X[:, i]' * B)
+    @assert res_y<1e-8 "eigenvectors doesnt match: i=$i, res_y = $res_y"
+    @assert res_x<1e-8 "eigenvectors doesnt match: i=$i, res_x = $res_x"
 end

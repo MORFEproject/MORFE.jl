@@ -21,10 +21,10 @@ result_asym = factorisations_asymmetric(multiindex_set, exp, k, candidate_indice
 
 println("Found ", length(result_asym), " asymmetric factorisation(s):\n")
 for (i, entry) in enumerate(result_asym)
-	println("  Factorisation $i (indices: $(entry.factor_indices)):")
-	for (j, idx) in enumerate(entry.factor_indices)
-		println("    factor $j: $(multiindex_set.exponents[idx])")
-	end
+    println("  Factorisation $i (indices: $(entry.factor_indices)):")
+    for (j, idx) in enumerate(entry.factor_indices)
+        println("    factor $j: $(multiindex_set.exponents[idx])")
+    end
 end
 
 println("\n" * "="^80 * "\n")
@@ -36,10 +36,10 @@ result_sym = factorisations_fully_symmetric(multiindex_set, exp, k, candidate_in
 
 println("Found ", length(result_sym), " fully symmetric factorisation(s):\n")
 for (i, entry) in enumerate(result_sym)
-	println("  Factorisation $i: indices $(entry.factor_indices)  ($(entry.multiplier) ordered arrangement(s))")
-	for (j, idx) in enumerate(entry.factor_indices)
-		println("    factor $j: $(multiindex_set.exponents[idx])")
-	end
+    println("  Factorisation $i: indices $(entry.factor_indices)  ($(entry.multiplier) ordered arrangement(s))")
+    for (j, idx) in enumerate(entry.factor_indices)
+        println("    factor $j: $(multiindex_set.exponents[idx])")
+    end
 end
 
 println("\n" * "="^80 * "\n")
@@ -56,19 +56,20 @@ group_sizes = (1, 2)
 
 result_group = factorisations_groupwise_symmetric(multiindex_set, exp, group_sizes, candidate_indices)
 
-println("Found ", length(result_group), " groupwise symmetric factorisation(s) with group sizes $group_sizes:\n")
+println("Found ", length(result_group),
+    " groupwise symmetric factorisation(s) with group sizes $group_sizes:\n")
 for (i, entry) in enumerate(result_group)
-	println("  Factorisation $i: indices $(entry.factor_indices)  ($(entry.multiplier) ordered arrangement(s))")
-	pos = 1
-	for (g, sz) in enumerate(group_sizes)
-		sz == 0 && continue
-		group_indices = entry.factor_indices[pos:(pos+sz-1)]
-		println("    Group $g (size $sz): indices $group_indices")
-		for (j, idx) in enumerate(group_indices)
-			println("      factor $(pos+j-1): $(multiindex_set.exponents[idx])")
-		end
-		pos += sz
-	end
+    println("  Factorisation $i: indices $(entry.factor_indices)  ($(entry.multiplier) ordered arrangement(s))")
+    pos = 1
+    for (g, sz) in enumerate(group_sizes)
+        sz == 0 && continue
+        group_indices = entry.factor_indices[pos:(pos + sz - 1)]
+        println("    Group $g (size $sz): indices $group_indices")
+        for (j, idx) in enumerate(group_indices)
+            println("      factor $(pos+j-1): $(multiindex_set.exponents[idx])")
+        end
+        pos += sz
+    end
 end
 
 println("\n" * "="^80 * "\n")
@@ -87,9 +88,9 @@ result_bounded = bounded_index_tuples(M, exp_sv)
 
 println("Found ", length(result_bounded), " bounded index tuple(s) for M = $M and exp = $exp_sv:\n")
 for (i, (idx_tuple, multiindex, perm_count)) in enumerate(result_bounded)
-	println("  Tuple $i: $idx_tuple")
-	println("    multiindex = $multiindex")
-	println("    permutation count = $perm_count")
+    println("  Tuple $i: $idx_tuple")
+    println("    multiindex = $multiindex")
+    println("    permutation count = $perm_count")
 end
 
 println("\n" * "="^80 * "\n")

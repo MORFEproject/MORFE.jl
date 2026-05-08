@@ -17,19 +17,19 @@ using InteractiveUtils
 
 # ╔═╡ bb000001-0001-4001-b001-000000000001
 begin
-	import Pkg
-	Pkg.activate(@__DIR__)
-	Pkg.instantiate()
+    import Pkg
+    Pkg.activate(@__DIR__)
+    Pkg.instantiate()
 end
 
 # ╔═╡ bb000002-0002-4002-b002-000000000002
 begin
-	using MORFE.Multiindices: all_multiindices_up_to
-	using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
-	using MORFE.ParametrisationMethod: create_parametrisation_method_objects
-	using MORFE.MultilinearTerms: compute_multilinear_terms, build_multilinear_terms_cache
-	using StaticArrays: SVector
-	using LinearAlgebra
+    using MORFE.Multiindices: all_multiindices_up_to
+    using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+    using MORFE.ParametrisationMethod: create_parametrisation_method_objects
+    using MORFE.MultilinearTerms: compute_multilinear_terms, build_multilinear_terms_cache
+    using StaticArrays: SVector
+    using LinearAlgebra
 end
 
 # ╔═╡ bb000003-0003-4003-b003-000000000003
@@ -83,20 +83,20 @@ The model matrices are all identity for simplicity (they do not affect this demo
 
 # ╔═╡ bb000005-0005-4005-b005-000000000005
 begin
-	FOM          = 2     # full-order DOF
-	ORD          = 2     # system order (position + velocity)
-	ROM          = 2     # reduced coordinates
-	FORCING_SIZE = 1     # external forcing variables
-	NVAR         = ROM + FORCING_SIZE  # = 3
+    FOM = 2     # full-order DOF
+    ORD = 2     # system order (position + velocity)
+    ROM = 2     # reduced coordinates
+    FORCING_SIZE = 1     # external forcing variables
+    NVAR = ROM + FORCING_SIZE  # = 3
 
-	term1 = MultilinearMap((res, x, xdot) -> (@. res += x * xdot),          (1, 1))
-	term2 = MultilinearMap((res, v1, v2)  -> (@. res += 0.5 * v1 * v2),     (0, 2))
-	term3 = MultilinearMap((res, x1, x2, xdot) -> (@. res += 0.5*x1*x2*xdot), (2, 1))
-	term4 = MultilinearMap((res, x, r)    -> (@. res += 2.0 * x * r),       (1, 0), 1)
-	term5 = MultilinearMap((res, r)       -> (@. res += [100.0, 200.0] * r), (0, 0), 1)
+    term1 = MultilinearMap((res, x, xdot) -> (@. res += x * xdot), (1, 1))
+    term2 = MultilinearMap((res, v1, v2) -> (@. res += 0.5 * v1 * v2), (0, 2))
+    term3 = MultilinearMap((res, x1, x2, xdot) -> (@. res += 0.5*x1*x2*xdot), (2, 1))
+    term4 = MultilinearMap((res, x, r) -> (@. res += 2.0 * x * r), (1, 0), 1)
+    term5 = MultilinearMap((res, r) -> (@. res += [100.0, 200.0] * r), (0, 0), 1)
 
-	Id    = Matrix{Float64}(I, FOM, FOM)
-	model = NDOrderModel((Id, Id, Id), (term1, term2, term3, term4, term5))
+    Id = Matrix{Float64}(I, FOM, FOM)
+    model = NDOrderModel((Id, Id, Id), (term1, term2, term3, term4, term5))
 end
 
 # ╔═╡ bb000006-0006-4006-b006-000000000006
@@ -124,12 +124,12 @@ The graded-lex ordering assigns the following indices:
 
 # ╔═╡ bb000007-0007-4007-b007-000000000007
 begin
-	mset = all_multiindices_up_to(NVAR, 3)
-	println("Multiindex set: $(length(mset.exponents)) monomials in $NVAR variables, degree ≤ 3")
-	println("\nFirst 12 exponents:")
-	for (i, e) in enumerate(mset.exponents[1:min(12, end)])
-		println("  idx $i → $e")
-	end
+    mset = all_multiindices_up_to(NVAR, 3)
+    println("Multiindex set: $(length(mset.exponents)) monomials in $NVAR variables, degree ≤ 3")
+    println("\nFirst 12 exponents:")
+    for (i, e) in enumerate(mset.exponents[1:min(12, end)])
+        println("  idx $i → $e")
+    end
 end
 
 # ╔═╡ bb000008-0008-4008-b008-000000000008
@@ -167,34 +167,43 @@ $\lambda_1 = -0.1 + 10\mathrm{i}$, $\lambda_2 = \bar\lambda_1$.
 
 # ╔═╡ bb000009-0009-4009-b009-000000000009
 begin
-	W, _ = create_parametrisation_method_objects(mset, ORD, FOM, ROM, FORCING_SIZE, ComplexF64)
+    W,
+    _ = create_parametrisation_method_objects(mset, ORD, FOM, ROM, FORCING_SIZE, ComplexF64)
 
-	λ₁ = -0.1 + 10.0im
-	λ₂ = conj(λ₁)
-	φ₁ = ComplexF64[2.0, 3.0]
-	φ₂ = ComplexF64[4.0, 5.0]
-	b  = ComplexF64[6.0, 7.0]
+    λ₁ = -0.1 + 10.0im
+    λ₂ = conj(λ₁)
+    φ₁ = ComplexF64[2.0, 3.0]
+    φ₂ = ComplexF64[4.0, 5.0]
+    b = ComplexF64[6.0, 7.0]
 
-	# Linear
-	W.poly.coefficients[:, 1, 2] = φ₁;          W.poly.coefficients[:, 2, 2] = λ₁ * φ₁
-	W.poly.coefficients[:, 1, 3] = φ₂;          W.poly.coefficients[:, 2, 3] = λ₂ * φ₂
-	W.poly.coefficients[:, 1, 4] = b;            W.poly.coefficients[:, 2, 4] = 1.0im * b
+    # Linear
+    W.poly.coefficients[:, 1, 2] = φ₁;
+    W.poly.coefficients[:, 2, 2] = λ₁ * φ₁
+    W.poly.coefficients[:, 1, 3] = φ₂;
+    W.poly.coefficients[:, 2, 3] = λ₂ * φ₂
+    W.poly.coefficients[:, 1, 4] = b;
+    W.poly.coefficients[:, 2, 4] = 1.0im * b
 
-	# Quadratic
-	W.poly.coefficients[:, 1, 5] = 0.1  * φ₁;   W.poly.coefficients[:, 2, 5] = b .+ φ₂
-	W.poly.coefficients[:, 1, 6] = 0.05 * φ₁;   W.poly.coefficients[:, 2, 6] = 0.05 * φ₂
-	W.poly.coefficients[:, 1, 7] = 0.1  * φ₁;   W.poly.coefficients[:, 2, 7] = -0.3 * φ₂
-	W.poly.coefficients[:, 1, 8] = b .+ φ₂;     W.poly.coefficients[:, 2, 8] = 0.2  * φ₂
+    # Quadratic
+    W.poly.coefficients[:, 1, 5] = 0.1 * φ₁;
+    W.poly.coefficients[:, 2, 5] = b .+ φ₂
+    W.poly.coefficients[:, 1, 6] = 0.05 * φ₁;
+    W.poly.coefficients[:, 2, 6] = 0.05 * φ₂
+    W.poly.coefficients[:, 1, 7] = 0.1 * φ₁;
+    W.poly.coefficients[:, 2, 7] = -0.3 * φ₂
+    W.poly.coefficients[:, 1, 8] = b .+ φ₂;
+    W.poly.coefficients[:, 2, 8] = 0.2 * φ₂
 
-	# Cubic
-	W.poly.coefficients[:, 1, 11] = 500.0 * φ₁; W.poly.coefficients[:, 2, 11] = -500im * φ₂
+    # Cubic
+    W.poly.coefficients[:, 1, 11] = 500.0 * φ₁;
+    W.poly.coefficients[:, 2, 11] = -500im * φ₂
 
-	println("Parametrisation populated.  Non-zero entries:")
-	for idx in [2,3,4,5,6,7,8,11]
-		p = W.poly.coefficients[:, 1, idx]
-		v = W.poly.coefficients[:, 2, idx]
-		println("  $(mset.exponents[idx])  pos=$p  vel=$v")
-	end
+    println("Parametrisation populated.  Non-zero entries:")
+    for idx in [2, 3, 4, 5, 6, 7, 8, 11]
+        p = W.poly.coefficients[:, 1, idx]
+        v = W.poly.coefficients[:, 2, idx]
+        println("  $(mset.exponents[idx])  pos=$p  vel=$v")
+    end
 end
 
 # ╔═╡ bb000010-0010-4010-b010-000000000010
@@ -216,13 +225,13 @@ zero constant term.
 
 # ╔═╡ bb000011-0011-4011-b011-000000000011
 begin
-	exp100  = SVector(1, 0, 0)
-	r100    = compute_multilinear_terms(model, exp100, W)
-	manual100 = ComplexF64[0.0, 0.0]
-	println("exp = $exp100")
-	println("  computed : $r100")
-	println("  manual   : $manual100")
-	println("  ‖error‖  : $(norm(r100 - manual100))")
+    exp100 = SVector(1, 0, 0)
+    r100 = compute_multilinear_terms(model, exp100, W)
+    manual100 = ComplexF64[0.0, 0.0]
+    println("exp = $exp100")
+    println("  computed : $r100")
+    println("  manual   : $manual100")
+    println("  ‖error‖  : $(norm(r100 - manual100))")
 end
 
 # ╔═╡ bb000012-0012-4012-b012-000000000012
@@ -256,13 +265,13 @@ $$\boxed{N_{(0,0,1)} = [100,\,200]^\top}$$
 
 # ╔═╡ bb000013-0013-4013-b013-000000000013
 begin
-	exp001    = SVector(0, 0, 1)
-	r001      = compute_multilinear_terms(model, exp001, W)
-	manual001 = ComplexF64[100.0, 200.0]
-	println("exp = $exp001")
-	println("  computed : $r001")
-	println("  manual   : $manual001")
-	println("  ‖error‖  : $(norm(r001 - manual001))")
+    exp001 = SVector(0, 0, 1)
+    r001 = compute_multilinear_terms(model, exp001, W)
+    manual001 = ComplexF64[100.0, 200.0]
+    println("exp = $exp001")
+    println("  computed : $r001")
+    println("  manual   : $manual001")
+    println("  ‖error‖  : $(norm(r001 - manual001))")
 end
 
 # ╔═╡ bb000014-0014-4014-b014-000000000014
@@ -321,19 +330,19 @@ $$N_{(2,0,0)} \approx [-200.38 + 36\mathrm{i},\; -450.855 + 81\mathrm{i}]^\top$$
 
 # ╔═╡ bb000015-0015-4015-b015-000000000015
 begin
-	exp200 = SVector(2, 0, 0)
-	r200   = compute_multilinear_terms(model, exp200, W)
+    exp200 = SVector(2, 0, 0)
+    r200 = compute_multilinear_terms(model, exp200, W)
 
-	manual200_term1 = λ₁ .* φ₁ .* φ₁
-	manual200_term2 = 0.5 * λ₁^2 .* φ₁ .* φ₁
-	manual200       = manual200_term1 + manual200_term2
+    manual200_term1 = λ₁ .* φ₁ .* φ₁
+    manual200_term2 = 0.5 * λ₁^2 .* φ₁ .* φ₁
+    manual200 = manual200_term1 + manual200_term2
 
-	println("exp = $exp200")
-	println("  computed         : $r200")
-	println("  manual term1     : $manual200_term1")
-	println("  manual term2     : $manual200_term2")
-	println("  manual total     : $manual200")
-	println("  ‖error‖          : $(norm(r200 - manual200))")
+    println("exp = $exp200")
+    println("  computed         : $r200")
+    println("  manual term1     : $manual200_term1")
+    println("  manual term2     : $manual200_term2")
+    println("  manual total     : $manual200")
+    println("  ‖error‖          : $(norm(r200 - manual200))")
 end
 
 # ╔═╡ bb000016-0016-4016-b016-000000000016
@@ -402,21 +411,21 @@ $$\boxed{N_{(1,0,1)} = (\mathrm{i} + \lambda_1 + \mathrm{i}\lambda_1)\,\varphi_1
 
 # ╔═╡ bb000017-0017-4017-b017-000000000017
 begin
-	exp101 = SVector(1, 0, 1)
-	r101   = compute_multilinear_terms(model, exp101, W)
+    exp101 = SVector(1, 0, 1)
+    r101 = compute_multilinear_terms(model, exp101, W)
 
-	manual101_term1 = (1.0im + λ₁) .* φ₁ .* b
-	manual101_term2 = (0.5 * 1.0im * λ₁ .* φ₁ .* b) * 2
-	manual101_term4 = 2.0 .* φ₁
-	manual101       = manual101_term1 + manual101_term2 + manual101_term4
+    manual101_term1 = (1.0im + λ₁) .* φ₁ .* b
+    manual101_term2 = (0.5 * 1.0im * λ₁ .* φ₁ .* b) * 2
+    manual101_term4 = 2.0 .* φ₁
+    manual101 = manual101_term1 + manual101_term2 + manual101_term4
 
-	println("exp = $exp101")
-	println("  computed         : $r101")
-	println("  manual term1     : $manual101_term1")
-	println("  manual term2     : $manual101_term2")
-	println("  manual term4     : $manual101_term4")
-	println("  manual total     : $manual101")
-	println("  ‖error‖          : $(norm(r101 - manual101))")
+    println("exp = $exp101")
+    println("  computed         : $r101")
+    println("  manual term1     : $manual101_term1")
+    println("  manual term2     : $manual101_term2")
+    println("  manual term4     : $manual101_term4")
+    println("  manual total     : $manual101")
+    println("  ‖error‖          : $(norm(r101 - manual101))")
 end
 
 # ╔═╡ bb000018-0018-4018-b018-000000000018
@@ -503,42 +512,42 @@ $$\boxed{N_{(3,0,1)} = \text{term1} + \text{term2} + \text{term3} + \text{term4}
 
 # ╔═╡ bb000019-0019-4019-b019-000000000019
 begin
-	exp301 = SVector(3, 0, 1)
-	r301   = compute_multilinear_terms(model, exp301, W)
+    exp301 = SVector(3, 0, 1)
+    r301 = compute_multilinear_terms(model, exp301, W)
 
-	# term1: four ordered pairs
-	t1_a = (500.0 * φ₁) .* (1.0im * b)
-	t1_b = b .* (-500im * φ₂)
-	t1_c = (0.1 * φ₁) .* (-0.3 * φ₂)
-	t1_d = (0.1 * φ₁) .* (b .+ φ₂)
-	manual301_term1 = t1_a + t1_b + t1_c + t1_d
+    # term1: four ordered pairs
+    t1_a = (500.0 * φ₁) .* (1.0im * b)
+    t1_b = b .* (-500im * φ₂)
+    t1_c = (0.1 * φ₁) .* (-0.3 * φ₂)
+    t1_d = (0.1 * φ₁) .* (b .+ φ₂)
+    manual301_term1 = t1_a + t1_b + t1_c + t1_d
 
-	# term2: two unordered pairs, each with sym_count=2
-	t2_a = 0.5 * (-500im * φ₂) .* (1.0im * b) * 2
-	t2_b = 0.5 * (b .+ φ₂)     .* (-0.3 * φ₂) * 2
-	manual301_term2 = t2_a + t2_b
+    # term2: two unordered pairs, each with sym_count=2
+    t2_a = 0.5 * (-500im * φ₂) .* (1.0im * b) * 2
+    t2_b = 0.5 * (b .+ φ₂) .* (-0.3 * φ₂) * 2
+    manual301_term2 = t2_a + t2_b
 
-	# term3: five groupwise-symmetric factorisations
-	t3_a = 0.5 * (0.1 * φ₁) .* φ₁ .* (1.0im * b) * 2
-	t3_b = 0.5 * (0.1 * φ₁) .* b  .* (λ₁ * φ₁)  * 2
-	t3_c = 0.5 * φ₁          .* b  .* (b .+ φ₂)   * 2
-	t3_d = 0.5 * φ₁          .* φ₁ .* (-0.3 * φ₂) * 1
-	t3_e = 0.5 * φ₁ .* (0.1 * φ₁)  .* (λ₁ * φ₁)   * 2
-	manual301_term3 = t3_a + t3_b + t3_c + t3_d + t3_e
+    # term3: five groupwise-symmetric factorisations
+    t3_a = 0.5 * (0.1 * φ₁) .* φ₁ .* (1.0im * b) * 2
+    t3_b = 0.5 * (0.1 * φ₁) .* b .* (λ₁ * φ₁) * 2
+    t3_c = 0.5 * φ₁ .* b .* (b .+ φ₂) * 2
+    t3_d = 0.5 * φ₁ .* φ₁ .* (-0.3 * φ₂) * 1
+    t3_e = 0.5 * φ₁ .* (0.1 * φ₁) .* (λ₁ * φ₁) * 2
+    manual301_term3 = t3_a + t3_b + t3_c + t3_d + t3_e
 
-	# term4: single x-slot at (3,0,0)
-	manual301_term4 = 2.0 * (500.0 * φ₁)
+    # term4: single x-slot at (3,0,0)
+    manual301_term4 = 2.0 * (500.0 * φ₁)
 
-	manual301 = manual301_term1 + manual301_term2 + manual301_term3 + manual301_term4
+    manual301 = manual301_term1 + manual301_term2 + manual301_term3 + manual301_term4
 
-	println("exp = $exp301")
-	println("  computed     : $r301")
-	println("  manual term1 : $manual301_term1")
-	println("  manual term2 : $manual301_term2")
-	println("  manual term3 : $manual301_term3")
-	println("  manual term4 : $manual301_term4")
-	println("  manual total : $manual301")
-	println("  ‖error‖      : $(norm(r301 - manual301))")
+    println("exp = $exp301")
+    println("  computed     : $r301")
+    println("  manual term1 : $manual301_term1")
+    println("  manual term2 : $manual301_term2")
+    println("  manual term3 : $manual301_term3")
+    println("  manual term4 : $manual301_term4")
+    println("  manual total : $manual301")
+    println("  ‖error‖      : $(norm(r301 - manual301))")
 end
 
 # ╔═╡ bb000020-0020-4020-b020-000000000020
@@ -554,28 +563,28 @@ The two paths must produce **bit-identical** results for every exponent.
 
 # ╔═╡ bb000021-0021-4021-b021-000000000021
 begin
-	cache     = build_multilinear_terms_cache(model, W)
-	mset_exps = mset.exponents
+    cache = build_multilinear_terms_cache(model, W)
+    mset_exps = mset.exponents
 
-	all_match = true
-	for (label, sv) in [
-		("(1,0,0)", SVector(1,0,0)),
-		("(0,0,1)", SVector(0,0,1)),
-		("(2,0,0)", SVector(2,0,0)),
-		("(1,0,1)", SVector(1,0,1)),
-		("(3,0,1)", SVector(3,0,1)),
-	]
-		idx      = findfirst(==(sv), mset_exps)
-		r_direct = compute_multilinear_terms(model, sv,  W)
-		r_cached = compute_multilinear_terms(model, idx, W, cache)
-		err      = norm(r_cached - r_direct)
-		status   = err == 0 ? "✓" : "✗"
-		println("$status  exp $label : ‖cached − direct‖ = $err")
-		all_match = all_match && (err == 0)
-	end
-	println()
-	all_match ? println("All cached results match direct computation.") :
-	            println("MISMATCH detected — check above.")
+    all_match = true
+    for (label, sv) in [
+        ("(1,0,0)", SVector(1, 0, 0)),
+        ("(0,0,1)", SVector(0, 0, 1)),
+        ("(2,0,0)", SVector(2, 0, 0)),
+        ("(1,0,1)", SVector(1, 0, 1)),
+        ("(3,0,1)", SVector(3, 0, 1))
+    ]
+        idx = findfirst(==(sv), mset_exps)
+        r_direct = compute_multilinear_terms(model, sv, W)
+        r_cached = compute_multilinear_terms(model, idx, W, cache)
+        err = norm(r_cached - r_direct)
+        status = err == 0 ? "✓" : "✗"
+        println("$status  exp $label : ‖cached − direct‖ = $err")
+        all_match = all_match && (err == 0)
+    end
+    println()
+    all_match ? println("All cached results match direct computation.") :
+    println("MISMATCH detected — check above.")
 end
 
 # ╔═╡ bb000022-0022-4022-b022-000000000022

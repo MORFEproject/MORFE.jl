@@ -177,15 +177,15 @@ using SparseArrays
 using StaticArrays
 
 export precompute_column_polynomials,
-	precompute_master_column_polynomials,
-	precompute_external_column_polynomials,
-	evaluate_system_matrix_and_lower_order_rhs!,
-	evaluate_column!,
-	evaluate_external_rhs!,
-	assemble_cohomological_matrix_and_rhs,
-	assemble_cohomological_matrix_and_rhs!,
-	build_sparse_L_and_rhs!,
-	precompute_sparse_L_template
+       precompute_master_column_polynomials,
+       precompute_external_column_polynomials,
+       evaluate_system_matrix_and_lower_order_rhs!,
+       evaluate_column!,
+       evaluate_external_rhs!,
+       assemble_cohomological_matrix_and_rhs,
+       assemble_cohomological_matrix_and_rhs!,
+       build_sparse_L_and_rhs!,
+       precompute_sparse_L_template
 
 # =============================================================================
 # 1.  Coefficient pre-computation
@@ -258,59 +258,58 @@ D[:, ·] = Σ_{k=j+1}^{ORD+1} B[k] * generalised_right_eigenmodes * reduced_dyna
 - Storage: `O(ORD · FOM · NVAR)`
 """
 function precompute_column_polynomials(
-	fom_matrices::NTuple{ORDP1, <:AbstractMatrix{T}}, # fom_matrices[k+1] = Bₖ,  k = 0,…,ORD
-	generalised_right_eigenmodes::AbstractMatrix{T},  # FOM × NVAR
-	reduced_dynamics_linear::AbstractMatrix{T},       # NVAR × NVAR  (generally upper triangular, or Jordan form)
-	ROM::Int,
+        fom_matrices::NTuple{ORDP1, <:AbstractMatrix{T}}, # fom_matrices[k+1] = Bₖ,  k = 0,…,ORD
+        generalised_right_eigenmodes::AbstractMatrix{T},  # FOM × NVAR
+        reduced_dynamics_linear::AbstractMatrix{T},       # NVAR × NVAR  (generally upper triangular, or Jordan form)
+        ROM::Int
 ) where {ORDP1, T <: Number}
+    ORD = ORDP1 - 1                                # polynomial order; compile-time constant
+    FOM = size(fom_matrices[1], 1)
+    NVAR = size(generalised_right_eigenmodes, 2)
+    N_EXT = NVAR - ROM
 
-	ORD   = ORDP1 - 1                                # polynomial order; compile-time constant
-	FOM   = size(fom_matrices[1], 1)
-	NVAR  = size(generalised_right_eigenmodes, 2)
-	N_EXT = NVAR - ROM
+    @assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
+    @assert size(generalised_right_eigenmodes, 1) == FOM "generalised_right_eigenmodes must have FOM = $(FOM) rows."
+    @assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
+    @assert 1 ≤ ROM ≤ NVAR "ROM must satisfy 1 ≤ ROM ≤ NVAR = $(NVAR)."
 
-	@assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
-	@assert size(generalised_right_eigenmodes, 1) == FOM "generalised_right_eigenmodes must have FOM = $(FOM) rows."
-	@assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
-	@assert 1 ≤ ROM ≤ NVAR "ROM must satisfy 1 ≤ ROM ≤ NVAR = $(NVAR)."
+    # Allocate output structures in their final per-target layout.
+    # C_coeffs[r][:, j] holds the degree-(j-1) coefficient for master mode r.
+    # E_coeffs[e][:, j] holds the degree-(j-1) coefficient for external mode e.
+    C_coeffs = [Matrix{T}(undef, FOM, ORD) for _ in 1:ROM]
+    E_coeffs = [Matrix{T}(undef, FOM, ORD) for _ in 1:N_EXT]
 
-	# Allocate output structures in their final per-target layout.
-	# C_coeffs[r][:, j] holds the degree-(j-1) coefficient for master mode r.
-	# E_coeffs[e][:, j] holds the degree-(j-1) coefficient for external mode e.
-	C_coeffs = [Matrix{T}(undef, FOM, ORD) for _ in 1:ROM]
-	E_coeffs = [Matrix{T}(undef, FOM, ORD) for _ in 1:N_EXT]
+    # ── Downward Horner recurrence ────────────────────────────────────────────
+    # D is the single FOM × NVAR working buffer.
+    # Invariant before the write step at index j:
+    #   D = Σ_{k=j+1}^{ORDP1} fom_matrices[k] * generalised_right_eigenmodes
+    #         * reduced_dynamics_linear^{k-(j+1)}.
+    # Each column of D is written directly into column j of the corresponding
+    # per-target matrix; no intermediate storage or repacking is needed.
+    D = Matrix{T}(undef, FOM, NVAR)   # current Horner step
+    D_tmp = Matrix{T}(undef, FOM, NVAR)   # scratch for the next step
 
-	# ── Downward Horner recurrence ────────────────────────────────────────────
-	# D is the single FOM × NVAR working buffer.
-	# Invariant before the write step at index j:
-	#   D = Σ_{k=j+1}^{ORDP1} fom_matrices[k] * generalised_right_eigenmodes
-	#         * reduced_dynamics_linear^{k-(j+1)}.
-	# Each column of D is written directly into column j of the corresponding
-	# per-target matrix; no intermediate storage or repacking is needed.
-	D     = Matrix{T}(undef, FOM, NVAR)   # current Horner step
-	D_tmp = Matrix{T}(undef, FOM, NVAR)   # scratch for the next step
+    mul!(D, fom_matrices[ORDP1], generalised_right_eigenmodes) # D ← B[ORD+1] · Y  (step j = ORD)
+    for r in 1:ROM
+        C_coeffs[r][:, ORD] .= @view D[:, r]
+    end
+    for e in 1:N_EXT
+        E_coeffs[e][:, ORD] .= -@view D[:, ROM + e] # sign flip: terms moved from the LHS to the RHS
+    end
 
-	mul!(D, fom_matrices[ORDP1], generalised_right_eigenmodes) # D ← B[ORD+1] · Y  (step j = ORD)
-	for r in 1:ROM
-		C_coeffs[r][:, ORD] .= @view D[:, r]
-	end
-	for e in 1:N_EXT
-		E_coeffs[e][:, ORD] .= -@view D[:, ROM+e] # sign flip: terms moved from the LHS to the RHS
-	end
+    for j in (ORD - 1):-1:1
+        mul!(D_tmp, D, reduced_dynamics_linear) # D_tmp ← D · Λ
+        mul!(D_tmp, fom_matrices[j + 1], generalised_right_eigenmodes, one(T), one(T)) # D_tmp += B[j+1] · Y
+        D, D_tmp = D_tmp, D # swap buffers (no copy)
+        for r in 1:ROM
+            C_coeffs[r][:, j] .= @view D[:, r]
+        end
+        for e in 1:N_EXT
+            E_coeffs[e][:, j] .= -@view D[:, ROM + e] # sign flip: terms moved from the LHS to the RHS
+        end
+    end
 
-	for j in (ORD-1):-1:1
-		mul!(D_tmp, D, reduced_dynamics_linear) # D_tmp ← D · Λ
-		mul!(D_tmp, fom_matrices[j+1], generalised_right_eigenmodes, one(T), one(T)) # D_tmp += B[j+1] · Y
-		D, D_tmp = D_tmp, D # swap buffers (no copy)
-		for r in 1:ROM
-			C_coeffs[r][:, j] .= @view D[:, r]
-		end
-		for e in 1:N_EXT
-			E_coeffs[e][:, j] .= -@view D[:, ROM+e] # sign flip: terms moved from the LHS to the RHS
-		end
-	end
-
-	return C_coeffs, E_coeffs
+    return C_coeffs, E_coeffs
 end
 
 """
@@ -334,39 +333,39 @@ Therefore `C_coeffs` is independent of the external directions `Φ_ext`.
   Used by `precompute_external_column_polynomials` to avoid recomputing master work.
 """
 function precompute_master_column_polynomials(
-	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
-	master_modes::AbstractMatrix,  # FOM × ROM
-	Λ_master::AbstractMatrix,      # ROM × ROM  (master eigenvalue block)
+        fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+        master_modes::AbstractMatrix,  # FOM × ROM
+        Λ_master::AbstractMatrix      # ROM × ROM  (master eigenvalue block)
 ) where {ORDP1}
-	T = promote_type(eltype(fom_matrices[1]), eltype(master_modes), eltype(Λ_master))
+    T = promote_type(eltype(fom_matrices[1]), eltype(master_modes), eltype(Λ_master))
 
-	ORD = ORDP1 - 1
-	FOM = size(fom_matrices[1], 1)
-	ROM = size(master_modes, 2)
+    ORD = ORDP1 - 1
+    FOM = size(fom_matrices[1], 1)
+    ROM = size(master_modes, 2)
 
-	C_coeffs       = [Matrix{T}(undef, FOM, ORD) for _ in 1:ROM]
-	D_master_steps = [Matrix{T}(undef, FOM, ROM) for _ in 1:ORD]
+    C_coeffs = [Matrix{T}(undef, FOM, ORD) for _ in 1:ROM]
+    D_master_steps = [Matrix{T}(undef, FOM, ROM) for _ in 1:ORD]
 
-	D     = Matrix{T}(undef, FOM, ROM)
-	D_tmp = Matrix{T}(undef, FOM, ROM)
+    D = Matrix{T}(undef, FOM, ROM)
+    D_tmp = Matrix{T}(undef, FOM, ROM)
 
-	mul!(D, fom_matrices[ORDP1], master_modes)   # D ← B[ORD+1] · master_modes
-	for r in 1:ROM
-		C_coeffs[r][:, ORD] .= @view D[:, r]
-	end
-	copyto!(D_master_steps[ORD], D)
+    mul!(D, fom_matrices[ORDP1], master_modes)   # D ← B[ORD+1] · master_modes
+    for r in 1:ROM
+        C_coeffs[r][:, ORD] .= @view D[:, r]
+    end
+    copyto!(D_master_steps[ORD], D)
 
-	for j in (ORD-1):-1:1
-		mul!(D_tmp, D, Λ_master)                                         # D_tmp ← D · Λ_master
-		mul!(D_tmp, fom_matrices[j+1], master_modes, one(T), one(T))     # D_tmp += B[j+1] · master_modes
-		D, D_tmp = D_tmp, D
-		for r in 1:ROM
-			C_coeffs[r][:, j] .= @view D[:, r]
-		end
-		copyto!(D_master_steps[j], D)
-	end
+    for j in (ORD - 1):-1:1
+        mul!(D_tmp, D, Λ_master)                                         # D_tmp ← D · Λ_master
+        mul!(D_tmp, fom_matrices[j + 1], master_modes, one(T), one(T))     # D_tmp += B[j+1] · master_modes
+        D, D_tmp = D_tmp, D
+        for r in 1:ROM
+            C_coeffs[r][:, j] .= @view D[:, r]
+        end
+        copyto!(D_master_steps[j], D)
+    end
 
-	return C_coeffs, D_master_steps
+    return C_coeffs, D_master_steps
 end
 
 """
@@ -387,48 +386,48 @@ E_coeffs needed for the initial external-forcing solve.
   each `FOM × ROM`.  `D_master_steps[j]` is the master Horner buffer at step `j`.
 """
 function precompute_external_column_polynomials(
-	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
-	external_directions::AbstractMatrix,          # FOM × N_EXT
-	reduced_dynamics_linear::AbstractMatrix,      # NVAR × NVAR
-	D_master_steps::Vector{<:AbstractMatrix},     # length ORD, each FOM × ROM
+        fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+        external_directions::AbstractMatrix,          # FOM × N_EXT
+        reduced_dynamics_linear::AbstractMatrix,      # NVAR × NVAR
+        D_master_steps::Vector{<:AbstractMatrix}     # length ORD, each FOM × ROM
 ) where {ORDP1}
-	T = promote_type(eltype(fom_matrices[1]), eltype(external_directions),
-	                 eltype(reduced_dynamics_linear), eltype(D_master_steps[1]))
+    T = promote_type(eltype(fom_matrices[1]), eltype(external_directions),
+        eltype(reduced_dynamics_linear), eltype(D_master_steps[1]))
 
-	ORD   = ORDP1 - 1
-	FOM   = size(fom_matrices[1], 1)
-	ROM   = size(D_master_steps[1], 2)
-	N_EXT = size(external_directions, 2)
-	NVAR  = ROM + N_EXT
+    ORD = ORDP1 - 1
+    FOM = size(fom_matrices[1], 1)
+    ROM = size(D_master_steps[1], 2)
+    N_EXT = size(external_directions, 2)
+    NVAR = ROM + N_EXT
 
-	N_EXT == 0 && return Vector{Matrix{T}}()
+    N_EXT == 0 && return Vector{Matrix{T}}()
 
-	Λ_master_ext = view(reduced_dynamics_linear, 1:ROM, (ROM+1):NVAR)  # ROM × N_EXT
-	Λ_ext        = view(reduced_dynamics_linear, (ROM+1):NVAR, (ROM+1):NVAR)  # N_EXT × N_EXT
+    Λ_master_ext = view(reduced_dynamics_linear, 1:ROM, (ROM + 1):NVAR)  # ROM × N_EXT
+    Λ_ext = view(reduced_dynamics_linear, (ROM + 1):NVAR, (ROM + 1):NVAR)  # N_EXT × N_EXT
 
-	E_coeffs  = [Matrix{T}(undef, FOM, ORD) for _ in 1:N_EXT]
-	D_ext     = Matrix{T}(undef, FOM, N_EXT)
-	D_ext_tmp = Matrix{T}(undef, FOM, N_EXT)
+    E_coeffs = [Matrix{T}(undef, FOM, ORD) for _ in 1:N_EXT]
+    D_ext = Matrix{T}(undef, FOM, N_EXT)
+    D_ext_tmp = Matrix{T}(undef, FOM, N_EXT)
 
-	mul!(D_ext, fom_matrices[ORDP1], external_directions)  # D_ext ← B[ORD+1] · Φ_ext
-	for e in 1:N_EXT
-		E_coeffs[e][:, ORD] .= -@view D_ext[:, e]  # sign flip (LHS → RHS)
-	end
+    mul!(D_ext, fom_matrices[ORDP1], external_directions)  # D_ext ← B[ORD+1] · Φ_ext
+    for e in 1:N_EXT
+        E_coeffs[e][:, ORD] .= -@view D_ext[:, e]  # sign flip (LHS → RHS)
+    end
 
-	for j in (ORD-1):-1:1
-		# D_ext ← D_ext · Λ_ext + D_master_steps[j+1] · Λ_master_ext + B[j+1] · Φ_ext
-		# D_master_steps[j+1] is the master buffer at the PREVIOUS step (step j+1),
-		# which is the state of D[:,1:ROM] at the start of this loop iteration.
-		mul!(D_ext_tmp, D_ext, Λ_ext)
-		mul!(D_ext_tmp, D_master_steps[j+1], Λ_master_ext, one(T), one(T))
-		mul!(D_ext_tmp, fom_matrices[j+1], external_directions, one(T), one(T))
-		D_ext, D_ext_tmp = D_ext_tmp, D_ext
-		for e in 1:N_EXT
-			E_coeffs[e][:, j] .= -@view D_ext[:, e]  # sign flip
-		end
-	end
+    for j in (ORD - 1):-1:1
+        # D_ext ← D_ext · Λ_ext + D_master_steps[j+1] · Λ_master_ext + B[j+1] · Φ_ext
+        # D_master_steps[j+1] is the master buffer at the PREVIOUS step (step j+1),
+        # which is the state of D[:,1:ROM] at the start of this loop iteration.
+        mul!(D_ext_tmp, D_ext, Λ_ext)
+        mul!(D_ext_tmp, D_master_steps[j + 1], Λ_master_ext, one(T), one(T))
+        mul!(D_ext_tmp, fom_matrices[j + 1], external_directions, one(T), one(T))
+        D_ext, D_ext_tmp = D_ext_tmp, D_ext
+        for e in 1:N_EXT
+            E_coeffs[e][:, j] .= -@view D_ext[:, e]  # sign flip
+        end
+    end
 
-	return E_coeffs
+    return E_coeffs
 end
 
 # =============================================================================
@@ -499,30 +498,31 @@ lower-order multi-indices associated with each Horner step.
 `O(ORD · FOM²)`, shared with the `L(s)` evaluation.
 """
 function evaluate_system_matrix_and_lower_order_rhs!(
-	parametrisation_operator::AbstractMatrix,
-	lower_order_rhs::AbstractVector,
-	s::Number,
-	lower_order_couplings::AbstractVector{<:AbstractVector},
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+        parametrisation_operator::AbstractMatrix,
+        lower_order_rhs::AbstractVector,
+        s::Number,
+        lower_order_couplings::AbstractVector{<:AbstractVector},
+        linear_terms::NTuple{ORDP1, <:AbstractMatrix}
 ) where {ORDP1}
-	T   = eltype(parametrisation_operator)  # output type set by the caller's buffer
-	ORD = ORDP1 - 1
-	@assert length(lower_order_couplings) == ORD "length(lower_order_couplings) must equal ORD = length(linear_terms) - 1."
+    T = eltype(parametrisation_operator)  # output type set by the caller's buffer
+    ORD = ORDP1 - 1
+    @assert length(lower_order_couplings) == ORD "length(lower_order_couplings) must equal ORD = length(linear_terms) - 1."
 
-	copyto!(parametrisation_operator, linear_terms[ORDP1]) # L ← B[ORD+1]
+    copyto!(parametrisation_operator, linear_terms[ORDP1]) # L ← B[ORD+1]
 
-	for j in ORD:-1:1
-		# Here: parametrisation_operator = L[j](s) = Σ_{k=j+1}^{ORD+1} B[k] · s^{k-(j+1)}.
-		# Accumulate: lower_order_rhs -= L[j](s) · ξ[j].
-		# mul!(y, M, x, -1, 1) computes y = y - M·x without allocation.
-		mul!(lower_order_rhs, parametrisation_operator, lower_order_couplings[j], -one(T), one(T))
+    for j in ORD:-1:1
+        # Here: parametrisation_operator = L[j](s) = Σ_{k=j+1}^{ORD+1} B[k] · s^{k-(j+1)}.
+        # Accumulate: lower_order_rhs -= L[j](s) · ξ[j].
+        # mul!(y, M, x, -1, 1) computes y = y - M·x without allocation.
+        mul!(lower_order_rhs, parametrisation_operator,
+            lower_order_couplings[j], -one(T), one(T))
 
-		rmul!(parametrisation_operator, s)             # L ← L · s
-		parametrisation_operator .+= linear_terms[j]   # L ← L + B[j]
-		# Here: parametrisation_operator = L_{j-1}(s) = Σ_{k=j}^{ORD+1} B[k] · s^{k-j}.
-	end
-	# On exit: parametrisation_operator = L_0(s) = Σ_{k=1}^{ORD+1} B[k] · s^{k-1} = L(s).
-	return parametrisation_operator
+        rmul!(parametrisation_operator, s)             # L ← L · s
+        parametrisation_operator .+= linear_terms[j]   # L ← L + B[j]
+        # Here: parametrisation_operator = L_{j-1}(s) = Σ_{k=j}^{ORD+1} B[k] · s^{k-j}.
+    end
+    # On exit: parametrisation_operator = L_0(s) = Σ_{k=1}^{ORD+1} B[k] · s^{k-1} = L(s).
+    return parametrisation_operator
 end
 
 # =============================================================================
@@ -568,22 +568,22 @@ column-major), so the loop touches sequential cache lines.
 `O(ORD · FOM)`
 """
 function evaluate_column!(
-	c::AbstractVector{T},
-	s::T,
-	r::Int,
-	C_coeffs::Vector{<:AbstractMatrix{T}},
+        c::AbstractVector{T},
+        s::T,
+        r::Int,
+        C_coeffs::Vector{<:AbstractMatrix{T}}
 ) where {T}
-	Cr  = C_coeffs[r]              # FOM × ORD;  column L ↔ degree-(L-1) coefficient
-	ORD = size(Cr, 2)
+    Cr = C_coeffs[r]              # FOM × ORD;  column L ↔ degree-(L-1) coefficient
+    ORD = size(Cr, 2)
 
-	ORD == 0 && (fill!(c, zero(T)); return c)
+    ORD == 0 && (fill!(c, zero(T)); return c)
 
-	copyto!(c, @view Cr[:, ORD])   # c ← highest-degree coefficient
-	for L in (ORD-1):-1:1
-		c .*= s
-		c .+= @view Cr[:, L]       # c ← c · s + degree-(L-1) coefficient
-	end
-	return c
+    copyto!(c, @view Cr[:, ORD])   # c ← highest-degree coefficient
+    for L in (ORD - 1):-1:1
+        c .*= s
+        c .+= @view Cr[:, L]       # c ← c · s + degree-(L-1) coefficient
+    end
+    return c
 end
 
 # =============================================================================
@@ -641,59 +641,59 @@ passes.
 - `O(FOM · ORD)` for the single Horner evaluation.
 """
 function evaluate_external_rhs!(
-	rhs::AbstractVector{T},
-	s::T,
-	external_dynamics::AbstractVector{T},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
-	g::AbstractVector{T},   # pre-allocated FOM buffer; zeroed inside
+        rhs::AbstractVector{T},
+        s::T,
+        external_dynamics::AbstractVector{T},
+        E_coeffs::Vector{<:AbstractMatrix{T}},
+        g::AbstractVector{T}   # pre-allocated FOM buffer; zeroed inside
 ) where {T}
-	N_EXT = length(E_coeffs)
-	@assert length(external_dynamics) == N_EXT "external_dynamics length must equal N_EXT = $(N_EXT)."
-	isempty(E_coeffs) && return rhs
+    N_EXT = length(E_coeffs)
+    @assert length(external_dynamics) == N_EXT "external_dynamics length must equal N_EXT = $(N_EXT)."
+    isempty(E_coeffs) && return rhs
 
-	ORD = size(E_coeffs[1], 2)
+    ORD = size(E_coeffs[1], 2)
 
-	# Check for all-zero external dynamics without allocating (replaces findall).
-	all_zero = true
-	for e in eachindex(external_dynamics)
-		!iszero(external_dynamics[e]) && (all_zero = false; break)
-	end
-	all_zero && return rhs
+    # Check for all-zero external dynamics without allocating (replaces findall).
+    all_zero = true
+    for e in eachindex(external_dynamics)
+        !iszero(external_dynamics[e]) && (all_zero = false; break)
+    end
+    all_zero && return rhs
 
-	# Form the combined coefficient vector for each polynomial degree:
-	#   g[:, L] = Σ_{e active} E_coeffs[e][:, L] · external_dynamics[e],  L = 1…ORD
-	# then evaluate g(s) = Σ_{L=1}^{ORD} g[:, L] · s^{L-1} via a single Horner pass.
-	fill!(g, zero(T))
+    # Form the combined coefficient vector for each polynomial degree:
+    #   g[:, L] = Σ_{e active} E_coeffs[e][:, L] · external_dynamics[e],  L = 1…ORD
+    # then evaluate g(s) = Σ_{L=1}^{ORD} g[:, L] · s^{L-1} via a single Horner pass.
+    fill!(g, zero(T))
 
-	# Initialise with the highest-degree combined coefficient (degree ORD-1).
-	for e in eachindex(external_dynamics)
-		iszero(external_dynamics[e]) && continue
-		@. g += E_coeffs[e][:, ORD] * external_dynamics[e]
-	end
+    # Initialise with the highest-degree combined coefficient (degree ORD-1).
+    for e in eachindex(external_dynamics)
+        iszero(external_dynamics[e]) && continue
+        @. g += E_coeffs[e][:, ORD] * external_dynamics[e]
+    end
 
-	# Descend through remaining degrees.
-	for L in (ORD-1):-1:1
-		g .*= s
-		for e in eachindex(external_dynamics)
-			iszero(external_dynamics[e]) && continue
-			@. g += E_coeffs[e][:, L] * external_dynamics[e]
-		end
-	end
+    # Descend through remaining degrees.
+    for L in (ORD - 1):-1:1
+        g .*= s
+        for e in eachindex(external_dynamics)
+            iszero(external_dynamics[e]) && continue
+            @. g += E_coeffs[e][:, L] * external_dynamics[e]
+        end
+    end
 
-	rhs .+= g # addition: the sign flip was already absorbed into the coefficients E_coeffs
-	return rhs
+    rhs .+= g # addition: the sign flip was already absorbed into the coefficients E_coeffs
+    return rhs
 end
 
 # Backward-compatible overload that allocates its own buffer.
 function evaluate_external_rhs!(
-	rhs::AbstractVector{T},
-	s::T,
-	external_dynamics::AbstractVector{T},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
+        rhs::AbstractVector{T},
+        s::T,
+        external_dynamics::AbstractVector{T},
+        E_coeffs::Vector{<:AbstractMatrix{T}}
 ) where {T}
-	isempty(E_coeffs) && return rhs
-	g = zeros(T, length(rhs))
-	return evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g)
+    isempty(E_coeffs) && return rhs
+    g = zeros(T, length(rhs))
+    return evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g)
 end
 
 # =============================================================================
@@ -764,78 +764,78 @@ pass** by [`evaluate_system_matrix_and_lower_order_rhs!`](@ref).
 `(M, rhs)` where `M` is `FOM × (FOM + nR)` and `rhs` is a length-`FOM` vector.
 """
 function assemble_cohomological_matrix_and_rhs(
-	s::Number,
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
-	C_coeffs::Vector{<:AbstractMatrix},
-	E_coeffs::Vector{<:AbstractMatrix},
-	resonance::SVector{ROM, Bool},
-	lower_order_couplings::AbstractVector{<:AbstractVector},
-	external_dynamics::AbstractVector,
+        s::Number,
+        linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+        C_coeffs::Vector{<:AbstractMatrix},
+        E_coeffs::Vector{<:AbstractMatrix},
+        resonance::SVector{ROM, Bool},
+        lower_order_couplings::AbstractVector{<:AbstractVector},
+        external_dynamics::AbstractVector
 ) where {ROM, ORDP1}
-	T   = promote_type(typeof(s), eltype(linear_terms[1]))
-	FOM = size(linear_terms[1], 1)
-	nR  = count(resonance)
-	M   = Matrix{T}(undef, FOM, FOM + nR)
+    T = promote_type(typeof(s), eltype(linear_terms[1]))
+    FOM = size(linear_terms[1], 1)
+    nR = count(resonance)
+    M = Matrix{T}(undef, FOM, FOM + nR)
 
-	# Block 1: L(s) in columns 1:FOM, with fused lower-order RHS accumulation.
-	rhs = zeros(T, FOM)
-	evaluate_system_matrix_and_lower_order_rhs!(
-		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
-	)
+    # Block 1: L(s) in columns 1:FOM, with fused lower-order RHS accumulation.
+    rhs = zeros(T, FOM)
+    evaluate_system_matrix_and_lower_order_rhs!(
+        view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms
+    )
 
-	# Blocks 2…: one column C[j](s) per resonant master mode, in increasing-j order.
-	col = FOM + 1
-	for j in eachindex(resonance)
-		if resonance[j]
-			evaluate_column!(view(M, :, col), s, j, C_coeffs)
-			col += 1
-		end
-	end
+    # Blocks 2…: one column C[j](s) per resonant master mode, in increasing-j order.
+    col = FOM + 1
+    for j in eachindex(resonance)
+        if resonance[j]
+            evaluate_column!(view(M, :, col), s, j, C_coeffs)
+            col += 1
+        end
+    end
 
-	# Accumulate external-forcing contribution into rhs.
-	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs)
+    # Accumulate external-forcing contribution into rhs.
+    evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs)
 
-	return M, rhs
+    return M, rhs
 end
 
 # Overload accepting a pre-allocated buffer for evaluate_external_rhs! (no alloc).
 function assemble_cohomological_matrix_and_rhs(
-	s::Number,
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
-	C_coeffs::Vector{<:AbstractMatrix},
-	E_coeffs::Vector{<:AbstractMatrix},
-	resonance::SVector{ROM, Bool},
-	lower_order_couplings::AbstractVector{<:AbstractVector},
-	external_dynamics::AbstractVector,
-	g_buffer::AbstractVector,   # pre-allocated FOM buffer for external RHS
+        s::Number,
+        linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+        C_coeffs::Vector{<:AbstractMatrix},
+        E_coeffs::Vector{<:AbstractMatrix},
+        resonance::SVector{ROM, Bool},
+        lower_order_couplings::AbstractVector{<:AbstractVector},
+        external_dynamics::AbstractVector,
+        g_buffer::AbstractVector   # pre-allocated FOM buffer for external RHS
 ) where {ROM, ORDP1}
-	T   = promote_type(typeof(s), eltype(linear_terms[1]))
-	FOM = size(linear_terms[1], 1)
-	nR  = count(resonance)
-	M   = Matrix{T}(undef, FOM, FOM + nR)
+    T = promote_type(typeof(s), eltype(linear_terms[1]))
+    FOM = size(linear_terms[1], 1)
+    nR = count(resonance)
+    M = Matrix{T}(undef, FOM, FOM + nR)
 
-	rhs = zeros(T, FOM)
-	evaluate_system_matrix_and_lower_order_rhs!(
-		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
-	)
+    rhs = zeros(T, FOM)
+    evaluate_system_matrix_and_lower_order_rhs!(
+        view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms
+    )
 
-	col = FOM + 1
-	for j in eachindex(resonance)
-		if resonance[j]
-			evaluate_column!(view(M, :, col), s, j, C_coeffs)
-			col += 1
-		end
-	end
+    col = FOM + 1
+    for j in eachindex(resonance)
+        if resonance[j]
+            evaluate_column!(view(M, :, col), s, j, C_coeffs)
+            col += 1
+        end
+    end
 
-	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
+    evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
 
-	return M, rhs
+    return M, rhs
 end
 
 """
 	assemble_cohomological_matrix_and_rhs!(M, rhs, s, linear_terms, C_coeffs, E_coeffs,
-	                                        resonance, lower_order_couplings,
-	                                        external_dynamics, g_buffer) → nothing
+											resonance, lower_order_couplings,
+											external_dynamics, g_buffer) → nothing
 
 In-place variant: writes the invariance-equation system matrix and RHS directly into
 the caller-supplied `M` and `rhs` buffers.  No heap allocation occurs.
@@ -845,31 +845,31 @@ the caller-supplied `M` and `rhs` buffers.  No heap allocation occurs.
 `g_buffer` is the pre-allocated `FOM`-length scratch buffer for the external RHS.
 """
 function assemble_cohomological_matrix_and_rhs!(
-	M::AbstractMatrix,
-	rhs::AbstractVector,
-	s::Number,
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
-	C_coeffs::Vector{<:AbstractMatrix},
-	E_coeffs::Vector{<:AbstractMatrix},
-	resonance::SVector{ROM, Bool},
-	lower_order_couplings::AbstractVector{<:AbstractVector},
-	external_dynamics::AbstractVector,
-	g_buffer::AbstractVector,
+        M::AbstractMatrix,
+        rhs::AbstractVector,
+        s::Number,
+        linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+        C_coeffs::Vector{<:AbstractMatrix},
+        E_coeffs::Vector{<:AbstractMatrix},
+        resonance::SVector{ROM, Bool},
+        lower_order_couplings::AbstractVector{<:AbstractVector},
+        external_dynamics::AbstractVector,
+        g_buffer::AbstractVector
 ) where {ROM, ORDP1}
-	FOM = size(linear_terms[1], 1)
-	fill!(rhs, zero(eltype(rhs)))
-	evaluate_system_matrix_and_lower_order_rhs!(
-		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
-	)
-	col = FOM + 1
-	for j in eachindex(resonance)
-		if resonance[j]
-			evaluate_column!(view(M, :, col), s, j, C_coeffs)
-			col += 1
-		end
-	end
-	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
-	return nothing
+    FOM = size(linear_terms[1], 1)
+    fill!(rhs, zero(eltype(rhs)))
+    evaluate_system_matrix_and_lower_order_rhs!(
+        view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms
+    )
+    col = FOM + 1
+    for j in eachindex(resonance)
+        if resonance[j]
+            evaluate_column!(view(M, :, col), s, j, C_coeffs)
+            col += 1
+        end
+    end
+    evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
+    return nothing
 end
 
 # =============================================================================
@@ -893,42 +893,43 @@ arithmetic allocations even when the input matrices do not share a common patter
 entries that cancel to exactly zero).
 """
 function precompute_sparse_L_template(
-	linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
+        linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
 ) where {ORDP1}
-	n = size(linear_terms[1], 1)
+    n = size(linear_terms[1], 1)
 
-	# Build union pattern by summing all-ones matrices — positive values cannot
-	# cancel, so every structural nonzero from every Bk is preserved.
-	L_ones = spzeros(Int, n, n)
-	for Bk in linear_terms
-		L_ones = L_ones + SparseMatrixCSC(
-			Bk.m, Bk.n, copy(Bk.colptr), copy(Bk.rowval), ones(Int, nnz(Bk)),
-		)
-	end
+    # Build union pattern by summing all-ones matrices — positive values cannot
+    # cancel, so every structural nonzero from every Bk is preserved.
+    L_ones = spzeros(Int, n, n)
+    for Bk in linear_terms
+        L_ones = L_ones + SparseMatrixCSC(
+            Bk.m, Bk.n, copy(Bk.colptr), copy(Bk.rowval), ones(Int, nnz(Bk))
+        )
+    end
 
-	# Allocate template: union pattern, zero ComplexF64 nzval (overwritten per monomial).
-	L_template = SparseMatrixCSC(
-		n, n, copy(L_ones.colptr), copy(L_ones.rowval), zeros(ComplexF64, nnz(L_ones)),
-	)
+    # Allocate template: union pattern, zero ComplexF64 nzval (overwritten per monomial).
+    L_template = SparseMatrixCSC(
+        n, n, copy(L_ones.colptr), copy(L_ones.rowval), zeros(ComplexF64, nnz(L_ones))
+    )
 
-	# For each term Bk, map its nzval positions into L_template.nzval positions.
-	mappings = Vector{Vector{Int}}(undef, ORDP1)
-	for k in 1:ORDP1
-		Bk = linear_terms[k]
-		mapping_k = Vector{Int}(undef, nnz(Bk))
-		for col in 1:n
-			for pos_k in Bk.colptr[col]:(Bk.colptr[col+1] - 1)
-				row = Bk.rowval[pos_k]
-				lo = L_template.colptr[col]
-				hi = L_template.colptr[col+1] - 1
-				pos_L = searchsortedfirst(L_template.rowval, row, lo, hi, Base.Order.Forward)
-				mapping_k[pos_k] = pos_L
-			end
-		end
-		mappings[k] = mapping_k
-	end
+    # For each term Bk, map its nzval positions into L_template.nzval positions.
+    mappings = Vector{Vector{Int}}(undef, ORDP1)
+    for k in 1:ORDP1
+        Bk = linear_terms[k]
+        mapping_k = Vector{Int}(undef, nnz(Bk))
+        for col in 1:n
+            for pos_k in Bk.colptr[col]:(Bk.colptr[col + 1] - 1)
+                row = Bk.rowval[pos_k]
+                lo = L_template.colptr[col]
+                hi = L_template.colptr[col + 1] - 1
+                pos_L = searchsortedfirst(
+                    L_template.rowval, row, lo, hi, Base.Order.Forward)
+                mapping_k[pos_k] = pos_L
+            end
+        end
+        mappings[k] = mapping_k
+    end
 
-	return L_template, mappings
+    return L_template, mappings
 end
 
 """
@@ -943,36 +944,36 @@ Avoids ALL per-monomial sparse arithmetic allocations regardless of whether the
 on each call; its `colptr`/`rowval` are never modified.
 """
 function build_sparse_L_and_rhs!(
-	rhs::AbstractVector,
-	L_template::SparseMatrixCSC,
-	mappings::Vector{Vector{Int}},
-	linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
-	s,
-	lower_order_couplings::AbstractVector{<:AbstractVector},
+        rhs::AbstractVector,
+        L_template::SparseMatrixCSC,
+        mappings::Vector{Vector{Int}},
+        linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
+        s,
+        lower_order_couplings::AbstractVector{<:AbstractVector}
 ) where {ORDP1}
-	T   = eltype(rhs)
-	T_L = eltype(L_template)
-	ORD = ORDP1 - 1
+    T = eltype(rhs)
+    T_L = eltype(L_template)
+    ORD = ORDP1 - 1
 
-	# Horner init: L_template ← linear_terms[ORDP1], mapped into union positions.
-	fill!(L_template.nzval, zero(T_L))
-	nzval_last = linear_terms[ORDP1].nzval
-	map_last   = mappings[ORDP1]
-	@inbounds for i in eachindex(nzval_last)
-		L_template.nzval[map_last[i]] = T_L(nzval_last[i])
-	end
+    # Horner init: L_template ← linear_terms[ORDP1], mapped into union positions.
+    fill!(L_template.nzval, zero(T_L))
+    nzval_last = linear_terms[ORDP1].nzval
+    map_last = mappings[ORDP1]
+    @inbounds for i in eachindex(nzval_last)
+        L_template.nzval[map_last[i]] = T_L(nzval_last[i])
+    end
 
-	@inbounds for j in ORD:-1:1
-		mul!(rhs, L_template, lower_order_couplings[j], -one(T), one(T))  # rhs -= L · ξ[j]
-		L_template.nzval .*= s                                              # L ← L · s
-		nzval_j = linear_terms[j].nzval
-		map_j   = mappings[j]
-		for i in eachindex(nzval_j)
-			L_template.nzval[map_j[i]] += T_L(nzval_j[i])                  # L ← L + B[j]
-		end
-	end
+    @inbounds for j in ORD:-1:1
+        mul!(rhs, L_template, lower_order_couplings[j], -one(T), one(T))  # rhs -= L · ξ[j]
+        L_template.nzval .*= s                                              # L ← L · s
+        nzval_j = linear_terms[j].nzval
+        map_j = mappings[j]
+        for i in eachindex(nzval_j)
+            L_template.nzval[map_j[i]] += T_L(nzval_j[i])                  # L ← L + B[j]
+        end
+    end
 
-	return L_template
+    return L_template
 end
 
 end # module InvarianceEquation

@@ -22,8 +22,8 @@ println("System: FOM=$FOM, ORD=$ORD  →  first-order sise $(n_total)×$(n_total
 # Random SPD linear matrices for a well-conditioned problem
 rng = MersenneTwister(42)
 function random_spd(n, rng)
-	G = randn(rng, n, n)
-	return G' * G + n * I
+    G = randn(rng, n, n)
+    return G' * G + n * I
 end
 
 linear_terms = ntuple(_ -> random_spd(FOM, rng), ORD + 1)
@@ -64,9 +64,9 @@ param_coeff = param.poly.coefficients
 left_eigenvectors = zeros(ComplexF64, FOM, ORD, nev)
 
 for i in 1:nev
-	propagate_right_eigenvector_from_first(param, Y[1:FOM, i], λ[i], i)
-	propagate_left_eigenvector_from_last(
-		model, left_eigenvectors, X[(FOM*(ORD-1)+1):end, i], conj(μ[i]), i)
+    propagate_right_eigenvector_from_first(param, Y[1:FOM, i], λ[i], i)
+    propagate_left_eigenvector_from_last(
+        model, left_eigenvectors, X[(FOM * (ORD - 1) + 1):end, i], conj(μ[i]), i)
 end
 
 # -------------------------------------------------------------------
@@ -79,16 +79,16 @@ end
 # Taking conjugate transpose of both sides gives x^† A = conj(μ) x^† B.
 # -------------------------------------------------------------------
 right_res = Vector{Float64}(undef, nev)
-left_res  = Vector{Float64}(undef, nev)
+left_res = Vector{Float64}(undef, nev)
 
 for i in 1:nev
-	# Right eigenproblem residual  ||A y_i - λ_i B y_i|| / ||y_i||
-	y_i = vec(param_coeff[:, :, i])
-	right_res[i] = norm(A * y_i - λ[i] * (B * y_i)) / norm(y_i)
+    # Right eigenproblem residual  ||A y_i - λ_i B y_i|| / ||y_i||
+    y_i = vec(param_coeff[:, :, i])
+    right_res[i] = norm(A * y_i - λ[i] * (B * y_i)) / norm(y_i)
 
-	# Left eigenproblem residual  ||x_i' A - conj(μ_i) x_i' B|| / ||x_i||
-	x_i = vec(left_eigenvectors[:, :, i])
-	left_res[i] = norm(x_i' * A - conj(μ[i]) * (x_i' * B)) / norm(x_i)
+    # Left eigenproblem residual  ||x_i' A - conj(μ_i) x_i' B|| / ||x_i||
+    x_i = vec(left_eigenvectors[:, :, i])
+    left_res[i] = norm(x_i' * A - conj(μ[i]) * (x_i' * B)) / norm(x_i)
 end
 
 println("\n" * "="^70)
@@ -100,13 +100,13 @@ println("  relative residual  ||A y_i - λ_i B y_i|| / ||y_i||")
 println("\nPolynomial residue")
 println("||(λ^3 B_3 + λ^2 B_2 + λ B_1 + B_0) y|| / ||y||")
 for i in 1:nev
-	tmp_mat = zeros(ComplexF64, FOM, FOM)
-	for j in 1:(ORD+1)
-		tmp_mat .+= λ[i]^(j - 1) * linear_terms[j]
-	end
-	tmp_vec = Y[1:FOM, i]
-	println("   for y[$i]:",
-		@sprintf("%.2e", norm(tmp_mat * tmp_vec) / norm(tmp_vec)))
+    tmp_mat = zeros(ComplexF64, FOM, FOM)
+    for j in 1:(ORD + 1)
+        tmp_mat .+= λ[i]^(j - 1) * linear_terms[j]
+    end
+    tmp_vec = Y[1:FOM, i]
+    println("   for y[$i]:",
+        @sprintf("%.2e", norm(tmp_mat * tmp_vec) / norm(tmp_vec)))
 end
 
 println("\n" * "="^70)
@@ -118,13 +118,13 @@ println("  relative residual  ||x_i' A - conj(μ_i) x_i' B|| / ||x_i||")
 println("\nPolynomial residue")
 println("||(λ^3 B_3 + λ^2 B_2 + λ B_1 + B_0) y|| / ||y||")
 for i in 1:nev
-	tmp_mat = zeros(ComplexF64, FOM, FOM)
-	for j in 1:(ORD+1)
-		tmp_mat .+= conj(μ[i])^(j - 1) * linear_terms[j]
-	end
-	tmp_vec = X[(FOM*(ORD-1)+1):end, i]
-	println("   for x[$i]:",
-		@sprintf("%.2e", norm(tmp_vec' * tmp_mat) / norm(tmp_vec)))
+    tmp_mat = zeros(ComplexF64, FOM, FOM)
+    for j in 1:(ORD + 1)
+        tmp_mat .+= conj(μ[i])^(j - 1) * linear_terms[j]
+    end
+    tmp_vec = X[(FOM * (ORD - 1) + 1):end, i]
+    println("   for x[$i]:",
+        @sprintf("%.2e", norm(tmp_vec' * tmp_mat) / norm(tmp_vec)))
 end
 
 println("="^70)

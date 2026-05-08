@@ -71,12 +71,12 @@ Construct with pre-allocated buffers sized from `cv`.
 """
 function FerriteGeometricNonlinearity{DEG}(
         dh::DH, cv::CV,
-        free_to_local::Dict{Int,Int}, n_free::Int,
+        free_to_local::Dict{Int, Int}, n_free::Int,
         λ::Float64, μ::Float64) where {DEG, DH, CV}
-    n_qp   = getnquadpoints(cv)
+    n_qp = getnquadpoints(cv)
     n_dofs = ndofs_per_cell(dh)
     ∇W_qp = Matrix{Tensor{2, 3, ComplexF64}}(undef, DEG, n_qp)
-    Fe     = Vector{ComplexF64}(undef, n_dofs)
+    Fe = Vector{ComplexF64}(undef, n_dofs)
     return FerriteGeometricNonlinearity{DEG, DH, CV}(
         dh, cv, free_to_local, n_free, λ, μ,
         (DEG, 0), 0, DEG, ∇W_qp, Fe)
@@ -104,7 +104,7 @@ to per-quadrature-point displacement gradients ∇W_col[q] = ∇u(ξ_q).
 """
 function MORFE.scatter_qp!(∇W_col, W_free, element, t::FerriteGeometricNonlinearity)
     reinit!(t.cv, element)
-    dofs  = celldofs(element)
+    dofs = celldofs(element)
     n_dofs = length(dofs)
     # Build element-local DOF vector (zero for constrained DOFs).
     u_e = Vector{ComplexF64}(undef, n_dofs)
@@ -122,7 +122,7 @@ end
 
 # Symmetric Green-Lagrange cross term for two gradients.
 @inline _E_nl(∇u1, ∇u2) = symmetric(
-    Tensor{2,3}(0.25 * (transpose(∇u1) ⋅ ∇u2 + transpose(∇u2) ⋅ ∇u1)))
+    Tensor{2, 3}(0.25 * (transpose(∇u1) ⋅ ∇u2 + transpose(∇u2) ⋅ ∇u1)))
 
 """
     MORFE.accumulate_qp!(Fe, ∇W_args::NTuple{2}, mult, element, q, dΩ, t)
@@ -136,21 +136,23 @@ Quadratic geometric nonlinearity integrand at one quadrature point:
 function MORFE.accumulate_qp!(Fe, ∇W_args::NTuple{2}, mult, _element, q, dΩ,
         t::FerriteGeometricNonlinearity{2})
     ∇u1, ∇u2 = ∇W_args
-    E_nl  = _E_nl(∇u1, ∇u2)
-    σ_nl  = _σ(E_nl, t.λ, t.μ)
-    ε1    = symmetric(∇u1)
-    ε2    = symmetric(∇u2)
-    σ_ε1  = _σ(ε1, t.λ, t.μ)
-    σ_ε2  = _σ(ε2, t.λ, t.μ)
+    E_nl = _E_nl(∇u1, ∇u2)
+    σ_nl = _σ(E_nl, t.λ, t.μ)
+    ε1 = symmetric(∇u1)
+    ε2 = symmetric(∇u2)
+    σ_ε1 = _σ(ε1, t.λ, t.μ)
+    σ_ε2 = _σ(ε2, t.λ, t.μ)
     n_dofs = ndofs_per_cell(t.dh)
     c = ComplexF64(mult * dΩ)
     for r in 1:n_dofs
-        δε  = shape_symmetric_gradient(t.cv, q, r)
+        δε = shape_symmetric_gradient(t.cv, q, r)
         ∂Nr = shape_gradient(t.cv, q, r)
         Fe[r] += c * (
             δε ⊡ σ_nl
-            + 0.5 * (symmetric(Tensor{2,3}(transpose(∇u1) ⋅ ∂Nr)) ⊡ σ_ε2
-                   + symmetric(Tensor{2,3}(transpose(∇u2) ⋅ ∂Nr)) ⊡ σ_ε1)
+            +
+            0.5 * (symmetric(Tensor{2, 3}(transpose(∇u1) ⋅ ∂Nr)) ⊡ σ_ε2
+             +
+             symmetric(Tensor{2, 3}(transpose(∇u2) ⋅ ∂Nr)) ⊡ σ_ε1)
         )
     end
 end
@@ -165,17 +167,20 @@ Cubic geometric nonlinearity integrand at one quadrature point:
 function MORFE.accumulate_qp!(Fe, ∇W_args::NTuple{3}, mult, _element, q, dΩ,
         t::FerriteGeometricNonlinearity{3})
     ∇u1, ∇u2, ∇u3 = ∇W_args
-    E_nl_23 = _E_nl(∇u2, ∇u3);  σ_23 = _σ(E_nl_23, t.λ, t.μ)
-    E_nl_13 = _E_nl(∇u1, ∇u3);  σ_13 = _σ(E_nl_13, t.λ, t.μ)
-    E_nl_12 = _E_nl(∇u1, ∇u2);  σ_12 = _σ(E_nl_12, t.λ, t.μ)
+    E_nl_23 = _E_nl(∇u2, ∇u3);
+    σ_23 = _σ(E_nl_23, t.λ, t.μ)
+    E_nl_13 = _E_nl(∇u1, ∇u3);
+    σ_13 = _σ(E_nl_13, t.λ, t.μ)
+    E_nl_12 = _E_nl(∇u1, ∇u2);
+    σ_12 = _σ(E_nl_12, t.λ, t.μ)
     n_dofs = ndofs_per_cell(t.dh)
     c = ComplexF64(mult * dΩ / 3)
     for r in 1:n_dofs
         ∂Nr = shape_gradient(t.cv, q, r)
         Fe[r] += c * (
-            symmetric(Tensor{2,3}(transpose(∇u1) ⋅ ∂Nr)) ⊡ σ_23
-          + symmetric(Tensor{2,3}(transpose(∇u2) ⋅ ∂Nr)) ⊡ σ_13
-          + symmetric(Tensor{2,3}(transpose(∇u3) ⋅ ∂Nr)) ⊡ σ_12
+            symmetric(Tensor{2, 3}(transpose(∇u1) ⋅ ∂Nr)) ⊡ σ_23
+            + symmetric(Tensor{2, 3}(transpose(∇u2) ⋅ ∂Nr)) ⊡ σ_13
+            + symmetric(Tensor{2, 3}(transpose(∇u3) ⋅ ∂Nr)) ⊡ σ_12
         )
     end
 end
@@ -208,11 +213,11 @@ sparse matrices using standard Galerkin FEM.
     M_rs = ∫ ρ φ_r · φ_s dΩ
 """
 function assemble_KM!(K, M, dh, cv, λ::Float64, μ::Float64, ρ::Float64)
-    n_dpc   = ndofs_per_cell(dh)
-    Ke      = zeros(n_dpc, n_dpc)
-    Me      = zeros(n_dpc, n_dpc)
-    asm_K   = start_assemble(K)
-    asm_M   = start_assemble(M)
+    n_dpc = ndofs_per_cell(dh)
+    Ke = zeros(n_dpc, n_dpc)
+    Me = zeros(n_dpc, n_dpc)
+    asm_K = start_assemble(K)
+    asm_M = start_assemble(M)
 
     for element in CellIterator(dh)
         fill!(Ke, 0.0)
@@ -224,8 +229,8 @@ function assemble_KM!(K, M, dh, cv, λ::Float64, μ::Float64, ρ::Float64)
                 δε = shape_symmetric_gradient(cv, q, r)
                 Nr = shape_value(cv, q, r)
                 for s in 1:n_dpc
-                    ε  = shape_symmetric_gradient(cv, q, s)
-                    σ  = λ * tr(ε) * one(ε) + 2μ * ε
+                    ε = shape_symmetric_gradient(cv, q, s)
+                    σ = λ * tr(ε) * one(ε) + 2μ * ε
                     Ke[r, s] += (δε ⊡ σ) * dΩ
                     Ns = shape_value(cv, q, s)
                     Me[r, s] += ρ * (Nr ⋅ Ns) * dΩ

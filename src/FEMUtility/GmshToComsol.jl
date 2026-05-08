@@ -7,15 +7,15 @@ export gmsh_to_comsol
 
 # Inverse permutations: undo the Comsol→Gmsh reorderings from comsol_to_gmsh.
 # Derived by computing inv_perm[i] = j s.t. perm[j] = i.
-const INV_PERM_T6  = [1, 2, 3, 4, 6, 5]
-const INV_PERM_Q9  = [1, 2, 4, 3, 5, 8, 9, 6, 7]
+const INV_PERM_T6 = [1, 2, 3, 4, 6, 5]
+const INV_PERM_Q9 = [1, 2, 4, 3, 5, 8, 9, 6, 7]
 const INV_PERM_P18 = [1, 2, 3, 4, 5, 6, 7, 8, 10, 9, 16, 11, 17, 18, 12, 13, 14, 15]
 # T10: inverse of perm [1,2,4,3,5,7,6,8,9,10] — self-inverse (pairs of swaps)
 const INV_PERM_T10 = [1, 2, 4, 3, 5, 7, 6, 8, 9, 10]
 # H27: FEconv PMH→COMSOL map (inverse of COMSOL→Gmsh perm in ComsolToGmsh.jl)
 const INV_PERM_H27 = [1, 2, 4, 3, 5, 6, 8, 7,
-                      9, 12, 13, 10, 14, 16, 22, 20, 23, 26, 27, 24,
-                      11, 17, 15, 25, 19, 21, 18]
+    9, 12, 13, 10, 14, 16, 22, 20, 23, 26, 27, 24,
+    11, 17, 15, 25, 19, 21, 18]
 
 """
     gmsh_to_comsol(gmsh_file::String, comsol_file::String)
@@ -46,11 +46,11 @@ function gmsh_to_comsol(gmsh_file::String, comsol_file::String)
 
     coords_sorted = Vector{Float64}(undef, nn * 3)
     for (new_i, old_i) in enumerate(perm)
-        coords_sorted[3new_i-2:3new_i] = coords[3old_i-2:3old_i]
+        coords_sorted[(3new_i - 2):3new_i] = coords[(3old_i - 2):3old_i]
     end
 
     # Gmsh node tag → 0-based COMSOL index (COMSOL is 0-indexed).
-    tag_to_comsol = Dict{Int64,Int64}(
+    tag_to_comsol = Dict{Int64, Int64}(
         Int64(tag) => (i - 1) for (i, tag) in enumerate(nodeTags_sorted)
     )
 
@@ -62,8 +62,8 @@ function gmsh_to_comsol(gmsh_file::String, comsol_file::String)
     # Gmsh type 13 = P18 (18-node quadratic prism)
     # Gmsh type 11 = T10 (10-node quadratic tetrahedron)
     # Gmsh type 12 = H27 (27-node quadratic hexahedron)
-    elemTags_T6,  nodeFlat_T6  = gmsh.model.mesh.getElementsByType(9)
-    elemTags_Q9,  nodeFlat_Q9  = gmsh.model.mesh.getElementsByType(10)
+    elemTags_T6, nodeFlat_T6 = gmsh.model.mesh.getElementsByType(9)
+    elemTags_Q9, nodeFlat_Q9 = gmsh.model.mesh.getElementsByType(10)
     elemTags_P18, nodeFlat_P18 = gmsh.model.mesh.getElementsByType(13)
     elemTags_T10, nodeFlat_T10 = gmsh.model.mesh.getElementsByType(11)
     elemTags_H27, nodeFlat_H27 = gmsh.model.mesh.getElementsByType(12)
@@ -80,14 +80,14 @@ function gmsh_to_comsol(gmsh_file::String, comsol_file::String)
         for i in 1:ne
             base = (i - 1) * npe
             for (j, p) in enumerate(inv_perm)
-                e2n[base+j] = tag_to_comsol[Int64(nodeFlat[base+p])]
+                e2n[base + j] = tag_to_comsol[Int64(nodeFlat[base + p])]
             end
         end
         return e2n, ne
     end
 
-    e2nT6_c,  neT6  = reorder(nodeFlat_T6,  6,  INV_PERM_T6)
-    e2nQ9_c,  neQ9  = reorder(nodeFlat_Q9,  9,  INV_PERM_Q9)
+    e2nT6_c, neT6 = reorder(nodeFlat_T6, 6, INV_PERM_T6)
+    e2nQ9_c, neQ9 = reorder(nodeFlat_Q9, 9, INV_PERM_Q9)
     e2nP18_c, neP18 = reorder(nodeFlat_P18, 18, INV_PERM_P18)
     e2nT10_c, neT10 = reorder(nodeFlat_T10, 10, INV_PERM_T10)
     e2nH27_c, neH27 = reorder(nodeFlat_H27, 27, INV_PERM_H27)
@@ -95,23 +95,23 @@ function gmsh_to_comsol(gmsh_file::String, comsol_file::String)
     # Geometric entity indices.
     # T6/Q9: reader applied +1, so subtract 1 to recover 0-based COMSOL index.
     # P18/T10/H27: reader stored as-is (no +1), so use element tag directly.
-    e2gT6_c  = [Int64(t) - 1 for t in elemTags_T6]
-    e2gQ9_c  = [Int64(t) - 1 for t in elemTags_Q9]
-    e2gP18_c = [Int64(t)     for t in elemTags_P18]
-    e2gT10_c = [Int64(t)     for t in elemTags_T10]
-    e2gH27_c = [Int64(t)     for t in elemTags_H27]
+    e2gT6_c = [Int64(t) - 1 for t in elemTags_T6]
+    e2gQ9_c = [Int64(t) - 1 for t in elemTags_Q9]
+    e2gP18_c = [Int64(t) for t in elemTags_P18]
+    e2gT10_c = [Int64(t) for t in elemTags_T10]
+    e2gH27_c = [Int64(t) for t in elemTags_H27]
 
     # -------------------------
     # 4. WRITE COMSOL FILE
     # -------------------------
-    ntypes = (neT6  > 0 ? 1 : 0) + (neQ9  > 0 ? 1 : 0) +
+    ntypes = (neT6 > 0 ? 1 : 0) + (neQ9 > 0 ? 1 : 0) +
              (neT10 > 0 ? 1 : 0) + (neP18 > 0 ? 1 : 0) + (neH27 > 0 ? 1 : 0)
 
     open(comsol_file, "w") do io
         _write_header(io, nn)
         for i in 1:nn
             @printf(io, "%.15g %.15g %.15g\n",
-                coords_sorted[3i-2], coords_sorted[3i-1], coords_sorted[3i])
+                coords_sorted[3i - 2], coords_sorted[3i - 1], coords_sorted[3i])
         end
         println(io)
         println(io, "$ntypes # number of element types")
@@ -172,8 +172,8 @@ end
 # After the type-name line the reader skips 3 lines, parses the 4th as element count,
 # then skips 1 more line before reading element connectivity.
 function _write_elem_section(
-    io::IO, type_idx::Int, type_name::String,
-    npe::Int, ne::Int, e2n::Vector{Int64}, e2g::Vector{Int64}
+        io::IO, type_idx::Int, type_name::String,
+        npe::Int, ne::Int, e2n::Vector{Int64}, e2g::Vector{Int64}
 )
     println(io)
     println(io, "# --------- Type $type_idx ----------")
