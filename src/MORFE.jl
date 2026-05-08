@@ -39,8 +39,8 @@ using .CohomologicalEquations
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
-	all_multiindices_up_to, multiindices_with_total_degree,
-	all_multiindices_in_box, indices_in_box_with_bounded_degree
+       all_multiindices_up_to, multiindices_with_total_degree,
+       all_multiindices_in_box, indices_in_box_with_bounded_degree
 
 # Polynomials
 export DensePolynomial, evaluate
@@ -53,22 +53,22 @@ export fem_elements, fem_n_qp, fem_ndofs_per_cell,
 
 # FullOrderModel
 export FullOrderModel, FirstOrderModel, NDOrderModel,
-	linear_first_order_matrices, evaluate_nonlinear_terms!
+       linear_first_order_matrices, evaluate_nonlinear_terms!
 
 # Eigenproblems
 export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, solve, solve_left,
-	Eigenproblem, compute_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
-	select_master_modes_by_sorting, select_master_modes_by_target_frequency
+       Eigenproblem, compute_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
+       select_master_modes_by_sorting, select_master_modes_by_target_frequency
 
 # Realification
 export realify, compose_linear, realify_via_linear
 
 #Resonance
 export ResonanceSet,
-	resonance_set_from_graph_style,
-	resonance_set_from_complex_normal_form_style,
-	resonance_set_from_real_normal_form_style,
-	resonance_set_from_condition_number_estimate
+       resonance_set_from_graph_style,
+       resonance_set_from_complex_normal_form_style,
+       resonance_set_from_real_normal_form_style,
+       resonance_set_from_condition_number_estimate
 
 # ParametrisationMethod
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects

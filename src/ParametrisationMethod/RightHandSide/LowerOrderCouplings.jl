@@ -2,9 +2,11 @@ module LowerOrderCouplings
 
 using LinearAlgebra
 using StaticArrays
-using ..Multiindices: MultiindexSet, build_exponent_index_map, indices_in_box_with_bounded_degree
+using ..Multiindices: MultiindexSet, build_exponent_index_map,
+                      indices_in_box_with_bounded_degree
 using ..Polynomials: nvars
-using ..ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients, multiindex_set
+using ..ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients,
+                               multiindex_set
 using StaticArrays: SVector
 
 export compute_lower_order_couplings
@@ -14,81 +16,81 @@ export compute_lower_order_couplings
 
 # Helper: sum over unit‑vector multi‑indices (total degree 1) from reduced dynamics
 @inline function _sum_degree_one_terms!(accumulator::Vector{Vector{T}},
-	upper_bound::SVector{NVAR, Int},
-	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
-	red_coefficients::AbstractMatrix{T},
-	param_coefficients::AbstractArray{T, 3},
-	unit_vectors::AbstractVector{SVector{NVAR, Int}}) where {NVAR, T}
-	ORD = size(param_coefficients, 2)
+        upper_bound::SVector{NVAR, Int},
+        multiindex_dict::Dict{SVector{NVAR, Int}, Int},
+        red_coefficients::AbstractMatrix{T},
+        param_coefficients::AbstractArray{T, 3},
+        unit_vectors::AbstractVector{SVector{NVAR, Int}}) where {NVAR, T}
+    ORD = size(param_coefficients, 2)
 
-	for j in 1:NVAR
-		upper_bound[j] < 1 && continue
+    for j in 1:NVAR
+        upper_bound[j] < 1 && continue
 
-		unit_vec = unit_vectors[j]
-		idx_unit = get(multiindex_dict, unit_vec, nothing)
-		idx_unit === nothing && continue
+        unit_vec = unit_vectors[j]
+        idx_unit = get(multiindex_dict, unit_vec, nothing)
+        idx_unit === nothing && continue
 
-		red_coeff = @view red_coefficients[:, idx_unit]   # length-NVAR view
+        red_coeff = @view red_coefficients[:, idx_unit]   # length-NVAR view
 
-		# difference = upper_bound - eⱼ
-		diff = upper_bound - unit_vec   # SVector{NVAR,Int}
+        # difference = upper_bound - eⱼ
+        diff = upper_bound - unit_vec   # SVector{NVAR,Int}
 
-		for i in 1:(j-1)
-			@inbounds red_val = red_coeff[i]
-			iszero(red_val) && continue
+        for i in 1:(j - 1)
+            @inbounds red_val = red_coeff[i]
+            iszero(red_val) && continue
 
-			# exponent for parametrisation: diff + eᵢ
-			param_exp = diff + unit_vectors[i]   # SVector{NVAR,Int}
-			param_idx = get(multiindex_dict, param_exp, nothing)
-			param_idx === nothing && continue
+            # exponent for parametrisation: diff + eᵢ
+            param_exp = diff + unit_vectors[i]   # SVector{NVAR,Int}
+            param_idx = get(multiindex_dict, param_exp, nothing)
+            param_idx === nothing && continue
 
-			param_coeff = @view param_coefficients[:, :, param_idx]  # FOM × ORD view
-			_is_zero_coeff(param_coeff) && continue
+            param_coeff = @view param_coefficients[:, :, param_idx]  # FOM × ORD view
+            _is_zero_coeff(param_coeff) && continue
 
-			factor = param_exp[i] * red_val
-			for k in 1:ORD
-				axpy!(factor, @view(param_coeff[:, k]), accumulator[k])
-			end
-		end
-	end
+            factor = param_exp[i] * red_val
+            for k in 1:ORD
+                axpy!(factor, @view(param_coeff[:, k]), accumulator[k])
+            end
+        end
+    end
 end
 
 # Helper: sum over multi‑indices of total degree ≥ 2 from reduced dynamics
 @inline function _sum_higher_degree_terms!(accumulator::Vector{Vector{T}},
-	upper_bound::SVector{NVAR, Int},
-	mset::MultiindexSet,
-	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
-	red_coefficients::AbstractMatrix{T},
-	param_coefficients::AbstractArray{T, 3},
-	candidate_idxs::AbstractVector{Int},
-	unit_vectors::AbstractVector{SVector{NVAR, Int}}) where {NVAR, T}
-	ORD = size(param_coefficients, 2)
-	isempty(candidate_idxs) && return
+        upper_bound::SVector{NVAR, Int},
+        mset::MultiindexSet,
+        multiindex_dict::Dict{SVector{NVAR, Int}, Int},
+        red_coefficients::AbstractMatrix{T},
+        param_coefficients::AbstractArray{T, 3},
+        candidate_idxs::AbstractVector{Int},
+        unit_vectors::AbstractVector{SVector{NVAR, Int}}) where {NVAR, T}
+    ORD = size(param_coefficients, 2)
+    isempty(candidate_idxs) && return
 
-	exps = mset.exponents
-	@inbounds for idx in candidate_idxs
-		multiindex = exps[idx]
-		red_coeff = @view red_coefficients[:, idx]   # length-ROM view
+    exps = mset.exponents
+    @inbounds for idx in candidate_idxs
+        multiindex = exps[idx]
+        red_coeff = @view red_coefficients[:, idx]   # length-ROM view
 
-		diff = upper_bound - multiindex
+        diff = upper_bound - multiindex
 
-		for i in 1:NVAR
-			@inbounds red_val = red_coeff[i]
-			iszero(red_val) && continue
+        for i in 1:NVAR
+            @inbounds red_val = red_coeff[i]
+            iszero(red_val) && continue
 
-			param_exp = diff + unit_vectors[i]
-			param_idx = get(multiindex_dict, param_exp, nothing)
-			param_idx === nothing && continue
+            param_exp = diff + unit_vectors[i]
+            param_idx = get(multiindex_dict, param_exp, nothing)
+            param_idx === nothing && continue
 
-			param_coeff = @view param_coefficients[:, :, param_idx]  # FOM × ORD view
-			_is_zero_coeff(param_coeff) && continue
+            param_coeff = @view param_coefficients[:, :, param_idx]  # FOM × ORD view
+            _is_zero_coeff(param_coeff) && continue
 
-			factor = param_exp[i] * red_val
-			for k in 1:ORD
-				axpy!(factor, @view(param_coeff[:, k]), accumulator[k])
-			end
-		end
-	end
+            factor = param_exp[i] * red_val
+            for k in 1:ORD
+                axpy!(factor, @view(param_coeff[:, k]), accumulator[k])
+            end
+        end
+    end
 end
 
 # -------------------------------------------------------------------
@@ -102,31 +104,30 @@ end
 #                            higher-degree sum (degree in [2, sum(upper_bound)-1],
 #                            componentwise ≤ upper_bound)
 function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
-	parametrisation::Parametrisation{ORD, NVAR, T},
-	reduced_dynamics::ReducedDynamics{ROM, NVAR, T},
-	multiindex_dict::Dict{SVector{NVAR, Int}, Int},
-	accumulator::Vector{Vector{T}},
-	candidate_idxs::AbstractVector{Int},
-	unit_vectors::AbstractVector{SVector{NVAR, Int}},
+        parametrisation::Parametrisation{ORD, NVAR, T},
+        reduced_dynamics::ReducedDynamics{ROM, NVAR, T},
+        multiindex_dict::Dict{SVector{NVAR, Int}, Int},
+        accumulator::Vector{Vector{T}},
+        candidate_idxs::AbstractVector{Int},
+        unit_vectors::AbstractVector{SVector{NVAR, Int}}
 ) where {ORD, NVAR, ROM, T}
-	total_deg_upper = sum(upper_bound)
-	total_deg_upper < 2 && return accumulator
+    total_deg_upper = sum(upper_bound)
+    total_deg_upper < 2 && return accumulator
 
-	mset = multiindex_set(parametrisation)
+    mset = multiindex_set(parametrisation)
 
-	red_coefficients   = coefficients(reduced_dynamics)    # Matrix{T}   (ROM × L)
-	param_coefficients = coefficients(parametrisation)     # Array{T,3}  (FOM × ORD × L)
+    red_coefficients = coefficients(reduced_dynamics)    # Matrix{T}   (ROM × L)
+    param_coefficients = coefficients(parametrisation)     # Array{T,3}  (FOM × ORD × L)
 
-	_sum_degree_one_terms!(accumulator, upper_bound,
-		multiindex_dict, red_coefficients, param_coefficients, unit_vectors)
+    _sum_degree_one_terms!(accumulator, upper_bound,
+        multiindex_dict, red_coefficients, param_coefficients, unit_vectors)
 
-	_sum_higher_degree_terms!(accumulator, upper_bound,
-		mset, multiindex_dict, red_coefficients, param_coefficients, candidate_idxs,
-		unit_vectors)
+    _sum_higher_degree_terms!(accumulator, upper_bound,
+        mset, multiindex_dict, red_coefficients, param_coefficients, candidate_idxs,
+        unit_vectors)
 
-	return accumulator
+    return accumulator
 end
-
 
 # -------------------------------------------------------------------
 # Convenience wrapper (allocating): builds the dictionary, accumulator,
@@ -134,21 +135,22 @@ end
 # for upper_bound (including plain Vector or SVector).
 # Use the 6-argument form in performance-critical loops.
 function compute_lower_order_couplings(
-	upper_bound::AbstractVector{Int},
-	parametrisation::Parametrisation{ORD, NVAR, T},
-	reduced_dynamics::ReducedDynamics{ROM, NVAR, T},
+        upper_bound::AbstractVector{Int},
+        parametrisation::Parametrisation{ORD, NVAR, T},
+        reduced_dynamics::ReducedDynamics{ROM, NVAR, T}
 ) where {ORD, NVAR, ROM, T}
-	mset            = multiindex_set(parametrisation)
-	FOM             = size(coefficients(parametrisation), 1)
-	multiindex_dict = build_exponent_index_map(mset)
-	accumulator     = [zeros(T, FOM) for _ in 1:ORD]
-	total_deg       = sum(upper_bound)
-	candidate_idxs  = total_deg < 2 ? Int[] :
-		indices_in_box_with_bounded_degree(mset, upper_bound, 2, total_deg)
-	ub_svec         = SVector{NVAR, Int}(upper_bound)
-	unit_vectors    = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR))) for j in 1:NVAR]
-	return compute_lower_order_couplings(ub_svec, parametrisation, reduced_dynamics,
-		multiindex_dict, accumulator, candidate_idxs, unit_vectors)
+    mset = multiindex_set(parametrisation)
+    FOM = size(coefficients(parametrisation), 1)
+    multiindex_dict = build_exponent_index_map(mset)
+    accumulator = [zeros(T, FOM) for _ in 1:ORD]
+    total_deg = sum(upper_bound)
+    candidate_idxs = total_deg < 2 ? Int[] :
+                     indices_in_box_with_bounded_degree(mset, upper_bound, 2, total_deg)
+    ub_svec = SVector{NVAR, Int}(upper_bound)
+    unit_vectors = [SVector{NVAR, Int}(ntuple(k -> k == j ? 1 : 0, Val(NVAR)))
+                    for j in 1:NVAR]
+    return compute_lower_order_couplings(ub_svec, parametrisation, reduced_dynamics,
+        multiindex_dict, accumulator, candidate_idxs, unit_vectors)
 end
 
 end # module

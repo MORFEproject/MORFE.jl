@@ -94,7 +94,8 @@ end
 #   Q_r[1] = Y^† · J_r[2, :] = Y^† · B₂^† · Xℓ_r
 #   C_coeffs[r][1, :] = Q_r[1][1:ROM]
 #   E_coeffs[r][1, :] = Q_r[1][ROM+1:NVAR]
-C_coeffs, E_coeffs = precompute_orthogonality_column_polynomials(
+C_coeffs,
+E_coeffs = precompute_orthogonality_column_polynomials(
     J_coeffs, generalised_right_eigenmodes, reduced_dynamics_linear
 )
 
@@ -143,7 +144,8 @@ external_dynamics = ComplexF64[-1000.0]
 # -------------------------------------------------------------------
 # M   : nR × (FOM + nR)  with  M = [ L | C ]
 # rhs : length nR
-M, rhs = assemble_orthogonality_matrix_and_rhs(
+M,
+rhs = assemble_orthogonality_matrix_and_rhs(
     s, J_coeffs, C_coeffs, E_coeffs,
     resonance, lower_order_couplings, external_dynamics
 )
@@ -226,8 +228,9 @@ println("\nRHS_lower_1 error = ", abs(rhs_lower_1 - rhs_lower_1_manual))
 # Resonant C_r(s) for mode 1: constant (ORD-1 = 1), picks resonant columns.
 # C_coeffs[1][1, :] = Q_1[1][1:ROM]; resonance = [true, false] → take column 1.
 c1_manual = ComplexF64[ # = Xℓ^† · B₂ · Y
-    (B2' * Xℓ)' * generalised_right_eigenmodes[:, 1],
-    (B2' * Xℓ)' * generalised_right_eigenmodes[:, 2]
+(B2' * Xℓ)' * generalised_right_eigenmodes[:, 1],
+(B2' * Xℓ)' * generalised_right_eigenmodes[
+    :, 2]
 ]
 println("\nC₁($s) resonant error = ", norm(c1 - c1_manual))
 

@@ -24,7 +24,8 @@ FOM = 3
 external_system_size = 1
 ROM = NVAR - external_system_size
 
-W, R = create_parametrisation_method_objects(
+W,
+R = create_parametrisation_method_objects(
     mset, ORD, FOM, ROM, external_system_size, ComplexF64)
 
 # Fill parametrisation coefficients.

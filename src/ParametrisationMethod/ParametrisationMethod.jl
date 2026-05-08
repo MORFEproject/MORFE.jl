@@ -6,7 +6,7 @@ using ..Multiindices: MultiindexSet
 using ..Polynomials: DensePolynomial
 
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
-	compute_higher_derivative_coefficients!
+       compute_higher_derivative_coefficients!
 
 """
 	Parametrisation{ORD, NVAR, T}
@@ -22,14 +22,15 @@ Layout: `coefficients[:, ord, l]` is the full‑state vector (length FOM) for th
 `ord`-th time derivative of the `l`-th monomial coefficient.
 """
 struct Parametrisation{ORD, NVAR, T}
-	poly::DensePolynomial{T, NVAR, 3, Array{T, 3}}
-	external_system_size::Int
+    poly::DensePolynomial{T, NVAR, 3, Array{T, 3}}
+    external_system_size::Int
 
-	function Parametrisation(poly::DensePolynomial{T, NVAR, 3, Array{T, 3}}, external_system_size::Int) where {T, NVAR}
-		ORD = size(poly.coefficients, 2)
-		@assert external_system_size >= 0 "external_system_size must be non‑negative"
-		new{ORD, NVAR, T}(poly, external_system_size)
-	end
+    function Parametrisation(poly::DensePolynomial{T, NVAR, 3, Array{T, 3}},
+            external_system_size::Int) where {T, NVAR}
+        ORD = size(poly.coefficients, 2)
+        @assert external_system_size >= 0 "external_system_size must be non‑negative"
+        new{ORD, NVAR, T}(poly, external_system_size)
+    end
 end
 
 Base.size(W::Parametrisation) = size(W.poly.coefficients, 1) # FOM: full‑order state dimension
@@ -50,15 +51,16 @@ The polynomial is stored in `poly`, and `external_system_size` gives the number 
 The dynamics are: ż = R(z, r), where r are the forcing variables.
 """
 struct ReducedDynamics{ROM, NVAR, T}
-	poly::DensePolynomial{T, NVAR, 2, Matrix{T}}
-	external_system_size::Int
+    poly::DensePolynomial{T, NVAR, 2, Matrix{T}}
+    external_system_size::Int
 
-	function ReducedDynamics(poly::DensePolynomial{T, NVAR, 2, Matrix{T}}, external_system_size::Int) where {T, NVAR}
-		@assert external_system_size >= 0 "external_system_size must be non‑negative"
-		ROM = NVAR - external_system_size
-		@assert ROM > 0 "ROM = NVAR - external_system_size must be positive; got $(ROM)"
-		new{ROM, NVAR, T}(poly, external_system_size)
-	end
+    function ReducedDynamics(poly::DensePolynomial{T, NVAR, 2, Matrix{T}},
+            external_system_size::Int) where {T, NVAR}
+        @assert external_system_size >= 0 "external_system_size must be non‑negative"
+        ROM = NVAR - external_system_size
+        @assert ROM > 0 "ROM = NVAR - external_system_size must be positive; got $(ROM)"
+        new{ROM, NVAR, T}(poly, external_system_size)
+    end
 end
 
 Base.size(::ReducedDynamics{ROM}) where {ROM} = ROM
@@ -86,30 +88,30 @@ to initialise the coefficient vectors correctly.
 - `T`: element type.
 """
 function create_parametrisation_method_objects(
-	mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, external_system_size::Int,
-	::Type{T} = Complex) where {T <: Number, NVAR}
-	# Validate variable count
-	@assert NVAR == ROM + external_system_size "Multiindex set has $NVAR variables, but ROM + external_system_size = $(ROM + external_system_size)"
+        mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int, ROM::Int, external_system_size::Int,
+        ::Type{T} = Complex) where {T <: Number, NVAR}
+    # Validate variable count
+    @assert NVAR == ROM + external_system_size "Multiindex set has $NVAR variables, but ROM + external_system_size = $(ROM + external_system_size)"
 
-	# Parametrisation coefficients: (FOM, ORD, L) 3-D array
-	W_poly = DensePolynomial(zeros(T, FOM, ORD, length(mset)), mset)
-	W = Parametrisation(W_poly, external_system_size)
+    # Parametrisation coefficients: (FOM, ORD, L) 3-D array
+    W_poly = DensePolynomial(zeros(T, FOM, ORD, length(mset)), mset)
+    W = Parametrisation(W_poly, external_system_size)
 
-	# Reduced dynamics coefficients: (ROM, L) matrix
-	R_poly = DensePolynomial(zeros(T, NVAR, length(mset)), mset)
-	# THE REDUCED DYNAMICS POLYNOMIAL HAS NVAR VARIABLES, NOT ROM, BECAUSE IT DEPENDS ON ALL REDUCED + EXTERNAL VARS
-	# ADDITIONALLY, THE COEFFICIENTS ARE NVAR-VECTORS, NOT SCALARS, SO THE COEFFICIENT ARRAY HAS SHAPE (NVAR, L)
-	# THE LAST ROWS OF THE COEFFICIENTS CORRESPOND TO THE EXTERNAL SYSTEM TERMS, WHICH ARE DIRECTLY COPIED FROM THE FULL ORDER MODEL
-	R = ReducedDynamics(R_poly, external_system_size)
+    # Reduced dynamics coefficients: (ROM, L) matrix
+    R_poly = DensePolynomial(zeros(T, NVAR, length(mset)), mset)
+    # THE REDUCED DYNAMICS POLYNOMIAL HAS NVAR VARIABLES, NOT ROM, BECAUSE IT DEPENDS ON ALL REDUCED + EXTERNAL VARS
+    # ADDITIONALLY, THE COEFFICIENTS ARE NVAR-VECTORS, NOT SCALARS, SO THE COEFFICIENT ARRAY HAS SHAPE (NVAR, L)
+    # THE LAST ROWS OF THE COEFFICIENTS CORRESPOND TO THE EXTERNAL SYSTEM TERMS, WHICH ARE DIRECTLY COPIED FROM THE FULL ORDER MODEL
+    R = ReducedDynamics(R_poly, external_system_size)
 
-	return (W, R)
+    return (W, R)
 end
 
 # For the special case where ROM = NVAR (no forcing, and reduced dimension equals variable count)
 function create_parametrisation_method_objects(
-	mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int,
-	::Type{T} = Complex) where {T <: Number, NVAR}
-	return create_parametrisation_method_objects(mset, ORD, FOM, NVAR, 0, T)
+        mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int,
+        ::Type{T} = Complex) where {T <: Number, NVAR}
+    return create_parametrisation_method_objects(mset, ORD, FOM, NVAR, 0, T)
 end
 
 """
@@ -157,38 +159,39 @@ derivatives exist for a first‑order ODE).
   [`LowerOrderCouplings.compute_lower_order_couplings`](@ref).
 """
 function compute_higher_derivative_coefficients!(
-	param_coeff::AbstractArray{T, 3},
-	red_coeff::AbstractMatrix{T},
-	external_dynamics::AbstractVector{T},
-	superharmonic::T,
-	global_index::Int,
-	generalised_eigenmodes::AbstractMatrix{T},
-	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+        param_coeff::AbstractArray{T, 3},
+        red_coeff::AbstractMatrix{T},
+        external_dynamics::AbstractVector{T},
+        superharmonic::T,
+        global_index::Int,
+        generalised_eigenmodes::AbstractMatrix{T},
+        lower_order_couplings::AbstractVector{<:AbstractVector{T}}
 ) where {T}
-	ORD = size(param_coeff, 2)
-	ROM = size(red_coeff, 1)
-	NVAR = size(generalised_eigenmodes, 2)
-	N_EXT = NVAR - ROM
+    ORD = size(param_coeff, 2)
+    ROM = size(red_coeff, 1)
+    NVAR = size(generalised_eigenmodes, 2)
+    N_EXT = NVAR - ROM
 
-	Rα = view(red_coeff, :, global_index)
+    Rα = view(red_coeff, :, global_index)
 
-	for j in 1:(ORD-1)
-		Wj  = view(param_coeff, :, j, global_index)
-		Wj1 = view(param_coeff, :, j + 1, global_index)
+    for j in 1:(ORD - 1)
+        Wj = view(param_coeff, :, j, global_index)
+        Wj1 = view(param_coeff, :, j + 1, global_index)
 
-		# W^(j+1)[α] = s·W^(j)[α] + ξ[j]
-		@. Wj1 = superharmonic * Wj + lower_order_couplings[j]
+        # W^(j+1)[α] = s·W^(j)[α] + ξ[j]
+        @. Wj1 = superharmonic * Wj + lower_order_couplings[j]
 
-		# + Φ_master · R[α]
-		mul!(Wj1, view(generalised_eigenmodes, :, 1:ROM), Rα, one(T), one(T))
+        # + Φ_master · R[α]
+        mul!(Wj1, view(generalised_eigenmodes, :, 1:ROM), Rα, one(T), one(T))
 
-		# + Φ_ext · e_dyn  (only if external modes are present)
-		if N_EXT > 0
-			mul!(Wj1, view(generalised_eigenmodes, :, (ROM+1):NVAR), external_dynamics, one(T), one(T))
-		end
-	end
+        # + Φ_ext · e_dyn  (only if external modes are present)
+        if N_EXT > 0
+            mul!(Wj1, view(generalised_eigenmodes, :, (ROM + 1):NVAR),
+                external_dynamics, one(T), one(T))
+        end
+    end
 
-	return nothing
+    return nothing
 end
 
 end # module

@@ -262,7 +262,8 @@ Warning: The Node Re-Ordering is done by hand comparing with the old comsol file
          Here is the permutation only implemented for T6, Q9 and P18
 """
 function comsol_to_gmsh(comsol_file::String, gmsh_file::String)
-    (nn, n2c, e2nT6, e2gT6, e2nQ9, e2gQ9, e2nT10, e2gT10, e2nP18, e2gP18, e2nH27, e2gH27) = _read_mesh(comsol_file)
+    (nn, n2c, e2nT6, e2gT6, e2nQ9, e2gQ9, e2nT10, e2gT10,
+        e2nP18, e2gP18, e2nH27, e2gH27) = _read_mesh(comsol_file)
 
     gmsh.initialize()
     gmsh.model.add("mesh")
@@ -368,8 +369,8 @@ function comsol_to_gmsh(comsol_file::String, gmsh_file::String)
         # completely reordered vs Gmsh type 12.
         # Derived from FEconv (inverse of PMH→COMSOL map) and verified vs Gmsh API coords.
         perm_H27 = [1, 2, 4, 3, 5, 6, 8, 7,
-                    9, 12, 21, 10, 11, 13, 23, 14, 22, 27, 25, 16,
-                    26, 15, 17, 20, 24, 18, 19]
+            9, 12, 21, 10, 11, 13, 23, 14, 22, 27, 25, 16,
+            26, 15, 17, 20, 24, 18, 19]
         ne = length(e2nH27) ÷ H27n
         for i in 1:ne
             idx = ((i - 1) * H27n + 1):(i * H27n)
@@ -386,7 +387,8 @@ end
 """
 """
 function comsol_to_gmsh_linear(comsol_file::String, gmsh_file::String)
-    (nn, n2c, e2nT6, e2gT6, e2nQ9, e2gQ9, e2nT10, e2gT10, e2nP18, e2gP18, e2nH27, e2gH27) = _read_mesh(comsol_file)
+    (nn, n2c, e2nT6, e2gT6, e2nQ9, e2gQ9, e2nT10, e2gT10,
+        e2nP18, e2gP18, e2nH27, e2gH27) = _read_mesh(comsol_file)
 
     gmsh.initialize()
     gmsh.model.add("mesh")
@@ -503,7 +505,7 @@ function comsol_to_gmsh_linear(comsol_file::String, gmsh_file::String)
         e2nT4 = Vector{Int64}(undef, ne * 4)
         for i in 1:ne
             idx10 = ((i - 1) * T10n + 1):(i * T10n)
-            idx4  = ((i - 1) * 4 + 1):(i * 4)
+            idx4 = ((i - 1) * 4 + 1):(i * 4)
             e2nT4[idx4] = e2nT10[idx10][1:4]
         end
         gmsh.model.mesh.addElements(dim_vol, vol_tag, [elemType], [elemTags], [e2nT4])
@@ -517,7 +519,7 @@ function comsol_to_gmsh_linear(comsol_file::String, gmsh_file::String)
         e2nH8 = Vector{Int64}(undef, ne * 8)
         for i in 1:ne
             idx27 = ((i - 1) * H27n + 1):(i * H27n)
-            idx8  = ((i - 1) * 8 + 1):(i * 8)
+            idx8 = ((i - 1) * 8 + 1):(i * 8)
             e2nH8[idx8] = e2nH27[idx27][1:8]
         end
         gmsh.model.mesh.addElements(dim_vol, vol_tag, [elemType], [elemTags], [e2nH8])

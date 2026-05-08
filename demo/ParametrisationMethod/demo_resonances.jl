@@ -23,7 +23,7 @@ println("Targets: 1..$internal_modes = internal, $(internal_modes+1)..$N_TARGETS
 super_eigenvalues = ComplexF64[1.0im, -1.0im, -1.0 + 1.0im, -1.0 - 1.0im, 1.1im, -1.1im]
 outer_eigenvalues = ComplexF64[2.0im, -2.0im, 0.0]
 target_eigenvalues = ComplexF64[
-    1.0im, -1.0im, -1.0 + 1.0im, -1.0 - 1.0im, 2.0im, -2.0im, 0.0]
+1.0im, -1.0im, -1.0 + 1.0im, -1.0 - 1.0im, 2.0im, -2.0im, 0.0]
 
 # 1. Graph style (classic)
 println("\n=== 1. Graph style (classic) ===")
