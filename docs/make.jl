@@ -21,6 +21,7 @@ makedocs(
         MORFE.FullOrderModel,
         MORFE.Eigenproblems,
         MORFE.Eigensolvers,
+        MORFE.Eigenproblems,
         MORFE.JordanChain,
         MORFE.PropagateEigenmodes,
         MORFE.Realification,
@@ -38,7 +39,7 @@ makedocs(
 
         # ── Tutorials ───────────────────────────────────────────────────────
         "Tutorials" => [
-            "MultilinearTerms" => "tutorials/multilinear_terms.md",
+            "MultilinearTerms" => "tutorials/multilinear_terms.md"
         ],
 
         # ── Theory ──────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ makedocs(
             "Spectral Decomposition" => [
                 "Eigenproblems" => "api/eigenproblems.md",
                 "Eigensolvers" => "api/eigensolvers.md",
+                "Eigenproblems" => "api/eigenproblems.md",
                 "JordanChain" => "api/jordan_chain.md",
                 "PropagateEigenmodes" => "api/propagate_eigenmodes.md"
             ],

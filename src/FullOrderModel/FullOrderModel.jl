@@ -28,7 +28,7 @@ abstract type AbstractFullOrderModel end
 
 """
 
-	NDOrderModel{ORD, ORDP1, N_NL, MT} <: AbstractFullOrderModel
+	NDOrderModel{ORD, ORDP1, N_NL, T, MT} <: AbstractFullOrderModel
 
 Representation of an ORD-th (ORDP1=ORD+1) order dynamical system of the form
 
