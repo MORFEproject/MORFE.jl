@@ -2,7 +2,8 @@ module MultilinearMaps
 
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, evaluate_term!,
        fem_elements, fem_n_qp, fem_ndofs_per_cell,
-       scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer
+       scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
+       fem_reinit!
 
 """
 	AbstractMultilinearMap{ORD}
@@ -38,6 +39,7 @@ abstract type FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD} end
 function fem_elements end
 function fem_n_qp end
 function fem_ndofs_per_cell end
+function fem_reinit! end
 function scatter_qp! end
 function accumulate_qp! end
 function assemble_element! end

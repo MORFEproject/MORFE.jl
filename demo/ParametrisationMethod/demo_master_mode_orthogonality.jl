@@ -4,7 +4,7 @@ using MORFE.MasterModeOrthogonality:
                                      evaluate_orthogonality_row_and_lower_order_rhs!,
                                      evaluate_orthogonality_column_row!,
                                      evaluate_orthogonality_external_rhs,
-                                     assemble_orthogonality_matrix_and_rhs
+                                     assemble_orthogonality_matrix_and_rhs!
 using LinearAlgebra
 using StaticArrays: SVector
 
@@ -144,9 +144,10 @@ external_dynamics = ComplexF64[-1000.0]
 # -------------------------------------------------------------------
 # M   : nR × (FOM + nR)  with  M = [ L | C ]
 # rhs : length nR
-M,
-rhs = assemble_orthogonality_matrix_and_rhs(
-    s, J_coeffs, C_coeffs, E_coeffs,
+M   = Matrix{ComplexF64}(undef, nR, FOM + nR)
+rhs = zeros(ComplexF64, nR)
+assemble_orthogonality_matrix_and_rhs!(
+    M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
     resonance, lower_order_couplings, external_dynamics
 )
 

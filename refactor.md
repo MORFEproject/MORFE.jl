@@ -6,8 +6,8 @@ All three files are oversized because they each carry multiple unrelated concern
 
 | File | Lines | Concerns bundled together |
 |:-----|------:|:--------------------------|
-| `CohomologicalEquations.jl` | 862 | (1) 18-field god-object struct, (2) dense+sparse solver implementations, (3) buffer-allocation helpers, (4) 200-line high-level driver |
-| `InvarianceEquation.jl` | 978 | (1) operator precomputation (dense Horner), (2) sparse Horner + template management, (3) column/external polynomial evaluation, (4) three near-duplicate assembly overloads |
+| `CohomologicalEquations.jl` | 872 | (1) 22-field god-object struct, (2) dense+sparse solver implementations, (3) buffer-allocation helpers, (4) 200-line high-level driver |
+| `InvarianceEquation.jl` | 979 | (1) operator precomputation (dense Horner), (2) sparse Horner + template management, (3) column/external polynomial evaluation, (4) three near-duplicate assembly overloads |
 | `MasterModeOrthogonality.jl` | 811 | (1) row-operator precomputation, (2) joint-operator precomputation, (3) fused row Horner evaluation, (4) column/external polynomial evaluation, (5) allocating + in-place assembly overloads |
 
 `InvarianceEquation.jl` and `MasterModeOrthogonality.jl` are structurally parallel and
@@ -21,13 +21,14 @@ for each file.
 | Assembly (module file, trimmed) | `InvarianceEquation.jl` | `MasterModeOrthogonality.jl` |
 
 The root cause in `CohomologicalEquations.jl` is `CohomologicalContext`: a single flat
-struct with 18 fields spanning five conceptually distinct categories of data:
+struct with 22 fields spanning six conceptually distinct categories of data:
 
 | Category | Current field names |
 |:---------|:--------------------|
 | Spectral / model data | `linear_terms`, `generalised_eigenmodes`, `lambda_diag` |
 | Invariance operators | `invariance_C_coeffs`, `invariance_E_coeffs` |
 | Orthogonality operators | `orthogonality_J_coeffs`, `orthogonality_C_coeffs`, `orthogonality_E_coeffs` |
+| Resonance bookkeeping | `resonance_set`, `linear_monomial_skip_set` |
 | Lower-order coupling | `multiindex_dict`, `lower_order_buffer`, `candidate_indices_by_monomial`, `unit_vectors` |
 | Solve buffers + sparse state | `system_matrix_buffer`, `rhs_buffer`, `external_rhs_buffer`, `ml_result_buffer`, `sparse_L_template`, `sparse_L_mappings`, `pardiso_solver`, `klu_cache` |
 
@@ -198,6 +199,14 @@ Constructor calls `precompute_sparse_L_template`, `_alloc_pardiso_solver`, and
 `CohomologicalEquations.jl`.  The `rhs_extended` field eliminates the
 `hcat(Vector(rhs), C_r)` allocation on every resonant monomial in the sparse path.
 
+> **Cross-module dependency**: `precompute_sparse_L_template` is defined in
+> `InvarianceEquation` and must remain there (it belongs to the Horner evaluator
+> for `L(s)`).  `CohomologicalEquations/SolverResources.jl` therefore needs
+> `using ..InvarianceEquation: precompute_sparse_L_template` in its module preamble.
+> Alternatively, the call can be kept in the outer `CohomologicalContext` constructor
+> and the resulting `(template, mappings)` pair passed into `SparseLinearSolverState`
+> as plain arguments, keeping `SolverResources.jl` dependency-free.
+
 ### 2e. `CohomologicalBuffers{T}` — lives in `SolverResources.jl`
 ```julia
 struct CohomologicalBuffers{T}
@@ -228,7 +237,7 @@ struct CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}
     sparse_solver::Union{Nothing, SparseLinearSolverState{T}}   # nothing on dense path
 end
 ```
-**18 flat fields → 10 named fields.**  Every call site becomes self-documenting:
+**22 flat fields → 10 named fields.**  Every call site becomes self-documenting:
 `ctx.invariance.C_coeffs` replaces `ctx.invariance_C_coeffs`;
 `ctx.buffers.rhs` replaces `ctx.rhs_buffer`;
 `ctx.sparse_solver.pardiso` replaces `ctx.pardiso_solver`.
@@ -371,12 +380,12 @@ Target: ≈ 180 lines.
 | `assemble_cohomological_matrix_and_rhs` (2 allocating overloads) | IE.jl lines 766–833 | Delete |
 | `evaluate_external_rhs!` allocating overload | IE.jl lines 688–697 | Delete |
 | `assemble_orthogonality_matrix_and_rhs` (allocating overload) | MMO.jl lines 733–770 | Delete |
-| `findall(!iszero, ...)` in `evaluate_orthogonality_external_rhs` | MMO.jl line 641 | Replace with inline scan (no alloc) |
-| `_alloc_system_buffer` | CE.jl lines 567–573 | Fold into `CohomologicalBuffers` constructor |
-| `_alloc_sparse_L_data` | CE.jl lines 578–581 | Fold into `SparseLinearSolverState` constructor |
-| `_alloc_pardiso_solver` | CE.jl lines 584–600 | Fold into `SparseLinearSolverState` constructor |
-| `_alloc_klu_cache` | CE.jl lines 604–605 | Fold into `SparseLinearSolverState` constructor |
-| `hcat(Vector(rhs), C_r)` per-monomial allocation | CE.jl line 377 | Replace with `rhs_extended` field in `SparseLinearSolverState` |
+| `findall(!iszero, ...)` in `evaluate_orthogonality_external_rhs` | MMO.jl line 640 | Replace with inline scan (no alloc) |
+| `_alloc_system_buffer` (two dispatch methods) | CE.jl lines 569–578 | Fold into `CohomologicalBuffers` constructor |
+| `_alloc_sparse_L_data` (two dispatch methods) | CE.jl lines 583–586 | Fold into `SparseLinearSolverState` constructor |
+| `_alloc_pardiso_solver` (two dispatch methods) | CE.jl lines 589–605 | Fold into `SparseLinearSolverState` constructor |
+| `_alloc_klu_cache` (two dispatch methods) | CE.jl lines 609–610 | Fold into `SparseLinearSolverState` constructor |
+| `hcat(Vector(rhs), C_r)` per-monomial allocation | CE.jl line 381 | Replace with `rhs_extended` field in `SparseLinearSolverState` |
 
 ---
 

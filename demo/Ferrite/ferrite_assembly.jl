@@ -49,6 +49,7 @@ order 2 (second-order ODE). The term only uses position-derivative inputs
 - `deg`            — DEG
 - `∇W_qp`         — pre-allocated qp gradient buffer, Matrix{Tensor{2,3,ComplexF64}}(DEG, n_qp)
 - `Fe`             — pre-allocated element residual, Vector{ComplexF64}(ndofs_per_cell)
+- `u_e`            — pre-allocated element DOF vector, Vector{ComplexF64}(ndofs_per_cell)
 """
 struct FerriteGeometricNonlinearity{DEG, DH, CV} <: MORFE.FEMMultilinearMap{2}
     dh::DH
@@ -62,6 +63,7 @@ struct FerriteGeometricNonlinearity{DEG, DH, CV} <: MORFE.FEMMultilinearMap{2}
     deg::Int
     ∇W_qp::Matrix{Tensor{2, 3, ComplexF64}}
     Fe::Vector{ComplexF64}
+    u_e::Vector{ComplexF64}
 end
 
 """
@@ -73,13 +75,14 @@ function FerriteGeometricNonlinearity{DEG}(
         dh::DH, cv::CV,
         free_to_local::Dict{Int, Int}, n_free::Int,
         λ::Float64, μ::Float64) where {DEG, DH, CV}
-    n_qp = getnquadpoints(cv)
+    n_qp   = getnquadpoints(cv)
     n_dofs = ndofs_per_cell(dh)
-    ∇W_qp = Matrix{Tensor{2, 3, ComplexF64}}(undef, DEG, n_qp)
-    Fe = Vector{ComplexF64}(undef, n_dofs)
+    ∇W_qp  = Matrix{Tensor{2, 3, ComplexF64}}(undef, DEG, n_qp)
+    Fe     = Vector{ComplexF64}(undef, n_dofs)
+    u_e    = Vector{ComplexF64}(undef, n_dofs)
     return FerriteGeometricNonlinearity{DEG, DH, CV}(
         dh, cv, free_to_local, n_free, λ, μ,
-        (DEG, 0), 0, DEG, ∇W_qp, Fe)
+        (DEG, 0), 0, DEG, ∇W_qp, Fe, u_e)
 end
 
 # -----------------------------------------------------------------------
@@ -96,18 +99,19 @@ MORFE.fem_qp_buffer(t::FerriteGeometricNonlinearity) = t.∇W_qp
 
 MORFE.fem_getdetJdV(_element, q, t::FerriteGeometricNonlinearity) = getdetJdV(t.cv, q)
 
+# Called once per element in _replay_fem_split! before the scatter loop (O1).
+MORFE.fem_reinit!(element, t::FerriteGeometricNonlinearity) = reinit!(t.cv, element)
+
 """
     MORFE.scatter_qp!(∇W_col, W_free, element, t)
 
-Reinit CellValues for `element`, then scatter the free-DOF vector `W_free`
-to per-quadrature-point displacement gradients ∇W_col[q] = ∇u(ξ_q).
+Scatter the free-DOF vector `W_free` to per-quadrature-point displacement gradients
+∇W_col[q] = ∇u(ξ_q).  CellValues must already be reinit!-ed for `element` via
+`fem_reinit!` before this call.
 """
 function MORFE.scatter_qp!(∇W_col, W_free, element, t::FerriteGeometricNonlinearity)
-    reinit!(t.cv, element)
     dofs = celldofs(element)
-    n_dofs = length(dofs)
-    # Build element-local DOF vector (zero for constrained DOFs).
-    u_e = Vector{ComplexF64}(undef, n_dofs)
+    u_e = t.u_e
     for (i, d) in enumerate(dofs)
         local_idx = get(t.free_to_local, d, 0)
         u_e[i] = local_idx == 0 ? zero(ComplexF64) : W_free[local_idx]
@@ -145,8 +149,8 @@ function MORFE.accumulate_qp!(Fe, ∇W_args::NTuple{2}, mult, _element, q, dΩ,
     n_dofs = ndofs_per_cell(t.dh)
     c = ComplexF64(mult * dΩ)
     for r in 1:n_dofs
-        δε = shape_symmetric_gradient(t.cv, q, r)
         ∂Nr = shape_gradient(t.cv, q, r)
+        δε  = symmetric(∂Nr)
         Fe[r] += c * (
             δε ⊡ σ_nl
             +

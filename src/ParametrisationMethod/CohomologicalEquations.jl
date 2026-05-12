@@ -69,7 +69,6 @@ using ..ParametrisationMethod: Parametrisation, ReducedDynamics,
 using ..LowerOrderCouplings: compute_lower_order_couplings
 using ..InvarianceEquation: assemble_cohomological_matrix_and_rhs,
                             assemble_cohomological_matrix_and_rhs!,
-                            precompute_column_polynomials,
                             precompute_master_column_polynomials,
                             precompute_external_column_polynomials,
                             build_sparse_L_and_rhs!,
@@ -208,7 +207,8 @@ struct CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT <: AbstractMatrix{L
     candidate_indices_by_monomial::Vector{Vector{Int}} # length L; candidates for _sum_higher_degree_terms!
     unit_vectors::Vector{SVector{NVAR, Int}}           # NVAR unit basis vectors; built once, shared
     # ── Stacked system pre-allocated buffers ────────────────────────────────────
-    # Dense path: (FOM+ROM)×(FOM+ROM); sparse path: (ROM+1)×(ROM+1) for Schur complement only.
+    # Both paths: (FOM+ROM)×(FOM+ROM). Dense path: full bordered system assembled here.
+    # Sparse path: rows 1:FOM → C_r (FOM×nR); rows FOM+1:FOM+nR → M_orth (nR×(FOM+nR)).
     system_matrix_buffer::Matrix{T}
     rhs_buffer::Vector{T}             # length FOM+ROM; holds rhs, then solution after ldiv!
     external_rhs_buffer::Vector{T}    # length FOM; scratch buffer for evaluate_external_rhs!
@@ -368,8 +368,8 @@ function _solve_monomial!(
     end
 
     # ── 3b. Resonant: bordered system via Pardiso + Schur complement ────────────
-    # Assemble C_r columns: FOM × nR (dense — one column per resonant mode)
-    C_r = Matrix{T}(undef, FOM, nR)
+    # Assemble C_r columns: FOM × nR — reuse pre-allocated buffer (rows 1:FOM).
+    C_r = view(ctx.system_matrix_buffer, 1:FOM, 1:nR)
     col = 1
     for r in eachindex(resonance)
         resonance[r] || continue
@@ -383,8 +383,8 @@ function _solve_monomial!(
     W_prime = view(X, :, 1)            # FOM-vector
     C_prime = view(X, :, 2:(nR + 1))      # FOM × nR
 
-    # Assemble orthogonality rows: nR × (FOM+nR) matrix and nR-vector g
-    M_orth = Matrix{T}(undef, nR, FOM + nR)
+    # Assemble orthogonality rows: nR × (FOM+nR) — reuse pre-allocated buffer (rows FOM+1:FOM+nR).
+    M_orth = view(ctx.system_matrix_buffer, (FOM + 1):(FOM + nR), 1:(FOM + nR))
     g = view(ctx.rhs_buffer, (FOM + 1):(FOM + nR))
     assemble_orthogonality_matrix_and_rhs!(
         M_orth, g, s,
@@ -570,10 +570,11 @@ function _alloc_system_buffer(::Type{<:AbstractMatrix}, FOM, ROM)
     Matrix{ComplexF64}(undef, FOM + ROM, FOM + ROM)
 end
 
-# Sparse path: only the small (ROM+1)×(ROM+1) Schur-complement buffer is needed;
-# the FOM×FOM block is solved via Pardiso without materialising a dense matrix.
+# Sparse path: same (FOM+ROM)×(FOM+ROM) size as the dense path. The buffer is
+# partitioned by the sparse _solve_monomial! into a C_r region (rows 1:FOM) and
+# an M_orth region (rows FOM+1:FOM+nR), eliminating per-monomial heap allocations.
 function _alloc_system_buffer(::Type{<:SparseMatrixCSC}, FOM, ROM)
-    Matrix{ComplexF64}(undef, ROM + 1, ROM + 1)
+    Matrix{ComplexF64}(undef, FOM + ROM, FOM + ROM)
 end
 
 # Sparse path: pre-allocate union-pattern L_template and compute nzval index mappings.
