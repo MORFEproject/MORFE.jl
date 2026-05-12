@@ -10,13 +10,13 @@ include("SpectralDecomposition/Eigensolvers.jl")
 include("SpectralDecomposition/JordanChain.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
-include("ParametrisationMethod/InvarianceEquation.jl")
-include("ParametrisationMethod/MasterModeOrthogonality.jl")
+include("ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl")
+include("ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
 include("SpectralDecomposition/PropagateEigenmodes.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
-include("ParametrisationMethod/CohomologicalEquations.jl")
+include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -49,7 +49,8 @@ export DensePolynomial, evaluate
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, ExternalSystem
 # FEMMultilinearMap interface methods (to be extended by FEM backends)
 export fem_elements, fem_n_qp, fem_ndofs_per_cell,
-       scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer
+       scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
+       fem_reinit!
 
 # FullOrderModel
 export FullOrderModel, FirstOrderModel, NDOrderModel,
@@ -73,6 +74,9 @@ export ResonanceSet,
 # ParametrisationMethod
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects
 export compute_multilinear_terms
+export CohomologicalContext,
+       InvarianceOperators, OrthogonalityOperators,
+       LowerOrderResources, CohomologicalBuffers, SparseLinearSolverState
 export solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
 
 end # module

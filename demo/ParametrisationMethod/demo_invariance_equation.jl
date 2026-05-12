@@ -2,7 +2,7 @@ using MORFE.InvarianceEquation: precompute_column_polynomials,
                                 evaluate_column!,
                                 evaluate_external_rhs!,
                                 evaluate_system_matrix_and_lower_order_rhs!,
-                                assemble_cohomological_matrix_and_rhs
+                                assemble_cohomological_matrix_and_rhs!
 using LinearAlgebra
 using StaticArrays: SVector
 
@@ -80,10 +80,13 @@ external_dynamics = [-1000.0 + 0.0im]   # only one external mode
 # -------------------------------------------------------------------
 # 4.  Assemble the cohomological matrix and right‑hand side
 # -------------------------------------------------------------------
-M,
-rhs = assemble_cohomological_matrix_and_rhs(
-    s, linear_terms, C_coeffs, E_coeffs,
-    resonance, lower_order_couplings, external_dynamics
+nR = count(resonance)
+M   = Matrix{ComplexF64}(undef, FOM, FOM + nR)
+rhs = zeros(ComplexF64, FOM)
+g_buffer = zeros(ComplexF64, FOM)
+assemble_cohomological_matrix_and_rhs!(
+    M, rhs, s, linear_terms, C_coeffs, E_coeffs,
+    resonance, lower_order_couplings, external_dynamics, g_buffer
 )
 
 println("\n=== Assembled cohomological system ===")
@@ -116,7 +119,7 @@ println("\nLower‑order RHS contribution:\n", lower_rhs)
 
 # Evaluate the external RHS contribution (should match the part from assembly)
 rhs_ext = zeros(ComplexF64, FOM)
-evaluate_external_rhs!(rhs_ext, s, external_dynamics, E_coeffs)
+evaluate_external_rhs!(rhs_ext, s, external_dynamics, E_coeffs, g_buffer)
 println("\nExternal RHS contribution:\n", rhs_ext)
 
 println("\n=== Low‑level function manual computations ===")

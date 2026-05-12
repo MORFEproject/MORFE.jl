@@ -11,7 +11,8 @@ using ..ParametrisationMethod: Parametrisation
 using ..FullOrderModel: NDOrderModel, MultilinearMap
 using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap,
                          fem_elements, fem_n_qp, fem_ndofs_per_cell,
-                         scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV
+                         fem_reinit!, scatter_qp!, accumulate_qp!, assemble_element!,
+                         fem_getdetJdV, fem_qp_buffer
 
 export compute_multilinear_terms, compute_multilinear_terms!, build_multilinear_terms_cache,
        MultilinearTermsCache
@@ -514,6 +515,9 @@ function _replay_fem_split!(
     n_uniq = length(fem_split.unique_cols)
 
     for element in fem_elements(t)
+
+        # reinit! is called once per element, before any scatter_qp! calls for this element.
+        fem_reinit!(element, t)
 
         # 1. Scatter each unique (order, col) W column to qp-level field quantities.
         for i in 1:n_uniq

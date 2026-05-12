@@ -135,8 +135,8 @@ Evaluate all nonlinear terms of a given polynomial degree for an `NDOrderModel`.
 - `state_vectors`: tuple `(x, x^(1), …, x^(ORD-1))` of state derivatives
 - `r`: external state vector (default `nothing`). Must be provided if any term uses external variables.
 """
-function evaluate_nonlinear_terms!(res, model::NDOrderModel{ORD, ORDP1, N_NL, MT},
-        order, state_vectors, r = nothing) where {ORD, ORDP1, N_NL, MT}
+function evaluate_nonlinear_terms!(res, model::NDOrderModel{ORD, ORDP1, N_NL},
+        order, state_vectors, r = nothing) where {ORD, ORDP1, N_NL}
     order <= 0 && return res
     @assert length(res)==model.n_fom "Result vector length does not match full‑order state dimension"
 
