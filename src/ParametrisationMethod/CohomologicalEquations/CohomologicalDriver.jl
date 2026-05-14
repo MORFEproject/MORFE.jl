@@ -78,7 +78,9 @@ end
         model, mset, master_eigenvalues,
         master_modes, left_eigenmodes, resonance_set;
         initial_W = nothing, initial_R = nothing,
-        master_modes_derivatives = nothing
+        master_modes_derivatives = nothing,
+        conjugate_permutation = nothing,
+        auto_detect_conjugates = true
     ) -> (W, R)
 
 High-level driver that assembles a [`CohomologicalContext`](@ref) from raw
@@ -109,6 +111,14 @@ linear-operator tuple is read from `model.linear_terms`.
 - `resonance_set :: ResonanceSet`.
 - `initial_W`, `initial_R` — optionally supply already-initialised objects.
 - `master_modes_derivatives` — `FOM × (ORD-1) × ROM`; required when `ORD > 1`.
+- `conjugate_permutation` — optional `AbstractVector{Int}` of length NVAR encoding the
+  conjugate permutation on modes (see [`detect_conjugate_permutation`](@ref)).
+  When `nothing` (default) and `auto_detect_conjugates = true`, the permutation is
+  auto-detected from the eigenvalues.
+- `auto_detect_conjugates` — if `true` (default) and `conjugate_permutation = nothing`,
+  [`detect_conjugate_permutation`](@ref) is called on the master eigenvalues and conjugate
+  symmetry is activated whenever at least one conjugate pair is found.  Set to `false` to
+  disable auto-detection and fall back to no symmetry exploitation.
 
 ## Returns
 
@@ -123,7 +133,9 @@ function solve_cohomological_problem(
         resonance_set::ResonanceSet;
         initial_W::Union{Nothing, Parametrisation} = nothing,
         initial_R::Union{Nothing, ReducedDynamics} = nothing,
-        master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing
+        master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
+        conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
+        auto_detect_conjugates::Bool = true
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
 
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
@@ -214,7 +226,25 @@ function solve_cohomological_problem(
         lower_order, buffers, sparse_solver
     )
 
-    solve_cohomological_equations!(W, R, ctx, model, ml_cache)
+    # ── 7. Conjugate-symmetry object and solve ────────────────────────────────
+    _conj_perm = if conjugate_permutation !== nothing
+        SVector{NVAR, Int}(conjugate_permutation)
+    elseif auto_detect_conjugates
+        auto = detect_conjugate_permutation(lambda_diag)
+        all(i -> auto[i] == i || auto[i] == 0, 1:NVAR) ? NoConjugatePermutation() : auto
+    else
+        NoConjugatePermutation()
+    end
+
+    sym = if _conj_perm isa NoConjugatePermutation
+        _build_conjugate_symmetry(_conj_perm, linear_skip_set, length(mset))
+    else
+        _build_conjugate_symmetry(_conj_perm, linear_skip_set, mset,
+                                  lower_order.multiindex_dict, FOM, ROM, ORD, LT, MT,
+                                  sparse_solver)
+    end
+
+    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache)
 
     return W, R
 end
