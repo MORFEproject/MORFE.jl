@@ -21,6 +21,11 @@ const GROUP = get(ENV, "GROUP", "all")
         end
     end
     if GROUP in ("all", "parametrisation")
+        @testset "ParametrisationMethod" begin
+            @testset "ConjugateSymmetry" begin
+                include("ParametrisationMethod/test_conjugate_symmetry.jl")
+            end
+        end
     end
 end
 

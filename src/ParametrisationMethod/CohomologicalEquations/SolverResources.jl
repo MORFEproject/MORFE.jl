@@ -85,7 +85,7 @@ struct SparseLinearSolverState{T}
     L_template::SparseMatrixCSC{T}
     L_mappings::Vector{Vector{Int}}
     pardiso::Union{Nothing, AbstractPardisoSolver}
-    klu_cache::Union{Nothing, Ref{Any}}   # Ref(nothing) until first factorisation
+    klu_cache::Ref{Any}                    # Ref(nothing) until first factorisation; always allocated
     rhs_extended::Matrix{T}              # FOM × (ROM+1); avoids hcat per resonant monomial
 end
 
@@ -110,8 +110,7 @@ function SparseLinearSolverState{T}(
         @warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
               "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
     end
-    klu_cache = ps === nothing ? Ref{Any}(nothing) : nothing
     return SparseLinearSolverState{T}(
-        L_template, L_mappings, ps, klu_cache, Matrix{T}(undef, FOM, ROM + 1)
+        L_template, L_mappings, ps, Ref{Any}(nothing), Matrix{T}(undef, FOM, ROM + 1)
     )
 end

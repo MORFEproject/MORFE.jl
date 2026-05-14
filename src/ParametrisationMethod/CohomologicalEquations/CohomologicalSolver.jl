@@ -20,12 +20,12 @@ end
 _sparse_solve(::Nothing, ::Nothing, A, B) = lu(A) \ B   # dense-path fallback
 
 # =============================================================================
-# Dense-path monomial solve
+# Shared bordered-system assembly (dense paths)
 # =============================================================================
 
-# Assembles the full (FOM+nR)×(FOM+nR) bordered system into ctx.buffers.system_matrix,
-# factors in-place with lu!, and writes the solution into ctx.buffers.rhs[1:FOM+nR].
-function _solve_monomial!(
+# Writes the (FOM+nR)×(FOM+nR) bordered system into ctx.buffers.system_matrix
+# and ctx.buffers.rhs.  Called by both the complex and real dense-path solvers.
+function _assemble_bordered_system!(
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         s, nR,
         resonance,
@@ -36,31 +36,65 @@ function _solve_monomial!(
     assemble_cohomological_matrix_and_rhs!(
         view(ctx.buffers.system_matrix, 1:FOM, 1:n_sys),
         view(ctx.buffers.rhs, 1:FOM),
-        s,
-        ctx.linear_terms,
-        ctx.invariance.C_coeffs,
-        ctx.invariance.E_coeffs,
-        resonance,
-        lower_order_couplings,
-        external_dynamics,
+        s, ctx.linear_terms,
+        ctx.invariance.C_coeffs, ctx.invariance.E_coeffs,
+        resonance, lower_order_couplings, external_dynamics,
         ctx.buffers.external_rhs
     )
     view(ctx.buffers.rhs, 1:FOM) .+= ctx.buffers.ml_result
-
     assemble_orthogonality_matrix_and_rhs!(
         view(ctx.buffers.system_matrix, (FOM + 1):n_sys, 1:n_sys),
         view(ctx.buffers.rhs, (FOM + 1):n_sys),
-        s,
-        ctx.orthogonality.J_coeffs,
-        ctx.orthogonality.C_coeffs,
-        ctx.orthogonality.E_coeffs,
+        s, ctx.orthogonality.J_coeffs,
+        ctx.orthogonality.C_coeffs, ctx.orthogonality.E_coeffs,
+        resonance, lower_order_couplings, external_dynamics
+    )
+    return
+end
+
+# =============================================================================
+# Dense-path monomial solve
+# =============================================================================
+
+# Assembles the bordered system then factors and solves in ComplexF64.
+function _solve_monomial!(
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        s, nR,
         resonance,
         lower_order_couplings,
         external_dynamics
-    )
-
+) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}
+    _assemble_bordered_system!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+    n_sys = FOM + nR
     F = lu!(view(ctx.buffers.system_matrix, 1:n_sys, 1:n_sys), check = false)
     ldiv!(F, view(ctx.buffers.rhs, 1:n_sys))
+    return
+end
+
+# =============================================================================
+# Real-arithmetic dense-path solve for self-conjugate monomials
+# =============================================================================
+
+# Assembles via the shared helper, casts to Float64, solves with a real LU
+# (~4× cheaper than ComplexF64), then writes the result back into ctx.buffers.rhs.
+# Only called when RB = RealArithmeticBuffers (real FOM + active conjugate symmetry).
+function _solve_monomial_real!(
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        rb::RealArithmeticBuffers,
+        s, nR,
+        resonance,
+        lower_order_couplings,
+        external_dynamics
+) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}
+    _assemble_bordered_system!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+    n_sys = FOM + nR
+    M_r = view(rb.system, 1:n_sys, 1:n_sys)
+    rhs_r = view(rb.rhs, 1:n_sys)
+    M_r .= real.(view(ctx.buffers.system_matrix, 1:n_sys, 1:n_sys))
+    rhs_r .= real.(view(ctx.buffers.rhs, 1:n_sys))
+    F = lu!(M_r, check = false)
+    ldiv!(F, rhs_r)
+    view(ctx.buffers.rhs, 1:n_sys) .= rhs_r
     return
 end
 
@@ -77,7 +111,7 @@ function _solve_monomial!(
         lower_order_couplings,
         external_dynamics
 ) where {T, ORD, ORDP1, NVAR, FOM, LT, MT <: SparseMatrixCSC}
-    ss = ctx.sparse_solver   # SparseLinearSolverState{T}
+    ss = ctx.sparse_solver::SparseLinearSolverState{T}
 
     # ── 1. Build L(s) and accumulate lower-order RHS ──────────────────────────
     rhs = view(ctx.buffers.rhs, 1:FOM)
@@ -94,7 +128,9 @@ function _solve_monomial!(
 
     if nR == 0
         # ── 3a. Non-resonant: L * W_α = rhs ──────────────────────────────────
-        view(ctx.buffers.rhs, 1:FOM) .= _sparse_solve(ss.pardiso, ss.klu_cache, L_s, Vector(rhs))
+        ss.rhs_extended[:, 1] .= rhs
+        view(ctx.buffers.rhs, 1:FOM) .= _sparse_solve(
+            ss.pardiso, ss.klu_cache, L_s, view(ss.rhs_extended, :, 1))
         return
     end
 

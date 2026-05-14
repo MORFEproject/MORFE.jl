@@ -74,10 +74,11 @@ Construct with pre-allocated buffers sized from `cv`.
 function FerriteGeometricNonlinearity{DEG}(
         dh::DH, cv::CV,
         free_to_local::Dict{Int, Int}, n_free::Int,
-        λ::Float64, μ::Float64) where {DEG, DH, CV}
+        λ::Float64, μ::Float64;
+        max_unique_cols::Int = DEG) where {DEG, DH, CV}
     n_qp   = getnquadpoints(cv)
     n_dofs = ndofs_per_cell(dh)
-    ∇W_qp  = Matrix{Tensor{2, 3, ComplexF64}}(undef, DEG, n_qp)
+    ∇W_qp  = Matrix{Tensor{2, 3, ComplexF64}}(undef, max_unique_cols, n_qp)
     Fe     = Vector{ComplexF64}(undef, n_dofs)
     u_e    = Vector{ComplexF64}(undef, n_dofs)
     return FerriteGeometricNonlinearity{DEG, DH, CV}(

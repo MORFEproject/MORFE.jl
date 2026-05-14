@@ -96,6 +96,7 @@ using StaticArrays: SVector
 include("OperatorData.jl")
 include("SolverResources.jl")
 include("CohomologicalContext.jl")
+include("ConjugateSymmetry.jl")
 include("CohomologicalSolver.jl")
 include("CohomologicalDriver.jl")
 
@@ -105,6 +106,11 @@ export CohomologicalContext,
        LowerOrderResources,
        CohomologicalBuffers,
        SparseLinearSolverState,
+       NoConjugatePermutation,
+       RealArithmeticBuffers,
+       ConjugateSymmetryData,
+       detect_conjugate_permutation,
+       fill_conjugate_monomial!,
        solve_cohomological_equations!,
        solve_single_monomial!,
        solve_cohomological_problem
@@ -157,8 +163,42 @@ end
 end
 
 # ==============================================================================
+# Conjugate-symmetry dispatch helpers (private)
+# ==============================================================================
+
+# RB = Nothing: real arithmetic never available → always complex solve.
+@inline function _sym_solve_monomial!(
+        ctx, ::ConjugateSymmetryData{CP, Nothing}, ::Int,
+        s, nR, resonance, lower_order_couplings, external_dynamics
+) where {CP}
+    _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+end
+
+# RB = RealArithmeticBuffers: one runtime check per monomial.
+# Real arithmetic is correct only for self-conjugate, NON-resonant monomials: the bordered
+# system [L C; L̂ Ĉ] has complex C and L̂ columns whenever nR > 0, so taking real(·) of
+# the bordered system gives the wrong solution for resonant monomials.
+@inline function _sym_solve_monomial!(
+        ctx, sym::ConjugateSymmetryData{CP, RealArithmeticBuffers}, idx,
+        s, nR, resonance, lower_order_couplings, external_dynamics
+) where {CP}
+    if sym.monomial_map[idx] == idx && nR == 0
+        _solve_monomial_real!(ctx, sym.real_buffers, s, nR, resonance,
+                              lower_order_couplings, external_dynamics)
+    else
+        _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+    end
+end
+
+# ==============================================================================
 # Solve a single monomial
 # ==============================================================================
+
+# Singleton used by the no-sym public overload; skip_bits is never indexed inside
+# solve_single_monomial!, so a zero-length BitVector is correct here.
+const _NO_SYM = ConjugateSymmetryData{NoConjugatePermutation, Nothing}(
+    NoConjugatePermutation(), Int[], BitVector(), nothing
+)
 
 """
 	solve_single_monomial!(W, R, idx, ctx, model, ml_cache) -> nothing
@@ -169,22 +209,26 @@ Solve the cohomological equations for the monomial with multiindex-set position
 See the module docstring for a description of the algorithm.
 """
 function solve_single_monomial!(
+        W, R, idx::Int, ctx, model, ml_cache
+)
+    solve_single_monomial!(W, R, idx, ctx, _NO_SYM, model, ml_cache)
+end
+
+# Canonical implementation: dispatches the solve step at compile time via sym.
+function solve_single_monomial!(
         W::Parametrisation{ORD, NVAR, T},
         R::ReducedDynamics{ROM, NVAR, T},
         idx::Int,
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        sym::ConjugateSymmetryData,
         model::NDOrderModel,
         ml_cache::MultilinearTermsCache
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     multi = multiindex_set(W)[idx]
 
-    # ── 1. Superharmonic frequency s = ⟨λ, α⟩ ────────────────────────────────
     s = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
-
-    # ── 2. Resonance bitmask ──────────────────────────────────────────────────
     resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
 
-    # ── 3. Lower-order coupling vectors ξ[j] ─────────────────────────────────
     for v in ctx.lower_order.buffer
         fill!(v, zero(T))
     end
@@ -196,23 +240,19 @@ function solve_single_monomial!(
         ctx.lower_order.unit_vectors
     )
 
-    # ── 4. Nonlinear model terms at this monomial ─────────────────────────────
     compute_multilinear_terms!(ctx.buffers.ml_result, model, idx, W, ml_cache)
 
-    # ── 5. Known external dynamics at this monomial ───────────────────────────
     external_dynamics = view(R.poly.coefficients, (ROM + 1):NVAR, idx)
-
-    # ── 6. Assemble and solve the stacked cohomological system ────────────────
     nR = count(resonance)
     n_sys = FOM + nR
 
-    _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
-    sol = view(ctx.buffers.rhs, 1:n_sys)
+    # Compile-time dispatch on RB; one runtime BitVector check when RB ≠ Nothing.
+    _sym_solve_monomial!(ctx, sym, idx, s, nR, resonance,
+                         lower_order_couplings, external_dynamics)
 
-    # ── 6a. Parametrisation coefficients (zeroth time-derivative) ────────────
+    sol = view(ctx.buffers.rhs, 1:n_sys)
     W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
 
-    # ── 6b. Reduced dynamics — non-zero only for resonant master modes ────────
     rr = 1
     for r in 1:ROM
         if resonance[r]
@@ -223,17 +263,12 @@ function solve_single_monomial!(
         end
     end
 
-    # ── 7. Higher time-derivative coefficients W^(j)[α], j = 1 … ORD-1 ───────
     compute_higher_derivative_coefficients!(
         W.poly.coefficients,
         view(R.poly.coefficients, 1:ROM, :),
-        external_dynamics,
-        s,
-        idx,
-        ctx.generalised_eigenmodes,
-        lower_order_couplings
+        external_dynamics, s, idx,
+        ctx.generalised_eigenmodes, lower_order_couplings
     )
-
     return nothing
 end
 
@@ -247,17 +282,50 @@ end
 Solve the cohomological equations for **all** monomials in the multiindex set
 of `W` and `R`, processing them in *causal order* (ascending total degree).
 """
+function solve_cohomological_equations!(W, R, ctx, model, ml_cache)
+    nterms = length(multiindex_set(W))
+    sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
+    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache)
+end
+
+# Overload without active symmetry: skip_bits covers only linear monomials; uses sym-aware
+# solve_single_monomial! to enable compile-time dispatch on RB.
 function solve_cohomological_equations!(
         W::Parametrisation{ORD, NVAR, T},
         R::ReducedDynamics{ROM, NVAR, T},
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        sym::ConjugateSymmetryData{NoConjugatePermutation, RB},
         model::NDOrderModel,
         ml_cache::MultilinearTermsCache
-) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
+) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT, RB}
     nterms = length(multiindex_set(W))
     for idx in 1:nterms
-        idx in ctx.linear_monomial_skip_set && continue
-        solve_single_monomial!(W, R, idx, ctx, model, ml_cache)
+        @inbounds sym.skip_bits[idx] && continue
+        solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+    end
+    return nothing
+end
+
+# Overload with active symmetry: secondaries are in skip_bits; primaries are solved
+# then their conjugate is filled via fill_conjugate_monomial!.
+function solve_cohomological_equations!(
+        W::Parametrisation{ORD, NVAR, T},
+        R::ReducedDynamics{ROM, NVAR, T},
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        sym::ConjugateSymmetryData{<:SVector, RB},
+        model::NDOrderModel,
+        ml_cache::MultilinearTermsCache
+) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT, RB}
+    nterms = length(multiindex_set(W))
+    cmap = sym.monomial_map
+
+    for idx in 1:nterms
+        @inbounds sym.skip_bits[idx] && continue   # skips linears AND secondary monomials
+
+        solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+
+        j = cmap[idx]
+        j > idx && fill_conjugate_monomial!(W, R, j, idx, sym)
     end
     return nothing
 end

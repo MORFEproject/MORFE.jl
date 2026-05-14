@@ -43,7 +43,7 @@ export MultiindexSet, zero_multiindex,
        all_multiindices_in_box, indices_in_box_with_bounded_degree
 
 # Polynomials
-export DensePolynomial, evaluate
+export DensePolynomial, evaluate, extract_component
 
 # MultilinearMaps
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, ExternalSystem
@@ -77,6 +77,8 @@ export compute_multilinear_terms
 export CohomologicalContext,
        InvarianceOperators, OrthogonalityOperators,
        LowerOrderResources, CohomologicalBuffers, SparseLinearSolverState
+export NoConjugatePermutation, RealArithmeticBuffers, ConjugateSymmetryData,
+       detect_conjugate_permutation, fill_conjugate_monomial!
 export solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
 
 end # module
