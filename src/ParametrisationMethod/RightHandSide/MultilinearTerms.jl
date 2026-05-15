@@ -237,31 +237,43 @@ struct CachedSplit
 end
 
 """
-	MultilinearTermsCache
+	MultilinearTermsCache{T, QP}
 
 All precomputed factorisation bookkeeping for a given `(model, parametrisation)`
 pair.  `splits[l][t_idx]` is the list of `CachedSplit` values for monomial `l`
 and term `t_idx`; an empty list means the term degree exceeds the monomial degree
 and it contributes nothing.
 
+Type parameters:
+- `T`  — element type of FOM-length vectors (e.g. `ComplexF64`)
+- `QP` — element type of the combined qp gradient buffer `global_∇W_qp`
+		  (e.g. `Tensor{2,3,ComplexF64}` for Ferrite SVK; `Nothing` when no FEM terms)
+
 **Build** once before the solve loop with `build_multilinear_terms_cache`.
 **Use** by passing to the `(model, exp_index, parametrisation, cache)` overload of
 `compute_multilinear_terms` inside the loop.  The cache is valid as long as the
 multiindex set and the model structure are unchanged (i.e. across all solve steps).
 """
-struct MultilinearTermsCache{T}
+struct MultilinearTermsCache{T, QP}
     splits::Vector{Vector{Vector{CachedSplit}}}
     # FEM-batched splits: fem_splits[l][t_idx] is Vector{FEMCachedSplit{DEG}} for FEM terms,
     # or an empty Vector for closure terms. Element type is Any because DEG varies per term.
     fem_splits::Vector{Vector{Vector{Any}}}
+    # O4 combined loop: one FEMGlobalSplit per monomial (element type Any because ENTRIES_TUPLE
+    # varies by monomial degree). Accessed via _replay_global_fem! function barrier.
+    global_fem_splits::Vector{Any}
     result_buffer::Vector{T}
     scratch_buffer::Vector{T}
     temp_buffer::Vector{T}
     unit_vectors::Vector   # Vector of SVector{N_EXT, Int}; empty when N_EXT == 0
-    # Pre-allocated element-local residual buffer, shared across all FEM terms.
-    # The qp-level field buffer (∇W_qp) is type-specific and owned by each FEMMultilinearMap
-    # via fem_qp_buffer(t) — see MultilinearMaps.jl interface.
+    # Pre-allocated element-local residual buffer for the me>0 fallback path.
     fem_Fe::Vector{T}     # size: max_ndofs_per_cell
+    # O4 shared qp gradient buffer: (max_global_unique × max_n_qp).
+    # QP is a type parameter so element access inside the hot loop is type-stable.
+    global_∇W_qp::Matrix{QP}
+    # O4 per-term element residual buffers: global_Fe_buffers[t_idx] is sized to
+    # fem_ndofs_per_cell(t) for FEM terms; empty Vector{T} for closure terms.
+    global_Fe_buffers::Vector{Vector{T}}
 end
 
 # -----------------------------------------------------------------------
@@ -301,6 +313,55 @@ struct FEMCachedSplit{DEG}
     args_ext_indices::Vector{Int}
     unique_cols::Vector{Tuple{Int, Int}}
     fem_entries::Vector{FEMFactorisationEntry{DEG}}
+end
+
+# -----------------------------------------------------------------------
+# O4 — combined element loop across all FEM terms
+# -----------------------------------------------------------------------
+#
+# For a model with N_FEM FEM terms (e.g. SVK: quadratic + cubic), the
+# per-split path calls fem_reinit! N_FEM times per element per monomial,
+# recomputing identical shape-function data each time.
+#
+# O4 merges all me=0 FEM term loops for a given monomial into a single
+# element traversal: reinit! once, scatter each globally-unique W-column
+# once, then accumulate contributions from all terms at every qp.
+
+"""
+	FEMGlobalEntry{DEG}
+
+One factorisation entry in the combined element loop for a given monomial.
+
+- `term_idx`             — index into `model.nonlinear_terms`
+- `multiplier`           — symmetry count (from `FEMFactorisationEntry`)
+- `local_factor_indices` — NTuple{DEG,Int}: indices into the enclosing
+						   `FEMGlobalSplit.global_unique_cols` table.
+"""
+struct FEMGlobalEntry{DEG}
+    term_idx::Int
+    multiplier::Int
+    local_factor_indices::NTuple{DEG, Int}
+end
+
+"""
+	FEMGlobalSplit{ENTRIES_TUPLE}
+
+All combined-loop bookkeeping for one monomial, covering all me=0 FEM terms.
+
+- `global_unique_cols`        — deduplicated (derivative_order, W_col_idx) pairs across
+							     ALL me=0 FEM terms and their splits. Scattered once per element.
+- `entries_by_deg`            — one `Vector{FEMGlobalEntry{D}}` per degree D present; stored as
+							     a typed Tuple so the inner loop dispatches type-stably on DEG.
+- `driver_term_idx`           — index of the FEM term that drives the element iterator; 0 when
+							     the split is empty (no me=0 FEM terms for this monomial).
+- `participating_term_indices` — sorted distinct `term_idx` values referenced in entries_by_deg;
+							     used in the assembly step to avoid scanning all terms.
+"""
+struct FEMGlobalSplit{ENTRIES_TUPLE}
+    global_unique_cols::Vector{Tuple{Int, Int}}
+    entries_by_deg::ENTRIES_TUPLE
+    driver_term_idx::Int
+    participating_term_indices::Vector{Int}
 end
 
 # -----------------------------------------------------------------------
@@ -345,6 +406,70 @@ function _build_fem_cached_split(::Val{DEG}, cs::CachedSplit) where {DEG}
                    )
                    for entry in cs.entries]
     return FEMCachedSplit{DEG}(cs.ext_count, cs.args_ext_indices, unique_cols, fem_entries)
+end
+
+# Build the O4 combined-loop bookkeeping for one monomial.
+# fem_splits_l[t_idx] is the Vector{FEMCachedSplit} for that term (empty if t.deg > deg_max).
+# fem_term_indices lists indices into model.nonlinear_terms that are FEMMultilinearMap.
+function _build_global_fem_split(model, fem_splits_l, fem_term_indices)
+    isempty(fem_term_indices) && return FEMGlobalSplit{Tuple{}}([], (), 0, Int[])
+
+    # --- Step 1: deduplicate (order, col) pairs across all me=0 FEM terms ---
+    global_unique_cols = Tuple{Int, Int}[]
+    col_to_global = Dict{Tuple{Int, Int}, Int}()
+
+    for t_idx in fem_term_indices
+        t = model.nonlinear_terms[t_idx]
+        t.multiplicity_external == 0 || continue
+        for fem_split in fem_splits_l[t_idx]
+            isempty(fem_split.args_ext_indices) || continue   # skip me>0 splits
+            for oc in fem_split.unique_cols
+                if !haskey(col_to_global, oc)
+                    push!(global_unique_cols, oc)
+                    col_to_global[oc] = length(global_unique_cols)
+                end
+            end
+        end
+    end
+
+    isempty(global_unique_cols) && return FEMGlobalSplit{Tuple{}}([], (), 0, Int[])
+
+    # --- Step 2: remap FEMFactorisationEntry indices into global table, group by DEG ---
+    entries_dict = Dict{Int, Vector{Any}}()   # DEG => Vector{FEMGlobalEntry{DEG}}
+
+    for t_idx in fem_term_indices
+        t = model.nonlinear_terms[t_idx]
+        t.multiplicity_external == 0 || continue
+        DEG = t.deg
+        for fem_split in fem_splits_l[t_idx]
+            isempty(fem_split.args_ext_indices) || continue
+            for fem_entry in fem_split.fem_entries
+                global_inds = ntuple(Val(DEG)) do k
+                    col_to_global[fem_split.unique_cols[fem_entry.local_factor_indices[k]]]
+                end
+                gentry = FEMGlobalEntry{DEG}(t_idx, fem_entry.multiplier, global_inds)
+                if !haskey(entries_dict, DEG)
+                    entries_dict[DEG] = Any[]
+                end
+                push!(entries_dict[DEG], gentry)
+            end
+        end
+    end
+
+    # --- Step 3: build typed vectors per DEG and collect into a Tuple ---
+    degs = sort!(collect(keys(entries_dict)))
+    entries_by_deg = Tuple(
+        [FEMGlobalEntry{d}(e.term_idx, e.multiplier, e.local_factor_indices)
+         for e in entries_dict[d]] for d in degs)
+
+    # --- Step 4: collect participating term indices ---
+    participating = sort!(unique!(Int[
+        e.term_idx
+        for entries in values(entries_dict)
+        for e in entries]))
+
+    driver_term_idx = fem_term_indices[1]
+    return FEMGlobalSplit(global_unique_cols, entries_by_deg, driver_term_idx, participating)
 end
 
 """
@@ -469,9 +594,34 @@ function build_multilinear_terms_cache(
     end
     fem_Fe = zeros(T, max_ndofs)
 
-    return MultilinearTermsCache{T}(all_splits, all_fem_splits,
+    # --- O4: build global FEM splits and allocate shared buffers ---
+    fem_term_indices = [t_idx for (t_idx, t) in enumerate(model.nonlinear_terms)
+                        if t isa FEMMultilinearMap]
+
+    global_fem_splits = Vector{Any}(undef, L)
+    for l in 1:L
+        global_fem_splits[l] = _build_global_fem_split(model, all_fem_splits[l], fem_term_indices)
+    end
+
+    if isempty(fem_term_indices)
+        QP = Nothing
+        global_∇W_qp = Matrix{Nothing}(undef, 0, 0)
+    else
+        driver_term = model.nonlinear_terms[fem_term_indices[1]]
+        QP = eltype(fem_qp_buffer(driver_term))
+        max_global_unique = maximum(
+            (length(global_fem_splits[l].global_unique_cols) for l in 1:L); init = 0)
+        max_n_qp = maximum(fem_n_qp(model.nonlinear_terms[i]) for i in fem_term_indices)
+        global_∇W_qp = Matrix{QP}(undef, max(max_global_unique, 1), max(max_n_qp, 1))
+    end
+
+    global_Fe_buffers = Vector{Vector{T}}([
+        (t isa FEMMultilinearMap ? zeros(T, fem_ndofs_per_cell(t)) : T[])
+        for t in model.nonlinear_terms])
+
+    return MultilinearTermsCache{T, QP}(all_splits, all_fem_splits, global_fem_splits,
         zeros(T, FOM), zeros(T, FOM), zeros(T, FOM),
-        unit_vectors, fem_Fe)
+        unit_vectors, fem_Fe, global_∇W_qp, global_Fe_buffers)
 end
 
 # -----------------------------------------------------------------------
@@ -560,6 +710,75 @@ function _replay_fem_split!(
 end
 
 # -----------------------------------------------------------------------
+# O4 — combined element loop across all me=0 FEM terms
+# -----------------------------------------------------------------------
+
+# Base case: empty entries tuple — nothing to do.
+@inline _accumulate_global_entries!(_, _, ::Tuple{}, _, _, _, _) = nothing
+
+# Recursive case: process the head degree group (DEG is a compile-time constant),
+# then recurse on the tail. Julia specialises a method per DEG so Val(DEG) in
+# ntuple(...) and the accumulate_qp! dispatch are both resolved at compile time.
+@inline function _accumulate_global_entries!(Fe_bufs, ∇W_qp,
+        entries_by_deg::Tuple{Vector{FEMGlobalEntry{DEG}}, Vararg},
+        model, element, q, dΩ) where {DEG}
+    for gentry in first(entries_by_deg)
+        t = model.nonlinear_terms[gentry.term_idx]
+        ∇W_args = ntuple(k -> ∇W_qp[gentry.local_factor_indices[k], q], Val(DEG))
+        accumulate_qp!(Fe_bufs[gentry.term_idx], ∇W_args, gentry.multiplier, element, q, dΩ, t)
+    end
+    _accumulate_global_entries!(Fe_bufs, ∇W_qp, Base.tail(entries_by_deg),
+                                model, element, q, dΩ)
+end
+
+# Execute a single element loop accumulating contributions from ALL me=0 FEM terms
+# for one monomial.  reinit! and scatter_qp! are called at most once per unique
+# (element, W-column) pair; accumulate_qp! dispatches per degree group.
+function _replay_all_fem_splits!(result, model, W,
+        global_split::FEMGlobalSplit,
+        global_∇W_qp, global_Fe_buffers)
+    driver = model.nonlinear_terms[global_split.driver_term_idx]
+    n_qp   = fem_n_qp(driver)
+    n_uniq = length(global_split.global_unique_cols)
+    participating = global_split.participating_term_indices
+
+    for element in fem_elements(driver)
+        fem_reinit!(element, driver)
+
+        for i in 1:n_uniq
+            (order, col) = global_split.global_unique_cols[i]
+            scatter_qp!(@view(global_∇W_qp[i, 1:n_qp]), @view(W[:, order, col]), element, driver)
+        end
+
+        for t_idx in participating
+            fill!(global_Fe_buffers[t_idx], zero(eltype(global_Fe_buffers[t_idx])))
+        end
+
+        for q in 1:n_qp
+            dΩ = fem_getdetJdV(element, q, driver)
+            _accumulate_global_entries!(global_Fe_buffers, global_∇W_qp,
+                                        global_split.entries_by_deg, model, element, q, dΩ)
+        end
+
+        for t_idx in participating
+            assemble_element!(result, global_Fe_buffers[t_idx], element,
+                              model.nonlinear_terms[t_idx])
+        end
+    end
+end
+
+# Function barrier: extracts global_fem_splits[exp_index] (type Any) and calls
+# _replay_all_fem_splits! via runtime dispatch.  The called method is type-stable.
+# cache::MultilinearTermsCache{T,QP} ensures global_∇W_qp::Matrix{QP} is concretely typed
+# at the call site even though global_split triggers dynamic dispatch.
+function _replay_global_fem!(result, model, W,
+        cache::MultilinearTermsCache{T, QP}, exp_index) where {T, QP}
+    gs = cache.global_fem_splits[exp_index]
+    isempty(gs.global_unique_cols) && return
+    _replay_all_fem_splits!(result, model, W, gs, cache.global_∇W_qp, cache.global_Fe_buffers)
+end
+
+# -----------------------------------------------------------------------
 # Term-level dispatch — cached path
 # -----------------------------------------------------------------------
 #
@@ -578,7 +797,10 @@ end
 
 function _replay_term!(result, t::FEMMultilinearMap, W, exp_index, t_idx,
         cache::MultilinearTermsCache)
+    # me=0 splits are handled by _replay_global_fem! (O4 combined loop).
+    # Only the me>0 fallback splits need processing here.
     for fem_split in cache.fem_splits[exp_index][t_idx]
+        isempty(fem_split.args_ext_indices) && continue
         _replay_fem_split!(result, t, W, fem_split, cache.fem_Fe)
     end
 end
@@ -632,6 +854,11 @@ function compute_multilinear_terms!(
     fill!(result, zero(eltype(result)))
     W = parametrisation.poly.coefficients
     deg_max = sum(parametrisation.poly.multiindex_set.exponents[exp_index])
+
+    # O4: single element loop covering all me=0 FEM terms.
+    _replay_global_fem!(result, model, W, cache, exp_index)
+
+    # Closure terms and me>0 FEM splits.
     for (t_idx, t) in enumerate(model.nonlinear_terms)
         t.deg > deg_max && continue
         _replay_term!(result, t, W, exp_index, t_idx, cache)
