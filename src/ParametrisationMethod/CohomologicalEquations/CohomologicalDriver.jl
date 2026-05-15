@@ -79,8 +79,7 @@ end
         master_modes, left_eigenmodes, resonance_set;
         initial_W = nothing, initial_R = nothing,
         master_modes_derivatives = nothing,
-        conjugate_permutation = nothing,
-        auto_detect_conjugates = true
+        conjugate_permutation = nothing
     ) -> (W, R)
 
 High-level driver that assembles a [`CohomologicalContext`](@ref) from raw
@@ -175,8 +174,7 @@ function solve_cohomological_problem(
         _build_conjugate_symmetry(_conj_perm, linear_skip_set, length(mset))
     else
         _build_conjugate_symmetry(_conj_perm, linear_skip_set, mset,
-                                  lower_order.multiindex_dict, FOM, ROM, ORD, LT, MT,
-                                  sparse_solver)
+                                  lower_order.multiindex_dict)
     end
 
     ml_cache = build_multilinear_terms_cache(model, W, sym.skip_bits)
