@@ -72,33 +72,6 @@ function _solve_monomial!(
 end
 
 # =============================================================================
-# Real-arithmetic dense-path solve for self-conjugate monomials
-# =============================================================================
-
-# Assembles via the shared helper, casts to Float64, solves with a real LU
-# (~4× cheaper than ComplexF64), then writes the result back into ctx.buffers.rhs.
-# Only called when RB = RealArithmeticBuffers (real FOM + active conjugate symmetry).
-function _solve_monomial_real!(
-        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-        rb::RealArithmeticBuffers,
-        s, nR,
-        resonance,
-        lower_order_couplings,
-        external_dynamics
-) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}
-    _assemble_bordered_system!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
-    n_sys = FOM + nR
-    M_r = view(rb.system, 1:n_sys, 1:n_sys)
-    rhs_r = view(rb.rhs, 1:n_sys)
-    M_r .= real.(view(ctx.buffers.system_matrix, 1:n_sys, 1:n_sys))
-    rhs_r .= real.(view(ctx.buffers.rhs, 1:n_sys))
-    F = lu!(M_r, check = false)
-    ldiv!(F, rhs_r)
-    view(ctx.buffers.rhs, 1:n_sys) .= rhs_r
-    return
-end
-
-# =============================================================================
 # Sparse-path monomial solve (dispatch on MT <: SparseMatrixCSC)
 # =============================================================================
 
