@@ -10,6 +10,7 @@
 #   5. Select master modes and build the generalised eigenmode matrix
 #   6. Build the multiindex set and the resonance set
 #   7. Solve cohomological equations → W (parametrisation) and R (reduced dynamics)
+#   8. Validate via invariance error convergence
 # ==============================================================================
 
 using MORFE.Eigensolvers: generalised_eigenpairs
@@ -21,6 +22,9 @@ using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_mat
 using MORFE.ExternalSystems: ExternalSystem
 using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
 using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.InvarianceError: invariance_error_norms, invariance_error_convergence,
+	plot_invariance_convergence
+using Plots: savefig
 
 using HDF5
 using LinearAlgebra
@@ -77,7 +81,7 @@ term_forcing_mixed = MultilinearMap(
 # ExternalSystem: harmonic forcing ṙ = -   0.5·r + 0.1 r² + 2.0 r³ with Ω = 1.0
 external_system = ExternalSystem(
 	DensePolynomial(
-		ComplexF64[1.0im 0.1 2.0], # 1×2 matrix: coefficients for r and r² terms
+		ComplexF64[-0.5 0.1 2.0], # 1×2 matrix: coefficients for r and r² terms
 		MultiindexSet([[1], [2], [3]]),
 	),
 )
@@ -201,7 +205,7 @@ R = solve_cohomological_problem(
 	master_modes, left_eigenmodes,
 	resonance_set;
 	master_modes_derivatives = master_modes_derivatives,
-	# conjugate_permutation = [2, 1, 3],
+	conjugate_permutation = [2, 1, 3],
 )
 
 # ------------------------------------------------------------------------------
@@ -229,6 +233,37 @@ h5open(output_path, "w") do f
 	f["outer_eigenvalues"] = outer_eigenvalues
 end
 println("Results exported to: $output_path")
+
+# ------------------------------------------------------------------------------
+# 11. Invariance error validation
+# ------------------------------------------------------------------------------
+
+# --- Summary statistics at a fixed amplitude ---
+err_norms = invariance_error_norms(model, W, R;
+	n_samples = 500, amplitude = 0.05, rng = MersenneTwister(0))
+
+println("\n=== Invariance error norms (amplitude = 0.05) ===")
+println("  max  ‖E(z)‖ = ", err_norms.max)
+println("  mean ‖E(z)‖ = ", err_norms.mean)
+println("  rms  ‖E(z)‖ = ", err_norms.rms)
+
+# --- Convergence study: sweep over forcing levels ---
+r_levels = [0.0, 0.5, 1.0, 2.0]
+err_conv = invariance_error_convergence(model, W, R;
+	n_samples = 500, r_magnitudes = r_levels, rng = MersenneTwister(0))
+
+println("\n=== Invariance error convergence ===")
+for res in err_conv
+	println("  |r| = $(res.r_magnitude)  →  max_order = $(res.max_order)",
+		"  s̄ = $(round(res.s_bar, digits=4))",
+		"  force_err ∈ [$(round(minimum(res.force_errors), sigdigits=2)),",
+		" $(round(maximum(res.force_errors), sigdigits=2))]")
+end
+
+plots = plot_invariance_convergence(err_conv)
+savefig(plots.full,   joinpath(@__DIR__, "invariance_convergence_full.png"))
+savefig(plots.master, joinpath(@__DIR__, "invariance_convergence_master.png"))
+println("\nConvergence plots saved to: ", @__DIR__)
 
 println("\n" * "="^80)
 println("Demo finished successfully.")

@@ -17,7 +17,7 @@ Zz = np.zeros((2, 2))
 Zz2 = np.zeros((2, 1))
 
 F = array([[1.0, 1.0]]).T   # Force input matrix
-external_eig = 1.0j
+external_eig = -0.5
 
 # Linear operator B and A₁
 B = block([
