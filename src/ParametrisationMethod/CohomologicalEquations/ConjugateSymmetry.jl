@@ -151,3 +151,66 @@ function fill_conjugate_monomial!(
     end
     return nothing
 end
+
+# =============================================================================
+# detect_conjugate_permutation — standalone utility
+# =============================================================================
+
+"""
+    detect_conjugate_permutation(lambda; atol = 1e-8) -> Union{Vector{Int}, Nothing}
+
+Attempt to construct a conjugate-permutation vector from the eigenvalue vector
+`lambda` (length `NVAR`).  Returns a `Vector{Int}` `perm` such that
+
+    lambda[perm[i]] ≈ conj(lambda[i])   for all i
+
+and `perm[perm[i]] == i` (involution), or `nothing` if no such perfect pairing
+exists (e.g. an eigenvalue has no conjugate partner within `atol`).
+
+**Warning — necessary but not sufficient.**  Two eigenvalues forming a conjugate
+pair does *not* guarantee that the corresponding eigenvectors satisfy
+
+    master_modes[:, perm[r]] ≈ conj(master_modes[:, r]).
+
+This condition can fail when:
+- the eigenvalue is degenerate (eigenspace has dimension > 1),
+- the solver returned a non-conjugate basis for a repeated eigenvalue,
+- eigenvectors were post-processed with different phases or normalisation.
+
+**Always verify eigenvector conjugacy** (e.g. check
+`norm(master_modes[:, perm[r]] - conj(master_modes[:, r]))`) before passing the
+returned vector to `solve_cohomological_problem` as `conjugate_permutation`.
+Passing an incorrect permutation silently corrupts W and R.
+
+## Arguments
+- `lambda` — eigenvalue vector of length `NVAR` (master + external eigenvalues).
+- `atol`   — absolute tolerance for the conjugate-match test
+              `|lambda[j] - conj(lambda[i])| < atol`.
+
+## Returns
+`Vector{Int}` (involution, 1-based) if a perfect pairing is found;
+`nothing` otherwise.
+"""
+function detect_conjugate_permutation(lambda::AbstractVector; atol::Real = 1e-8)
+    NVAR = length(lambda)
+    perm = zeros(Int, NVAR)
+    used = falses(NVAR)
+    for i in 1:NVAR
+        used[i] && continue
+        λi = lambda[i]
+        best_j = 0
+        for j in i:NVAR
+            used[j] && continue
+            if abs(lambda[j] - conj(λi)) < atol
+                best_j = j
+                break
+            end
+        end
+        best_j == 0 && return nothing
+        perm[i] = best_j
+        perm[best_j] = i
+        used[i] = true
+        used[best_j] = true
+    end
+    return perm
+end

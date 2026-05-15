@@ -559,6 +559,30 @@ function _replay_fem_split!(
     isempty(fem_split.args_ext_indices) || axpy!(fem_split.ext_count, Fe, result)
 end
 
+# -----------------------------------------------------------------------
+# Term-level dispatch — cached path
+# -----------------------------------------------------------------------
+#
+# Multiple dispatch on the concrete term type selects the replay strategy.
+# Adding a new AbstractMultilinearMap subtype requires only a new _replay_term! method;
+# compute_multilinear_terms! never needs to be modified.
+
+function _replay_term!(result, t::MultilinearMap, W, exp_index, t_idx,
+        cache::MultilinearTermsCache)
+    deg = t.deg - t.multiplicity_external
+    for split in cache.splits[exp_index][t_idx]
+        _replay_split!(result, cache.scratch_buffer, cache.temp_buffer,
+                       t, W, split, deg, cache.unit_vectors)
+    end
+end
+
+function _replay_term!(result, t::FEMMultilinearMap, W, exp_index, t_idx,
+        cache::MultilinearTermsCache)
+    for fem_split in cache.fem_splits[exp_index][t_idx]
+        _replay_fem_split!(result, t, W, fem_split, cache.fem_Fe)
+    end
+end
+
 """
 	compute_multilinear_terms(model, exp_index, parametrisation, cache) → Vector
 
@@ -608,23 +632,9 @@ function compute_multilinear_terms!(
     fill!(result, zero(eltype(result)))
     W = parametrisation.poly.coefficients
     deg_max = sum(parametrisation.poly.multiindex_set.exponents[exp_index])
-    scratch = cache.scratch_buffer
-    temp = cache.temp_buffer
-    unit_vectors = cache.unit_vectors
-
     for (t_idx, t) in enumerate(model.nonlinear_terms)
         t.deg > deg_max && continue
-        deg = t.deg - t.multiplicity_external
-        if t isa FEMMultilinearMap
-            # RHS-C batched path: one element-loop per split instead of n_entries loops.
-            for fem_split in cache.fem_splits[exp_index][t_idx]
-                _replay_fem_split!(result, t, W, fem_split, cache.fem_Fe)
-            end
-        else
-            for split in cache.splits[exp_index][t_idx]
-                _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
-            end
-        end
+        _replay_term!(result, t, W, exp_index, t_idx, cache)
     end
     return nothing
 end

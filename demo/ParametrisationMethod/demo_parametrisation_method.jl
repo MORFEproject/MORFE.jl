@@ -77,7 +77,7 @@ term_forcing_mixed = MultilinearMap(
 # ExternalSystem: harmonic forcing ṙ = -   0.5·r + 0.1 r² + 2.0 r³ with Ω = 1.0
 external_system = ExternalSystem(
 	DensePolynomial(
-		ComplexF64[-0.5 0.1 2.0], # 1×2 matrix: coefficients for r and r² terms
+		ComplexF64[1.0im 0.1 2.0], # 1×2 matrix: coefficients for r and r² terms
 		MultiindexSet([[1], [2], [3]]),
 	),
 )

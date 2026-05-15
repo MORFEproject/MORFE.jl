@@ -77,7 +77,8 @@ export compute_multilinear_terms
 export CohomologicalContext,
        InvarianceOperators, OrthogonalityOperators,
        LowerOrderResources, CohomologicalBuffers, SparseLinearSolverState
-export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!
+export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
+       detect_conjugate_permutation
 export solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
 
 end # module
