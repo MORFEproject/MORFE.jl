@@ -63,11 +63,9 @@ struct MultiindexSet{N}
 	# each exponent is fixed length SVector for efficient storage and comparison
 	# degree_offsets[d+1] = last index with total degree < d (O(1) degree-boundary lookup)
 	degree_offsets::Vector{Int}
-	# Internal constructor with sortedness assertion (debug mode only)
+	# Internal constructor: callers guarantee sortedness; assertion stripped in release.
 	function MultiindexSet(exponents::Vector{SVector{N, Int}}, ::Val{true}) where {N}
-		if !is_sorted(exponents)
-			error("MultiindexSet constructed with unsorted exponents")
-		end
+		@assert is_sorted(exponents) "MultiindexSet constructed with unsorted exponents"
 		new{N}(exponents, _build_degree_offsets(exponents))
 	end
 end
@@ -154,13 +152,13 @@ multiindex(components::Int...) = collect(Int, components)
 # filling a preallocated matrix column‑wise.
 function _generate_ascending_lex_fixed!(
 	exponents::AbstractMatrix{Int}, n::Int, total_degree::Int)
-	col = 1
+	col = Ref(1)   # Ref avoids Core.Box: mutated captures of Int would be type-unstable
 	buf = Vector{Int}(undef, n)
 	function recurse(depth::Int, remaining_deg::Int)
 		if depth == n
 			@inbounds buf[depth] = remaining_deg
-			@inbounds exponents[:, col] .= buf
-			col += 1
+			@inbounds exponents[:, col[]] .= buf
+			col[] += 1
 		else
 			for e in remaining_deg:-1:0
 				@inbounds buf[depth] = e
@@ -268,6 +266,12 @@ function Base.iterate(S::MultiindexSet, state = 1)
 	state > length(S) ? nothing : (S[state], state + 1)
 end
 Base.collect(S::MultiindexSet) = [Vector(S.exponents[i]) for i in 1:length(S)]
+
+function Base.:(==)(a::MultiindexSet{N}, b::MultiindexSet{N}) where {N}
+	a === b && return true          # same object: O(1)
+	a.exponents == b.exponents      # degree_offsets is a derived field; skip it
+end
+Base.:(==)(::MultiindexSet{N}, ::MultiindexSet{M}) where {N, M} = false
 
 """
 	find_in_set(set::MultiindexSet, exp::AbstractVector{Int}) -> Union{Int, Nothing}
@@ -384,11 +388,17 @@ function indices_in_box_with_bounded_degree(
 	last_idx = _last_index_below_degree(set, total_deg_upper)
 
 	result = Int[]
+	sizehint!(result, last_idx - first_idx + 1)
 	@inbounds for i in first_idx:last_idx
 		v = exps[i]
-		if all(v .<= box_upper)
-			push!(result, i)
+		dominated = true
+		for j in 1:N
+			if v[j] > box_upper[j]
+				dominated = false
+				break
+			end
 		end
+		dominated && push!(result, i)
 	end
 	return result
 end
@@ -417,12 +427,18 @@ function indices_in_box_with_bounded_degree(
 	hi_pos = searchsortedlast(allowed_indices, last_below_upper)
 
 	result = Int[]
+	sizehint!(result, hi_pos - lo_pos + 1)
 	@inbounds for pos in lo_pos:hi_pos
 		i = allowed_indices[pos]
 		v = exps[i]
-		if all(v .<= box_upper)
-			push!(result, i)
+		dominated = true
+		for j in 1:N
+			if v[j] > box_upper[j]
+				dominated = false
+				break
+			end
 		end
+		dominated && push!(result, i)
 	end
 	return result
 end
@@ -466,6 +482,7 @@ function factorisations_asymmetric(
 	exp_svec = SVector{N, Int}(exp)
 	exps = set.exponents
 	results = FactorisationEntry[]
+	sizehint!(results, length(candidate_indices))
 	current_idxs = Vector{Int}(undef, num_factors)
 
 	function backtrack(depth::Int, current_sum::SVector{N, Int})
@@ -506,11 +523,21 @@ function factorisations_fully_symmetric(
 	if num_factors == 0
 		return iszero(exp) ? [FactorisationEntry(Int[], 1)] : FactorisationEntry[]
 	end
+	sorted_candidates = sort(unique(candidate_indices))
+	return _factorisations_fully_symmetric_sorted(set, exp, num_factors, sorted_candidates)
+end
+
+# Internal variant: requires `sorted_candidates` to already be sorted and deduplicated.
+# Called by factorisations_groupwise_symmetric to avoid re-sorting on every recursion.
+function _factorisations_fully_symmetric_sorted(
+	set::MultiindexSet{N}, exp::AbstractVector{Int}, num_factors::Int,
+	sorted_candidates::AbstractVector{Int}) where {N}
+	if num_factors == 0
+		return iszero(exp) ? [FactorisationEntry(Int[], 1)] : FactorisationEntry[]
+	end
 
 	exp_svec = SVector{N, Int}(exp)
 	exps = set.exponents
-
-	sorted_candidates = sort(unique(candidate_indices))
 	L = length(sorted_candidates)
 
 	results = FactorisationEntry[]
@@ -567,6 +594,8 @@ function factorisations_groupwise_symmetric(
 	candidate_indices::AbstractVector{Int}) where {N, M}
 	exp_svec = SVector{N, Int}(exp)
 
+	# Sort and deduplicate once here; passed directly to the presorted inner variant
+	# so that each recursive CartesianIndices iteration avoids redundant work.
 	global_candidates = sort(unique(candidate_indices))
 
 	results = FactorisationEntry[]
@@ -586,10 +615,12 @@ function factorisations_groupwise_symmetric(
 			return
 		end
 
-		ranges = [0:remaining[i] for i in 1:N]
-		for s_idx in CartesianIndices(Tuple(ranges))
-			s = SVector{N, Int}(ntuple(i -> s_idx[i], N))
-			for entry in factorisations_fully_symmetric(set, s, k, global_candidates)
+		# Stack-allocated NTuple avoids a Vector{UnitRange} heap allocation per call.
+		ranges = ntuple(i -> 0:remaining[i], Val(N))
+		for s_idx in CartesianIndices(ranges)
+			s = SVector{N, Int}(ntuple(i -> s_idx[i], Val(N)))
+			# Use presorted variant: global_candidates is already sorted and unique.
+			for entry in _factorisations_fully_symmetric_sorted(set, s, k, global_candidates)
 				new_remaining = remaining - s
 				if all(≥(0), new_remaining)
 					append!(current_flat, entry.factor_indices)
@@ -736,7 +767,7 @@ where:
 - `permutation_count::Int` is the number of distinct permutations
 """
 function bounded_index_tuples(M::Int, exp::SVector{N, Int}) where {N}
-	results = Vector{Tuple{NTuple{Int64(M), Int}, SVector{N, Int}, Int}}()
+	results = Vector{Tuple{NTuple{M, Int}, SVector{N, Int}, Int}}()
 
 	counts = zeros(Int, N)
 

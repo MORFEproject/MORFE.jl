@@ -104,7 +104,7 @@ with h5py.File(Path(__file__).parent / "output.h5", "r") as file:
     R = file["R_coefficients"][:].T                        # (n_red, num_monomials)
     eig_master = diag(file["master_eigenvalues"])
 
-print("Multindex set (exponents of the monomials):\n", mset)
+#print("Multindex set (exponents of the monomials):\n", mset)
 
 # Add the external variable component to W
 W = vstack((W, np.zeros((1, len(mset)))))

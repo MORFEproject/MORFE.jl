@@ -183,12 +183,12 @@ resonance_set = resonance_set_from_graph_style(
 	ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05,
 )
 
-println("\nResonance set (graph style):")
-for (idx, mi) in enumerate(mset.exponents)
-	res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
-	isempty(res_str) && (res_str = "none")
-	println("  $mi → [$res_str]")
-end
+#println("\nResonance set (graph style):")
+#for (idx, mi) in enumerate(mset.exponents)
+#	res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
+#	isempty(res_str) && (res_str = "none")
+#	println("  $mi → [$res_str]")
+#end
 
 # ------------------------------------------------------------------------------
 # 8. Solve cohomological equations
@@ -201,13 +201,13 @@ R = solve_cohomological_problem(
 	master_modes, left_eigenmodes,
 	resonance_set;
 	master_modes_derivatives = master_modes_derivatives,
-	conjugate_permutation = [2, 1, 3],
+	# conjugate_permutation = [2, 1, 3],
 )
 
 # ------------------------------------------------------------------------------
 # 9. Display results
 # ------------------------------------------------------------------------------
-n_monomials = min(200, length(mset))
+n_monomials = min(50, length(mset))
 println("\n=== Solution (first $n_monomials monomials) ===\n")
 for idx in 1:n_monomials
 	pos = W.poly.coefficients[:, 1, idx]
