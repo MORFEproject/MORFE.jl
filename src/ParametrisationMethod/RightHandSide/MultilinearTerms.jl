@@ -348,14 +348,25 @@ function _build_fem_cached_split(::Val{DEG}, cs::CachedSplit) where {DEG}
 end
 
 """
-	build_multilinear_terms_cache(model, parametrisation) → MultilinearTermsCache
+	build_multilinear_terms_cache(model, parametrisation[, skip_bits]) → MultilinearTermsCache
 
 Precompute all factorisation data for every monomial and term.
 Valid as long as the multiindex set is unchanged.
+
+When `skip_bits[l]` is `true` the cache entry for monomial `l` is left empty.
+This is safe for monomials that will never be replayed (linear monomials, conjugate
+secondaries): those entries are guarded by the same `skip_bits` check in the solve loop.
 """
 function build_multilinear_terms_cache(
         model::NDOrderModel{ORD}, parametrisation::Parametrisation{ORD, NVAR}) where {
         ORD, NVAR}
+    L = length(parametrisation.poly.multiindex_set)
+    build_multilinear_terms_cache(model, parametrisation, falses(L))
+end
+
+function build_multilinear_terms_cache(
+        model::NDOrderModel{ORD}, parametrisation::Parametrisation{ORD, NVAR},
+        skip_bits::BitVector) where {ORD, NVAR}
     mset = parametrisation.poly.multiindex_set
     L = length(mset)
     n_terms = length(model.nonlinear_terms)
@@ -366,6 +377,11 @@ function build_multilinear_terms_cache(
     all_fem_splits = Vector{Vector{Vector{Any}}}(undef, L)
 
     for l in 1:L
+        if skip_bits[l]
+            all_splits[l]     = [CachedSplit[] for _ in 1:n_terms]
+            all_fem_splits[l] = [[]            for _ in 1:n_terms]
+            continue
+        end
         exp = mset.exponents[l]
         deg_max = sum(exp)
         candidate_indices = indices_in_box_with_bounded_degree(mset, exp, 1, deg_max)

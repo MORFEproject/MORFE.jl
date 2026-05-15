@@ -112,13 +112,11 @@ linear-operator tuple is read from `model.linear_terms`.
 - `initial_W`, `initial_R` — optionally supply already-initialised objects.
 - `master_modes_derivatives` — `FOM × (ORD-1) × ROM`; required when `ORD > 1`.
 - `conjugate_permutation` — optional `AbstractVector{Int}` of length NVAR encoding the
-  conjugate permutation on modes (see [`detect_conjugate_permutation`](@ref)).
-  When `nothing` (default) and `auto_detect_conjugates = true`, the permutation is
-  auto-detected from the eigenvalues.
-- `auto_detect_conjugates` — if `true` (default) and `conjugate_permutation = nothing`,
-  [`detect_conjugate_permutation`](@ref) is called on the master eigenvalues and conjugate
-  symmetry is activated whenever at least one conjugate pair is found.  Set to `false` to
-  disable auto-detection and fall back to no symmetry exploitation.
+  conjugate permutation on modes.  `perm[i] = j` means mode `j` is the complex conjugate
+  of mode `i`.  When `nothing` (default), no conjugate-symmetry exploitation is performed.
+  The caller must verify that the eigenvectors satisfy the conjugate symmetry before passing
+  this argument — two eigenvalues forming a conjugate pair is necessary but not sufficient
+  (the eigenspace must be one-dimensional, or the eigenvectors must be chosen conjugately).
 
 ## Returns
 
@@ -134,8 +132,7 @@ function solve_cohomological_problem(
         initial_W::Union{Nothing, Parametrisation} = nothing,
         initial_R::Union{Nothing, ReducedDynamics} = nothing,
         master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
-        conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
-        auto_detect_conjugates::Bool = true
+        conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
 
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
@@ -166,12 +163,24 @@ function solve_cohomological_problem(
     Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
     lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
 
-    # ── 2. Shared resources (allocated once, reused in both contexts) ─────────
-    ml_cache = build_multilinear_terms_cache(model, W)
+    # ── 2. Shared resources: sym is built before ml_cache so skip_bits are available ──
     linear_skip_set = Set(_linear_monomial_indices(mset))
     lower_order = LowerOrderResources{NVAR, T}(mset, ORD, FOM)
-    buffers = CohomologicalBuffers{T}(FOM, ROM)
     sparse_solver = _make_sparse_solver(MT, linear_terms, FOM, ROM)
+
+    _conj_perm = conjugate_permutation !== nothing ?
+        SVector{NVAR, Int}(conjugate_permutation) : NoConjugatePermutation()
+
+    sym = if _conj_perm isa NoConjugatePermutation
+        _build_conjugate_symmetry(_conj_perm, linear_skip_set, length(mset))
+    else
+        _build_conjugate_symmetry(_conj_perm, linear_skip_set, mset,
+                                  lower_order.multiindex_dict, FOM, ROM, ORD, LT, MT,
+                                  sparse_solver)
+    end
+
+    ml_cache = build_multilinear_terms_cache(model, W, sym.skip_bits)
+    buffers = CohomologicalBuffers{T}(FOM, ROM)
 
     # ── 3. Φ_ext-independent operators ───────────────────────────────────────
     orthogonality_J_coeffs = precompute_orthogonality_operator_coefficients(
@@ -226,24 +235,7 @@ function solve_cohomological_problem(
         lower_order, buffers, sparse_solver
     )
 
-    # ── 7. Conjugate-symmetry object and solve ────────────────────────────────
-    _conj_perm = if conjugate_permutation !== nothing
-        SVector{NVAR, Int}(conjugate_permutation)
-    elseif auto_detect_conjugates
-        auto = detect_conjugate_permutation(lambda_diag)
-        all(i -> auto[i] == i || auto[i] == 0, 1:NVAR) ? NoConjugatePermutation() : auto
-    else
-        NoConjugatePermutation()
-    end
-
-    sym = if _conj_perm isa NoConjugatePermutation
-        _build_conjugate_symmetry(_conj_perm, linear_skip_set, length(mset))
-    else
-        _build_conjugate_symmetry(_conj_perm, linear_skip_set, mset,
-                                  lower_order.multiindex_dict, FOM, ROM, ORD, LT, MT,
-                                  sparse_solver)
-    end
-
+    # ── 7. Main solve ─────────────────────────────────────────────────────────
     solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache)
 
     return W, R
