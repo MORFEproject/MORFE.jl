@@ -17,6 +17,7 @@ include("SpectralDecomposition/PropagateEigenmodes.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl")
+include("Validation/InvarianceError.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -36,6 +37,7 @@ using .PropagateEigenmodes
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 using .CohomologicalEquations
+using .InvarianceError
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
@@ -80,5 +82,8 @@ export CohomologicalContext,
 export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
        detect_conjugate_permutation
 export solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
+
+# Validation
+export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
 
 end # module

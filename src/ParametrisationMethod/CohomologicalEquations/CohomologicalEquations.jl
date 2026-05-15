@@ -137,7 +137,7 @@ end
 
 function _progress_done!(p::_SimpleProgress, n_done::Int)
 	p.enabled || return
-	println(stderr, "\rSolved $n_done monomials." * " "^20)
+	println(stderr, "\rSolved $n_done monomials." * " "^30)
 end
 
 # ==============================================================================
