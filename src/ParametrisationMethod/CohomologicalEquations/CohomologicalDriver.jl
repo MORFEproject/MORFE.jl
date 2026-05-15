@@ -26,12 +26,39 @@ function _initialise_waveform!(
     return nothing
 end
 
-# Solve the external linear monomials using a partial context (Φ_ext = 0).
+# Solve primary external linear monomials using a partial context (Φ_ext = 0).
+# Secondaries (already in sym.skip_bits from conjugate-pair detection) are filled
+# by conjugation from their primary, matching the logic for all other non-master monomials.
+# All external linear monomials are marked done in sym.skip_bits so the main loop skips them.
 function _solve_external_directions!(
-        W, R, partial_ctx, model, ml_cache, N_EXT::Int, ROM::Int, unit_offset::Int
+        W, R, partial_ctx, model, ml_cache,
+        sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int, ROM::Int, unit_offset::Int
 )
     for e in 1:N_EXT
-        solve_single_monomial!(W, R, ROM + e + unit_offset, partial_ctx, model, ml_cache)
+        idx = ROM + e + unit_offset
+        solve_single_monomial!(W, R, idx, partial_ctx, model, ml_cache)
+        @inbounds sym.skip_bits[idx] = true
+    end
+    return nothing
+end
+
+function _solve_external_directions!(
+        W, R, partial_ctx, model, ml_cache,
+        sym::ConjugateSymmetryData{<:SVector}, N_EXT::Int, ROM::Int, unit_offset::Int
+)
+    N_EXT == 0 && return nothing
+    ext_idx_set = Set(ROM + e + unit_offset for e in 1:N_EXT)
+    for e in 1:N_EXT
+        idx = ROM + e + unit_offset
+        @inbounds sym.skip_bits[idx] && continue   # secondary: filled below
+        solve_single_monomial!(W, R, idx, partial_ctx, model, ml_cache)
+    end
+    for (src, dst) in sym.primary_pairs
+        src ∈ ext_idx_set || continue
+        fill_conjugate_monomial!(W, R, dst, src, sym)
+    end
+    for e in 1:N_EXT
+        @inbounds sym.skip_bits[ROM + e + unit_offset] = true
     end
     return nothing
 end
@@ -163,7 +190,10 @@ function solve_cohomological_problem(
     lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
 
     # ── 2. Shared resources: sym is built before ml_cache so skip_bits are available ──
-    linear_skip_set = Set(_linear_monomial_indices(mset))
+    # Only master linear monomials are pre-initialised from eigenvectors and never solved;
+    # external linear monomials go through the same conjugate-symmetry logic as all other
+    # non-master monomials and are pre-solved by _solve_external_directions!.
+    linear_skip_set = Set(_linear_monomial_indices(mset)[1:ROM])
     lower_order = LowerOrderResources{NVAR, T}(mset, ORD, FOM)
     sparse_solver = _make_sparse_solver(MT, linear_terms, FOM, ROM)
 
@@ -206,7 +236,13 @@ function solve_cohomological_problem(
             resonance_set, linear_skip_set,
             lower_order, buffers, sparse_solver
         )
-        _solve_external_directions!(W, R, partial_ctx, model, ml_cache, N_EXT, ROM, unit_offset)
+        _solve_external_directions!(W, R, partial_ctx, model, ml_cache, sym, N_EXT, ROM, unit_offset)
+    else
+        # initial values provided: external directions are already in W; mark them done
+        # so the main loop does not overwrite them.
+        for e in 1:N_EXT
+            @inbounds sym.skip_bits[ROM + e + unit_offset] = true
+        end
     end
 
     # ── 5. Full eigenmodes and operators ──────────────────────────────────────

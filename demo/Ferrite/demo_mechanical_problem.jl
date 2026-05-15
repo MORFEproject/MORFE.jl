@@ -81,7 +81,7 @@ println("Free DOFs  : ", n_free)
 ROM = 2
 N_EXT = 0
 NVAR = ROM + N_EXT
-max_degree = 3
+max_degree = 9
 mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 _max_uniq = length(mset)
 

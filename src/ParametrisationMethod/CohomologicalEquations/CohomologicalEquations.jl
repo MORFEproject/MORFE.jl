@@ -109,6 +109,7 @@ export CohomologicalContext,
        NoConjugatePermutation,
        ConjugateSymmetryData,
        fill_conjugate_monomial!,
+       detect_conjugate_permutation,
        solve_cohomological_equations!,
        solve_single_monomial!,
        solve_cohomological_problem
@@ -294,6 +295,11 @@ function solve_cohomological_equations!(
 
         solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
 
+        # Advance ptr past any pairs whose primary was already handled before this loop
+        # (e.g. external linear monomials solved by _solve_external_directions!).
+        while ptr <= length(pairs) && @inbounds sym.skip_bits[pairs[ptr][1]]
+            ptr += 1
+        end
         if ptr <= length(pairs) && @inbounds pairs[ptr][1] == idx
             (src, dst) = @inbounds pairs[ptr]
             fill_conjugate_monomial!(W, R, dst, src, sym)
