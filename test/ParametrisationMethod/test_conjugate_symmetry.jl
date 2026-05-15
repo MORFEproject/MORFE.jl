@@ -5,7 +5,7 @@ using StaticArrays
 using MORFE.Multiindices: all_multiindices_up_to
 using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.Resonance: resonance_set_from_complex_normal_form_style
-using MORFE.CohomologicalEquations: solve_cohomological_problem, detect_conjugate_permutation
+using MORFE.CohomologicalEquations: solve_cohomological_problem
 
 # ── Minimal 2-DOF Duffing model ──────────────────────────────────────────────
 const _FOM = 2
@@ -88,19 +88,12 @@ _common_kwargs = (
 
 W_nosym, R_nosym = solve_cohomological_problem(
     _model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, _resonance_set;
-    auto_detect_conjugates = false,
     _common_kwargs...,
 )
 
 W_expl, R_expl = solve_cohomological_problem(
     _model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, _resonance_set;
     conjugate_permutation = _conj_perm,
-    _common_kwargs...,
-)
-
-W_auto, R_auto = solve_cohomological_problem(
-    _model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, _resonance_set;
-    auto_detect_conjugates = true,
     _common_kwargs...,
 )
 
@@ -138,9 +131,5 @@ W_auto, R_auto = solve_cohomological_problem(
         @test R_expl.poly.coefficients ≈ R_nosym.poly.coefficients rtol=1e-8
     end
 
-    @testset "Parity: auto-detect ≈ no-sym" begin
-        @test W_auto.poly.coefficients ≈ W_nosym.poly.coefficients rtol=1e-8
-        @test R_auto.poly.coefficients ≈ R_nosym.poly.coefficients rtol=1e-8
-    end
 
 end

@@ -71,48 +71,6 @@ struct ConjugateSymmetryData{CP, RB}
 end
 
 # =============================================================================
-# detect_conjugate_permutation
-# =============================================================================
-
-"""
-    detect_conjugate_permutation(lambda; atol=1e-8) -> SVector{NVAR, Int}
-
-Build the conjugate permutation from eigenvalues `lambda` (length NVAR):
-
-- `perm[i] = j` if `lambda[j] ≈ conj(lambda[i])` and `j ≠ i`
-- `perm[i] = i` if `lambda[i]` is numerically real (`|imag| ≤ atol`)
-- `perm[i] = 0` if `lambda[i]` is complex but no conjugate partner is found
-"""
-function detect_conjugate_permutation(lambda::AbstractVector{<:Number}; atol = 1e-8)
-    NVAR = length(lambda)
-    perm = zeros(Int, NVAR)
-    assigned = falses(NVAR)
-
-    for i in 1:NVAR
-        assigned[i] && continue
-        if abs(imag(lambda[i])) ≤ atol
-            perm[i] = i
-            assigned[i] = true
-            continue
-        end
-        found = false
-        for j in (i + 1):NVAR
-            assigned[j] && continue
-            abs(imag(lambda[j])) ≤ atol && continue
-            if abs(lambda[j] - conj(lambda[i])) ≤ atol
-                perm[i] = j
-                perm[j] = i
-                assigned[i] = assigned[j] = true
-                found = true
-                break
-            end
-        end
-        found || (perm[i] = 0; assigned[i] = true)
-    end
-    return SVector{NVAR, Int}(perm)
-end
-
-# =============================================================================
 # _build_monomial_map
 # =============================================================================
 
