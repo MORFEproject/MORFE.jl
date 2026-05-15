@@ -143,6 +143,8 @@ linear-operator tuple is read from `model.linear_terms`.
   The caller must verify that the eigenvectors satisfy the conjugate symmetry before passing
   this argument — two eigenvalues forming a conjugate pair is necessary but not sufficient
   (the eigenspace must be one-dimensional, or the eigenvectors must be chosen conjugately).
+- `show_progress` — print a progress line to `stderr` while solving (default: `true`).
+  Suppressed automatically when `stderr` is not a TTY.
 
 ## Returns
 
@@ -158,7 +160,8 @@ function solve_cohomological_problem(
         initial_W::Union{Nothing, Parametrisation} = nothing,
         initial_R::Union{Nothing, ReducedDynamics} = nothing,
         master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
-        conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing
+        conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
+        show_progress::Bool = true
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
 
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
@@ -270,7 +273,7 @@ function solve_cohomological_problem(
     )
 
     # ── 7. Main solve ─────────────────────────────────────────────────────────
-    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache)
+    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
 
     return W, R
 end

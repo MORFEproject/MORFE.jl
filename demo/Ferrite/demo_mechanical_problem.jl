@@ -209,12 +209,12 @@ target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
 resonance_set = resonance_set_from_complex_normal_form_style(
 	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
 
-println("\nResonance set:")
-for (idx, mi) in enumerate(mset.exponents)
-	res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
-	isempty(res_str) && (res_str = "none")
-	println("  $mi → [$res_str]")
-end
+#println("\nResonance set:")
+#for (idx, mi) in enumerate(mset.exponents)
+#	res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
+#	isempty(res_str) && (res_str = "none")
+#	println("  $mi → [$res_str]")
+#end
 
 # -----------------------------------------------------------------------
 # 8. Solve cohomological equations
