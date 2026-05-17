@@ -1,3 +1,17 @@
+"""
+Module `Multiindices` — graded-lexicographic multiindex sets and combinatorial utilities.
+
+A *multiindex* is an exponent vector `α ∈ ℕᴺ` that identifies the monomial
+`z₁^α₁ ⋯ zₙ^αₙ` in `N` variables.  This module provides:
+
+- `MultiindexSet{N}` — a sorted, deduplicated collection of `SVector{N, Int}` exponents
+  in graded-lexicographic (GrLex) order, with O(1) degree-boundary queries.
+- Generators: `all_multiindices_up_to`, `multiindices_with_total_degree`, `all_multiindices_in_box`.
+- Binary-search lookup: `find_in_set`, `build_exponent_index_map`.
+- Factorisation enumerators: `factorisations_asymmetric`, `factorisations_fully_symmetric`,
+  `factorisations_groupwise_symmetric` — used by `MultilinearTerms` to sum nonlinear contributions.
+- Combinatorial utilities: `monomial_rank`, `bounded_index_tuples`, `divides`, `is_constant`.
+"""
 module Multiindices
 
 using StaticArrays: SVector
@@ -56,7 +70,9 @@ A fixed collection of exponent vectors (multiindices) stored as a vector of `SVe
 The set is guaranteed to be sorted according to the graded lexicographic (Grlex) order.
 
 # Fields
-- `exponents::Vector{SVector{N, Int}}`: each element is an exponent vector.
+- `exponents::Vector{SVector{N, Int}}`: the sorted list of exponent vectors.
+- `degree_offsets::Vector{Int}`: precomputed boundary table; `degree_offsets[d+1]` is the
+  last index in `exponents` with total degree `< d`, enabling O(1) degree-range queries.
 """
 struct MultiindexSet{N}
 	exponents::Vector{SVector{N, Int}} # unknown size list of exponent vectors, sorted by Grlex
@@ -300,7 +316,7 @@ end
 """
 	_sv_eq_tuple(v::SVector{N,Int}, t::NTuple{N,Int})
 
-Helper functions that compares:  SVector ==(indexwise) NTuple
+Helper function that compares an `SVector` and an `NTuple` element-wise.
 """
 @inline function _sv_eq_tuple(v::SVector{N, Int}, t::NTuple{N, Int}) where {N}
 	for i in 1:N
@@ -708,12 +724,10 @@ function _lex_rank_fixed_degree(exp::AbstractVector{Int}, n::Int, total_degree::
 end
 
 """
-	build_exponent_index_map(set::MultiindexSet) -> Dict{NTuple{N,Int}, Int} where N
+	build_exponent_index_map(set::MultiindexSet) -> Dict{SVector{N,Int}, Int}
 
-Build a dictionary mapping each exponent (as a tuple) to its column index in the set.
+Build a dictionary mapping each exponent `SVector` to its 1-based column index in `set`.
 Useful for O(1) lookups without repeated binary searches.
-
-The keys are `NTuple{N,Int}` where `N` is the number of variables.
 """
 function build_exponent_index_map(set::MultiindexSet{N}) where {N}
 	exps = set.exponents

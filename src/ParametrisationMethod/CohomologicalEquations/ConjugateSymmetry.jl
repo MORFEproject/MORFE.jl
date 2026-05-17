@@ -52,6 +52,13 @@ end
 # _build_monomial_map
 # =============================================================================
 
+"""
+    _build_monomial_map(mset, perm, mdict) -> Vector{Int}
+
+Build the monomial conjugate map induced by the mode permutation `perm`.
+`monomial_map[i]` is the index in `mset` of the monomial `P·γ` where `γ = mset[i]`
+and `(P·γ)[k] = γ[perm[k]]`.  Returns `0` when `P·γ` is not in `mset`.
+"""
 function _build_monomial_map(
         mset::MultiindexSet{NVAR},
         perm::SVector{NVAR, Int},
@@ -71,7 +78,19 @@ end
 # _build_conjugate_symmetry — factory
 # =============================================================================
 
-# Inactive path: wrap the linear skip set as a BitVector, allocate nothing.
+"""
+    _build_conjugate_symmetry(perm_or_sentinel, linear_skip_set, ...) -> ConjugateSymmetryData
+
+Factory for `ConjugateSymmetryData`.
+
+- **Inactive** (first argument is `NoConjugatePermutation()`): wraps `linear_skip_set`
+  as `skip_bits` and returns a `ConjugateSymmetryData{NoConjugatePermutation}` with
+  empty `primary_pairs`.
+- **Active** (first argument is an `SVector{NVAR,Int}` involution): builds the monomial
+  conjugate map, identifies primary/secondary pairs, populates `skip_bits` for both
+  linear monomials and secondary conjugate monomials, and returns a
+  `ConjugateSymmetryData{SVector{NVAR,Int}}`.
+"""
 function _build_conjugate_symmetry(::NoConjugatePermutation, linear_skip_set::Set{Int}, L::Int)
     skip_bits = falses(L)
     for i in linear_skip_set

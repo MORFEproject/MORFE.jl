@@ -1,3 +1,16 @@
+"""
+Module `ExternalSystems` — representation of autonomous external dynamical systems
+that drive a full-order model.
+
+An `ExternalSystem` encodes a finite-dimensional autonomous ODE
+
+    ṙ = f(r) = A r + higher-order terms
+
+whose state `r ∈ ℂᴺᴱˣᵀ` appears as a forcing argument in the nonlinear terms
+of an `NDOrderModel`.  The module stores the polynomial dynamics together with
+the linear matrix `A` and its eigenvalues, which enter the cohomological equations
+as external superharmonic frequencies.
+"""
 module ExternalSystems
 
 using StaticArrays, LinearAlgebra
@@ -41,7 +54,12 @@ struct ExternalSystem{N_EXT, T, EigenvalueType}
     eigenvalues::SVector{N_EXT, EigenvalueType}
 end
 
-# Helper type alias for eigenvalue storage
+"""
+    _evtype(::Type{T}) -> Type
+
+Return the eigenvalue storage type for scalar type `T`: `Complex{T}` when `T <: Real`,
+or `T` itself when `T <: Complex`.
+"""
 _evtype(::Type{T}) where {T <: Real} = Complex{T}
 _evtype(::Type{T}) where {T <: Complex} = T
 

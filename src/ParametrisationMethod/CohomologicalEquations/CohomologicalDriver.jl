@@ -2,7 +2,19 @@
 # Private driver helpers
 # =============================================================================
 
-# Initialise W and R linear monomials from spectral data and embed external dynamics.
+"""
+    _initialise_waveform!(W, R, master_modes, master_eigenvalues,
+                          master_modes_derivatives, unit_offset, model)
+
+Initialise the linear-monomial coefficients of `W` and `R` from spectral data:
+
+- `W[:, 1, eᵣ] = master_modes[:, r]` and, for `ORD > 1`,
+  `W[:, k, eᵣ] = master_modes_derivatives[:, k-1, r]`.
+- `R[r, eᵣ] = master_eigenvalues[r]`.
+
+Also embeds the external-system linear dynamics into the external rows of `R` via
+`_embed_external_dynamics!` when `model.external_system !== nothing`.
+"""
 function _initialise_waveform!(
         W::Parametrisation, R::ReducedDynamics,
         master_modes, master_eigenvalues,
@@ -26,10 +38,17 @@ function _initialise_waveform!(
     return nothing
 end
 
-# Solve primary external linear monomials using a partial context (Φ_ext = 0).
-# Secondaries (already in sym.skip_bits from conjugate-pair detection) are filled
-# by conjugation from their primary, matching the logic for all other non-master monomials.
-# All external linear monomials are marked done in sym.skip_bits so the main loop skips them.
+"""
+    _solve_external_directions!(W, R, partial_ctx, model, ml_cache, sym, N_EXT, ROM, unit_offset)
+
+Solve the `N_EXT` external forcing directions using a *partial* context in which
+the external generalised eigenvectors `Φ_ext` are set to zero (they are unknown at
+this stage).  When conjugate-symmetry is active, secondary external monomials are
+skipped and filled from their primaries via `fill_conjugate_monomial!`.
+
+All external linear monomials are marked in `sym.skip_bits` after this call so
+the main `solve_cohomological_equations!` loop does not overwrite them.
+"""
 function _solve_external_directions!(
         W, R, partial_ctx, model, ml_cache,
         sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int, ROM::Int, unit_offset::Int
@@ -63,7 +82,12 @@ function _solve_external_directions!(
     return nothing
 end
 
-# Dispatch helper: sparse path creates SparseLinearSolverState, dense path returns nothing.
+"""
+    _make_sparse_solver(MT, linear_terms, FOM, ROM) -> Union{SparseLinearSolverState, Nothing}
+
+Dispatch helper: returns a `SparseLinearSolverState` when `MT <: SparseMatrixCSC`
+(sparse path), or `nothing` for all other matrix types (dense path).
+"""
 _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int) = nothing
 function _make_sparse_solver(
         ::Type{<:SparseMatrixCSC}, linear_terms, FOM::Int, ROM::Int
@@ -72,7 +96,14 @@ function _make_sparse_solver(
     return SparseLinearSolverState{ComplexF64}(L_template, L_mappings, FOM, ROM)
 end
 
-# Assemble a CohomologicalContext from operator data and shared resources.
+"""
+    _build_context(linear_terms, generalised_eigenmodes, lambda_diag,
+                   inv_ops, orth_ops, resonance_set, linear_skip_set,
+                   lower_order, buffers, sparse_solver) -> CohomologicalContext
+
+Construct a `CohomologicalContext` from pre-assembled operator data and shared
+resources.  All type parameters are inferred from the arguments.
+"""
 function _build_context(
         linear_terms::NTuple{ORDP1, MT},
         generalised_eigenmodes::Matrix{T},

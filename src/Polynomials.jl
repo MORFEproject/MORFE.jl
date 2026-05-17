@@ -1,3 +1,18 @@
+"""
+Module `Polynomials` — dense multivariate polynomial type aligned to a `MultiindexSet`.
+
+A `DensePolynomial{T, NVAR, RANK}` stores coefficients in a single contiguous array
+whose last axis indexes monomials in the same GrLex order as the associated
+`MultiindexSet`.  The layout is chosen so that polynomial evaluation reduces to a
+single BLAS `gemv` / `dot` call regardless of the output rank:
+
+- Scalar polynomial (`RANK = 1`): coefficient array of shape `(L,)`.
+- Vector polynomial (`RANK = 2`): coefficient array of shape `(K, L)`.
+- Tensor polynomial (`RANK = k+1`): coefficient array of shape `(d₁, …, dₖ, L)`.
+
+Key operations: `evaluate`, `extract_component`, `each_term`, `similar_poly`,
+`linear_matrix_of_polynomial`, `coefficient`.
+"""
 module Polynomials
 
 # ============================================================
@@ -480,6 +495,11 @@ end
 # similar_poly
 # ─────────────────────────────────────────────────────────────────────────────
 
+"""
+	similar_poly(dict::Dict{SVector{NVAR,Int}, T}) where {NVAR, T<:Number}
+
+Scalar polynomial from a dictionary mapping exponent vectors to scalar coefficients.
+"""
 function similar_poly(dict::Dict{SVector{NVAR, Int}, T}) where {NVAR, T <: Number}
     isempty(dict) &&
         return DensePolynomial(T[], MultiindexSet(Vector{SVector{NVAR, Int}}()))
@@ -492,6 +512,12 @@ function similar_poly(dict::Dict{SVector{NVAR, Int}, T}) where {NVAR, T <: Numbe
     DensePolynomial(c, mset)
 end
 
+"""
+	similar_poly(dict::Dict{SVector{NVAR,Int}, SVector{K,T}}) where {NVAR, K, T<:Number}
+
+Fixed-size-vector polynomial from a dictionary mapping exponent vectors to
+`SVector{K,T}` coefficients. The output coefficient matrix has size `K × L`.
+"""
 function similar_poly(dict::Dict{
         SVector{NVAR, Int}, SVector{K, T}}) where {NVAR, K, T <: Number}
     isempty(dict) &&

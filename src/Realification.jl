@@ -1,3 +1,14 @@
+"""
+Module `Realification` — convert complex-valued parametrisations and reduced dynamics
+to real-valued form.
+
+The cohomological equations are solved in `ComplexF64` to handle both damped and
+undamped systems uniformly.  For systems with real matrices and complex-conjugate
+master-mode pairs, the resulting `W` and `R` satisfy conjugate-symmetry relations
+that allow an exact transformation to real arithmetic.  This module implements that
+transformation so that subsequent time integration and post-processing can operate
+entirely in real arithmetic.
+"""
 module Realification
 
 using LinearAlgebra

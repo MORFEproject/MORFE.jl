@@ -1,3 +1,29 @@
+"""
+Module `MultilinearTerms` — efficient evaluation of the nonlinear right-hand side
+of the cohomological equations.
+
+For each monomial `α` the nonlinear contribution is
+
+    Σₜ  Σ_{β₁+…+βₖ=α}  multiplier · t.f!(W[β₁], …, W[βₖ], r₁, …, rₘ)
+
+where the outer sum runs over all nonlinear terms `t` of the model and the inner
+sum enumerates factorisations of `α` into `k` sub-exponents from already-computed
+`W` columns.  This module provides two evaluation paths:
+
+- **Non-cached** (`compute_multilinear_terms` with an `SVector` exponent):
+  calls the factorisation routines on every invocation.  Simple but allocating.
+
+- **Cached** (`build_multilinear_terms_cache` + `compute_multilinear_terms!`):
+  precomputes all factorisation bookkeeping in `MultilinearTermsCache` once before
+  the solve loop, then replays it allocation-free at each monomial.
+
+For FEM-backed terms (`FEMMultilinearMap`) an additional **O4 combined element loop**
+merges all me=0 FEM contributions into a single mesh traversal per monomial,
+avoiding redundant `fem_reinit!` and `scatter_qp!` calls.
+
+Three symmetry strategies (`FullyAsymmetric`, `FullySymmetric`, `GroupwiseSymmetric`)
+are dispatched at compile time from the `MultilinearMap.multiindex` field.
+"""
 module MultilinearTerms
 
 using LinearAlgebra: axpy!
@@ -34,11 +60,51 @@ export compute_multilinear_terms, compute_multilinear_terms!, build_multilinear_
 # Dispatching on these tags lets Julia specialise the hot inner loop at
 # compile time.
 
+"""
+    SymmetryType
+
+Abstract tag type used to dispatch the inner factorisation accumulation strategy
+at compile time.  The three concrete subtypes correspond to the three cases that
+arise from `MultilinearMap.multiindex`:
+
+- `FullyAsymmetric`    — all entries ≤ 1; each factor slot uses a different derivative.
+- `FullySymmetric`     — exactly one entry > 1; all slots share one derivative.
+- `GroupwiseSymmetric` — multiple entries > 0; slots span several derivatives.
+"""
 abstract type SymmetryType end
+
+"""
+    FullyAsymmetric <: SymmetryType
+
+Tag for terms whose factor slots all use distinct derivatives (`multiindex` has no
+repeated entry > 1).  No scratch buffer is needed; `t.f!` writes directly into
+the accumulator.
+"""
 struct FullyAsymmetric <: SymmetryType end
+
+"""
+    FullySymmetric <: SymmetryType
+
+Tag for terms where all factor slots share a single derivative order (exactly one
+positive entry in `multiindex`).  Each factorisation carries a symmetry count.
+"""
 struct FullySymmetric <: SymmetryType end
+
+"""
+    GroupwiseSymmetric <: SymmetryType
+
+Tag for terms whose factor slots span multiple derivative orders (multiple positive
+entries in `multiindex`).  Uses `factorisations_groupwise_symmetric` with a combined
+per-group symmetry count.
+"""
 struct GroupwiseSymmetric <: SymmetryType end
 
+"""
+    symmetry_type(t) -> SymmetryType
+
+Classify a `AbstractMultilinearMap` as `FullyAsymmetric`, `FullySymmetric`,
+or `GroupwiseSymmetric` based on its `multiindex` field.
+"""
 function symmetry_type(t::AbstractMultilinearMap)
     all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
     count(>(0), t.multiindex) == 1 && return FullySymmetric()
@@ -76,7 +142,16 @@ end
 # The caller is responsible for zeroing `accum` before calling when needed
 # (see accumulate_multilinear_term! below).
 
-# No scratch needed: t.f! writes directly into accum.
+"""
+    _accumulate_split!(accum, scratch, t, sym, W, set, rem, deg, candidate_indices, args_ext)
+
+Accumulate contributions from one (monomial, external-split) pair into `accum`,
+dispatching on the `SymmetryType` tag `sym`.
+
+- `FullyAsymmetric`: calls `t.f!` directly into `accum` for each factorisation.
+- `FullySymmetric` / `GroupwiseSymmetric`: calls `t.f!` into `scratch`, then
+  `axpy!(multiplier, scratch, accum)` to apply the symmetry count.
+"""
 function _accumulate_split!(accum, _scratch,
         t, ::FullyAsymmetric, W, set, rem, deg, candidate_indices, args_ext)
     orders = _derivative_orders(t)
@@ -368,12 +443,25 @@ end
 # Cache construction helpers
 # -----------------------------------------------------------------------
 
-# Per-slot orders as a Vector (for storage in CachedSplit).
+"""
+    _orders_for_cache(sym, t, deg) -> Vector{Int}
+
+Return the per-slot derivative order vector for storage in a `CachedSplit`.
+
+- `FullySymmetric`: all `deg` slots share one derivative index.
+- Other: read from `_derivative_orders(t)`.
+"""
 _orders_for_cache(::FullySymmetric, t, deg) = fill(findfirst(>(0), t.multiindex)::Int, deg)
 _orders_for_cache(::SymmetryType, t, deg) = collect(Int, _derivative_orders(t))
 
-# Route to the right factorisation function for cache construction.
-# GroupwiseSymmetric needs t.multiindex; the others do not.
+"""
+    _collect_entries(sym, t, mset, rem, deg, cands) -> Vector{FactorisationEntry}
+
+Call the appropriate factorisation function for cache construction, routing
+`FullyAsymmetric` to `factorisations_asymmetric`, `FullySymmetric` to
+`factorisations_fully_symmetric`, and `GroupwiseSymmetric` to
+`factorisations_groupwise_symmetric`.
+"""
 function _collect_entries(::FullyAsymmetric, t, mset, rem, deg, cands)
     factorisations_asymmetric(mset, rem, deg, cands)
 end
@@ -384,8 +472,14 @@ function _collect_entries(::GroupwiseSymmetric, t, mset, rem, deg, cands)
     factorisations_groupwise_symmetric(mset, rem, t.multiindex, cands)
 end
 
-# Build a FEMCachedSplit{DEG} from an already-constructed CachedSplit.
-# Called once per split at cache-build time; zero allocation in the hot path.
+"""
+    _build_fem_cached_split(::Val{DEG}, cs) -> FEMCachedSplit{DEG}
+
+Convert a `CachedSplit` to a `FEMCachedSplit{DEG}` for the FEM-batched replay path.
+Deduplicates `(derivative_order, W_col_idx)` pairs across all entries and remaps
+each entry's factor slots to local indices into the `unique_cols` table.
+Called once at cache-build time; produces zero allocations in the hot path.
+"""
 function _build_fem_cached_split(::Val{DEG}, cs::CachedSplit) where {DEG}
     # 1. Enumerate unique (derivative_order, W_col_idx) pairs across all entries.
     unique_cols = Tuple{Int, Int}[]
@@ -408,9 +502,17 @@ function _build_fem_cached_split(::Val{DEG}, cs::CachedSplit) where {DEG}
     return FEMCachedSplit{DEG}(cs.ext_count, cs.args_ext_indices, unique_cols, fem_entries)
 end
 
-# Build the O4 combined-loop bookkeeping for one monomial.
-# fem_splits_l[t_idx] is the Vector{FEMCachedSplit} for that term (empty if t.deg > deg_max).
-# fem_term_indices lists indices into model.nonlinear_terms that are FEMMultilinearMap.
+"""
+    _build_global_fem_split(model, fem_splits_l, fem_term_indices) -> FEMGlobalSplit
+
+Build the O4 combined-element-loop bookkeeping for one monomial, merging all me=0
+FEM terms into a single `FEMGlobalSplit`.
+
+- Deduplicates `(order, col)` pairs across all me=0 FEM splits into a global table.
+- Remaps each `FEMFactorisationEntry`'s local indices to global table indices.
+- Groups entries by degree into a typed `Tuple` for type-stable compile-time dispatch.
+- Returns an empty `FEMGlobalSplit{Tuple{}}` when no me=0 FEM terms are present.
+"""
 function _build_global_fem_split(model, fem_splits_l, fem_term_indices)
     isempty(fem_term_indices) && return FEMGlobalSplit{Tuple{}}([], (), 0, Int[])
 
@@ -628,9 +730,16 @@ end
 # Public API — cached
 # -----------------------------------------------------------------------
 
-# Replay one CachedSplit into result.
-# me = 0 (empty args_ext_indices): accumulate directly into result.
-# me > 0: accumulate into temp, then axpy!(ext_count, temp, result).
+"""
+    _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
+
+Replay one `CachedSplit` into `result` using precomputed factorisation bookkeeping.
+
+- `me = 0` (`args_ext_indices` empty): accumulates directly into `result`.
+- `me > 0`: accumulates into `temp`, then `axpy!(ext_count, temp, result)`.
+
+Dispatches asymmetric/symmetric accumulation via `split.is_asymmetric`.
+"""
 function _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
     if isempty(split.args_ext_indices)
         accum = result
@@ -658,10 +767,17 @@ function _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
     isempty(split.args_ext_indices) || axpy!(split.ext_count, temp, result)
 end
 
-# Replay one FEMCachedSplit using a single element-loop (RHS-C batched path).
-# Fe is the pre-allocated element-residual buffer from MultilinearTermsCache.
-# The qp-level gradient buffer ∇W_qp is obtained from the term via fem_qp_buffer(t),
-# which allows each FEMMultilinearMap subtype to use its own concrete element type.
+"""
+    _replay_fem_split!(result, t, W, fem_split, Fe)
+
+Replay one `FEMCachedSplit{DEG}` using the FEM-batched element loop.
+
+For each element: calls `fem_reinit!` once, scatters each unique `(order, col)` W
+column to qp-level field values via `scatter_qp!`, accumulates all qp contributions
+via `accumulate_qp!`, and assembles the element residual into `result` via
+`assemble_element!`.  The qp gradient buffer `∇W_qp` is obtained from the term
+via `fem_qp_buffer(t)` and is owned by the term, not allocated here.
+"""
 function _replay_fem_split!(
         result, t::FEMMultilinearMap, W, fem_split::FEMCachedSplit{DEG},
         Fe) where {DEG}
@@ -713,12 +829,16 @@ end
 # O4 — combined element loop across all me=0 FEM terms
 # -----------------------------------------------------------------------
 
-# Base case: empty entries tuple — nothing to do.
+"""
+    _accumulate_global_entries!(Fe_bufs, ∇W_qp, entries_by_deg, model, element, q, dΩ)
+
+Recursive type-stable dispatch over the degree-grouped entry tuple.  The base case
+(empty tuple) is a no-op.  Each recursive step processes the head degree group —
+Julia specialises a method per `DEG` so `Val(DEG)` in `ntuple` and the
+`accumulate_qp!` dispatch are resolved at compile time — then recurses on the tail.
+"""
 @inline _accumulate_global_entries!(_, _, ::Tuple{}, _, _, _, _) = nothing
 
-# Recursive case: process the head degree group (DEG is a compile-time constant),
-# then recurse on the tail. Julia specialises a method per DEG so Val(DEG) in
-# ntuple(...) and the accumulate_qp! dispatch are both resolved at compile time.
 @inline function _accumulate_global_entries!(Fe_bufs, ∇W_qp,
         entries_by_deg::Tuple{Vector{FEMGlobalEntry{DEG}}, Vararg},
         model, element, q, dΩ) where {DEG}
@@ -731,9 +851,15 @@ end
                                 model, element, q, dΩ)
 end
 
-# Execute a single element loop accumulating contributions from ALL me=0 FEM terms
-# for one monomial.  reinit! and scatter_qp! are called at most once per unique
-# (element, W-column) pair; accumulate_qp! dispatches per degree group.
+"""
+    _replay_all_fem_splits!(result, model, W, global_split, global_∇W_qp, global_Fe_buffers)
+
+Execute the O4 combined element loop: traverse the mesh once, scatter all globally-unique
+W columns, then accumulate contributions from ALL me=0 FEM terms at each quadrature point.
+
+`fem_reinit!` and `scatter_qp!` are called at most once per unique `(element, W-column)`
+pair; `accumulate_qp!` dispatches per degree group via `_accumulate_global_entries!`.
+"""
 function _replay_all_fem_splits!(result, model, W,
         global_split::FEMGlobalSplit,
         global_∇W_qp, global_Fe_buffers)
@@ -767,10 +893,14 @@ function _replay_all_fem_splits!(result, model, W,
     end
 end
 
-# Function barrier: extracts global_fem_splits[exp_index] (type Any) and calls
-# _replay_all_fem_splits! via runtime dispatch.  The called method is type-stable.
-# cache::MultilinearTermsCache{T,QP} ensures global_∇W_qp::Matrix{QP} is concretely typed
-# at the call site even though global_split triggers dynamic dispatch.
+"""
+    _replay_global_fem!(result, model, W, cache, exp_index)
+
+Function barrier: retrieves `cache.global_fem_splits[exp_index]` (stored as `Any`) and
+delegates to `_replay_all_fem_splits!`.  The barrier restores type stability because
+`cache.global_∇W_qp::Matrix{QP}` is concretely typed at the call site even though the
+`global_split` triggers runtime dispatch on `ENTRIES_TUPLE`.
+"""
 function _replay_global_fem!(result, model, W,
         cache::MultilinearTermsCache{T, QP}, exp_index) where {T, QP}
     gs = cache.global_fem_splits[exp_index]
@@ -786,6 +916,16 @@ end
 # Adding a new AbstractMultilinearMap subtype requires only a new _replay_term! method;
 # compute_multilinear_terms! never needs to be modified.
 
+"""
+    _replay_term!(result, t, W, exp_index, t_idx, cache)
+
+Replay all cached splits for one nonlinear term `t` and monomial `exp_index` into
+`result`.  Dispatches on the concrete term type:
+
+- `MultilinearMap`: replays via `_replay_split!` (closure path).
+- `FEMMultilinearMap`: me=0 splits are handled by `_replay_global_fem!` (O4 combined
+  loop); only me>0 fallback splits are processed here via `_replay_fem_split!`.
+"""
 function _replay_term!(result, t::MultilinearMap, W, exp_index, t_idx,
         cache::MultilinearTermsCache)
     deg = t.deg - t.multiplicity_external

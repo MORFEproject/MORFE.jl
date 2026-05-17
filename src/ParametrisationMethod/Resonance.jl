@@ -48,6 +48,21 @@ export ResonanceSet,
 # ======================================================================
 # ResonanceSet
 # ======================================================================
+
+"""
+	ResonanceSet{NVAR, N_TARGETS, M}
+
+Boolean look-up table recording which monomials are resonant with which
+master-mode targets.
+
+- `multiindices`: the `MultiindexSet{NVAR}` over which resonances are defined
+- `resonances`: `N_TARGETS × NMON` `BitMatrix`; `resonances[r, k] == true` means
+  monomial `k` is resonant with target `r`
+- `n_internal`: number of internal master modes (rows 1:`n_internal` correspond to
+  the ROM eigenvalues; remaining rows correspond to external/forcing eigenvalues)
+
+Use one of the `resonance_set_from_*` constructors rather than building this directly.
+"""
 struct ResonanceSet{NVAR, N_TARGETS, M <: AbstractMatrix{Bool}}
     multiindices::MultiindexSet{NVAR}
     resonances::M
@@ -62,10 +77,23 @@ struct ResonanceSet{NVAR, N_TARGETS, M <: AbstractMatrix{Bool}}
     end
 end
 
+"""
+    empty_resonance_set(multiindices, nmodes, n_internal) -> ResonanceSet
+
+Construct a `ResonanceSet` with all resonance flags set to `false`.
+Useful as a starting point for manual `set_resonance!` calls.
+"""
 function empty_resonance_set(multiindices::MultiindexSet{NVAR}, nmodes::Int, n_internal::Int) where {NVAR}
     ResonanceSet{NVAR, nmodes, BitMatrix}(multiindices, falses(nmodes, length(multiindices)), n_internal)
 end
 
+"""
+    set_resonance!(rs, target, idx, value) -> rs
+    set_resonance!(rs, target, mi, value)  -> rs
+
+Set the resonance flag for target mode `target` and monomial `idx` (or multiindex
+vector `mi`) to `value`.  Returns `rs` for chaining.  Warns if `mi` is not found.
+"""
 function set_resonance!(rs::ResonanceSet{NVAR, N_TARGETS}, target::Int,
         idx::Int, value::Bool) where {NVAR, N_TARGETS}
     (rs.resonances[target, idx] = value; rs)
@@ -77,6 +105,13 @@ function set_resonance!(rs::ResonanceSet{NVAR, N_TARGETS}, target::Int,
     return set_resonance!(rs, target, idx, value)
 end
 
+"""
+    is_resonant(rs, idx, target) -> Bool
+    is_resonant(rs, mi, target)  -> Bool
+
+Return `true` when the monomial at position `idx` (or with exponent vector `mi`)
+is resonant with master-mode target `target`.
+"""
 is_resonant(rs::ResonanceSet, idx::Int, target::Int) = rs.resonances[target, idx]
 function is_resonant(rs::ResonanceSet{NVAR, N_TARGETS}, mi::Vector{Int}, target::Int) where {
         NVAR, N_TARGETS}
@@ -84,6 +119,15 @@ function is_resonant(rs::ResonanceSet{NVAR, N_TARGETS}, mi::Vector{Int}, target:
     idx === nothing && return false
     return rs.resonances[target, idx]
 end
+
+"""
+    resonant_targets(rs, idx) -> AbstractVector{Bool}
+    resonant_targets(rs, mi)  -> Union{AbstractVector{Bool}, Nothing}
+
+Return the column `rs.resonances[:, idx]` indicating which targets are resonant
+with the monomial at position `idx` (or with exponent vector `mi`).
+Returns `nothing` when `mi` is not in the multiindex set.
+"""
 function resonant_targets(rs::ResonanceSet{NVAR, N_TARGETS}, idx::Int) where {
         NVAR, N_TARGETS}
     rs.resonances[:, idx]
@@ -94,15 +138,55 @@ function resonant_targets(rs::ResonanceSet{NVAR, N_TARGETS}, mi::Vector{Int}) wh
     idx === nothing && return nothing
     return resonant_targets(rs, idx)
 end
+
+"""
+    resonant_multiindices(rs, target) -> Vector{Int}
+
+Return the positions in the multiindex set of all monomials resonant with `target`.
+"""
 resonant_multiindices(rs::ResonanceSet, target::Int) = findall(rs.resonances[target, :])
 
 # ======================================================================
 # Internal strategies
 # ======================================================================
+
+"""
+    InternalResonance
+
+Abstract supertype for strategies that decide which monomials are resonant
+with the *internal* (ROM) master modes.  Two concrete subtypes are provided:
+`GraphInternal` and `NormalFormInternal`.
+"""
 abstract type InternalResonance end
+
+"""
+    GraphInternal <: InternalResonance
+
+Internal-resonance strategy for the **graph style**: every monomial of total
+degree ≥ 2 is marked resonant with all internal master modes.  Linear monomials
+`eᵣ` are resonant only with their own mode `r`.
+"""
 struct GraphInternal <: InternalResonance end
+
+"""
+    NormalFormInternal <: InternalResonance
+
+Internal-resonance strategy for the **normal form style**: no monomial is
+automatically marked resonant with internal modes — resonance is determined
+entirely by the outer eigenvalue-proximity condition.
+"""
 struct NormalFormInternal <: InternalResonance end
 
+"""
+    apply_internal_resonances!(resonances, strategy, mi, n_internal, k)
+
+Set the internal-resonance flags in column `k` of `resonances` for the
+monomial with exponent vector `mi`, according to `strategy`.
+
+- `GraphInternal`: marks all `n_internal` rows resonant for degree ≥ 2;
+  for a linear monomial `eᵣ` marks only row `r` (if `r ≤ n_internal`).
+- `NormalFormInternal`: no-op — leaves all internal flags unchanged.
+"""
 function apply_internal_resonances!(resonances::AbstractMatrix{Bool}, ::NormalFormInternal,
         mi::AbstractVector{Int}, n_internal::Int, k::Int)
     return
@@ -135,8 +219,28 @@ end
 # index to address `cond.eigenvalues` (and `cond.condition_numbers`).
 # This decouples the size of the stored arrays from the global N_TARGETS.
 # ======================================================================
+
+"""
+    OuterResonanceCondition
+
+Abstract supertype for conditions that test whether a monomial is resonant with
+an *outer* (forcing or target) mode at superharmonic frequency `s`.
+
+All concrete subtypes must implement
+`is_resonant(cond, target::Int, s::ComplexF64, k::Int) -> Bool`.
+"""
 abstract type OuterResonanceCondition end
 
+"""
+    EigenvalueCondition <: OuterResonanceCondition
+
+Flags a monomial as resonant when `|λⱼ - s| < tol`.
+
+- `eigenvalues`: target eigenvalues (local indexing).
+- `tol`: scalar global tolerance, or `Vector{Vector{Float64}}` for per-monomial,
+  per-target tolerances.
+- `target_indices`: global target indices this condition applies to.
+"""
 struct EigenvalueCondition <: OuterResonanceCondition
     eigenvalues::Vector{ComplexF64}
     tol::Union{Float64, Vector{Vector{Float64}}}
@@ -146,6 +250,15 @@ struct EigenvalueCondition <: OuterResonanceCondition
     end
 end
 
+"""
+    RealEigenvalueCondition <: OuterResonanceCondition
+
+Flags a monomial as resonant when `|λⱼ - s| < tol` **or** `|λ_{conj(j)} - s| < tol`,
+so that conjugate eigenvalue pairs share the same resonance flag.
+
+- `conjugacy_map`: local index map; `conjugacy_map[i]` is the local index of the
+  conjugate of eigenvalue `i`.
+"""
 struct RealEigenvalueCondition <: OuterResonanceCondition
     eigenvalues::Vector{ComplexF64}
     conjugacy_map::Vector{Int}    # local index map: conjugacy_map[local_i] = local_j
@@ -156,6 +269,22 @@ struct RealEigenvalueCondition <: OuterResonanceCondition
     end
 end
 
+"""
+    ConditionNumberEstimateCondition <: OuterResonanceCondition
+
+Flags a monomial as resonant using a condition-number criterion:
+
+    |λⱼ - s| * max_cond < spectral_radius * κ(λⱼ)
+
+This catches near-resonances that a fixed-tolerance eigenvalue check would miss
+when the cohomological operator is close to singular.
+
+- `spectral_radius`: spectral radius of the full-order system.
+- `condition_numbers`: per-target eigenvalue condition numbers `κ(λⱼ)`.
+- `max_cond`: maximum acceptable condition number for the cohomological operator.
+- `conjugacy_map`: optional local conjugacy map; when set, both `λⱼ` and its
+  conjugate are tested.
+"""
 struct ConditionNumberEstimateCondition <: OuterResonanceCondition
     eigenvalues::Vector{ComplexF64}
     spectral_radius::Float64
@@ -171,9 +300,23 @@ struct ConditionNumberEstimateCondition <: OuterResonanceCondition
     end
 end
 
-# Local-index helper: returns nothing if target is not in the condition.
+"""
+    _local_index(cond, target) -> Union{Int, Nothing}
+
+Return the local array index for global target `target` in `cond.target_indices`,
+or `nothing` if this condition does not apply to that target.
+"""
 @inline _local_index(cond::OuterResonanceCondition, target::Int) = findfirst(==(target), cond.target_indices)
 
+"""
+    is_resonant(cond::EigenvalueCondition, target, s, k) -> Bool
+    is_resonant(cond::RealEigenvalueCondition, target, s, k) -> Bool
+    is_resonant(cond::ConditionNumberEstimateCondition, target, s, k) -> Bool
+
+Test whether superharmonic frequency `s` of monomial `k` is resonant with
+target mode `target` under the given outer condition.  Returns `false` immediately
+when `target` is not in `cond.target_indices`.
+"""
 function is_resonant(cond::EigenvalueCondition, target::Int, s::ComplexF64, k::Int)::Bool
     local_idx = _local_index(cond, target)
     local_idx === nothing && return false
@@ -223,12 +366,29 @@ end
 # ======================================================================
 # ResonanceStyle and generic constructor
 # ======================================================================
+
+"""
+    AbstractResonanceStyle
+
+Abstract supertype for resonance style objects.  A concrete subtype bundles an
+`InternalResonance` strategy with an `OuterResonanceCondition` and is passed to
+`resonance_set_from_style` to build a `ResonanceSet`.
+"""
 abstract type AbstractResonanceStyle end
 
-# n_targets: total number of target modes (rows in the resonance matrix).
-# This may exceed length(outer_condition.eigenvalues) when, e.g., internal
-# resonances are handled by GraphInternal but the outer condition only stores
-# the outer eigenvalues.
+"""
+    ResonanceStyle{INT, EXT} <: AbstractResonanceStyle
+
+Composed resonance specification: combines an `InternalResonance` strategy `INT`
+with an `OuterResonanceCondition` `EXT`.
+
+# Fields
+- `super_eigenvalues`: eigenvalues used to compute the superharmonic `s = ⟨λ, α⟩`.
+- `internal_strategy`: controls internal-mode resonance marking.
+- `outer_condition`: controls outer-mode resonance marking.
+- `n_internal`: number of internal (ROM) master modes.
+- `n_targets`: total number of target rows in the resonance matrix (`n_internal + n_outer`).
+"""
 struct ResonanceStyle{INT <: InternalResonance, EXT <: OuterResonanceCondition} <:
        AbstractResonanceStyle
     super_eigenvalues::Vector{ComplexF64}
@@ -237,8 +397,21 @@ struct ResonanceStyle{INT <: InternalResonance, EXT <: OuterResonanceCondition} 
     n_internal::Int
     n_targets::Int
 end
+
+"""
+    n_internal(style::ResonanceStyle) -> Int
+
+Return the number of internal master modes in `style`.
+"""
 n_internal(style::ResonanceStyle) = style.n_internal
 
+"""
+    build_resonances_matrix(style, multiindices) -> BitMatrix
+
+Build the `N_TARGETS × NMON` resonance matrix from a `ResonanceStyle` and a
+`MultiindexSet`.  For each monomial, the superharmonic `s` is computed, then
+`apply_internal_resonances!` and the outer `is_resonant` condition are applied.
+"""
 function build_resonances_matrix(style::ResonanceStyle{INT, EXT},
         multiindices::MultiindexSet{NVAR}) where {NVAR, INT, EXT}
     exps = multiindices.exponents
@@ -261,6 +434,12 @@ function build_resonances_matrix(style::ResonanceStyle{INT, EXT},
     return resonances
 end
 
+"""
+    resonance_set_from_style(style, multiindices) -> ResonanceSet
+
+Build a `ResonanceSet` from any `AbstractResonanceStyle` and a `MultiindexSet`.
+This is the generic entry point used internally by all `resonance_set_from_*` constructors.
+"""
 function resonance_set_from_style(style::AbstractResonanceStyle, multiindices::MultiindexSet{NVAR}) where {NVAR}
     resonances = build_resonances_matrix(style, multiindices)
     N_TARGETS = size(resonances, 1)
@@ -271,10 +450,18 @@ end
 # Public constructors (convenience)
 # ======================================================================
 
-# Graph style: internal modes use GraphInternal (all-resonant for degree ≥ 2),
-# outer modes use an eigenvalue proximity check.
-# The EigenvalueCondition stores only the outer eigenvalues (local indices 1..n_outer)
-# with target_indices = (n_internal+1):(n_internal+n_outer).
+"""
+	resonance_set_from_graph_style(
+		n_internal, multiindices, super_eigenvalues,
+		outer_eigenvalues, tol)
+
+Build a `ResonanceSet` using the **graph style**: every monomial of total degree ≥ 2
+is marked resonant with all `n_internal` internal master modes.  Outer (forcing)
+modes are flagged by eigenvalue proximity: monomial `k` is resonant with outer
+target `j` when `|λⱼ - s| < tol`, where `s = ⟨super_eigenvalues, α⟩`.
+
+This is the recommended choice for non-autonomous SSMs with external forcing.
+"""
 function resonance_set_from_graph_style(n_internal::Int, multiindices::MultiindexSet{NVAR},
         super_eigenvalues::Vector{ComplexF64}, outer_eigenvalues::Vector{ComplexF64},
         tol::Union{Float64, Vector{Vector{Float64}}}) where {NVAR}
@@ -286,8 +473,16 @@ function resonance_set_from_graph_style(n_internal::Int, multiindices::Multiinde
     return resonance_set_from_style(style, multiindices)
 end
 
-# Complex normal form: no automatic internal resonances; all targets checked via
-# eigenvalue proximity.
+"""
+	resonance_set_from_complex_normal_form_style(
+		n_internal, multiindices, super_eigenvalues,
+		target_eigenvalues, tol)
+
+Build a `ResonanceSet` using the **complex normal form style**: no automatic
+internal resonances; a monomial is resonant with target `j` only when
+`|λⱼ - s| < tol`.  Suitable for autonomous SSMs with complex conjugate
+reduced variables.
+"""
 function resonance_set_from_complex_normal_form_style(
         n_internal::Int, multiindices::MultiindexSet{NVAR},
         super_eigenvalues::Vector{ComplexF64}, target_eigenvalues::Vector{ComplexF64},
@@ -299,8 +494,17 @@ function resonance_set_from_complex_normal_form_style(
     return resonance_set_from_style(style, multiindices)
 end
 
-# Real normal form: conjugate pairs share resonance via RealEigenvalueCondition.
-# `conjugacy_map[i]` is the **local** index of the conjugate of target i.
+"""
+	resonance_set_from_real_normal_form_style(
+		n_internal, multiindices, super_eigenvalues,
+		target_eigenvalues, conjugacy_map, tol)
+
+Build a `ResonanceSet` using the **real normal form style**: like the complex
+normal form style but conjugate pairs share resonance — monomial `k` is resonant
+with target `j` when `|λⱼ - s| < tol` OR `|λ_{conj(j)} - s| < tol`.
+`conjugacy_map[i]` is the local index of the conjugate of target `i`.
+Use when building a real-valued ROM without explicit complex conjugation.
+"""
 function resonance_set_from_real_normal_form_style(
         n_internal::Int,
         multiindices::MultiindexSet{NVAR},
@@ -316,6 +520,22 @@ function resonance_set_from_real_normal_form_style(
     return resonance_set_from_style(style, multiindices)
 end
 
+"""
+	resonance_set_from_condition_number_estimate(
+		n_internal, multiindices, super_eigenvalues,
+		target_eigenvalues, spectral_radius,
+		target_condition_numbers, max_cond
+		[, target_indices, conjugacy_map])
+
+Build a `ResonanceSet` that flags near-resonant monomials by a condition-number
+criterion: monomial `k` is resonant with target `j` when
+
+	|λⱼ - s| * max_cond < spectral_radius * κ(λⱼ)
+
+where `κ(λⱼ)` is the eigenvalue condition number and `spectral_radius` is the
+spectral radius of the system.  Use when eigenvalues are approximate and purely
+geometric proximity criteria are unreliable.
+"""
 function resonance_set_from_condition_number_estimate(
         n_internal::Int,
         multiindices::MultiindexSet{NVAR},
@@ -336,8 +556,13 @@ function resonance_set_from_condition_number_estimate(
     return resonance_set_from_style(style, multiindices)
 end
 
-# Advanced: graph style with any pre-built outer condition.
-# n_targets is inferred as max(n_internal, maximum(cond.target_indices)).
+"""
+    resonance_set_from_graph_style(n_internal, multiindices, super_eigenvalues, outer_condition)
+
+Advanced overload of `resonance_set_from_graph_style` that accepts any pre-built
+`OuterResonanceCondition`.  `n_targets` is inferred as
+`max(n_internal, maximum(outer_condition.target_indices))`.
+"""
 function resonance_set_from_graph_style(n_internal::Int, multiindices::MultiindexSet{NVAR},
         super_eigenvalues::Vector{ComplexF64},
         outer_condition::OuterResonanceCondition) where {NVAR}
