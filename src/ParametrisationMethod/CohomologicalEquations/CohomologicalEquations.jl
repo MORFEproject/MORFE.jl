@@ -106,11 +106,13 @@ export CohomologicalContext,
 	LowerOrderResources,
 	CohomologicalBuffers,
 	SparseLinearSolverState,
+	ThreadedMonoSolveResources,
 	NoConjugatePermutation,
 	ConjugateSymmetryData,
 	fill_conjugate_monomial!,
 	detect_conjugate_permutation,
 	solve_cohomological_equations!,
+	solve_cohomological_equations_threaded!,
 	solve_single_monomial!,
 	solve_cohomological_problem
 
@@ -235,9 +237,9 @@ end
 # ==============================================================================
 
 # Singleton used by the no-sym public overload; skip_bits is never indexed inside
-# solve_single_monomial!, so a zero-length BitVector is correct here.
+# solve_single_monomial!, so empty fields are correct here.
 const _NO_SYM = ConjugateSymmetryData{NoConjugatePermutation}(
-	NoConjugatePermutation(), Int[], BitVector(), NTuple{2, Int}[],
+	NoConjugatePermutation(), BitVector(), NTuple{2, Int}[], Int[],
 )
 
 """
@@ -321,13 +323,13 @@ Solve the cohomological equations for **all** monomials in the multiindex set
 of `W` and `R`, processing them in *causal order* (ascending total degree).
 """
 function solve_cohomological_equations!(W, R, ctx, model, ml_cache; show_progress::Bool = true)
-	nterms = length(multiindex_set(W))
-	sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
+	sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set,
+		multiindex_set(W))
 	solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
 end
 
-# Overload without active symmetry: skip_bits covers only linear monomials; uses sym-aware
-# solve_single_monomial! to enable compile-time dispatch on RB.
+# Overload without active symmetry.  Uses sym-aware solve_single_monomial! to enable
+# compile-time dispatch on NoConjugatePermutation.
 function solve_cohomological_equations!(
 	W::Parametrisation{ORD, NVAR, T},
 	R::ReducedDynamics{ROM, NVAR, T},
@@ -337,12 +339,10 @@ function solve_cohomological_equations!(
 	ml_cache::MultilinearTermsCache;
 	show_progress::Bool = true,
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
-	nterms = length(multiindex_set(W))
-	n_to_solve = count(!b for b in sym.skip_bits)
-	prog = _make_progress(n_to_solve, show_progress)
+	jobs = sym.solve_jobs
+	prog = _make_progress(length(jobs), show_progress)
 	n_done = 0
-	for idx in 1:nterms
-		@inbounds sym.skip_bits[idx] && continue
+	for (idx, _) in jobs
 		solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
 		n_done += 1
 		_progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
@@ -351,8 +351,8 @@ function solve_cohomological_equations!(
 	return nothing
 end
 
-# Overload with active symmetry: secondaries are in skip_bits; primaries are solved
-# then their conjugate is filled via fill_conjugate_monomial!.
+# Overload with active symmetry: secondaries are in skip_bits; solve_jobs contains only
+# primaries.  Each primary is solved then its conjugate secondary is filled.
 function solve_cohomological_equations!(
 	W::Parametrisation{ORD, NVAR, T},
 	R::ReducedDynamics{ROM, NVAR, T},
@@ -362,34 +362,171 @@ function solve_cohomological_equations!(
 	ml_cache::MultilinearTermsCache;
 	show_progress::Bool = true,
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
-	nterms = length(multiindex_set(W))
-	pairs = sym.primary_pairs
-	ptr = 1
-
-	n_to_solve = count(!b for b in sym.skip_bits)
-	prog = _make_progress(n_to_solve, show_progress)
+	jobs = sym.solve_jobs
+	prog = _make_progress(length(jobs), show_progress)
 	n_done = 0
-
-	for idx in 1:nterms
-		@inbounds sym.skip_bits[idx] && continue   # skips linears AND secondary monomials
-
+	for (idx, dst) in jobs
 		solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
 		n_done += 1
 		_progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
-
-		# Advance ptr past any pairs whose primary was already handled before this loop
-		# (e.g. external linear monomials solved by _solve_external_directions!).
-		while ptr <= length(pairs) && @inbounds sym.skip_bits[pairs[ptr][1]]
-			ptr += 1
-		end
-		if ptr <= length(pairs) && @inbounds pairs[ptr][1] == idx
-			(src, dst) = @inbounds pairs[ptr]
-			fill_conjugate_monomial!(W, R, dst, src, sym)
-			ptr += 1
-		end
+		iszero(dst) || fill_conjugate_monomial!(W, R, dst, idx, sym)
 	end
 	_progress_done!(prog, n_done)
 	return nothing
+end
+
+# ==============================================================================
+# Threaded solve infrastructure (dense path only)
+# ==============================================================================
+
+"""
+    _solve_single_threaded!(W, R, idx, ctx, local_res, sym, model, ml_cache)
+
+Solve the cohomological system for monomial `idx` using thread-local `local_res`
+for all mutable scratch (system buffers + lower-order coupling buffer).
+
+`local_res.buffers.ml_result` must already contain the multilinear-terms
+contribution for this monomial (computed before entering the parallel region).
+
+This function is identical in logic to `solve_single_monomial!` but reads from
+`local_res.buffers` and `local_res.lo_buffer` instead of `ctx.buffers` and
+`ctx.lower_order.buffer`, eliminating all cross-thread data races.
+"""
+function _solve_single_threaded!(
+        W::Parametrisation{ORD, NVAR, T},
+        R::ReducedDynamics{ROM, NVAR, T},
+        idx::Int,
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        local_res::ThreadedMonoSolveResources{T},
+) where {T, ORD, ORDP1, NVAR, FOM, ROM, LT, MT}
+    lb = local_res.buffers
+
+    multi     = multiindex_set(W)[idx]
+    s         = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
+    resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
+    nR        = count(resonance)
+    n_sys     = FOM + nR
+
+    # ── Lower-order couplings (thread-local buffer) ───────────────────────────
+    for v in local_res.lo_buffer
+        fill!(v, zero(T))
+    end
+    lower_order_couplings = compute_lower_order_couplings(
+        multi, W, R,
+        ctx.lower_order.multiindex_dict,
+        local_res.lo_buffer,
+        ctx.lower_order.candidate_indices[idx],
+        ctx.lower_order.unit_vectors,
+    )
+
+    external_dynamics = view(R.poly.coefficients, (ROM + 1):NVAR, idx)
+
+    # ── System assembly (into thread-local buffers) ───────────────────────────
+    assemble_cohomological_matrix_and_rhs!(
+        view(lb.system_matrix, 1:FOM, 1:n_sys),
+        view(lb.rhs, 1:FOM),
+        s, ctx.linear_terms,
+        ctx.invariance.C_coeffs, ctx.invariance.E_coeffs,
+        resonance, lower_order_couplings, external_dynamics,
+        lb.external_rhs
+    )
+    view(lb.rhs, 1:FOM) .+= lb.ml_result
+    assemble_orthogonality_matrix_and_rhs!(
+        view(lb.system_matrix, (FOM + 1):n_sys, 1:n_sys),
+        view(lb.rhs, (FOM + 1):n_sys),
+        s, ctx.orthogonality.J_coeffs,
+        ctx.orthogonality.C_coeffs, ctx.orthogonality.E_coeffs,
+        resonance, lower_order_couplings, external_dynamics
+    )
+
+    # ── Dense solve (Schur complement for resonant) ───────────────────────────
+    _dense_solve_bordered!(lb, FOM, nR)
+
+    # ── Extract solution and write to W, R ────────────────────────────────────
+    sol = view(lb.rhs, 1:n_sys)
+    W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
+
+    rr = 1
+    for r in 1:ROM
+        if resonance[r]
+            R.poly.coefficients[r, idx] = sol[FOM + rr]
+            rr += 1
+        else
+            R.poly.coefficients[r, idx] = zero(T)
+        end
+    end
+
+    compute_higher_derivative_coefficients!(
+        W.poly.coefficients,
+        view(R.poly.coefficients, 1:ROM, :),
+        external_dynamics, s, idx,
+        ctx.generalised_eigenmodes, lower_order_couplings,
+    )
+    return nothing
+end
+
+"""
+    solve_cohomological_equations_threaded!(W, R, ctx, sym, model, ml_cache, thread_res)
+
+Thread-parallel variant of `solve_cohomological_equations!` for the **dense path**.
+
+Primary monomials at the same polynomial degree are mutually independent and are
+solved in parallel with `Threads.@threads`.  After all primaries at a degree are
+done, their conjugate secondaries are filled sequentially (degree barrier).
+
+`compute_multilinear_terms!` is serialized via a `ReentrantLock`; its cost is
+`O(FOM)` per monomial versus `O(FOM³)` for the LU, so lock contention is negligible.
+
+`thread_res[tid]` must be pre-allocated via `alloc_thread_resources` before this call.
+"""
+function solve_cohomological_equations_threaded!(
+        W::Parametrisation{ORD, NVAR, T},
+        R::ReducedDynamics{ROM, NVAR, T},
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        sym::ConjugateSymmetryData,
+        model::NDOrderModel,
+        ml_cache::MultilinearTermsCache,
+        thread_res::Vector{<:ThreadedMonoSolveResources{T}};
+        show_progress::Bool = true,
+) where {T, ORD, ORDP1, NVAR, FOM, ROM, LT, MT}
+    jobs   = sym.solve_jobs
+    bounds = sym.degree_boundaries
+    n_deg  = length(bounds) - 1
+    ml_lock = ReentrantLock()
+
+    prog   = _make_progress(length(jobs), show_progress)
+    n_done = Threads.Atomic{Int}(0)
+
+    for d in 1:n_deg
+        lo = bounds[d]
+        hi = bounds[d + 1] - 1
+
+        # All degree-d primary monomials are independent — solve in parallel.
+        Threads.@threads for k in lo:hi
+            tid       = Threads.threadid()
+            idx       = jobs[k][1]
+            local_res = thread_res[tid]
+
+            # Multilinear terms: serialized (O(FOM) vs O(FOM³) for LU — negligible).
+            @lock ml_lock begin
+                compute_multilinear_terms!(local_res.buffers.ml_result, model, idx, W, ml_cache)
+            end
+
+            _solve_single_threaded!(W, R, idx, ctx, local_res)
+
+            nd = Threads.atomic_add!(n_done, 1) + 1
+            _progress_tick!(prog, nd, sum(multiindex_set(W)[idx]))
+        end
+
+        # Degree barrier: fill conjugate secondaries sequentially.
+        for k in lo:hi
+            (idx, dst) = jobs[k]
+            iszero(dst) || fill_conjugate_monomial!(W, R, dst, idx, sym)
+        end
+    end
+
+    _progress_done!(prog, n_done[])
+    return nothing
 end
 
 end # module CohomologicalEquations
