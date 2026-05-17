@@ -74,10 +74,59 @@ end
 # =============================================================================
 
 """
+    _dense_solve_bordered!(buffers, FOM, nR)
+
+Solve the bordered cohomological system already assembled into `buffers`.
+
+- **Non-resonant** (`nR == 0`): direct `lu!` + `ldiv!` on the `FOM × FOM` block.
+- **Resonant** (`nR > 0`): factors only the `FOM × FOM` block `L(s)`, solves the RHS
+  and the `C_r` columns in-place via two `ldiv!` calls, then eliminates the
+  `nR × nR` Schur complement.  Saves `O(FOM² · nR)` flops versus factoring the full
+  bordered system.
+
+On exit `buffers.rhs[1:FOM+nR]` contains the solution `[W_α; R_res]`.
+"""
+function _dense_solve_bordered!(
+        buffers::CohomologicalBuffers{T}, FOM::Int, nR::Int
+) where {T}
+    if nR == 0
+        F = lu!(view(buffers.system_matrix, 1:FOM, 1:FOM), check = false)
+        ldiv!(F, view(buffers.rhs, 1:FOM))
+    else
+        n_sys = FOM + nR
+        # Factor FOM×FOM operator block in-place.
+        F = lu!(view(buffers.system_matrix, 1:FOM, 1:FOM), check = false)
+
+        # W' = L(s)^{-1} rhs[1:FOM]  (overwrites rhs in-place)
+        ldiv!(F, view(buffers.rhs, 1:FOM))
+
+        # C_r is in system_matrix[1:FOM, FOM+1:FOM+nR] (placed by _assemble_bordered_system!).
+        # Overwrite it with C' = L(s)^{-1} C_r  (reuses the same columns as scratch).
+        ldiv!(F, view(buffers.system_matrix, 1:FOM, (FOM + 1):(FOM + nR)))
+
+        W_prime = view(buffers.rhs, 1:FOM)
+        C_prime = view(buffers.system_matrix, 1:FOM, (FOM + 1):(FOM + nR))
+
+        # Orthogonality rows: assembled into system_matrix[FOM+1:n_sys, 1:n_sys].
+        J_r   = view(buffers.system_matrix, (FOM + 1):n_sys, 1:FOM)
+        Cbar  = view(buffers.system_matrix, (FOM + 1):n_sys, (FOM + 1):n_sys)
+        g     = view(buffers.rhs, (FOM + 1):n_sys)
+
+        # nR×nR Schur complement (tiny allocation).
+        S   = J_r * C_prime - Matrix{T}(Cbar)
+        r_α = S \ (J_r * W_prime .- g)
+
+        view(buffers.rhs, 1:FOM)         .= W_prime .- C_prime * r_α
+        view(buffers.rhs, (FOM + 1):n_sys) .= r_α
+    end
+    return
+end
+
+"""
     _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
 
-**Dense path.** Assemble the `(FOM+nR)` bordered system via
-`_assemble_bordered_system!`, then solve it in-place with `lu!` + `ldiv!`.
+**Dense path.** Assemble the bordered cohomological system via
+`_assemble_bordered_system!`, then solve it with `_dense_solve_bordered!`.
 The solution is written into `ctx.buffers.rhs[1:FOM+nR]`.
 """
 function _solve_monomial!(
@@ -88,9 +137,7 @@ function _solve_monomial!(
         external_dynamics
 ) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}
     _assemble_bordered_system!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
-    n_sys = FOM + nR
-    F = lu!(view(ctx.buffers.system_matrix, 1:n_sys, 1:n_sys), check = false)
-    ldiv!(F, view(ctx.buffers.rhs, 1:n_sys))
+    _dense_solve_bordered!(ctx.buffers, FOM, nR)
     return
 end
 

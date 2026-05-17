@@ -40,16 +40,26 @@ Compile-time dispatch on `CP` eliminates secondary-monomial bookkeeping when
 inactive.  When active, secondary monomials (those whose conjugate partner has
 a lower multiindex-set index) are marked in `skip_bits` and skipped in the
 outer solve loop; their coefficients are filled by `fill_conjugate_monomial!`.
+
+# Fields
+
+- `permutation`        — mode conjugate permutation (or sentinel).
+- `skip_bits`          — length-L BitVector; `true` = skip (linear or secondary monomial).
+- `solve_jobs`         — flat list of `(primary_idx, secondary_idx)` pairs to solve.
+  `secondary_idx == 0` means no conjugate fill is needed after the solve.
+- `degree_boundaries`  — `degree_boundaries[d]` is the first index in `solve_jobs`
+  belonging to degree shell `d`; `degree_boundaries[end]` is a sentinel equal to
+  `length(solve_jobs) + 1`.  Used to partition jobs by degree for parallel solving.
 """
 struct ConjugateSymmetryData{CP}
     permutation::CP
-    monomial_map::Vector{Int}
-    skip_bits::BitVector           # length L; true = skip this monomial (linears + secondaries)
-    primary_pairs::Vector{NTuple{2, Int}}  # (source_idx, conj_idx) where conj_idx > source_idx
+    skip_bits::BitVector
+    solve_jobs::Vector{NTuple{2, Int}}
+    degree_boundaries::Vector{Int}
 end
 
 # =============================================================================
-# _build_monomial_map
+# _build_monomial_map  (internal helper — not a struct field)
 # =============================================================================
 
 """
@@ -75,28 +85,62 @@ function _build_monomial_map(
 end
 
 # =============================================================================
+# _build_degree_boundaries  (internal helper)
+# =============================================================================
+
+function _build_degree_boundaries(solve_jobs::Vector{NTuple{2, Int}},
+        mset::MultiindexSet)
+    degree_boundaries = Int[]
+    current_degree = -1
+    for k in eachindex(solve_jobs)
+        d = sum(mset[solve_jobs[k][1]])
+        if d != current_degree
+            push!(degree_boundaries, k)
+            current_degree = d
+        end
+    end
+    push!(degree_boundaries, length(solve_jobs) + 1)
+    return degree_boundaries
+end
+
+# =============================================================================
 # _build_conjugate_symmetry — factory
 # =============================================================================
 
 """
-    _build_conjugate_symmetry(perm_or_sentinel, linear_skip_set, ...) -> ConjugateSymmetryData
+    _build_conjugate_symmetry(perm_or_sentinel, linear_skip_set, mset, [mdict]) -> ConjugateSymmetryData
 
 Factory for `ConjugateSymmetryData`.
 
 - **Inactive** (first argument is `NoConjugatePermutation()`): wraps `linear_skip_set`
-  as `skip_bits` and returns a `ConjugateSymmetryData{NoConjugatePermutation}` with
-  empty `primary_pairs`.
+  as `skip_bits`, builds `solve_jobs` for all non-skipped monomials with `dst = 0`,
+  and computes `degree_boundaries`.
 - **Active** (first argument is an `SVector{NVAR,Int}` involution): builds the monomial
   conjugate map, identifies primary/secondary pairs, populates `skip_bits` for both
-  linear monomials and secondary conjugate monomials, and returns a
-  `ConjugateSymmetryData{SVector{NVAR,Int}}`.
+  linear monomials and secondary conjugate monomials, and returns a fully populated
+  `ConjugateSymmetryData{SVector{NVAR,Int}}` with `degree_boundaries`.
 """
-function _build_conjugate_symmetry(::NoConjugatePermutation, linear_skip_set::Set{Int}, L::Int)
+function _build_conjugate_symmetry(
+        ::NoConjugatePermutation,
+        linear_skip_set::Set{Int},
+        mset::MultiindexSet
+)
+    L = length(mset)
     skip_bits = falses(L)
     for i in linear_skip_set
         skip_bits[i] = true
     end
-    return ConjugateSymmetryData{NoConjugatePermutation}(NoConjugatePermutation(), Int[], skip_bits, NTuple{2, Int}[])
+
+    solve_jobs = NTuple{2, Int}[]
+    for i in 1:L
+        skip_bits[i] && continue
+        push!(solve_jobs, (i, 0))
+    end
+
+    degree_boundaries = _build_degree_boundaries(solve_jobs, mset)
+    return ConjugateSymmetryData{NoConjugatePermutation}(
+        NoConjugatePermutation(), skip_bits, solve_jobs, degree_boundaries
+    )
 end
 
 # Active path: perm must be a proper involution with no zero entries.
@@ -113,23 +157,27 @@ function _build_conjugate_symmetry(
     monomial_map = _build_monomial_map(mset, perm, mdict)
 
     skip_bits = falses(length(mset))
-    primary_pairs = NTuple{2, Int}[]
     for i in linear_skip_set
         skip_bits[i] = true
     end
+
+    solve_jobs = NTuple{2, Int}[]
     for i in eachindex(monomial_map)
         skip_bits[i] && continue          # linear or already-marked secondary — skip
         j = monomial_map[i]
         if j > i
-            skip_bits[j] = true
-            push!(primary_pairs, (i, j))
+            skip_bits[j] = true           # j is the secondary; mark it now
+            push!(solve_jobs, (i, j))
+        else
+            push!(solve_jobs, (i, 0))     # self-symmetric (j==i) or no partner (j==0)
         end
-        j ∈ (0, i) && continue           # no partner (j=0) or self-symmetric (j=i)
+        j ∈ (0, i) && continue            # no partner or self-symmetric — no assertion needed
         @assert monomial_map[j] == i "conjugate map must be symmetric at i=$i"
         @assert !(j in linear_skip_set) "conjugate of a non-linear must not be linear"
     end
 
-    return ConjugateSymmetryData{SVector{NVAR, Int}}(perm, monomial_map, skip_bits, primary_pairs)
+    degree_boundaries = _build_degree_boundaries(solve_jobs, mset)
+    return ConjugateSymmetryData{SVector{NVAR, Int}}(perm, skip_bits, solve_jobs, degree_boundaries)
 end
 
 # =============================================================================
@@ -152,6 +200,11 @@ has set them from the conjugate-symmetric external dynamics polynomial.
 **Precondition**: all ORD time-derivative orders of W and master-mode rows (1:ROM)
 of R at `source_idx` must be finalised before this is called.
 """
+# No-op: inactive symmetry path never produces dst ≠ 0, but a method must exist so
+# the threaded loop compiles cleanly when sym::ConjugateSymmetryData{NoConjugatePermutation}.
+fill_conjugate_monomial!(::Any, ::Any, ::Int, ::Int, ::ConjugateSymmetryData{NoConjugatePermutation}) =
+    nothing
+
 function fill_conjugate_monomial!(
         W::Parametrisation{ORD, NVAR, T},
         R::ReducedDynamics{ROM, NVAR, T},
