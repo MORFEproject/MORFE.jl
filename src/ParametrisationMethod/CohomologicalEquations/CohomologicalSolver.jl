@@ -2,9 +2,17 @@
 # Sparse-linear-system dispatch
 # =============================================================================
 
-# Solve A*X = B.  Priority: Pardiso → KLU (with lazy symbolic caching) → UMFPACK.
-# KLU caches the symbolic factorization on the first call via klu_cache::Ref{Any};
-# subsequent calls reuse it via klu!(), skipping the symbolic step entirely.
+"""
+    _sparse_solve(pardiso, klu_cache, A, B) -> X
+
+Solve `A * X = B` using the best available sparse factoriser.
+
+Dispatch priority:
+1. **Pardiso** — used when an `AbstractPardisoSolver` is available (MKL or open-source).
+2. **KLU** — uses SuiteSparse KLU with lazy symbolic caching: symbolic factorisation
+   is computed once on the first call and reused via `klu!(F, A)` on subsequent calls.
+3. **UMFPACK** (fallback) — plain `lu(A) \\ B` when `klu_cache` is `nothing`.
+"""
 _sparse_solve(ps::AbstractPardisoSolver, ::Any, A, B) = pardiso_solve(ps, A, B)
 
 function _sparse_solve(::Nothing, klu_cache::Ref{Any}, A::SparseMatrixCSC, B)
@@ -23,8 +31,17 @@ _sparse_solve(::Nothing, ::Nothing, A, B) = lu(A) \ B   # dense-path fallback
 # Shared bordered-system assembly (dense paths)
 # =============================================================================
 
-# Writes the (FOM+nR)×(FOM+nR) bordered system into ctx.buffers.system_matrix
-# and ctx.buffers.rhs.  Called by both the complex and real dense-path solvers.
+"""
+    _assemble_bordered_system!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+
+Assemble the `(FOM+nR) × (FOM+nR)` bordered cohomological system into
+`ctx.buffers.system_matrix` and `ctx.buffers.rhs`.
+
+- The first `FOM` rows come from the invariance equation (operator + nonlinear RHS).
+- The next `nR` rows come from the orthogonality conditions.
+
+Called by both the dense-path `_solve_monomial!` overloads.
+"""
 function _assemble_bordered_system!(
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         s, nR,
@@ -56,7 +73,13 @@ end
 # Dense-path monomial solve
 # =============================================================================
 
-# Assembles the bordered system then factors and solves in ComplexF64.
+"""
+    _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+
+**Dense path.** Assemble the `(FOM+nR)` bordered system via
+`_assemble_bordered_system!`, then solve it in-place with `lu!` + `ldiv!`.
+The solution is written into `ctx.buffers.rhs[1:FOM+nR]`.
+"""
 function _solve_monomial!(
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         s, nR,
@@ -71,12 +94,19 @@ function _solve_monomial!(
     return
 end
 
-# =============================================================================
-# Sparse-path monomial solve (dispatch on MT <: SparseMatrixCSC)
-# =============================================================================
+"""
+    _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
 
-# Builds L(s) as SparseMatrixCSC, then solves the bordered system via
-# Pardiso/KLU + dense Schur complement for the resonant reduced-dynamics block.
+**Sparse path** (dispatched when `MT <: SparseMatrixCSC`). Builds `L(s)` as a
+`SparseMatrixCSC` from the union-pattern template, then:
+
+- **Non-resonant** (`nR == 0`): solves `L(s) W_α = rhs` directly via `_sparse_solve`.
+- **Resonant** (`nR > 0`): performs one sparse factorisation with `(1 + nR)` right-hand
+  sides (the RHS vector plus the `C_r` columns), then eliminates the resonant
+  reduced-dynamics block via a dense Schur complement.
+
+Results are written into `ctx.buffers.rhs[1:FOM+nR]`.
+"""
 function _solve_monomial!(
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         s, nR,

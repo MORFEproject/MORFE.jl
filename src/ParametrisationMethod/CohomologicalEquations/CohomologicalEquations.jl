@@ -118,15 +118,34 @@ export CohomologicalContext,
 # Progress indicator (stderr, \r-based, no external dependencies)
 # ==============================================================================
 
+"""
+	_SimpleProgress
+
+Lightweight progress state for the `\r`-based terminal progress indicator.
+`enabled` is set to `false` when `stderr` is not a TTY so that CI logs stay clean.
+"""
 struct _SimpleProgress
 	n_total::Int
 	enabled::Bool
 end
 
+"""
+	_make_progress(n_total, show_progress) -> _SimpleProgress
+
+Construct a `_SimpleProgress` tracker.  Disables output automatically when
+`stderr` is not a TTY (e.g. in CI or when piped).
+"""
 function _make_progress(n_total::Int, show_progress::Bool)
 	return _SimpleProgress(n_total, show_progress && stderr isa Base.TTY)
 end
 
+"""
+	_progress_tick!(p, n_done, degree)
+
+Print an in-place `\r`-overwritten progress line to `stderr` showing the
+current polynomial degree and the fraction of monomials solved.
+No-op when `p.enabled == false`.
+"""
 function _progress_tick!(p::_SimpleProgress, n_done::Int, degree::Int)
 	p.enabled || return
 	percentage = 100.0 * n_done / p.n_total
@@ -135,6 +154,13 @@ function _progress_tick!(p::_SimpleProgress, n_done::Int, degree::Int)
 		"($(round(percentage; digits = 2))%)   ")
 end
 
+"""
+	_progress_done!(p, n_done)
+
+Print the final "Solved N monomials." completion line to `stderr` and clear
+any trailing characters from the last `_progress_tick!` call.
+No-op when `p.enabled == false`.
+"""
 function _progress_done!(p::_SimpleProgress, n_done::Int)
 	p.enabled || return
 	println(stderr, "\rSolved $n_done monomials." * " "^30)
@@ -144,8 +170,13 @@ end
 # Utility helpers (public — used by solve_single_monomial! and the driver)
 # ==============================================================================
 
-# Copy the coefficients of an N_EXT-variable external polynomial into the last
-# N_EXT rows of R's coefficient matrix.
+"""
+	_embed_external_dynamics!(R, ext_poly, mset)
+
+Copy coefficients from the `N_EXT`-variable external polynomial `ext_poly` into
+the last `N_EXT` rows of `R`'s coefficient matrix, embedding them into the full
+`NVAR = ROM + N_EXT` multiindex set `mset`.  No-op when `N_EXT == 0`.
+"""
 function _embed_external_dynamics!(
 	R::ReducedDynamics{ROM, NVAR, T},
 	ext_poly::DensePolynomial{T, N_EXT, 2},
@@ -166,7 +197,13 @@ function _embed_external_dynamics!(
 	return nothing
 end
 
-# Return positions in `mset` of all unit-vector monomials eᵣ for r = 1 … NVAR.
+"""
+	_linear_monomial_indices(mset) -> Vector{Int}
+
+Return the positions in `mset` of all unit-vector monomials `eᵣ` for `r = 1 … NVAR`
+(i.e., the linear monomials).  Used to identify which entries of `W` and `R` are
+initialised from eigenvectors rather than solved.
+"""
 function _linear_monomial_indices(mset::MultiindexSet{NVAR}) where {NVAR}
 	indices = Int[]
 	n_search = min(NVAR + 1, length(mset))
@@ -178,8 +215,13 @@ function _linear_monomial_indices(mset::MultiindexSet{NVAR}) where {NVAR}
 	return indices
 end
 
-# Return a compile-time-sized SVector{ROM, Bool} indicating which master modes
-# are resonant with the monomial at position `monomial_idx`.
+"""
+	_resonance_vector(resonance_set, monomial_idx, ::Val{ROM}) -> SVector{ROM, Bool}
+
+Return a compile-time-sized boolean vector indicating which of the `ROM` master
+modes are resonant with the monomial at position `monomial_idx` in the multiindex
+set.  Using `Val{ROM}` enables the compiler to emit a fully unrolled ntuple loop.
+"""
 @inline function _resonance_vector(
 	resonance_set::ResonanceSet,
 	monomial_idx::Int,

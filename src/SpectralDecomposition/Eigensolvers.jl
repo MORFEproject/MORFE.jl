@@ -1,3 +1,13 @@
+"""
+Module `Eigensolvers` — high-level interface for computing generalised eigenpairs
+of large sparse systems arising from `NDOrderModel`.
+
+The primary entry point is `generalised_eigenpairs`, which wraps `Arpack.eigs` to
+compute a selected subset of eigenpairs of the companion-form system `A v = λ B v`.
+A shift-invert spectral transformation is used internally to target eigenpairs near
+a specified shift `σ`, which is essential for large sparse problems where only a
+small number of physically relevant modes are needed.
+"""
 module Eigensolvers
 
 using Arpack

@@ -1,3 +1,17 @@
+"""
+Module `MultilinearMaps` — multilinear nonlinear term representations for `NDOrderModel`.
+
+Nonlinear terms in the full-order ODE are encoded as `AbstractMultilinearMap` subtypes:
+
+- `MultilinearMap{ORD, F}` — a single polynomial term of total degree `deg`, stored as
+  a callable `f!` that evaluates the multilinear form plus metadata (`multiindex`,
+  `multiplicity_external`, `deg`).
+- `FEMMultilinearMap{ORD}` — abstract base for FEM-backed terms that expose element-level
+  primitives (`fem_elements`, `scatter_qp!`, `accumulate_qp!`, `assemble_element!`, …).
+  Implementing these methods enables the O4 batched RHS-C assembly path in `MultilinearTerms`.
+
+See `demo/Gridap/` and `demo/Ferrite/` for reference FEM backend implementations.
+"""
 module MultilinearMaps
 
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, evaluate_term!,
@@ -32,6 +46,7 @@ Required methods (extend `MORFE.*`):
 - `accumulate_qp!(Fe, ∇W_args::NTuple, mult, element, q, dΩ, t)` → add integrand at one qp
 - `assemble_element!(accum, Fe, element, t)`                    → scatter element residual to global
 - `fem_getdetJdV(element, q, t)`                                → integration weight at qp q
+- `fem_qp_buffer(t)`                                            → pre-allocated scratch buffer for one quadrature point
 """
 abstract type FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD} end
 

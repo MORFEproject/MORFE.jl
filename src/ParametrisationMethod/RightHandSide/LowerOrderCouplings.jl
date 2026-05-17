@@ -1,3 +1,14 @@
+"""
+Module `LowerOrderCouplings` — computation of lower-order coupling vectors `ξ[α]`.
+
+For each monomial `α` the cohomological right-hand side includes a coupling term
+
+    ξ[α] = Σ_{β+γ=α, |β|≥1} R_β · (|γ₁| W_{γ+e₁} + … + |γₙ| W_{γ+eₙ})
+
+that links the current monomial to all lower-degree coefficients of `W` and `R`
+already computed.  `compute_lower_order_couplings` evaluates this sum efficiently
+using a precomputed dictionary and candidate index list.
+"""
 module LowerOrderCouplings
 
 using LinearAlgebra
@@ -11,10 +22,24 @@ using StaticArrays: SVector
 
 export compute_lower_order_couplings
 
-# Helper: check whether a coefficient slice (FOM × ORD matrix view) is all zero
+"""
+    _is_zero_coeff(coeff) -> Bool
+
+Return `true` when the FOM × ORD coefficient slice `coeff` is entirely zero.
+Used to skip trivial contributions without entering the accumulation loop.
+"""
 @inline _is_zero_coeff(coeff::AbstractMatrix) = iszero(coeff)
 
-# Helper: sum over unit‑vector multi‑indices (total degree 1) from reduced dynamics
+"""
+    _sum_degree_one_terms!(accumulator, upper_bound, multiindex_dict,
+                           red_coefficients, param_coefficients, unit_vectors)
+
+Accumulate the `|β| = 1` part of the lower-order coupling sum into `accumulator`.
+
+For each unit-vector `eⱼ` with `eⱼ ≤ upper_bound`, and for each `i < j`, adds
+`R[i, eⱼ] * (upper_bound - eⱼ + eᵢ)[i] * W[:, :, upper_bound - eⱼ + eᵢ]`
+to `accumulator`.  Only reads precomputed `multiindex_dict` — no allocations.
+"""
 @inline function _sum_degree_one_terms!(accumulator::Vector{Vector{T}},
         upper_bound::SVector{NVAR, Int},
         multiindex_dict::Dict{SVector{NVAR, Int}, Int},
@@ -55,7 +80,17 @@ export compute_lower_order_couplings
     end
 end
 
-# Helper: sum over multi‑indices of total degree ≥ 2 from reduced dynamics
+"""
+    _sum_higher_degree_terms!(accumulator, upper_bound, mset, multiindex_dict,
+                              red_coefficients, param_coefficients,
+                              candidate_idxs, unit_vectors)
+
+Accumulate the `|β| ≥ 2` part of the lower-order coupling sum into `accumulator`.
+
+Iterates over `candidate_idxs` (precomputed as exponents componentwise ≤ `upper_bound`
+with total degree in `[2, sum(upper_bound)-1]`) and adds the same weighted
+`R[i, β] * W[:, :, upper_bound - β + eᵢ]` contributions as `_sum_degree_one_terms!`.
+"""
 @inline function _sum_higher_degree_terms!(accumulator::Vector{Vector{T}},
         upper_bound::SVector{NVAR, Int},
         mset::MultiindexSet,
@@ -93,16 +128,18 @@ end
     end
 end
 
-# -------------------------------------------------------------------
-# Main entry point
-# Accepts pre-allocated resources from CohomologicalContext to avoid per-call
-# heap allocation:
-#   multiindex_dict        – pre-built Dict mapping exponents to linear indices
-#   accumulator            – pre-allocated Vector{Vector{T}} (length ORD, each FOM);
-#                            zeroed by the caller before this call
-#   candidate_idxs         – pre-computed indices of sub-monomials for the
-#                            higher-degree sum (degree in [2, sum(upper_bound)-1],
-#                            componentwise ≤ upper_bound)
+"""
+    compute_lower_order_couplings(upper_bound, parametrisation, reduced_dynamics,
+                                  multiindex_dict, accumulator, candidate_idxs,
+                                  unit_vectors) -> accumulator
+
+**Performance path.** Evaluate the lower-order coupling vector `ξ[α]` for monomial
+`α = upper_bound` and accumulate the result into the pre-zeroed `accumulator`.
+
+All auxiliary data (`multiindex_dict`, `accumulator`, `candidate_idxs`,
+`unit_vectors`) must be pre-allocated by the caller (typically via `LowerOrderResources`)
+to avoid heap allocation in the inner solve loop.  Returns `accumulator` for convenience.
+"""
 function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
         parametrisation::Parametrisation{ORD, NVAR, T},
         reduced_dynamics::ReducedDynamics{ROM, NVAR, T},
@@ -129,11 +166,15 @@ function compute_lower_order_couplings(upper_bound::SVector{NVAR, Int},
     return accumulator
 end
 
-# -------------------------------------------------------------------
-# Convenience wrapper (allocating): builds the dictionary, accumulator,
-# and candidate index list internally.  Accepts any AbstractVector{Int}
-# for upper_bound (including plain Vector or SVector).
-# Use the 6-argument form in performance-critical loops.
+"""
+    compute_lower_order_couplings(upper_bound, parametrisation, reduced_dynamics) -> Vector{Vector{T}}
+
+**Allocating convenience wrapper.** Builds the multiindex dictionary, accumulator,
+and candidate index list internally, then delegates to the performance path.
+
+Use the 7-argument form inside performance-critical loops; this overload is intended
+for interactive use or testing.
+"""
 function compute_lower_order_couplings(
         upper_bound::AbstractVector{Int},
         parametrisation::Parametrisation{ORD, NVAR, T},

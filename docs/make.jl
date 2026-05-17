@@ -19,6 +19,7 @@ makedocs(
         MORFE.MultilinearMaps,
         MORFE.ExternalSystems,
         MORFE.FullOrderModel,
+        MORFE.Eigenproblems,
         MORFE.Eigensolvers,
         MORFE.JordanChain,
         MORFE.PropagateEigenmodes,
@@ -29,7 +30,8 @@ makedocs(
         MORFE.ParametrisationMethod,
         MORFE.MultilinearTerms,
         MORFE.LowerOrderCouplings,
-        MORFE.CohomologicalEquations
+        MORFE.CohomologicalEquations,
+        MORFE.InvarianceError,
     ],
     pages = [
         "Home" => "index.md",
@@ -59,6 +61,7 @@ makedocs(
                 "FullOrderModel" => "api/full_order_model.md"
             ],
             "Spectral Decomposition" => [
+                "Eigenproblems" => "api/eigenproblems.md",
                 "Eigensolvers" => "api/eigensolvers.md",
                 "JordanChain" => "api/jordan_chain.md",
                 "PropagateEigenmodes" => "api/propagate_eigenmodes.md"
@@ -71,6 +74,9 @@ makedocs(
                 "MultilinearTerms" => "api/multilinear_terms.md",
                 "LowerOrderCouplings" => "api/lower_order_couplings.md",
                 "CohomologicalEquations" => "api/cohomological_equations.md"
+            ],
+            "Validation" => [
+                "InvarianceError" => "api/invariance_error.md",
             ]
         ]
     ],
@@ -91,7 +97,7 @@ makedocs(
         # custom.css for improved typography and layout.
         # mermaid.js loads Mermaid.js from CDN and renders ```mermaid blocks.
         # logo.svg in assets/ is auto-detected by Documenter and shown in the sidebar.
-        assets = ["assets/custom.css", "assets/mermaid.js"],
+        assets = ["assets/custom.css", "assets/mermaid.js", "assets/nav-inject.js"],
 
         # Collapse the sidebar to depth 2 so API sub-sections start expanded.
         collapselevel = 2,
@@ -103,8 +109,10 @@ makedocs(
         # Increase the page-size warning threshold — the API page is large by
         # design (all module docstrings on one page).
         size_threshold_warn = 300 * 1024,   # 300 KiB
-        size_threshold = 600 * 1024   # 600 KiB hard limit
+        size_threshold = 600 * 1024,        # 600 KiB hard limit
+        sidebar_sitename = false            # logo SVG only; "MORFE.jl" text hidden
     ),
+    build = joinpath(@__DIR__, "..", "website", "MORFE website", "docs"),
     doctest = false,
     warnonly = [:docs_block, :missing_docs, :cross_references]
 )

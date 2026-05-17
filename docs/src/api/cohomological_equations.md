@@ -8,5 +8,5 @@ MORFE.CohomologicalEquations
 ```@autodocs
 Modules = [MORFE.CohomologicalEquations]
 Order   = [:type, :function]
-Private = false
+Private = true
 ```

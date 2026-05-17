@@ -1,3 +1,17 @@
+"""
+Module `FullOrderModel` — representation of high-dimensional nonlinear ODEs.
+
+The central type is `NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}`, which encodes
+an `ORD`-th order system
+
+    B_ORD ẋ^(ORD) + … + B₁ ẋ + B₀ x = F(x, ẋ, …, r)
+
+where `r` satisfies an autonomous external system.  Linear terms are stored as an
+`NTuple{ORDP1, MT}` of matrices; nonlinear terms as an `NTuple{N_NL, AbstractMultilinearMap}`.
+
+Key functions: `linear_first_order_matrices` (produces the companion-form `(A, B)` pair
+used by eigensolvers), `evaluate_nonlinear_terms!`.
+"""
 module FullOrderModel
 
 using LinearAlgebra
@@ -41,7 +55,7 @@ where:
 - `n_fom`: dimension of the full‑order state vector x.
 - `linear_terms`: tuple of linear coefficient matrices (B_0, …, B_ORD).
 - `nonlinear_terms`: tuple of `MultilinearMap` representing nonlinear contributions.
-- `external_system`: object of tyle `ExternalSystem` defining the external dynamics.
+- `external_system`: object of type `ExternalSystem` defining the external dynamics.
 
 # Representation
 
@@ -56,7 +70,6 @@ Each `MultilinearMap` defines:
 # Notes
 - All matrices must have identical size.
 - The nonlinear structure is stored in sparse form (only active terms).
-- TODO For large `K`, a `Vector` may be more appropriate than an `NTuple`.
 """
 struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
        AbstractFullOrderModel

@@ -1,9 +1,22 @@
 """
-	Eigenproblems
+Module `Eigenproblems` — solve and manage the generalised eigenproblem for an `NDOrderModel`.
 
-Structures the handling of the eigenproblem, including solving of the eigenproblem and choosing of the master_modes.
+Starting from an `NDOrderModel`, the companion-form first-order matrices `(A, B)` are
+assembled and the generalised eigenproblem `A v = λ B v` is solved.  The results are
+stored in an `Eigenproblem` struct together with:
 
-TODO:  detailed explanation
+- **Sorting** — eigenpairs ordered by eigenvalue magnitude (`sort_by_magnitude!`).
+- **Left/right matching** — left eigenvectors sorted to match right eigenvectors by
+  eigenvalue proximity (`sort_left_eigenmodes!`).
+- **Biorthogonal normalisation** — eigenvectors normalised so that
+  `xᵢᴴ B yⱼ = δᵢⱼ` (`normalize_biorthogonal!`).
+- **Master-mode selection** — choose which eigenpairs define the invariant manifold
+  (`select_master_modes_by_hand`, `select_master_modes_by_sorting`,
+  `select_master_modes_by_target_frequency`).
+
+Two built-in eigensolvers are provided: `DefaultEigensolver` (dense, via `LinearAlgebra.eigen`)
+and `ArpackEigensolver` (sparse, via `Arpack.eigs`).  Custom solvers can be added by
+subtyping `AbstractEigensolver`.
 """
 module Eigenproblems
 
@@ -17,7 +30,12 @@ export Eigenproblem, compute_eigenproblem, get_eigenpairs, select_master_modes_b
        select_master_modes_by_sorting, select_master_modes_by_target_frequency
 
 """
-	Eigensolver
+	AbstractEigensolver
+
+Abstract supertype for all eigensolvers accepted by `compute_eigenproblem`.
+
+Concrete subtypes must implement `solve` and `solve_left` for `NDOrderModel`.
+Two built-in subtypes are provided: `DefaultEigensolver` and `ArpackEigensolver`.
 """
 abstract type AbstractEigensolver end
 
@@ -29,9 +47,10 @@ function solve_left(model::NDOrderModel, solver::AbstractEigensolver, args...)
 end
 
 """
-	struct DefaultEigensolver <: AbstractEigensolver end    
+	DefaultEigensolver <: AbstractEigensolver
 
-Default LinearAlgebra eigen solver. 
+Dense eigensolver backed by `LinearAlgebra.eigen`. Computes all eigenpairs.
+Suitable for small to medium full-order models (dense matrices).
 """
 struct DefaultEigensolver <: AbstractEigensolver end
 
@@ -48,12 +67,10 @@ function solve_left(model::NDOrderModel, solver::DefaultEigensolver)
 end
 
 """
-struct ArpackEigensolver <: AbstractEigensolver
-	nev::Union{Nothing, UInt64}
-end
+	ArpackEigensolver <: AbstractEigensolver
 
-Use Arpack eigs for sparse matrices. Computes nev eigenpairs.
-
+Sparse eigensolver backed by `Arpack.eigs`. Computes `nev` smallest-magnitude
+eigenpairs. If `nev` is not specified, Arpack's default count is used.
 """
 struct ArpackEigensolver <: AbstractEigensolver
     nev::Union{Nothing, Int64}
@@ -88,16 +105,18 @@ function solve_left(model::NDOrderModel, solver::ArpackEigensolver)
 end
 
 """
-mutable struct Eigenproblem{T}
-	model::NDOrderModel
-	solver::AbstractEigensolver
-	eigenvalues::Vector{Complex{T}}
-	eigenmodes::Matrix{Complex{T}}
-	master_modes::Union{Nothing, Vector{UInt64}}
-	left_eigenvectors::Union{Nothing, Matrix{Complex{T}}}
+	Eigenproblem{T}
 
-Struct to save sorted and matched left and right eigenpairs.
-Additionally it defines which modes are master_modes.
+Stores sorted and biorthogonally normalised left/right eigenpairs of the
+generalised eigenproblem `A x = λ B x`, together with a master-mode selector.
+
+# Fields
+- `model`: the `NDOrderModel` from which the eigenproblem was derived
+- `solver`: the `AbstractEigensolver` used to compute eigenpairs
+- `eigenvalues`: sorted eigenvalues `λ`
+- `eigenmodes`: right eigenvectors (columns), sorted to match `eigenvalues`
+- `left_eigenmodes`: left eigenvectors matched to right eigenvectors
+- `master_modes`: `Vector{Bool}` flagging master modes; `nothing` until set by a `select_master_modes_*` call
 """
 mutable struct Eigenproblem{T}
     model::NDOrderModel
@@ -158,7 +177,7 @@ end
 """
 	sort_by_magnitude!(eigenvalues, eigenmodes)
 
-Sorts eigenpairs to resamble the order:
+Sorts eigenpairs to resemble the order:
 	|λ[1]| ≤ |λ[2]| ≤ ...  
 where λ=eigenvalues.
 """
@@ -171,7 +190,7 @@ end
 """
 	sort_left_eigenmodes!(eigenvalues, left_eigenvalues, left_eigenmodes)
 
-Sorts the left eigenpairs to match richt eigenpairs, by using the distance function
+Sorts the left eigenpairs to match right eigenpairs, by using the distance function
 	dist(a, b) = abs(real(a - b)) + abs(imag(a - b))
 """
 function sort_left_eigenmodes!(eigenvalues, left_eigenvalues, left_eigenmodes)
@@ -249,7 +268,7 @@ function select_master_modes_by_hand(ep::Eigenproblem, mastermodes::Vector{Bool}
 end
 
 """
-	select_master_modes_by_sorting(ep::Eigenproblem, nev::UInt64)
+	select_master_modes_by_sorting(ep::Eigenproblem, nev::Int)
 
 Defines master_modes as the first nev eigenpairs. Sorting was done in compute_eigenproblem.
 """

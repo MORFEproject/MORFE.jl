@@ -1,3 +1,19 @@
+"""
+Module `ParametrisationMethod` — core data structures for the DPIM parametrisation.
+
+Defines the two coefficient objects that together represent the invariant manifold
+and the reduced dynamics:
+
+- `Parametrisation{ORD, NVAR, T}` — the map `W : ℂᴺᵛᵃʳ → ℂᶠᵒᵐ` expanded as a
+  `DensePolynomial` with a `(FOM × ORD × L)` coefficient tensor; the `ORD` axis
+  stores the time-derivative orders required by higher-order ODEs.
+- `ReducedDynamics{ROM, NVAR, T}` — the reduced ODE `ż = R(z)` expanded as a
+  `DensePolynomial` with a `(NVAR × L)` coefficient matrix.
+
+Also provides `create_parametrisation_method_objects` (allocates both objects for a
+given `MultiindexSet`) and `compute_higher_derivative_coefficients!` (fills the
+derivative-order slices of `W` from the solved first-order slice and the reduced dynamics).
+"""
 module ParametrisationMethod
 
 using LinearAlgebra: mul!
