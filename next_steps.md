@@ -42,16 +42,16 @@ These plans are written with the following regime in mind:
 
 | # | Item | Impact | Effort | Status | Section |
 |:--|:-----|:-------|:-------|:-------|:--------|
-| 1 | Thread-parallel solve by degree group | **Critical** | Large | ✅ | §1 |
-| 2 | `solve_jobs` flat work list | Medium | Small | ✅ | §2 |
+| 1 | Thread-parallel solve by degree group | **Critical** | Large | ⬜ | §1 |
+| 2 | `solve_jobs` flat work list | Medium | Small | ⬜ | §2 |
 | 3 | `detect_conjugate_permutation` standalone utility | Medium (UX) | Trivial | ✅ | §3 |
 | 4a | `_replay_term!` multiple dispatch (prerequisite to §4) | Cleanup | Trivial | ✅ | §4a |
 | 4 | FEM O4 — combined element loop | **Critical** (FEM) | Large | ✅ | §4 |
-| 5 | Dense-path Schur complement for resonant block | Low–Medium | Small | ✅ | §5 |
+| 5 | Dense-path Schur complement for resonant block | Low–Medium | Small | ⬜ | §5 |
 | 6 | Multiindex generation: eliminate `vcat()` | Low | Small | ✅ | §6 |
 | 7 | Accept `SVector` in `indices_in_box_with_bounded_degree` | Low | Trivial | ✅ | §7 |
 | 8 | Pre-allocate Horner scratch in `PropagateEigenmodes` | Negligible | Trivial | ✅ | §8 |
-| 9 | Remove `monomial_map` from `ConjugateSymmetryData` | Cleanup | Trivial | ✅ | §9 |
+| 9 | Remove `monomial_map` from `ConjugateSymmetryData` | Cleanup | Trivial | ⬜ | §9 |
 
 **Not pursued**: Real arithmetic for self-conjugate monomials. Self-conjugate monomials
 are a small fraction of L (which is itself small), so their 4× LU speedup is swamped by
@@ -60,26 +60,208 @@ justified.
 
 ---
 
-## §1 — Thread-parallel solve by degree group *(Critical)* ✅
+## §1 — Thread-parallel solve by degree group *(Critical)*
 
-`solve_cohomological_equations_threaded!` added to `CohomologicalEquations.jl`.
-`ThreadedMonoSolveResources{T}` (per-thread buffers + lo_buffer) added to `SolverResources.jl`.
-`alloc_thread_resources` allocates one bundle per thread.
-`solve_cohomological_problem` gains `n_threads::Int = 1` kwarg; sparse models fall back to
-serial with `@warn`. The degree-barrier pattern ensures intra-degree parallelism is correct:
-all degree-`d` primary solves complete before conjugate fills, which complete before
-degree-`d+1` begins. `compute_multilinear_terms!` is serialized via `ReentrantLock` (O(FOM)
-vs O(FOM³) for LU — negligible overhead for large FOM).
+### Why this is the right target
+
+At FOM = 5 000, a single non-resonant dense-path monomial solve is dominated by `lu!`
+(`getrf!`) at `O(FOM³) ≈ 125 × 10⁹` flops. Profiling confirms `getrf!` accounts for
+**62.9%** of total wall time. For degree-9, NVAR-4 expansions with conjugate symmetry,
+there are ~350 primary solves. Each is independent of the others within the same degree
+shell. Parallelising across 8 threads gives an 8× reduction in total wall time — the
+single most impactful change available.
+
+### Correctness of intra-degree parallelism
+
+The GrLex ordering groups monomials by total degree `d` before splitting within a degree.
+Lower-order couplings `ξ[α]` at degree `d` use only `W[β]` with `|β| < d`. Therefore:
+
+> **All primary monomials at the same degree `d` are mutually independent.**
+
+The fill step for degree-`d` secondaries (`fill_conjugate_monomial!`) depends on the
+corresponding primary being solved — so fills must happen after all same-degree primary
+solves complete. This is a degree-level barrier, not a monomial-level one.
+
+### Required infrastructure
+
+#### 1a. `degree_boundaries` in `ConjugateSymmetryData`
+
+Add a `degree_boundaries::Vector{Int}` field. Entry `k` is the first index into
+`solve_jobs` (see §2) that belongs to degree `k`. Built while populating `solve_jobs`:
+
+```julia
+degree_boundaries = Int[1]
+current_degree = sum(mset.exponents[solve_jobs[1][1]])
+for k in 2:length(solve_jobs)
+    d = sum(mset.exponents[solve_jobs[k][1]])
+    if d > current_degree
+        push!(degree_boundaries, k)
+        current_degree = d
+    end
+end
+push!(degree_boundaries, length(solve_jobs) + 1)   # sentinel
+```
+
+This requires §2 (`solve_jobs`) to be in place first.
+
+#### 1b. Per-thread compute buffers
+
+The following are written to during each monomial solve and must not be shared:
+
+| Mutable resource | Refactoring |
+|:-----------------|:------------|
+| `ctx.buffers` (`CohomologicalBuffers`) | `Vector{CohomologicalBuffers{T}}` of length `n_threads` |
+| `ctx.lower_order.buffer` (zeroed before each monomial) | `buffer::Vector{Vector{Vector{T}}}` — outer index = thread |
+| `ss.klu_cache` in `SparseLinearSolverState` (KLU numeric factor) | `klu_caches::Vector{Ref{Any}}` of length `n_threads` |
+
+All other fields in `ctx` are read-only after construction; no change needed.
+
+**`CohomologicalBuffers` multi-allocation helper** (`SolverResources.jl`):
+
+```julia
+function alloc_thread_buffers(FOM::Int, ROM::Int, n_threads::Int, ::Type{T}) where {T}
+    return [CohomologicalBuffers{T}(FOM, ROM) for _ in 1:n_threads]
+end
+```
+
+**`LowerOrderResources` per-thread buffer** (`SolverResources.jl`):
+
+```julia
+struct LowerOrderResources{NVAR, T}
+    multiindex_dict   ::Dict{SVector{NVAR, Int}, Int}
+    buffer            ::Vector{Vector{Vector{T}}}  # [thread_id][order] → FOM vector
+    candidate_indices ::Vector{Vector{Int}}
+    unit_vectors      ::Vector{SVector{NVAR, Int}}
+end
+# Constructor gains an n_threads argument; defaults to 1 (serial path unchanged)
+```
+
+#### 1c. Thread-parallel solve loop
+
+New function `solve_cohomological_equations_threaded!` in `CohomologicalEquations.jl`:
+
+```julia
+function solve_cohomological_equations_threaded!(
+        W, R, ctx, sym, model, ml_cache
+)
+    jobs = sym.solve_jobs
+    bounds = sym.degree_boundaries
+    n_degrees = length(bounds) - 1
+
+    for d in 1:n_degrees
+        lo = bounds[d];  hi = bounds[d + 1] - 1
+
+        # All degree-d primary solves are independent — run in parallel
+        Threads.@threads for k in lo:hi
+            idx, _ = jobs[k]
+            _solve_single_threaded!(W, R, idx, ctx, Threads.threadid(), sym, model, ml_cache)
+        end
+
+        # Degree barrier: all primaries at degree d are done; fill their secondaries
+        for k in lo:hi
+            idx, dst = jobs[k]
+            iszero(dst) || fill_conjugate_monomial!(W, R, dst, idx, sym)
+        end
+    end
+    return nothing
+end
+```
+
+`_solve_single_threaded!` is identical to `solve_single_monomial!` except it indexes
+into `ctx.buffers[tid]` and `ctx.lower_order.buffer[tid]` instead of scalar fields.
+
+#### 1d. Integration strategy
+
+The existing serial `solve_cohomological_equations!` is left **completely unchanged**.
+`solve_cohomological_problem` gains a keyword argument:
+
+```julia
+function solve_cohomological_problem(...; n_threads::Int = 1, ...)
+```
+
+When `n_threads > 1`, the driver allocates per-thread buffers and dispatches to the
+threaded overload. The default `n_threads = 1` keeps the serial path allocation-identical
+to the current state.
+
+### Files to modify
+
+| File | Change |
+|:-----|:-------|
+| `ConjugateSymmetry.jl` | Add `degree_boundaries` field; populate during build |
+| `SolverResources.jl` | Per-thread constructors for `CohomologicalBuffers` and `LowerOrderResources` |
+| `CohomologicalEquations.jl` | Add `solve_cohomological_equations_threaded!` + `_solve_single_threaded!` |
+| `CohomologicalDriver.jl` | Add `n_threads` kwarg; conditional threaded dispatch |
+
+### Verification
+
+1. `n_threads = 1` output must be bit-identical to the serial path.
+2. `n_threads = 2`: W, R coefficients must match serial output to `1e-12 * norm(W)`.
+3. `@benchmark solve_cohomological_problem(...; n_threads=8)` on the 20×3×3 Ferrite beam
+   should show close to 8× speedup in the solve-loop component.
+4. `@allocated solve_cohomological_problem(...; n_threads=1)` must be unchanged from
+   the serial baseline.
 
 ---
 
-## §2 — `solve_jobs` flat work list *(Medium)* ✅
+## §2 — `solve_jobs` flat work list *(Medium)*
 
-`primary_pairs` replaced by `solve_jobs::Vector{NTuple{2,Int}}` in `ConjugateSymmetryData`.
-`degree_boundaries::Vector{Int}` added as a field and populated by `_build_degree_boundaries`.
-Both `_build_conjugate_symmetry` overloads (inactive and active) build `solve_jobs` and
-call `_build_degree_boundaries`. Solve loops in `CohomologicalEquations.jl` iterate
-`sym.solve_jobs` directly instead of checking `skip_bits` per iteration.
+### Motivation
+
+The active-symmetry solve loop currently iterates all `L` monomial indices:
+
+```julia
+for idx in 1:nterms                            # L iterations
+    @inbounds sym.skip_bits[idx] && continue   # BitVector read + branch on ~half
+    solve_single_monomial!(...)
+    if ptr <= length(pairs) && pairs[ptr][1] == idx
+        fill_conjugate_monomial!(...)
+        ptr += 1
+    end
+end
+```
+
+With `L ≈ 700` and FOM ≫ 1, the loop overhead is negligible. The main benefit of
+this change is **structural clarity** and enabling §1 (threading needs `degree_boundaries`
+which is naturally built while constructing `solve_jobs`) rather than raw performance.
+
+### Implementation
+
+Replace `primary_pairs::Vector{NTuple{2,Int}}` with `solve_jobs::Vector{NTuple{2,Int}}`
+in `ConjugateSymmetryData`. Each entry `(idx, dst)`:
+
+- `dst = 0` → solve `idx`, no fill (self-symmetric or unpaired)
+- `dst > 0` → solve `idx`, then fill `dst`
+
+Built in `_build_conjugate_symmetry`:
+
+```julia
+solve_jobs = NTuple{2, Int}[]
+for i in eachindex(monomial_map)
+    skip_bits[i] && continue
+    j = monomial_map[i]
+    push!(solve_jobs, j > i ? (i, j) : (i, 0))
+    j > i && (skip_bits[j] = true)
+end
+```
+
+The solve loop becomes:
+
+```julia
+for (idx, dst) in sym.solve_jobs
+    solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+    iszero(dst) || fill_conjugate_monomial!(W, R, dst, idx, sym)
+end
+```
+
+`skip_bits` is kept in the struct — it is consumed externally by
+`build_multilinear_terms_cache`.
+
+### Files to modify
+
+| File | Change |
+|:-----|:-------|
+| `ConjugateSymmetry.jl` | Replace `primary_pairs` with `solve_jobs`; both factory overloads |
+| `CohomologicalEquations.jl` | Rewrite active-symmetry `solve_cohomological_equations!` |
 
 ---
 
@@ -200,13 +382,64 @@ new `_replay_term!` method.
 
 ---
 
-## §5 — Dense-path Schur complement for resonant monomials *(Low–Medium)* ✅
+## §5 — Dense-path Schur complement for resonant monomials *(Low–Medium)*
 
-`_dense_solve_bordered!(buffers, FOM, nR)` extracted in `CohomologicalSolver.jl`.
-For `nR == 0`: identical to the previous path (`lu!` + `ldiv!` on the FOM×FOM block).
-For `nR > 0`: factors only the FOM×FOM block, then two separate `ldiv!` calls (RHS
-in-place, then C_r columns in-place reusing their existing slots as scratch), followed by
-the tiny nR×nR Schur complement. The `_solve_monomial!` dense overload now calls this helper.
+### Motivation
+
+For resonant monomials (`nR > 0`), the dense path factors the full
+`(FOM + nR) × (FOM + nR)` bordered system. With `nR ≤ ROM` small (1–4) and `FOM` large,
+factoring only the `FOM × FOM` block `L(s)` and condensing to an `nR × nR` Schur system
+saves `O(FOM² · nR)` flops relative to the full bordered factor. The sparse path already
+implements this; this item brings the dense path to parity.
+
+Resonant monomials are rare for high-order expansions (typically < 1% of total L), so
+the gain is problem-dependent — most significant for systems with many internal resonances
+or at low polynomial orders (degree ≤ 3).
+
+### Implementation
+
+In `CohomologicalSolver.jl`, split the dense `_solve_monomial!` on `nR`:
+
+```julia
+function _solve_monomial!(ctx, s, nR, resonance, lc, ed)
+    _assemble_bordered_system!(ctx, s, nR, resonance, lc, ed)
+    n_sys = FOM + nR
+    if nR == 0
+        F = lu!(view(ctx.buffers.system_matrix, 1:FOM, 1:FOM), check = false)
+        ldiv!(F, view(ctx.buffers.rhs, 1:FOM))
+    else
+        # Factor FOM×FOM L block; solve 1+nR right-hand sides
+        F = lu!(view(ctx.buffers.system_matrix, 1:FOM, 1:FOM), check = false)
+        C_view = view(ctx.buffers.system_matrix, 1:FOM, (FOM+1):n_sys)
+        # Solve [W', C'] = L\[rhs, C] in-place using the right half of system_matrix as scratch
+        rhs_ext = view(ctx.buffers.system_matrix, 1:FOM, (FOM+1):(FOM+nR+1))
+        rhs_ext[:, 1]      .= view(ctx.buffers.rhs, 1:FOM)
+        rhs_ext[:, 2:nR+1] .= C_view
+        ldiv!(F, rhs_ext)
+        W_prime = view(rhs_ext, :, 1)
+        C_prime = view(rhs_ext, :, 2:nR+1)
+        # nR×nR Schur complement
+        Ĵ = view(ctx.buffers.system_matrix, (FOM+1):n_sys, 1:FOM)
+        Ĉ = view(ctx.buffers.system_matrix, (FOM+1):n_sys, (FOM+1):n_sys)
+        g = view(ctx.buffers.rhs, (FOM+1):n_sys)
+        S   = Ĵ * C_prime - Matrix(Ĉ)       # nR×nR; tiny
+        r_α = S \ (Ĵ * W_prime .- g)
+        view(ctx.buffers.rhs, 1:FOM)         .= W_prime .- C_prime * r_α
+        view(ctx.buffers.rhs, (FOM+1):n_sys) .= r_α
+    end
+    return
+end
+```
+
+The `system_matrix` buffer right-half columns are used as scratch for the multi-RHS
+solve; this is valid since `_assemble_bordered_system!` has already written what it needs
+into those columns and they are not read again.
+
+### Files to modify
+
+| File | Change |
+|:-----|:-------|
+| `CohomologicalSolver.jl` | Replace flat `lu!` / `ldiv!` with nR-branching Schur implementation |
 
 ---
 
@@ -233,26 +466,52 @@ instead of `copy`. These are user-facing functions; the driver does not call the
 
 ---
 
-## §9 — Remove `monomial_map` from `ConjugateSymmetryData` *(Cleanup)* ✅
+## §9 — Remove `monomial_map` from `ConjugateSymmetryData` *(Cleanup)*
 
-`monomial_map` demoted to a local variable in `_build_conjugate_symmetry` (active overload).
-Final struct has four fields: `permutation`, `skip_bits`, `solve_jobs`, `degree_boundaries`.
+### Context
+
+After §2 (`solve_jobs`), `monomial_map` is never read from the struct in any hot-path
+or downstream code — confirmed by full-source grep (zero hits outside
+`ConjugateSymmetry.jl`). It is only used locally during `_build_conjugate_symmetry` to
+construct `skip_bits` and `solve_jobs`.
+
+### Fix
+
+Make `monomial_map` a local variable inside `_build_conjugate_symmetry`; remove it from
+the struct. Target struct after §2 and this cleanup:
+
+```julia
+struct ConjugateSymmetryData{CP}
+    permutation      ::CP
+    skip_bits        ::BitVector
+    solve_jobs       ::Vector{NTuple{2, Int}}
+    degree_boundaries::Vector{Int}
+end
+```
+
+### Files to modify
+
+| File | Change |
+|:-----|:-------|
+| `ConjugateSymmetry.jl` | Remove `monomial_map` field; demote to local variable |
 
 ---
 
 ## Implementation order
-
-All items complete.
 
 ```
 ✅ §3  detect_conjugate_permutation   — done
 ✅ §4a _replay_term! dispatch         — done
 ✅ §4  FEM O4                         — done
 ✅ §6–§8  Cleanup                     — done
-✅ §2  solve_jobs + degree_boundaries — done
-✅ §9  Remove monomial_map            — done
-✅ §1  Threading                      — done (n_threads kwarg; dense path only)
-✅ §5  Dense Schur (dense path)       — done
+
+⬜ §2  solve_jobs                     — replaces primary_pairs; adds degree_boundaries scaffold
+        ↓
+⬜ §9  Remove monomial_map            — cleanup after §2 removes the last hot-path use
+        ↓
+⬜ §1  Threading                      — builds on degree_boundaries from §2
+
+⬜ §5  Dense Schur (dense path)       — independent; sparse path already done
 ```
 
 ---

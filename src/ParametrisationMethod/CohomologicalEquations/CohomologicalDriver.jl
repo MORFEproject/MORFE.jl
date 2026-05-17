@@ -72,8 +72,7 @@ function _solve_external_directions!(
         @inbounds sym.skip_bits[idx] && continue   # secondary: filled below
         solve_single_monomial!(W, R, idx, partial_ctx, model, ml_cache)
     end
-    for (src, dst) in sym.solve_jobs
-        iszero(dst) && continue
+    for (src, dst) in sym.primary_pairs
         src ∈ ext_idx_set || continue
         fill_conjugate_monomial!(W, R, dst, src, sym)
     end
@@ -177,12 +176,6 @@ linear-operator tuple is read from `model.linear_terms`.
   (the eigenspace must be one-dimensional, or the eigenvectors must be chosen conjugately).
 - `show_progress` — print a progress line to `stderr` while solving (default: `true`).
   Suppressed automatically when `stderr` is not a TTY.
-- `n_threads` — number of Julia threads to use for the monomial solve loop (default: `1`).
-  When `n_threads > 1`, primary monomials at the same polynomial degree are solved in
-  parallel using `Threads.@threads`.  Requires the Julia process to be started with
-  `julia --threads N` or `JULIA_NUM_THREADS=N`.
-  **Only supported for dense matrix models** (`MT <: AbstractMatrix` but not
-  `SparseMatrixCSC`); sparse models fall back to the serial path with a warning.
 
 ## Returns
 
@@ -199,8 +192,7 @@ function solve_cohomological_problem(
         initial_R::Union{Nothing, ReducedDynamics} = nothing,
         master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
         conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
-        show_progress::Bool = true,
-        n_threads::Int = 1
+        show_progress::Bool = true
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
 
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
@@ -243,7 +235,7 @@ function solve_cohomological_problem(
         SVector{NVAR, Int}(conjugate_permutation) : NoConjugatePermutation()
 
     sym = if _conj_perm isa NoConjugatePermutation
-        _build_conjugate_symmetry(_conj_perm, linear_skip_set, mset)
+        _build_conjugate_symmetry(_conj_perm, linear_skip_set, length(mset))
     else
         _build_conjugate_symmetry(_conj_perm, linear_skip_set, mset,
                                   lower_order.multiindex_dict)
@@ -312,19 +304,7 @@ function solve_cohomological_problem(
     )
 
     # ── 7. Main solve ─────────────────────────────────────────────────────────
-    if n_threads > 1
-        if ctx.sparse_solver !== nothing
-            @warn "n_threads > 1 is not supported for sparse-matrix models; " *
-                  "falling back to serial solve."
-            solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
-        else
-            thread_res = alloc_thread_resources(FOM, ROM, ORD, n_threads, T)
-            solve_cohomological_equations_threaded!(
-                W, R, ctx, sym, model, ml_cache, thread_res; show_progress)
-        end
-    else
-        solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
-    end
+    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
 
     return W, R
 end
