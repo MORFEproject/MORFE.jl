@@ -100,11 +100,10 @@ end
 
 # Constructor for purely linear, decoupled system: dx/dt = diag(eigenvalues) * x
 function ExternalSystem(eigenvalues::NTuple{N_EXT, E}) where {N_EXT, E}
-    # Build the polynomial: each coordinate gets its own linear term
-    coeffs = [ntuple(k -> k == j ? eigenvalues[j] : zero(E), Val(N_EXT)) for j in 1:N_EXT]
-    # Multi-index set containing all monomials of degree ≤ 1
+    # Build the polynomial: diagonal coefficient matrix (N_EXT × N_EXT)
     multiindex_set = all_multiindices_up_to(N_EXT, 1)
     deleteat!(multiindex_set.exponents, 1)  # remove zero exponent (constant term)
+    coeffs = Matrix{E}(Diagonal(collect(eigenvalues)))
     polynomial = DensePolynomial(coeffs, multiindex_set)
 
     linear_matrix = SMatrix{N_EXT, N_EXT, E}(Diagonal(collect(eigenvalues)))

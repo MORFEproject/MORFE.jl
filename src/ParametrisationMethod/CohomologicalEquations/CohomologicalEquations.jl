@@ -111,6 +111,7 @@ export CohomologicalContext,
 	fill_conjugate_monomial!,
 	detect_conjugate_permutation,
 	solve_cohomological_equations!,
+	solve_cohomological_equations_benchmarked!,
 	solve_single_monomial!,
 	solve_cohomological_problem
 
@@ -127,6 +128,7 @@ Lightweight progress state for the `\r`-based terminal progress indicator.
 struct _SimpleProgress
 	n_total::Int
 	enabled::Bool
+	max_nl_degree::Int
 end
 
 """
@@ -135,8 +137,8 @@ end
 Construct a `_SimpleProgress` tracker.  Disables output automatically when
 `stderr` is not a TTY (e.g. in CI or when piped).
 """
-function _make_progress(n_total::Int, show_progress::Bool)
-	return _SimpleProgress(n_total, show_progress && stderr isa Base.TTY)
+function _make_progress(n_total::Int, show_progress::Bool, max_nl_degree::Int)
+	return _SimpleProgress(n_total, show_progress && stderr isa Base.TTY, max_nl_degree)
 end
 
 """
@@ -148,10 +150,10 @@ No-op when `p.enabled == false`.
 """
 function _progress_tick!(p::_SimpleProgress, n_done::Int, degree::Int)
 	p.enabled || return
-	percentage = 100.0 * n_done / p.n_total
+	percentage = round(100.0 * (n_done / p.n_total)^p.max_nl_degree; digits = 2)
 	print(stderr,
-		"\rSolving: order $degree \t Progress: $n_done/$(p.n_total) ",
-		"($(round(percentage; digits = 2))%)   ")
+		"\rSolving: order $degree \t Monomials: $n_done/$(p.n_total) \t Progress: $percentage%   ",
+	)
 end
 
 """
@@ -339,7 +341,7 @@ function solve_cohomological_equations!(
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
 	nterms = length(multiindex_set(W))
 	n_to_solve = count(!b for b in sym.skip_bits)
-	prog = _make_progress(n_to_solve, show_progress)
+	prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
 	n_done = 0
 	for idx in 1:nterms
 		@inbounds sym.skip_bits[idx] && continue
@@ -367,7 +369,7 @@ function solve_cohomological_equations!(
 	ptr = 1
 
 	n_to_solve = count(!b for b in sym.skip_bits)
-	prog = _make_progress(n_to_solve, show_progress)
+	prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
 	n_done = 0
 
 	for idx in 1:nterms
@@ -391,5 +393,7 @@ function solve_cohomological_equations!(
 	_progress_done!(prog, n_done)
 	return nothing
 end
+
+include("CohomologicalBenchmark.jl")
 
 end # module CohomologicalEquations

@@ -21,7 +21,7 @@ include("Validation/InvarianceError.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
-using .Polynomials: DensePolynomial, evaluate
+using .Polynomials: DensePolynomial, evaluate, extract_component
 using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
@@ -81,7 +81,8 @@ export CohomologicalContext,
        LowerOrderResources, CohomologicalBuffers, SparseLinearSolverState
 export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
        detect_conjugate_permutation
-export solve_cohomological_equations!, solve_single_monomial!, solve_cohomological_problem
+export solve_cohomological_equations!, solve_cohomological_equations_benchmarked!,
+       solve_single_monomial!, solve_cohomological_problem
 
 # Validation
 export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence

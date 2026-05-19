@@ -192,7 +192,8 @@ function solve_cohomological_problem(
         initial_R::Union{Nothing, ReducedDynamics} = nothing,
         master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
         conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
-        show_progress::Bool = true
+        show_progress::Bool = true,
+        benchmark_dir::Union{Nothing, AbstractString} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
 
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
@@ -304,7 +305,12 @@ function solve_cohomological_problem(
     )
 
     # ── 7. Main solve ─────────────────────────────────────────────────────────
-    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
+    if benchmark_dir !== nothing
+        solve_cohomological_equations_benchmarked!(W, R, ctx, sym, model, ml_cache;
+            benchmark_dir, show_progress)
+    else
+        solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
+    end
 
     return W, R
 end
