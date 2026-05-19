@@ -19,6 +19,9 @@ const GROUP = get(ENV, "GROUP", "all")
                 include("Utils/test_realification.jl")
             end
         end
+        @testset "SpectralDecomposition" begin
+            include("SpectralDecomposition/test_eigenproblems.jl")
+        end
     end
     if GROUP in ("all", "parametrisation")
         @testset "ParametrisationMethod" begin

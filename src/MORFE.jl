@@ -5,8 +5,8 @@ include("Polynomials.jl")
 include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
-include("SpectralDecomposition/Eigenproblems.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
+include("SpectralDecomposition/Eigenproblems.jl")
 include("SpectralDecomposition/JordanChain.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
@@ -25,8 +25,8 @@ using .Polynomials: DensePolynomial, evaluate, extract_component
 using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
-using .Eigenproblems
 using .Eigensolvers
+using .Eigenproblems
 using .JordanChain
 using .Realification
 using .Resonance
@@ -59,8 +59,10 @@ export FullOrderModel, FirstOrderModel, NDOrderModel,
        linear_first_order_matrices, evaluate_nonlinear_terms!
 
 # Eigenproblems
-export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, solve, solve_left,
-       Eigenproblem, compute_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
+export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
+       StructureModalDampingEigensolver
+export solve, solve_left, sort_by_magnitude!, normalize_biorthogonal!
+export Eigenproblem, compute_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
        select_master_modes_by_sorting, select_master_modes_by_target_frequency
 
 # Realification
