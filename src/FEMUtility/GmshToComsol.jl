@@ -12,10 +12,12 @@ const INV_PERM_Q9 = [1, 2, 4, 3, 5, 8, 9, 6, 7]
 const INV_PERM_P18 = [1, 2, 3, 4, 5, 6, 7, 8, 10, 9, 16, 11, 17, 18, 12, 13, 14, 15]
 # T10: inverse of perm [1,2,4,3,5,7,6,8,9,10] — self-inverse (pairs of swaps)
 const INV_PERM_T10 = [1, 2, 4, 3, 5, 7, 6, 8, 9, 10]
-# H27: FEconv PMH→COMSOL map (inverse of COMSOL→Gmsh perm in ComsolToGmsh.jl)
-const INV_PERM_H27 = [1, 2, 4, 3, 5, 6, 8, 7,
-    9, 12, 13, 10, 14, 16, 22, 20, 23, 26, 27, 24,
-    11, 17, 15, 25, 19, 21, 18]
+# H27: derived from actual Gmsh type-12 node coordinates vs legacy shape_functions.jl ordering.
+# INV_PERM_H27[j] = Gmsh position whose parametric coords match Legacy position j.
+# Verified via beam_h27.msh first-element node coordinates.
+const INV_PERM_H27 = [3, 7, 4, 8, 2, 6, 1, 5,
+    15, 14, 25, 20, 16, 12, 24, 19, 21, 27, 26, 10,
+    23, 18, 13, 9, 22, 17, 11]
 
 """
     gmsh_to_comsol(gmsh_file::String, comsol_file::String)
