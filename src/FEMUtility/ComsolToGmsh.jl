@@ -365,12 +365,12 @@ function comsol_to_gmsh(comsol_file::String, gmsh_file::String)
     if length(e2nH27) > 0
         elemType = 12
         elemTags = e2gH27
-        # COMSOL hex2: corners 3↔4 and 7↔8 swapped, edge-mids and face-centers
-        # completely reordered vs Gmsh type 12.
-        # Derived from FEconv (inverse of PMH→COMSOL map) and verified vs Gmsh API coords.
-        perm_H27 = [1, 2, 4, 3, 5, 6, 8, 7,
-            9, 12, 21, 10, 11, 13, 23, 14, 22, 27, 25, 16,
-            26, 15, 17, 20, 24, 18, 19]
+        # perm_H27[j] = Legacy position corresponding to Gmsh type-12 position j.
+        # Derived from actual Gmsh type-12 node coordinates vs legacy shape_functions.jl ordering.
+        # Inverse of INV_PERM_H27 in GmshToComsol.jl.
+        perm_H27 = [7, 5, 1, 3, 8, 6, 2, 4,
+            24, 20, 27, 14, 23, 10, 9, 13, 26, 22, 16, 12,
+            17, 25, 21, 15, 11, 19, 18]
         ne = length(e2nH27) ÷ H27n
         for i in 1:ne
             idx = ((i - 1) * H27n + 1):(i * H27n)
