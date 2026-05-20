@@ -78,7 +78,7 @@ term_forcing_mixed = MultilinearMap(
 	(2, 1), 1,   # one external variable
 )
 
-# ExternalSystem: harmonic forcing ṙ = -   0.5·r + 0.1 r² + 2.0 r³ with Ω = 1.0
+# ExternalSystem: harmonic forcing ṙ = - 0.5·r + 0.1 r² + 2.0 r³
 external_system = ExternalSystem(
 	DensePolynomial(
 		ComplexF64[-0.5 0.1 2.0], # 1×2 matrix: coefficients for r and r² terms
@@ -261,7 +261,7 @@ for res in err_conv
 end
 
 plots = plot_invariance_convergence(err_conv)
-savefig(plots.full,   joinpath(@__DIR__, "invariance_convergence_full.png"))
+savefig(plots.full, joinpath(@__DIR__, "invariance_convergence_full.png"))
 savefig(plots.master, joinpath(@__DIR__, "invariance_convergence_master.png"))
 println("\nConvergence plots saved to: ", @__DIR__)
 

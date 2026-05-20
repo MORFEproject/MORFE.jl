@@ -165,7 +165,7 @@ No-op when `p.enabled == false`.
 """
 function _progress_done!(p::_SimpleProgress, n_done::Int)
 	p.enabled || return
-	println(stderr, "\rSolved $n_done monomials." * " "^30)
+	println(stderr, "\rSolved $n_done monomials." * " "^50)
 end
 
 # ==============================================================================

@@ -240,7 +240,7 @@ for i in 1:NVAR
 end
 Rr = ReducedDynamics(realify(extract_component(R.poly, 1), conj_map), R.external_system_size)
 
-println("\nReduced dynamics coefficients (real part):")
+println("\nReduced dynamics coefficients:")
 for m in 1:length(Rr.poly.multiindex_set.exponents)
 	mi = Rr.poly.multiindex_set.exponents[m]
 	c = Rr.poly.coefficients[:, m]
