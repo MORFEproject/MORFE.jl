@@ -64,14 +64,14 @@ println("Total DOFs : ", ndofs(dh))
 E = 160e3
 ν = 0.22
 ρ = 2.32e-3
-λ = (E * ν) / ((1 + ν) * (1 - 2ν))
-μ = E / (2(1 + ν))
+λ_lame = (E * ν) / ((1 + ν) * (1 - 2ν))
+μ_lame = E / (2(1 + ν))
 α = 0.5369754008568333/500.0
 β = 0.0
 
 K_full = allocate_matrix(dh)
 M_full = allocate_matrix(dh)
-assemble_KM!(K_full, M_full, dh, cv, λ, μ, ρ)
+assemble_KM!(K_full, M_full, dh, cv, λ_lame, μ_lame, ρ)
 
 free          = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
 free_to_local = Dict(d => i for (i, d) in enumerate(free))
@@ -90,103 +90,23 @@ println("Free DOFs  : ", n_free)
 const ROM        = 2
 const N_EXT      = 2
 const NVAR       = ROM + N_EXT
-const max_degree = 9
+const max_degree = 3
 
 mset      = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 _max_uniq = length(mset)
-
-# -----------------------------------------------------------------------
-# 4. Nonlinear terms  (FEMMultilinearMap, O5 Re/Im path)
-# -----------------------------------------------------------------------
-
-term_quad  = FerriteGeometricNonlinearity{2}(
-dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = _max_uniq)
-term_cubic = FerriteGeometricNonlinearity{3}(
-dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = _max_uniq)
-
-# Forcing matrix N×N_EXT (filled after eigenproblem; captured by closure).
-# F_force * [r₁; r₂] = F[:,1]*r₁ + F[:,2]*r₂ = f_vec*(r₁+r₂) = 2f_vec·cos(Ωt)
-F_force      = zeros(Float64, n_free, N_EXT)
-term_forcing = MultilinearMap(
-(res, r) -> (res .+= F_force * r),
-(0, 0), 1
-)
-
-# -----------------------------------------------------------------------
-# 5. NDOrderModel for eigenproblem (N_EXT = 0; only K, C, M matter)
-# -----------------------------------------------------------------------
-
-model_0 = NDOrderModel(
-	(K, C, M),
-	(term_quad, term_cubic),
-)
-
-# -----------------------------------------------------------------------
-# 6. Eigensolver  (identical to demo/Ferrite/demo_mechanical_problem.jl)
-# -----------------------------------------------------------------------
-
-mutable struct Mechanical_Problem_Solver <: AbstractEigensolver
-	right_eig_result::Union{Nothing, Matrix}
-	eigenvalues::Union{Nothing, Vector}
-	nev::Int
-	α::Float64
-	β::Float64
-end
-
-function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
-	ω2, ϕ = eigs(model.linear_terms[1], model.linear_terms[3];
-		nev = solver.nev, which = :SM)
-	idx = sortperm(real(ω2))[1:solver.nev]
-	ω2 = real.(ω2[idx])
-	ϕ = real.(ϕ[:, idx])
-	ω = sqrt.(ω2)
-	FOM = size(ϕ, 1)
-
-	λ_all = zeros(ComplexF64, 2 * solver.nev)
-	for i in 1:solver.nev
-		ξ           = 0.5 * (solver.α / ω[i] + solver.β * ω[i])
-		λ_all[2i-1] = ω[i] * (-ξ + sqrt(Complex(1.0 - ξ^2)) * im)
-		λ_all[2i]   = ω[i] * (-ξ - sqrt(Complex(1.0 - ξ^2)) * im)
-	end
-
-	evecs = Matrix{ComplexF64}(undef, 2FOM, 2 * solver.nev)
-	for i in 1:solver.nev
-		evecs[1:FOM, 2i-1]       .= ϕ[:, i]
-		evecs[1:FOM, 2i]         .= ϕ[:, i]
-		evecs[(FOM+1):end, 2i-1] .= λ_all[2i-1] .* ϕ[:, i]
-		evecs[(FOM+1):end, 2i]   .= λ_all[2i] .* ϕ[:, i]
-	end
-	solver.right_eig_result = evecs
-	solver.eigenvalues = λ_all
-	return λ_all, evecs
-end
-
-function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::Mechanical_Problem_Solver)
-	@assert solver.right_eig_result !== nothing "Run solve() first"
-	R   = solver.right_eig_result
-	FOM = size(R, 1) ÷ 2
-	L   = similar(R)
-	for i in 1:(length(solver.eigenvalues)÷2)
-		L[(FOM+1):end, 2i-1] = R[1:FOM, 2i]
-		L[(FOM+1):end, 2i]   = R[1:FOM, 2i-1]
-	end
-	for (i, λi) in enumerate(solver.eigenvalues)
-		L[1:FOM, i] = -(1 / conj(λi)) * model.linear_terms[1]' * L[(FOM+1):end, i]
-	end
-	return solver.eigenvalues, L
-end
 
 # -----------------------------------------------------------------------
 # §1 — Eigenproblem
 # -----------------------------------------------------------------------
 
 println("\n§1  Eigenproblem …")
-r1                  = @timed compute_eigenproblem(
-model_0,
-solver  = Mechanical_Problem_Solver(nothing, nothing, 10, α, β),
-sorter! = (args...) -> nothing
-)
-eigenproblem        = r1.value
+solver_eig = StructureModalDampingEigensolver(10, α, β)
+
+r1 = @timed begin
+	λ, Y_all = solve(M, K, solver_eig)
+	Eigenproblem(solver_eig, λ, Y_all, Matrix{ComplexF64}(Y_all[:, 1, :]))
+end
+eigenproblem = r1.value
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
 
 println("  First eigenvalues:")
@@ -198,22 +118,36 @@ FOM = n_free
 select_master_modes_by_sorting(eigenproblem, ROM)
 
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
-master_modes       = Y[1:FOM, 1:ROM]
-left_eigenmodes    = Y[(FOM+1):end, 1:ROM]
+master_modes       = Y[:, 1, 1:ROM]   # position component of right eigenvectors
+left_eigenmodes    = X[:, 1:ROM]      # adjoint mode shapes — X is FOM × n_eigs from get_eigenpairs
 
-ORD_model                = length(model_0.linear_terms) - 1   # = 2
+ORD_model                = size(Y_all, 2)
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
 	for k in 1:(ORD_model-1)
-		master_modes_derivatives[:, k, r] .= Y[(k*FOM+1):((k+1)*FOM), r]
+		master_modes_derivatives[:, k, r] .= Y[:, k+1, r]
 	end
 end
 
+# -----------------------------------------------------------------------
+# 4. Force terms  (FEMMultilinearMap, O5 Re/Im path)
+# -----------------------------------------------------------------------
+
+term_quad  = FerriteGeometricNonlinearity{2}(
+dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
+term_cubic = FerriteGeometricNonlinearity{3}(
+dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
+
 # Forcing frequency = damped natural frequency of mode 1; force shape = mode 1
-Ω_force      = abs(imag(eigenvalues[1]))
-f_vec         = 2.5 .* (M * real.(master_modes[:, 1]))
-F_force[:, 1] .= f_vec
-F_force[:, 2] .= f_vec
+Ω_force = abs(eigenvalues[1])
+f_vec = 2.5 .* (M * real.(master_modes[:, 1]))
+
+# Forcing matrix N×N_EXT (filled after eigenproblem; captured by closure).
+# f_vec · sum(r) = f_vec · (r₁+r₂) = f_vec · 2 cos(Ωt)
+term_forcing = MultilinearMap(
+	(res, r) -> (res .+= f_vec * sum(r)),
+	(0, 0), 1,
+)
 
 ext_sys = ExternalSystem((complex(0.0, Ω_force), complex(0.0, -Ω_force)))
 model   = NDOrderModel(
@@ -224,48 +158,55 @@ ext_sys
 
 # super_eigenvalues: one per NVAR variable (internal + external)
 # target_eigenvalues: master modes only (CNF style — matches legacy 'c' style)
-super_eigenvalues  = Vector{ComplexF64}([master_eigenvalues..., complex(0.0, Ω_force), complex(0.0, -Ω_force)])
+super_eigenvalues = Vector{ComplexF64}([master_eigenvalues..., complex(0.0, Ω_force), complex(0.0, -Ω_force)])
 target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-resonance_set      = resonance_set_from_complex_normal_form_style(
-ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
+resonance_set = resonance_set_from_complex_normal_form_style(
+	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
 
 # -----------------------------------------------------------------------
 # §2 — Cohomological solve  (quadratic + cubic, full model)
 # -----------------------------------------------------------------------
 
 println("\n§2  Cohomological solve (max_degree = $max_degree) …")
-r2     = @timed solve_cohomological_problem(
-model, mset,
-master_eigenvalues,
-master_modes, left_eigenmodes,
-resonance_set;
-master_modes_derivatives = master_modes_derivatives,
-conjugate_permutation    = [2, 1, 4, 3],
-benchmark_dir            = joinpath(@__DIR__, "benchmark_results")
+r2 = @timed solve_cohomological_problem(
+	model, mset,
+	master_eigenvalues,
+	master_modes, left_eigenmodes,
+	resonance_set;
+	master_modes_derivatives = master_modes_derivatives,
+	conjugate_permutation = [2, 1, 4, 3],
+	# benchmark_dir = joinpath(@__DIR__, "benchmark_results"),
 )
 (W, R) = r2.value
+
+println("\nReduced dynamics coefficients:")
+for m in 1:length(R.poly.multiindex_set.exponents)
+	mi = R.poly.multiindex_set.exponents[m]
+	c = R.poly.coefficients[:, m]
+	any(abs.(c) .> 1e-12) && println("  $mi : $(c[1]) \t $(c[2])")
+end
 
 # -----------------------------------------------------------------------
 # Summary table
 # -----------------------------------------------------------------------
 
 to_gb(b) = round(b / 1024^3; digits = 1)
-sep      = "=" ^ 67
+sep = "=" ^ 67
 
 println()
 println(sep)
 println("MORFE.jl — Ferrite Benchmark   (clamped-clamped beam, beam_h27.msh)")
-@printf("  Mesh   : H27 quadratic Lagrange hex (40×2×2)    FOM = %d\n", FOM)
-@printf("  ROM    : %d modes   max_degree = %d   N_EXT = %d\n", ROM, max_degree, N_EXT)
+println("  Mesh   : H27 quadratic Lagrange hex (40×2×2)    FOM = %d\n", FOM)
+println("  ROM    : %d modes   max_degree = %d   N_EXT = %d\n", ROM, max_degree, N_EXT)
 println("-" ^ 67)
-@printf("  %-32s  %9s  %11s  %7s\n", "Phase", "Time (s)", "Memory (GB)", "GC (s)")
+println("  %-32s  %9s  %11s  %7s\n", "Phase", "Time (s)", "Memory (GB)", "GC (s)")
 println("-" ^ 67)
-@printf("  §1  %-28s  %9.3f  %11.2f  %7.3f\n",
+println("  §1  %-28s  %9.3f  %11.2f  %7.3f\n",
 	"Eigenproblem", r1.time, to_gb(r1.bytes), r1.gctime)
-@printf("  §2  %-28s  %9.3f  %11.2f  %7.3f\n",
+println("  §2  %-28s  %9.3f  %11.2f  %7.3f\n",
 	"Cohomological solve", r2.time, to_gb(r2.bytes), r2.gctime)
 println("-" ^ 67)
-@printf("  %-32s  %9.3f  %11.1f  %7.3f\n",
+println("  %-32s  %9.3f  %11.1f  %7.3f\n",
 	"Σ  Cumulative (§1+§2)", r1.time + r2.time, to_gb(r1.bytes)+to_gb(r2.bytes), r1.gctime+r2.gctime)
-@printf("Monomials (max_degree=$max_degree) =", length(mset.exponents))
+println("Monomials (max_degree=$max_degree) =", length(mset.exponents))
 println(sep)
