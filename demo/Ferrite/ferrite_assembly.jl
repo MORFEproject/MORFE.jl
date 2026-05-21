@@ -199,7 +199,7 @@ function MORFE.accumulate_qp!(Fe, ∇W_args::NTuple{2}, mult, _element, q, dΩ,
 			 0.5 * (cr1_re ⊡ σ_ε2_im + cr1_im ⊡ σ_ε2_re +
 					cr2_re ⊡ σ_ε1_im + cr2_im ⊡ σ_ε1_re)
 
-		Fe[r] += complex(c * re, c * im)
+		Fe[r] -= complex(c * re, c * im)
 	end
 end
 
@@ -258,7 +258,7 @@ function MORFE.accumulate_qp!(Fe, ∇W_args::NTuple{3}, mult, _element, q, dΩ,
 			 cr2_re ⊡ σ13_im + cr2_im ⊡ σ13_re +
 			 cr3_re ⊡ σ12_im + cr3_im ⊡ σ12_re
 
-		Fe[r] += complex(c * re, c * im)
+		Fe[r] -= complex(c * re, c * im)
 	end
 end
 

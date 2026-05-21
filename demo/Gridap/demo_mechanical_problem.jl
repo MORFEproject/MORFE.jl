@@ -95,8 +95,8 @@ function quadratic_nonlinearity!(res, vec1, vec2)
 	u1i = FEFunction(V, imag(vec1))
 	u2r = FEFunction(V, real(vec2))
 	u2i = FEFunction(V, imag(vec2))
-	res .+= assemble_vector(v -> (g_quad(u1r, u2r, v) - g_quad(u1i, u2i, v)), V)
-	res .+= assemble_vector(v -> (g_quad(u1r, u2i, v) + g_quad(u1i, u2r, v)), V) * im
+	res .-= assemble_vector(v -> (g_quad(u1r, u2r, v) - g_quad(u1i, u2i, v)), V)
+	res .-= assemble_vector(v -> (g_quad(u1r, u2i, v) + g_quad(u1i, u2r, v)), V) * im
 end
 term_quad = MultilinearMap(quadratic_nonlinearity!, (2, 0))
 function cubic_nonlinearity!(res, vec1, vec2, vec3)
@@ -106,10 +106,10 @@ function cubic_nonlinearity!(res, vec1, vec2, vec3)
 	u1i = FEFunction(V, imag(vec1))
 	u2i = FEFunction(V, imag(vec2))
 	u3i = FEFunction(V, imag(vec3))
-	res .+= assemble_vector(
+	res .-= assemble_vector(
 		v -> (h_cube(u1r, u2r, u3r, v) - h_cube(u1r, u2i, u3i, v) -
 			  h_cube(u1i, u2r, u3i, v) - h_cube(u1i, u2i, u3r, v)), V)
-	res .+= assemble_vector(
+	res .-= assemble_vector(
 		v -> (h_cube(u1i, u2r, u3r, v) + h_cube(u1r, u2i, u3r, v) +
 			  h_cube(u1r, u2r, u3i, v) - h_cube(u1i, u2i, u3i, v)), V)
 end
