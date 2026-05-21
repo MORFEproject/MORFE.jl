@@ -201,7 +201,7 @@ function MORFE.Eigenproblems.solve_left(
 end
 
 # Compute left and right eigenpairs using the default solver and store it in Eigenproblem
-eigenproblem = compute_eigenproblem(
+eigenproblem = solve_eigenproblem(
 	model, solver = Mechanical_Problem_Solver(nothing, nothing, 10, α, β),
 	sorter! = (args...) -> nothing)
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)

@@ -8,7 +8,7 @@ using MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
 using MORFE.Polynomials
 using MORFE.LowerOrderCouplings
 using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics,
-                                   create_parametrisation_method_objects
+	create_parametrisation_method_objects
 
 # -------------------------------------------------------------------
 println("Demo: compute_lower_order_couplings \n")
@@ -26,42 +26,42 @@ ROM = NVAR - external_system_size
 
 W,
 R = create_parametrisation_method_objects(
-    mset, ORD, FOM, ROM, external_system_size, ComplexF64)
+	mset, ORD, FOM, ROM, external_system_size, ComplexF64)
 
 # Fill parametrisation coefficients.
 # W.poly.coefficients layout: (FOM=3, ORD=2, L=6)
 W.poly.coefficients[:, 1, :] .= [1.0 2.0 3.0 4.0 5.0 6.0;
-                                 2.0 4.0 8.0 16.0 32.0 64.0;
-                                 0.0 -1.0 -3.0 -6.0 -9.0 -12.0]
+	2.0 4.0 8.0 16.0 32.0 64.0;
+	0.0 -1.0 -3.0 -6.0 -9.0 -12.0]
 #  (0,0) (1,0) (0,1) (2,0) (1,1) (0,2) monomial order
 W.poly.coefficients[:, 2, :] .= [1.0im 2.0im 3.0im 4.0im 5.0im 6.0im;
-                                 2.0im 4.0im 8.0im 16.0im 32.0im 64.0im;
-                                 0.0 -1.0im -3.0im -6.0im -9.0im -12.0im]
+	2.0im 4.0im 8.0im 16.0im 32.0im 64.0im;
+	0.0 -1.0im -3.0im -6.0im -9.0im -12.0im]
 #  (0,0)  (1,0)  (0,1)  (2,0)  (1,1)  (0,2) monomial order
 
 # Fill reduced dynamics coefficients.
 # R.poly.coefficients has shape (NVAR, L).
 red_data = [
-    ComplexF64[0.0, 0.0],    # (0,0)
-    ComplexF64[1.0im, 0.0],  # (1,0)
-    ComplexF64[1.0, 1.0im],  # (0,1)
-    ComplexF64[3.0, 3.0im],  # (2,0)
-    ComplexF64[4.0, 4.0im],  # (1,1)
-    ComplexF64[5.0, 5.0im]  # (0,2)
+	ComplexF64[0.0, 0.0],    # (0,0)
+	ComplexF64[1.0im, 0.0],  # (1,0)
+	ComplexF64[1.0, 1.0im],  # (0,1)
+	ComplexF64[3.0, 3.0im],  # (2,0)
+	ComplexF64[4.0, 4.0im],  # (1,1)
+	ComplexF64[5.0, 5.0im],  # (0,2)
 ]
 for (idx, vec) in enumerate(red_data)
-    R.poly.coefficients[:, idx] = vec
+	R.poly.coefficients[:, idx] = vec
 end
 
 println("\nParametrisation coefficients (position | velocity):")
 for (idx, exp) in enumerate(mset.exponents)
-    pos = W.poly.coefficients[:, 1, idx]
-    vel = W.poly.coefficients[:, 2, idx]
-    println("  exp $exp → pos=$pos\tvel=$vel")
+	pos = W.poly.coefficients[:, 1, idx]
+	vel = W.poly.coefficients[:, 2, idx]
+	println("  exp $exp → pos=$pos\tvel=$vel")
 end
 println("\nReduced dynamics coefficients:")
 for (idx, exp) in enumerate(mset.exponents)
-    println("  exp $exp → $(R.poly.coefficients[:, idx])")
+	println("  exp $exp → $(R.poly.coefficients[:, idx])")
 end
 
 # ----------------------------------------------------------------------
@@ -85,8 +85,8 @@ println("Result: $result")
 # = ([4.0, 16.0, -6.0], [4.0, 16.0, -6.0]*im) * 2 * 1.0 = ([8.0, 32.0, -12.0], [8.0im, 32.0im, -12.0im])
 #
 expected1 = [
-    ComplexF64[8.0, 32.0, -12.0],          # position part
-    ComplexF64[8.0im, 32.0im, -12.0im]     # velocity part
+	ComplexF64[8.0, 32.0, -12.0],          # position part
+	ComplexF64[8.0im, 32.0im, -12.0im],     # velocity part
 ]
 println("Expected = $expected1")
 err1 = sqrt(sum(norm(result[k] - expected1[k])^2 for k in eachindex(result)))
@@ -146,8 +146,8 @@ println("Result: $result2")
 #
 
 expected2 = [
-    ComplexF64[47.0 + 56.0im, 224.0 + 512.0im, -75.0 - 108.0im],
-    ComplexF64[-56.0 + 47.0im, -512.0 + 224.0im, 108.0 - 75.0im]
+	ComplexF64[47.0+56.0im, 224.0+512.0im, -75.0-108.0im],
+	ComplexF64[-56.0+47.0im, -512.0+224.0im, 108.0-75.0im],
 ]
 println("Expected = $expected2")
 err2 = sqrt(sum(norm(result2[k] - expected2[k])^2 for k in eachindex(result2)))
@@ -172,8 +172,8 @@ W3, R3 = create_parametrisation_method_objects(mset3, ORD3, FOM3, NVAR3, 0, Comp
 
 # Fill with random coefficients
 for idx in 1:nterms
-    W3.poly.coefficients[:, 1, idx] = randn(ComplexF64, FOM3)
-    R3.poly.coefficients[:, idx] = randn(ComplexF64, NVAR3)
+	W3.poly.coefficients[:, 1, idx] = randn(ComplexF64, FOM3)
+	R3.poly.coefficients[:, idx] = randn(ComplexF64, NVAR3)
 end
 
 upper_bound3 = SVector{3, Int}(1, 4, 1)

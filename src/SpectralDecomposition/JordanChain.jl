@@ -40,91 +40,91 @@ The chain length ℓ is the largest integer for which the equations are consiste
 
 """
 function compute_jordan_chain(A, B, λ, v, L; tol = 1e-12)
-    n = size(A, 1)
-    v = reshape(v, n, 1)
+	n = size(A, 1)
+	v = reshape(v, n, 1)
 
-    M = λ * B - A
-    residual0 = norm(M * v)
-    ref_norm = norm(B * v)
-    if residual0 > tol * ref_norm
-        @warn "Starting vector may not be an eigenvector: " *
-              "‖(λB - A)v‖ / ‖Bv‖ = $(residual0/ref_norm)"
-    end
+	M = λ * B - A
+	residual0 = norm(M * v)
+	ref_norm = norm(B * v)
+	if residual0 > tol * ref_norm
+		@warn "Starting vector may not be an eigenvector: " *
+			  "‖(λB - A)v‖ / ‖Bv‖ = $(residual0/ref_norm)"
+	end
 
-    if L == 1
-        return v, 1
-    end
+	if L == 1
+		return v, 1
+	end
 
-    # Precompute a factorization of M
-    if issparse(M)
-        F = qr(M)               # sparse QR
-    else
-        F = qr(M, Val(true))    # dense QR with column pivoting
-    end
+	# Precompute a factorization of M
+	if issparse(M)
+		F = qr(M)               # sparse QR
+	else
+		F = qr(M, Val(true))    # dense QR with column pivoting
+	end
 
-    chain = zeros(eltype(v), n, L)
-    chain[:, 1] = vec(v)
-    actual_length = 1
+	chain = zeros(eltype(v), n, L)
+	chain[:, 1] = vec(v)
+	actual_length = 1
 
-    for j in 2:L
-        rhs = B * chain[:, j - 1]
-        x = F \ rhs
+	for j in 2:L
+		rhs = B * chain[:, j-1]
+		x = F \ rhs
 
-        resid = norm(M * x - rhs)
-        if resid > tol
-            @warn "Chain ends at length $(actual_length): cannot extend further (residual = $resid)"
-            break
-        end
+		resid = norm(M * x - rhs)
+		if resid > tol
+			@warn "Chain ends at length $(actual_length): cannot extend further (residual = $resid)"
+			break
+		end
 
-        chain[:, j] = vec(x)
-        actual_length += 1
-    end
+		chain[:, j] = vec(x)
+		actual_length += 1
+	end
 
-    return chain[:, 1:actual_length], actual_length
+	return chain[:, 1:actual_length], actual_length
 end
 
 function solve_forced_frequency(A, B, λ, v, L; tol = 1e-12)
-    n = size(A, 1)
-    v = reshape(v, n, 1)
+	n = size(A, 1)
+	v = reshape(v, n, 1)
 
-    M = λ * B - A
-    residual0 = norm(M * v)
-    ref_norm = norm(B * v)
-    if residual0 > tol * ref_norm
-        @warn "Starting vector may not be an eigenvector: " *
-              "‖(λB - A)v‖ / ‖Bv‖ = $(residual0/ref_norm)"
-    end
+	M = λ * B - A
+	residual0 = norm(M * v)
+	ref_norm = norm(B * v)
+	if residual0 > tol * ref_norm
+		@warn "Starting vector may not be an eigenvector: " *
+			  "‖(λB - A)v‖ / ‖Bv‖ = $(residual0/ref_norm)"
+	end
 
-    if L == 1
-        return v, 1
-    end
+	if L == 1
+		return v, 1
+	end
 
-    # Precompute a factorization of M
-    if issparse(M)
-        F = qr(M)               # sparse QR
-    else
-        F = qr(M, Val(true))    # dense QR with column pivoting
-    end
+	# Precompute a factorization of M
+	if issparse(M)
+		F = qr(M)               # sparse QR
+	else
+		F = qr(M, Val(true))    # dense QR with column pivoting
+	end
 
-    chain = zeros(eltype(v), n, L)
-    chain[:, 1] = vec(v)
-    actual_length = 1
+	chain = zeros(eltype(v), n, L)
+	chain[:, 1] = vec(v)
+	actual_length = 1
 
-    for j in 2:L
-        rhs = B * chain[:, j - 1]
-        x = F \ rhs
+	for j in 2:L
+		rhs = B * chain[:, j-1]
+		x = F \ rhs
 
-        resid = norm(M * x - rhs)
-        if resid > tol
-            @warn "Chain ends at length $(actual_length): cannot extend further (residual = $resid)"
-            break
-        end
+		resid = norm(M * x - rhs)
+		if resid > tol
+			@warn "Chain ends at length $(actual_length): cannot extend further (residual = $resid)"
+			break
+		end
 
-        chain[:, j] = vec(x)
-        actual_length += 1
-    end
+		chain[:, j] = vec(x)
+		actual_length += 1
+	end
 
-    return chain[:, 1:actual_length], actual_length
+	return chain[:, 1:actual_length], actual_length
 end
 
 end # module

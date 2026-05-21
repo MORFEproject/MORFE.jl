@@ -3,11 +3,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial import Polynomial
+from scipy.special import binom
 
 # ============================================
 # 1. Load NEW benchmark
 # ============================================
-mono_new = pd.read_csv("benchmark_results/benchmark_per_monomial.csv")
+root = 'benchmark_results_backup_20h00_20_May'
+mono_new = pd.read_csv(f"{root}/benchmark_per_monomial.csv")
 mono_new['exp_tuple'] = mono_new['exponents'].apply(
     lambda s: tuple(int(x) for x in s.split('_'))
 )
@@ -70,6 +72,12 @@ y_ends_leg = order_ends['y_leg'].values
 poly_new = Polynomial.fit(x_ends, y_ends_new, deg=3)
 poly_leg = Polynomial.fit(x_ends, y_ends_leg, deg=3)
 x_smooth = np.linspace(x_shared.min(), x_shared.max(), 500)
+def n_mon(order):
+    return binom(order+4, 4)
+def ratio(order):
+    N = n_mon(order)
+    return poly_leg(N) / poly_new(N)
+print("ratio series =", ratio(9), ratio(10), ratio(11), "tends to ", poly_leg.coef[3] / poly_new.coef[3])
 
 print(f"Poly fit new (deg={poly_new.degree()}): {poly_new.coef}")
 print(f"Poly fit leg (deg={poly_leg.degree()}): {poly_leg.coef}")

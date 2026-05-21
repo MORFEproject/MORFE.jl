@@ -62,7 +62,7 @@ export FullOrderModel, FirstOrderModel, NDOrderModel,
 export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
        StructureModalDampingEigensolver
 export solve, solve_left, sort_by_magnitude!, normalize_biorthogonal!
-export Eigenproblem, compute_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
+export Eigenproblem, solve_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
        select_master_modes_by_sorting, select_master_modes_by_target_frequency
 
 # Realification

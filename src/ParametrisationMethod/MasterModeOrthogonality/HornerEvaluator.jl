@@ -60,25 +60,25 @@ The scalar lower-order RHS accumulation
 `O(ORD · FOM)`, shared with the `L_r(s)` evaluation.
 """
 function evaluate_orthogonality_row_and_lower_order_rhs!(
-        row::AbstractVector{T},
-        s::T,
-        lower_order_couplings::AbstractVector{<:AbstractVector{T}},
-        J_coeffs_r::AbstractMatrix{T}  # ORD × FOM,  ORD = ORD_M1 + 1
+	row::AbstractVector{T},
+	s::T,
+	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+	J_coeffs_r::AbstractMatrix{T},  # ORD × FOM,  ORD = ORD_M1 + 1
 ) where {T}
-    ORD = length(lower_order_couplings)
+	ORD = length(lower_order_couplings)
 
-    copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
+	copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
 
-    scalar_rhs = zero(T)
-    for j in (ORD - 1):-1:1
-        # row = L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
-        # Accumulate scalar dot: scalar_rhs -= row · ξ[j]
-        scalar_rhs -= dot(row, lower_order_couplings[j])
-        row .*= s
-        row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
-        # row = L_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
-    end
-    # On exit: row = L_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
+	scalar_rhs = zero(T)
+	for j in (ORD-1):-1:1
+		# row = L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
+		# Accumulate scalar dot: scalar_rhs -= row · ξ[j]
+		scalar_rhs -= dot(row, lower_order_couplings[j])
+		row .*= s
+		row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
+		# row = L_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
+	end
+	# On exit: row = L_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
 
-    return scalar_rhs
+	return scalar_rhs
 end

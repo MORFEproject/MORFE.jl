@@ -198,11 +198,11 @@ include("HornerEvaluator.jl")
 include("ColumnPolynomials.jl")
 
 export precompute_orthogonality_operator_coefficients,
-       precompute_orthogonality_column_polynomials,
-       evaluate_orthogonality_row_and_lower_order_rhs!,
-       evaluate_orthogonality_column_row!,
-       evaluate_orthogonality_external_rhs,
-       assemble_orthogonality_matrix_and_rhs!
+	precompute_orthogonality_column_polynomials,
+	evaluate_orthogonality_row_and_lower_order_rhs!,
+	evaluate_orthogonality_column_row!,
+	evaluate_orthogonality_external_rhs,
+	assemble_orthogonality_matrix_and_rhs!
 
 # =============================================================================
 # Full orthogonality matrix and RHS assembly (in-place only)
@@ -218,33 +218,33 @@ caller-supplied `M` (`nR × n_sys`) and `rhs` (length `nR`) buffers.  Returns
 immediately when `nR == 0` (non-resonant monomial).  No heap allocation occurs.
 """
 function assemble_orthogonality_matrix_and_rhs!(
-        M::AbstractMatrix,
-        rhs::AbstractVector,
-        s::T,
-        J_coeffs::AbstractVector{<:AbstractMatrix{T}},
-        C_coeffs::Vector{<:AbstractMatrix{T}},
-        E_coeffs::Vector{<:AbstractMatrix{T}},
-        resonance::SVector{ROM, Bool},
-        lower_order_couplings::AbstractVector{<:AbstractVector{T}},
-        external_dynamics::AbstractVector{T}
+	M::AbstractMatrix,
+	rhs::AbstractVector,
+	s::T,
+	J_coeffs::AbstractVector{<:AbstractMatrix{T}},
+	C_coeffs::Vector{<:AbstractMatrix{T}},
+	E_coeffs::Vector{<:AbstractMatrix{T}},
+	resonance::SVector{ROM, Bool},
+	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+	external_dynamics::AbstractVector{T},
 ) where {T, ROM}
-    isempty(rhs) && return nothing
-    FOM = size(J_coeffs[1], 2)
-    nR = count(resonance)
-    row = 1
-    for r in eachindex(resonance)
-        if resonance[r]
-            rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
-                view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r]
-            )
-            evaluate_orthogonality_column_row!(
-                view(M, row, (FOM + 1):(FOM + nR)), s, r, C_coeffs, resonance
-            )
-            rhs[row] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
-            row += 1
-        end
-    end
-    return nothing
+	isempty(rhs) && return nothing
+	FOM = size(J_coeffs[1], 2)
+	nR = count(resonance)
+	row = 1
+	for r in eachindex(resonance)
+		if resonance[r]
+			rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
+				view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r],
+			)
+			evaluate_orthogonality_column_row!(
+				view(M, row, (FOM+1):(FOM+nR)), s, r, C_coeffs, resonance,
+			)
+			rhs[row] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
+			row += 1
+		end
+	end
+	return nothing
 end
 
 end # module MasterModeOrthogonality
