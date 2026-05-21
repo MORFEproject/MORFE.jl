@@ -46,7 +46,7 @@ end
 
     # @testset "Solvers" begin
     #     @testset "DefaultEigensolver" begin
-    #         ep = compute_eigenproblem(
+    #         ep = solve_eigenproblem(
     #             model_dense;
     #             solver = DefaultEigensolver(),
     #             sorter! = (args...) -> nothing,
@@ -75,7 +75,7 @@ end
 
     #     @testset "ArpackEigensolver" begin
     #         nev = 2
-    #         ep = compute_eigenproblem(
+    #         ep = solve_eigenproblem(
     #             model;
     #             solver = ArpackEigensolver(nev),
     #             sorter! = (args...) -> nothing,
@@ -105,7 +105,7 @@ end
 
     #     @testset "MorfeEigensolver" begin
     #         nev = 2
-    #         ep = compute_eigenproblem(
+    #         ep = solve_eigenproblem(
     #             model;
     #             solver = MorfeEigensolver(nev, 0.0 + 0.0 * im),
     #             sorter! = (args...) -> nothing,
@@ -141,7 +141,7 @@ end
     #         A, B = linear_first_order_matrices(model_modal_damping)
 
     #         nev = 2
-    #         ep = compute_eigenproblem(
+    #         ep = solve_eigenproblem(
     #             model;
     #             solver = StructureModalDampingEigensolver(nev, α, β),
     #             sorter! = (args...) -> nothing,
@@ -238,7 +238,7 @@ end
 
             A, B = linear_first_order_matrices(model)
 
-            ep = compute_eigenproblem(
+            ep = solve_eigenproblem(
                 model;
                 solver = DefaultEigensolver(),
                 sorter! = sort_by_magnitude!,

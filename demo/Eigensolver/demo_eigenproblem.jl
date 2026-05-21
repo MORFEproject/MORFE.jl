@@ -25,7 +25,7 @@ model = NDOrderModel((B0, B1, B2))
 # # ------------------------------------------------------------------------------
 
 # Compute left and right eigenpairs using the default solver and store it in Eigenproblem
-eigenproblem = compute_eigenproblem(model)# , normalizer! = (args...) -> nothing)
+eigenproblem = solve_eigenproblem(model)# , normalizer! = (args...) -> nothing)
 (eigs, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigs)
     println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
@@ -79,7 +79,7 @@ function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::My_Own_Solv
 end
 
 # Compute left and right eigenpairs using the default solver and store it in Eigenproblem
-eigenproblem = compute_eigenproblem(
+eigenproblem = solve_eigenproblem(
     model, solver = My_Own_Solver(nothing), normalizer! = (args...) -> nothing)
 (eigs, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigs)

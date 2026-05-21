@@ -4,7 +4,7 @@ Module `InvarianceError` — a posteriori validation of the computed invariant m
 After `solve_cohomological_problem` produces `(W, R)`, this module measures how
 well the parametrisation satisfies the invariance equation
 
-    ∂W/∂z · R(z) = F(W(z))
+	∂W/∂z · R(z) = F(W(z))
 
 by evaluating both sides on random points `z` on the manifold and computing the
 relative residual.  Results are plotted as convergence curves against the polynomial

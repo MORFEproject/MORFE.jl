@@ -22,7 +22,7 @@ include(info_file)
 #Import mesh
 mesh_file = "./demo/BenchmarkMorfe20/beam.mphtxt"
 mesh = read_mesh(mesh_file, domains_list, materials_list, materials_dict,
-    boundaries_list, constrained_dof, bc_vals)
+	boundaries_list, constrained_dof, bc_vals)
 
 # initialise a dummy field to store dofs ordering and static solutions
 U = Field(mesh, Morfe_2_0.dim)
@@ -31,7 +31,7 @@ info.nm = length(info.Φ)   # master modes
 info.nz = 2 * info.nm
 info.nzforce = 2  # imposes only two nonautonomous
 if info.Ffreq == 0
-    info.nzforce = 0
+	info.nzforce = 0
 end
 info.nrom = info.nz + info.nzforce
 info.nK = U.neq   # dim of FEM problem
@@ -53,11 +53,11 @@ C = info.α * M + info.β * K
 # ------------------------------------------------------------------------------
 
 function quadratic!(res, Ψ₁, Ψ₂)
-    Morfe_2_0.assembly_G!(res, Ψ₁, Ψ₂, mesh, U)
+	Morfe_2_0.assembly_G!(res, Ψ₁, Ψ₂, mesh, U)
 end
 quadratic_term = MultilinearMap(quadratic!, (2, 0))
 function cubic!(res, Ψ₁, Ψ₂, Ψ₃)
-    Morfe_2_0.assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh, U)
+	Morfe_2_0.assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh, U)
 end
 cubic_term = MultilinearMap(cubic!, (3, 0))
 model = NDOrderModel((K, C, M), (quadratic_term, cubic_term))
@@ -70,14 +70,12 @@ println("FOM:", FOM)
 # 2. EigenProblem
 # ------------------------------------------------------------------------------
 # Compute left and right eigenpairs using the special StructureModalDampingEigensolver and store it in EigenProblem
-eigenproblem = compute_eigenproblem(
-    model;
-    solver = StructureModalDampingEigensolver(10, info.α, info.β),
-    sorter! = (args...) -> nothing,
-    normalizer! = (args...) -> nothing)
+eigenproblem = solve_eigenproblem(
+	model, StructureModalDampingEigensolver(10, info.α, info.β);
+	sorter! = (args...) -> nothing)
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigenvalues)
-    println("  mode $i →   λ = $λ\n")
+	println("  mode $i →   λ = $λ\n")
 end
 # ------------------------------------------------------------------------------
 # 3. Select master modes and build the reduced-variable structure
@@ -92,7 +90,7 @@ select_master_modes_by_sorting(eigenproblem, ROM)
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[:, 1, 1:ROM]            # size: FOM × ROM
 # left_eigenmodes = Y[(FOM + 1):end, 1:ROM]  # size: FOM × ROM
-left_eigenmodes = X[:, 1, 1:ROM]  # size: FOM × ROM
+left_eigenmodes = X[:, 1:ROM]      # size: FOM × ROM — X is FOM × n_eigs from get_eigenpairs
 
 # Higher-order master mode derivatives W^(k)[e_r], k = 2 … ORD.
 # For the companion-form eigenproblem with state ẑ = [x; ẋ; …], the k-th
@@ -110,7 +108,7 @@ master_modes_derivatives = Y
 # 4. Build multiindex set and resonance set
 # ------------------------------------------------------------------------------
 
-outer_eigenvalues = eigenvalues[(ROM + 1):end] # 2*10-FOM
+outer_eigenvalues = eigenvalues[(ROM+1):end] # 2*10-FOM
 # no external system 
 super_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
 target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
@@ -120,7 +118,7 @@ mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
 resonance_set = resonance_set_from_complex_normal_form_style(
-    ROM, mset, super_eigenvalues, target_eigenvalues, 0.05
+	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05,
 )
 # resonance_set = resonance_set_from_graph_style(
 #     ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05
@@ -128,9 +126,9 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 
 println("\nResonance set:")
 for (idx, mi) in enumerate(mset.exponents)
-    res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
-    isempty(res_str) && (res_str = "none")
-    println("  $mi → [$res_str]")
+	res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
+	isempty(res_str) && (res_str = "none")
+	println("  $mi → [$res_str]")
 end
 
 # ------------------------------------------------------------------------------
@@ -139,18 +137,18 @@ end
 # ------------------------------------------------------------------------------
 # Profile.clear()
 @time W, R = solve_cohomological_problem(
-    model, mset,
-    master_eigenvalues,
-    master_modes, left_eigenmodes,
-    resonance_set;
-    master_modes_derivatives = master_modes_derivatives
+	model, mset,
+	master_eigenvalues,
+	master_modes, left_eigenmodes,
+	resonance_set;
+	master_modes_derivatives = master_modes_derivatives,
 )
 @time W, R = solve_cohomological_problem(
-    model, mset,
-    master_eigenvalues,
-    master_modes, left_eigenmodes,
-    resonance_set;
-    master_modes_derivatives = master_modes_derivatives
+	model, mset,
+	master_eigenvalues,
+	master_modes, left_eigenmodes,
+	resonance_set;
+	master_modes_derivatives = master_modes_derivatives,
 )
 
 println("finished")
@@ -219,7 +217,7 @@ println("finished")
 mset = R.poly.multiindex_set
 coefficients = R.poly.coefficients
 for m in 1:length(mset.exponents)
-    multiindex = mset.exponents[m]
-    coeff = coefficients[:, m]
-    println(multiindex, " ", coeff)
+	multiindex = mset.exponents[m]
+	coeff = coefficients[:, m]
+	println(multiindex, " ", coeff)
 end

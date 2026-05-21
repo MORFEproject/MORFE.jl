@@ -90,7 +90,7 @@ println("Free DOFs  : ", n_free)
 const ROM        = 2
 const N_EXT      = 2
 const NVAR       = ROM + N_EXT
-const max_degree = 3
+const max_degree = 5
 
 mset      = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 _max_uniq = length(mset)
@@ -102,15 +102,12 @@ _max_uniq = length(mset)
 println("\n§1  Eigenproblem …")
 solver_eig = StructureModalDampingEigensolver(10, α, β)
 
-r1 = @timed begin
-	λ, Y_all = solve(M, K, solver_eig)
-	Eigenproblem(solver_eig, λ, Y_all, Matrix{ComplexF64}(Y_all[:, 1, :]))
-end
+r1 = @timed solve_eigenproblem(K, M, solver_eig; sorter! = (args...) -> nothing)
 eigenproblem = r1.value
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
 
 println("  First eigenvalues:")
-for (i, λi) in enumerate(eigenvalues[1:min(4, end)])
+for (i, λi) in enumerate(eigenvalues)
 	println("    mode $i: λ = $λi")
 end
 
@@ -121,7 +118,7 @@ master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes       = Y[:, 1, 1:ROM]   # position component of right eigenvectors
 left_eigenmodes    = X[:, 1:ROM]      # adjoint mode shapes — X is FOM × n_eigs from get_eigenpairs
 
-ORD_model                = size(Y_all, 2)
+ORD_model                = size(eigenproblem.eigenmodes, 2)
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
 	for k in 1:(ORD_model-1)
@@ -183,7 +180,7 @@ println("\nReduced dynamics coefficients:")
 for m in 1:length(R.poly.multiindex_set.exponents)
 	mi = R.poly.multiindex_set.exponents[m]
 	c = R.poly.coefficients[:, m]
-	any(abs.(c) .> 1e-12) && println("  $mi : $(c[1]) \t $(c[2])")
+	any(abs.(c) .> 1e-12) && println("$mi   $(c[1]) \t $(c[2])")
 end
 
 # -----------------------------------------------------------------------

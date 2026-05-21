@@ -10,6 +10,8 @@
 Manifest.toml
 docs/Manifest.toml
 .JuliaFormatter.toml
+.DS_Store
+demo/.DS_Store
 
 # Package artifacts (stores downloaded dependencies)
 /artifacts/

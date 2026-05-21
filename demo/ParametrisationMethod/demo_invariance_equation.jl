@@ -1,8 +1,8 @@
 using MORFE.InvarianceEquation: precompute_column_polynomials,
-                                evaluate_column!,
-                                evaluate_external_rhs!,
-                                evaluate_system_matrix_and_lower_order_rhs!,
-                                assemble_cohomological_matrix_and_rhs!
+	evaluate_column!,
+	evaluate_external_rhs!,
+	evaluate_system_matrix_and_lower_order_rhs!,
+	assemble_cohomological_matrix_and_rhs!
 using LinearAlgebra
 using StaticArrays: SVector
 
@@ -28,18 +28,18 @@ linear_terms = (B0, B1, B2)   # NTuple{ORDP1} = (B₀, B₁, B₂)
 # Reduced dynamics linear part (NVAR × NVAR) – Jordan form
 # For demo, a matrix with eigenvalues λ₁, λ₂ = -0.1±1i (master) and λ₃ = 3.0 (external)
 reduced_dynamics_linear = [-0.1+1.0im 0.0+0.0im 1.0+0.0im; # forcing excites master mode 1
-                           0.0+0.0im -0.1-1.0im 0.0+0.0im; # forcing does not excite master mode 2
-                           0.0+0.0im 0.0+0.0im 0.0+1.0im]  # Example matrix
+	0.0+0.0im -0.1-1.0im 0.0+0.0im; # forcing does not excite master mode 2
+	0.0+0.0im 0.0+0.0im 0.0+1.0im]  # Example matrix
 println("\nReduced dynamics linear part (NVAR × NVAR):\n",
-    repr("text/plain", reduced_dynamics_linear))
+	repr("text/plain", reduced_dynamics_linear))
 
 # Generalised eigenvectors (FOM × NVAR)
 # Columns 1:ROM = master modes, ROM+1:NVAR = external forcing modes
 # Only store the position part
 generalised_eigenmodes = Matrix{ComplexF64}(I, FOM, NVAR)  # identity for simplicity
 for i in 1:ORD
-    println("\nGeneralised eigenmodes at order $i (FOM × NVAR) = ",
-        repr("text/plain", generalised_eigenmodes * (reduced_dynamics_linear)^(i - 1)))
+	println("\nGeneralised eigenmodes at order $i (FOM × NVAR) = ",
+		repr("text/plain", generalised_eigenmodes * (reduced_dynamics_linear)^(i - 1)))
 end
 
 # -------------------------------------------------------------------
@@ -47,15 +47,15 @@ end
 # -------------------------------------------------------------------
 C_coeffs,
 E_coeffs = precompute_column_polynomials(
-    linear_terms, generalised_eigenmodes, reduced_dynamics_linear, ROM
+	linear_terms, generalised_eigenmodes, reduced_dynamics_linear, ROM,
 )
 
 println("\n=== Precomputed coefficients ===")
 for j in 1:ROM
-    println("\nC_coeffs[$j] (master mode $j):\n", repr("text/plain", C_coeffs[j]))
+	println("\nC_coeffs[$j] (master mode $j):\n", repr("text/plain", C_coeffs[j]))
 end
 for e in 1:N_EXT
-    println("\nE_coeffs[$e] (external mode $e):\n", repr("text/plain", E_coeffs[e]))
+	println("\nE_coeffs[$e] (external mode $e):\n", repr("text/plain", E_coeffs[e]))
 end
 
 # -------------------------------------------------------------------
@@ -70,8 +70,8 @@ resonance = SVector{ROM, Bool}(true, false)   # the single master mode is resona
 # Lower‑order couplings ξ_j (j = 1…ORD) – each is a FOM‑vector
 # In a real simulation these come from lower‑order multiindices.
 lower_order_couplings = SVector{ORD, Vector{ComplexF64}}(
-    [0.1, 0.1, 0.1, 0.1, 0.1],       # position
-    [10.0, 10.0, 10.0, 10.0, 10.0]  # velocity
+	[0.1, 0.1, 0.1, 0.1, 0.1],       # position
+	[10.0, 10.0, 10.0, 10.0, 10.0],  # velocity
 )
 
 # External dynamics amplitudes (length N_EXT)
@@ -81,12 +81,12 @@ external_dynamics = [-1000.0 + 0.0im]   # only one external mode
 # 4.  Assemble the cohomological matrix and right‑hand side
 # -------------------------------------------------------------------
 nR = count(resonance)
-M   = Matrix{ComplexF64}(undef, FOM, FOM + nR)
+M = Matrix{ComplexF64}(undef, FOM, FOM + nR)
 rhs = zeros(ComplexF64, FOM)
 g_buffer = zeros(ComplexF64, FOM)
 assemble_cohomological_matrix_and_rhs!(
-    M, rhs, s, linear_terms, C_coeffs, E_coeffs,
-    resonance, lower_order_couplings, external_dynamics, g_buffer
+	M, rhs, s, linear_terms, C_coeffs, E_coeffs,
+	resonance, lower_order_couplings, external_dynamics, g_buffer,
 )
 
 println("\n=== Assembled cohomological system ===")
@@ -109,7 +109,7 @@ evaluate_column!(c2, s, 2, C_coeffs)
 L = Matrix{ComplexF64}(undef, FOM, FOM)
 lower_rhs = zeros(ComplexF64, FOM)
 evaluate_system_matrix_and_lower_order_rhs!(
-    L, lower_rhs, s, lower_order_couplings, linear_terms
+	L, lower_rhs, s, lower_order_couplings, linear_terms,
 )
 
 println("\nC₁($s) =\n", c1)
@@ -125,8 +125,8 @@ println("\nExternal RHS contribution:\n", rhs_ext)
 println("\n=== Low‑level function manual computations ===")
 
 C = B2 * generalised_eigenmodes * s +
-    B2 * generalised_eigenmodes * reduced_dynamics_linear +
-    B1 * generalised_eigenmodes
+	B2 * generalised_eigenmodes * reduced_dynamics_linear +
+	B1 * generalised_eigenmodes
 
 println("\nC₁($s) =\n", C * [1.0, 0.0, 0.0])
 
@@ -135,7 +135,7 @@ println("\nC₂($s) =\n", C * [0.0, 1.0, 0.0])
 println("\nL($s) = \n", repr("text/plain", B2 * (s^2) + B1 * s + B0))
 
 println("\nLower‑order RHS contribution:\n",
-    -(B2 * s + B1) * lower_order_couplings[1] - B2 * lower_order_couplings[2]
+	-(B2 * s + B1) * lower_order_couplings[1] - B2 * lower_order_couplings[2],
 )
 
 println("\nExternal RHS contribution:\n", -C * [0.0, 0.0, external_dynamics[1]])

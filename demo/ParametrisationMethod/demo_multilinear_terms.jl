@@ -96,9 +96,9 @@ W.poly.coefficients[:, 2, 11] = -500im * φ₂  # (3,0,0)
 
 println("\nParametrisation coefficients (first few):")
 for idx in 1:10
-    pos = W.poly.coefficients[:, 1, idx]
-    vel = W.poly.coefficients[:, 2, idx]
-    println("  $(mset.exponents[idx]) → pos=$pos  vel=$vel")
+	pos = W.poly.coefficients[:, 1, idx]
+	vel = W.poly.coefficients[:, 2, idx]
+	println("  $(mset.exponents[idx]) → pos=$pos  vel=$vel")
 end
 
 # -----------------------------------------------------------------------
@@ -151,14 +151,14 @@ exp301 = SVector(3, 0, 1)
 println("exp = $exp301  (cubic in z₁, linear in r)")
 println("result = ", compute_multilinear_terms(model, exp301, W))
 manual300_term1 = ((500.0 * φ₁) .* (b * 1.0im)) + (b .* (-500im * φ₂)) + # (3,0,0) + (0,0,1) and (0,0,1) + (3,0,0)
-                  ((0.1 * φ₁) .* (-0.3 * φ₂)) + ((0.1 * φ₁) .* (b .+ φ₂)) # (2,0,0) + (1,0,1) and (1,0,1) + (2,0,0)
+				  ((0.1 * φ₁) .* (-0.3 * φ₂)) + ((0.1 * φ₁) .* (b .+ φ₂)) # (2,0,0) + (1,0,1) and (1,0,1) + (2,0,0)
 manual300_term2 = 0.5 * ((-500im * φ₂) .* (b * 1.0im)) * 2 + # (3,0,0) + (0,0,1) with two permutations
-                  0.5 * ((b .+ φ₂) .* (-0.3 * φ₂)) * 2 # (2,0,0) + (1,0,1) with two permutations
+				  0.5 * ((b .+ φ₂) .* (-0.3 * φ₂)) * 2 # (2,0,0) + (1,0,1) with two permutations
 manual300_term3 = 0.5 * ((0.1 * φ₁) .* (φ₁) .* (b * 1.0im)) * 2 + # ((2,0,0) + (1,0,0)) + (0,0,1) with two permutations
-                  0.5 * ((0.1 * φ₁) .* (b) .* (λ₁ * φ₁)) * 2 + # ((2,0,0) + (0,0,1)) + (1,0,0) with two permutations
-                  0.5 * ((b) .* (φ₁) .* (b .+ φ₂)) * 2 + # ((0,0,1) + (1,0,0)) + (2,0,0) with two permutations
-                  0.5 * ((φ₁) .* (φ₁) .* (-0.3 * φ₂)) + # ((1,0,0) + (1,0,0)) + (1,0,1) without nontrivial permutations
-                  0.5 * ((φ₁) .* (0.1 * φ₁) .* (λ₁ * φ₁)) * 2 # ((1,0,0) + (1,0,1)) + (1,0,0) with two permutations
+				  0.5 * ((0.1 * φ₁) .* (b) .* (λ₁ * φ₁)) * 2 + # ((2,0,0) + (0,0,1)) + (1,0,0) with two permutations
+				  0.5 * ((b) .* (φ₁) .* (b .+ φ₂)) * 2 + # ((0,0,1) + (1,0,0)) + (2,0,0) with two permutations
+				  0.5 * ((φ₁) .* (φ₁) .* (-0.3 * φ₂)) + # ((1,0,0) + (1,0,0)) + (1,0,1) without nontrivial permutations
+				  0.5 * ((φ₁) .* (0.1 * φ₁) .* (λ₁ * φ₁)) * 2 # ((1,0,0) + (1,0,1)) + (1,0,0) with two permutations
 manual300_term4 = 2.0 * (500.0 * φ₁) .* 1.0 # (3,0,0) + (0,0,1) is the only contribition due to forcing
 manual300 = manual300_term1 + manual300_term2 + manual300_term3 + manual300_term4
 println("manual = $manual300\t(term1+term2+term3+term4)\n")
@@ -172,14 +172,14 @@ cache = build_multilinear_terms_cache(model, W)
 
 mset_exps = mset.exponents
 for (exp_str, exp_vec) in [
-    ("(1,0,0)", exp100), ("(0,0,1)", exp001),
-    ("(2,0,0)", exp200), ("(1,0,1)", exp101)]
-    exp_index = findfirst(==(exp_vec), mset_exps)
-    r_direct = compute_multilinear_terms(model, exp_vec, W)
-    r_cached = compute_multilinear_terms(model, exp_index, W, cache)
-    err = norm(r_cached - r_direct)
-    println("exp $exp_str: cached vs direct error = $err")
-    @assert err==0 "Mismatch for exp $exp_str"
+	("(1,0,0)", exp100), ("(0,0,1)", exp001),
+	("(2,0,0)", exp200), ("(1,0,1)", exp101)]
+	exp_index = findfirst(==(exp_vec), mset_exps)
+	r_direct = compute_multilinear_terms(model, exp_vec, W)
+	r_cached = compute_multilinear_terms(model, exp_index, W, cache)
+	err = norm(r_cached - r_direct)
+	println("exp $exp_str: cached vs direct error = $err")
+	@assert err==0 "Mismatch for exp $exp_str"
 end
 
 println("\n" * "="^80 * "\n")

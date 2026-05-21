@@ -16,7 +16,7 @@
 # compile time.
 
 """
-    SymmetryType
+	SymmetryType
 
 Abstract tag type used to dispatch the inner factorisation accumulation strategy
 at compile time.  The three concrete subtypes correspond to the three cases that
@@ -29,7 +29,7 @@ arise from `MultilinearMap.multiindex`:
 abstract type SymmetryType end
 
 """
-    FullyAsymmetric <: SymmetryType
+	FullyAsymmetric <: SymmetryType
 
 Tag for terms whose factor slots all use distinct derivatives (`multiindex` has no
 repeated entry > 1).  No scratch buffer is needed; `t.f!` writes directly into
@@ -38,7 +38,7 @@ the accumulator.
 struct FullyAsymmetric <: SymmetryType end
 
 """
-    FullySymmetric <: SymmetryType
+	FullySymmetric <: SymmetryType
 
 Tag for terms where all factor slots share a single derivative order (exactly one
 positive entry in `multiindex`).  Each factorisation carries a symmetry count.
@@ -46,7 +46,7 @@ positive entry in `multiindex`).  Each factorisation carries a symmetry count.
 struct FullySymmetric <: SymmetryType end
 
 """
-    GroupwiseSymmetric <: SymmetryType
+	GroupwiseSymmetric <: SymmetryType
 
 Tag for terms whose factor slots span multiple derivative orders (multiple positive
 entries in `multiindex`).  Uses `factorisations_groupwise_symmetric` with a combined
@@ -55,15 +55,15 @@ per-group symmetry count.
 struct GroupwiseSymmetric <: SymmetryType end
 
 """
-    symmetry_type(t) -> SymmetryType
+	symmetry_type(t) -> SymmetryType
 
 Classify a `AbstractMultilinearMap` as `FullyAsymmetric`, `FullySymmetric`,
 or `GroupwiseSymmetric` based on its `multiindex` field.
 """
 function symmetry_type(t::AbstractMultilinearMap)
-    all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
-    count(>(0), t.multiindex) == 1 && return FullySymmetric()
-    return GroupwiseSymmetric()
+	all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
+	count(>(0), t.multiindex) == 1 && return FullySymmetric()
+	return GroupwiseSymmetric()
 end
 
 # -----------------------------------------------------------------------
@@ -77,12 +77,12 @@ Map each factor slot to its 1-based derivative index.
 Example: `multiindex = (2, 1)` → `(1, 1, 2)`.
 """
 function _derivative_orders(t::AbstractMultilinearMap)
-    deg = sum(t.multiindex)
-    return ntuple(deg) do slot
-        cumulative = 0
-        for (k, cnt) in enumerate(t.multiindex)
-            cumulative += cnt
-            slot <= cumulative && return k
-        end
-    end
+	deg = sum(t.multiindex)
+	return ntuple(deg) do slot
+		cumulative = 0
+		for (k, cnt) in enumerate(t.multiindex)
+			cumulative += cnt
+			slot <= cumulative && return k
+		end
+	end
 end
