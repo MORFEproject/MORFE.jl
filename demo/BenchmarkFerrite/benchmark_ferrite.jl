@@ -137,7 +137,7 @@ dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
 
 # Forcing frequency = damped natural frequency of mode 1; force shape = mode 1
 Ω_force = abs(eigenvalues[1])
-f_vec = 2.5 .* (M * real.(master_modes[:, 1]))
+f_vec = 2.5 .* (M * master_modes[:, 1])
 
 # Forcing matrix N×N_EXT (filled after eigenproblem; captured by closure).
 # f_vec · sum(r) = f_vec · (r₁+r₂) = f_vec · 2 cos(Ωt)
@@ -207,3 +207,27 @@ println("  %-32s  %9.3f  %11.1f  %7.3f\n",
 	"Σ  Cumulative (§1+§2)", r1.time + r2.time, to_gb(r1.bytes)+to_gb(r2.bytes), r1.gctime+r2.gctime)
 println("Monomials (max_degree=$max_degree) =", length(mset.exponents))
 println(sep)
+
+# --- Convergence study: sweep over forcing levels ---
+ENV["GKSwstype"] = "100"  # suppress GUI window; write PNGs directly
+using Random
+using Plots
+r_levels = [0.0, 0.5, 1.0, 2.0]
+err_conv = invariance_error_convergence(model, W, R;
+	n_samples = 500, r_magnitudes = r_levels, rng = MersenneTwister(0))
+
+println("\n=== Invariance error convergence ===")
+for res in err_conv
+	println("  |r| = $(res.r_magnitude)  →  max_order = $(res.max_order)",
+		"  s̄ = $(round(res.s_bar, digits=4))",
+		"  force_err ∈ [$(round(minimum(res.force_errors), sigdigits=2)),",
+		" $(round(maximum(res.force_errors), sigdigits=2))]")
+end
+
+plots = plot_invariance_convergence(err_conv)
+savefig(plots.full, joinpath(@__DIR__, "invariance_convergence_full.png"))
+savefig(plots.master, joinpath(@__DIR__, "invariance_convergence_master.png"))
+println("\nConvergence plots saved to: ", @__DIR__)
+
+println("\n" * "="^80)
+println("Demo finished successfully.")

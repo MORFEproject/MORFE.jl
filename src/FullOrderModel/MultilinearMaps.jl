@@ -15,9 +15,9 @@ See `demo/Gridap/` and `demo/Ferrite/` for reference FEM backend implementations
 module MultilinearMaps
 
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, evaluate_term!,
-       fem_elements, fem_n_qp, fem_ndofs_per_cell,
-       scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
-       fem_reinit!
+	fem_elements, fem_n_qp, fem_ndofs_per_cell,
+	scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
+	fem_reinit!
 
 """
 	AbstractMultilinearMap{ORD}
@@ -91,10 +91,10 @@ During evaluation the multilinear map is called as
 
 """
 struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
-    f!::F
-    multiindex::NTuple{ORD, Int}
-    multiplicity_external::Int
-    deg::Int
+	f!::F
+	multiindex::NTuple{ORD, Int}
+	multiplicity_external::Int
+	deg::Int
 end
 
 """
@@ -107,40 +107,40 @@ Create a multilinear term for a system of order ORD without external dynamics.
 - `multiindex`: tuple specifying which derivatives are used
 """
 function MultilinearMap(f!, multiindex::NTuple{ORD, Int}) where {ORD}
-    @assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
-    deg = sum(multiindex)
-    # Check if input arguments of f matches deg
-    ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
-    @assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-    @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
+	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
+	deg = sum(multiindex)
+	# Check if input arguments of f matches deg
+	ms = methods(f!)
+	@assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
+	@assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
+	@assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
 
-    return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg)
+	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg)
 end
 
 # Create a multilinear term for a first order system.
 function MultilinearMap(f!)
-    ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
-    deg = ms[1].nargs - 2 # subtract the function itself and `res`
-    @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
-    multiindex = (UInt8(deg),)
-    return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg)
+	ms = methods(f!)
+	@assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
+	deg = ms[1].nargs - 2 # subtract the function itself and `res`
+	@assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
+	multiindex = (UInt8(deg),)
+	return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg)
 end
 
 function MultilinearMap(
-        f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int) where {ORD}
-    @assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
-    @assert multiplicity_external >= 0 "The argument multiplicity_external cannot be negative, but multiplicity_external=$multiplicity_external"
-    deg = sum(multiindex) + multiplicity_external
-    # Check if input arguments of f matches deg
-    ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
-    @assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-    @assert (deg >= 2) || (multiplicity_external >= 1)
-    "Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
+	f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int) where {ORD}
+	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
+	@assert multiplicity_external >= 0 "The argument multiplicity_external cannot be negative, but multiplicity_external=$multiplicity_external"
+	deg = sum(multiindex) + multiplicity_external
+	# Check if input arguments of f matches deg
+	ms = methods(f!)
+	@assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
+	@assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
+	@assert (deg >= 2) || (multiplicity_external >= 1)
+	"Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
 
-    return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg)
+	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg)
 end
 
 """
@@ -155,30 +155,84 @@ Evaluate a single `MultilinearMap` and accumulate (adds) the result into `res`.
 - `r`: external state vector (or `nothing` if not used). If `r` is `nothing` but the term expects external arguments, an error is thrown.
 """
 @inline function evaluate_term!(res, term::MultilinearMap{ORD}, xs, r) where {ORD}
-    inds = term.multiindex
-    # me = term.multiplicity_external
-    total_args = term.deg
+	inds = term.multiindex
+	# me = term.multiplicity_external
+	total_args = term.deg
 
-    # Build the argument list
-    args = ntuple(total_args) do k
-        if k <= sum(inds)
-            # Pick from xs based on multiindex
-            s = 0
-            for j in 1:ORD
-                s += inds[j]
-                if k ≤ s
-                    return @inbounds xs[j]
-                end
-            end
-        else
-            # Pick from external state
-            if r === nothing
-                error("Term expects external arguments but no external state provided")
-            end
-            return r
-        end
-    end
-    term.f!(res, args...)
+	# Build the argument list
+	args = ntuple(total_args) do k
+		if k <= sum(inds)
+			# Pick from xs based on multiindex
+			s = 0
+			for j in 1:ORD
+				s += inds[j]
+				if k ≤ s
+					return @inbounds xs[j]
+				end
+			end
+		else
+			# Pick from external state
+			if r === nothing
+				error("Term expects external arguments but no external state provided")
+			end
+			return r
+		end
+	end
+	term.f!(res, args...)
+end
+
+"""
+	evaluate_term!(res, t::FEMMultilinearMap{ORD}, xs, r)
+
+Direct (uncached) evaluation of a FEM-backed multilinear term at state `xs` and
+external state `r`, accumulating the result into `res`. To be used in InvarianceError.jl.
+
+Internal argument slots (determined by `t.multiindex`) are scattered to quadrature-point
+field quantities via `scatter_qp!` and assembled element-wise.
+
+For `me = 0`: `∇W_args` is a homogeneous `NTuple{N_INT, QP_TYPE}` — type-stable.
+
+For `me > 0`: the external arg slots in `∇W_args` receive `r` directly (not scattered).
+`r` is a small N_EXT-dimensional external-state vector, not a FOM displacement field.
+The concrete `accumulate_qp!` evaluates the full multilinear map
+`F(∇u₁,…,∇uₙ, r₁,…,rₘₑ)` at the actual inputs.
+"""
+function evaluate_term!(res, t::FEMMultilinearMap{ORD}, xs, r) where {ORD}
+	_eval_fem_term_direct!(res, t, xs, r, Val(t.deg), Val(sum(t.multiindex)))
+end
+
+function _eval_fem_term_direct!(
+	res, t::FEMMultilinearMap{ORD}, xs, r,
+	::Val{DEG}, ::Val{N_INT}) where {ORD, DEG, N_INT}
+	inds = t.multiindex
+	me = DEG - N_INT        # number of external arg slots; compile-time constant
+	∇W_qp = fem_qp_buffer(t)  # pre-allocated; ≥ DEG rows guaranteed by constructor
+	n_qp = fem_n_qp(t)
+	n_dofs = fem_ndofs_per_cell(t)
+	Fe = zeros(eltype(res), n_dofs)
+
+	for element in fem_elements(t)
+		fem_reinit!(element, t)
+		# Scatter N_INT internal arg slots to qp-level gradients (rows 1:N_INT).
+		slot = 0
+		for j in 1:ORD
+			for _ in 1:inds[j]
+				slot += 1
+				scatter_qp!(@view(∇W_qp[slot, 1:n_qp]), xs[j], element, t)
+			end
+		end
+		fill!(Fe, zero(eltype(Fe)))
+		for q in 1:n_qp
+			dΩ = fem_getdetJdV(element, q, t)
+			if me == 0
+				∇W_args = ntuple(k -> ∇W_qp[k, q], Val(N_INT))
+			else
+				∇W_args = ntuple(k -> k ≤ N_INT ? ∇W_qp[k, q] : r, Val(DEG))
+			end
+			accumulate_qp!(Fe, ∇W_args, 1.0, element, q, dΩ, t)
+		end
+		assemble_element!(res, Fe, element, t)
+	end
 end
 
 end # module

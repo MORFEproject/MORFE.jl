@@ -8,6 +8,8 @@ MORFE.jl might rely on several third-party libraries for core functionality:
 
 E.g.:
 - **SLEPc**: Scalable Library for Eigenvalue Problem Computations
+- Ferrite
+- Gridap
 
 These dependencies should be installed separately (typically via conda or pip) and are not included in this repository.
 
