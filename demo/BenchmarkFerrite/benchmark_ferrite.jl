@@ -212,9 +212,9 @@ println(sep)
 ENV["GKSwstype"] = "100"  # suppress GUI window; write PNGs directly
 using Random
 using Plots
-r_levels = [0.0, 0.5, 1.0, 2.0]
+r_levels = [0.0, 0.02, 0.05, 0.1]
 err_conv = invariance_error_convergence(model, W, R;
-	n_samples = 500, r_magnitudes = r_levels, rng = MersenneTwister(0))
+	n_samples = 300, r_magnitudes = r_levels, rng = MersenneTwister(0))
 
 println("\n=== Invariance error convergence ===")
 for res in err_conv
