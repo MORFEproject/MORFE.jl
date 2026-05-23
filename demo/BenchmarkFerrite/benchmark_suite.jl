@@ -66,23 +66,22 @@ const BENCH_BASE = joinpath(@__DIR__, "benchmark_results")
 # -----------------------------------------------------------------------
 
 """
-	benchmark_mesh(nx, ny, nz) -> NamedTuple
+	benchmark_mesh(nx, ny, nz; max_degree=SUITE_DEGREE) -> NamedTuple
 
 Load the mesh `beam_h27_{nx}x{ny}x{nz}.msh`, assemble linear matrices,
-solve the eigenproblem and cohomological problem (ROM=$(SUITE_ROM),
-max_degree=$(SUITE_DEGREE)), and write timed results to a timestamped
-subdirectory of `benchmark_results/`.
+solve the eigenproblem and cohomological problem (ROM=$(SUITE_ROM)), and
+write timed results to a timestamped subdirectory of `benchmark_results/`.
 
 Returns `(; mesh_name, n_free, r1, r2, bench_dir)`.
 """
-function benchmark_mesh(nx::Int, ny::Int, nz::Int)
+function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGREE)
 	mesh_name = "beam_h27_$(nx)x$(ny)x$(nz)"
 	msh_path  = joinpath(@__DIR__, "$(mesh_name).msh")
 	isfile(msh_path) ||
 		error("Mesh not found: $(msh_path)\nRun generate_beam_meshes.jl first.")
 
 	timestamp = Dates.format(now(), "yyyymmddTHHMMSS")
-	bench_dir = joinpath(BENCH_BASE, "$(mesh_name)_degree$(SUITE_DEGREE)_$(timestamp)")
+	bench_dir = joinpath(BENCH_BASE, "$(mesh_name)_degree$(max_degree)_$(timestamp)")
 	mkpath(bench_dir)
 
 	sep = "=" ^ 70
@@ -132,7 +131,7 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int)
 	# -------------------------------------------------------------------
 	# 3. Multiindex set
 	# -------------------------------------------------------------------
-	mset     = all_multiindices_up_to(SUITE_NVAR, SUITE_DEGREE; min_degree = 1)
+	mset     = all_multiindices_up_to(SUITE_NVAR, max_degree; min_degree = 1)
 	max_uniq = length(mset)
 
 	# -------------------------------------------------------------------
@@ -194,7 +193,7 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int)
 	# -------------------------------------------------------------------
 	# §2 — Cohomological solve
 	# -------------------------------------------------------------------
-	println("\n§2  Cohomological solve (max_degree = $(SUITE_DEGREE)) …")
+	println("\n§2  Cohomological solve (max_degree = $(max_degree)) …")
 	r2 = @timed solve_cohomological_problem(
 		model, mset,
 		master_eigenvalues,
@@ -216,7 +215,7 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int)
 		println(io, "FOM         = $(n_free)")
 		println(io, "ROM         = $(SUITE_ROM)")
 		println(io, "N_EXT       = $(SUITE_N_EXT)")
-		println(io, "max_degree  = $(SUITE_DEGREE)")
+		println(io, "max_degree  = $(max_degree)")
 		println(io, "monomials   = $(length(mset.exponents))")
 		println(io, "timestamp   = $(timestamp)")
 		println(io)
@@ -244,6 +243,8 @@ end
 # -----------------------------------------------------------------------
 # Run the suite
 # -----------------------------------------------------------------------
+
+if abspath(PROGRAM_FILE) == @__FILE__
 
 println("=" ^ 70)
 println("MORFE.jl — Multi-Mesh Benchmark Suite (Ferrite path)")
@@ -284,3 +285,5 @@ for r in suite_results
 end
 println()
 println("Suite finished successfully.")
+
+end # if abspath(PROGRAM_FILE) == @__FILE__
