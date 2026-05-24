@@ -1,12 +1,13 @@
 """
 Multi-mesh benchmark suite for MORFE.jl — Ferrite path.
 
-Sweeps four mesh densities of the clamped-clamped H27 beam:
+Sweeps five denser mesh sizes of the clamped-clamped H27 beam at degree 5:
 
-  NX=10  → ~1 425 free DoFs  (≈ 1/4× baseline)
-  NX=20  → ~2 925 free DoFs  (≈ 1/2× baseline)
-  NX=40  → ~5 925 free DoFs  (=  1× baseline, beam_h27.msh)
-  NX=80  → ~11 925 free DoFs (≈  2× baseline)
+   80× 4×2  → ~23 625 free DoFs
+   80× 4×4  → ~47 025 free DoFs
+  160× 4×4  → ~94 125 free DoFs
+  160× 8×4  → ~188 025 free DoFs
+  160× 8×8  → ~375 825 free DoFs
 
 For each mesh the script measures:
   §1  Eigenproblem
@@ -21,7 +22,7 @@ Results are written to timestamped subfolders:
 A consolidated table is printed at the end.
 
 Prerequisites:
-  Run generate_beam_meshes.jl once to create the four .msh files.
+  Run generate_beam_meshes.jl once to create the .msh files.
 
 Usage:
   julia --project demo/BenchmarkFerrite/benchmark_suite.jl
@@ -43,13 +44,11 @@ include(joinpath(@__DIR__, "../Ferrite/ferrite_assembly.jl"))
 # Suite parameters (fixed across all mesh sizes)
 # -----------------------------------------------------------------------
 
-const SUITE_NX     = [10, 20, 40, 80]
-const SUITE_NY     = 2
-const SUITE_NZ     = 2
+const SUITE_MESHES = [(160, 8, 4), (160, 8, 8)]
 const SUITE_ROM    = 2
 const SUITE_N_EXT  = 2
 const SUITE_NVAR   = SUITE_ROM + SUITE_N_EXT
-const SUITE_DEGREE = 11
+const SUITE_DEGREE = 5
 
 const E        = 160e3
 const ν_ratio = 0.22
@@ -249,12 +248,12 @@ if abspath(PROGRAM_FILE) == @__FILE__
 println("=" ^ 70)
 println("MORFE.jl — Multi-Mesh Benchmark Suite (Ferrite path)")
 println("  ROM=$(SUITE_ROM)  N_EXT=$(SUITE_N_EXT)  max_degree=$(SUITE_DEGREE)")
-println("  Meshes: ", join(["beam_h27_$(nx)x$(SUITE_NY)x$(SUITE_NZ)" for nx in SUITE_NX], ", "))
+println("  Meshes: ", join(["beam_h27_$(nx)x$(ny)x$(nz)" for (nx,ny,nz) in SUITE_MESHES], ", "))
 println("=" ^ 70)
 
 suite_results = []
-for nx in SUITE_NX
-	push!(suite_results, benchmark_mesh(nx, SUITE_NY, SUITE_NZ))
+for (nx, ny, nz) in SUITE_MESHES
+	push!(suite_results, benchmark_mesh(nx, ny, nz))
 end
 
 # -----------------------------------------------------------------------
