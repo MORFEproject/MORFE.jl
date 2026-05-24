@@ -11,13 +11,18 @@ Run with the same Project.toml as the benchmark; the mesh
 The script proceeds in five steps:
 
   (1) load the reference mesh and Ferrite FE space
-  (2) build the parametric geometry: J₁, det_series, adj_series,
-	  inv_series — and verify the reciprocal-series recurrence
+  (2) build the parametric geometry: J₁, det_series, adj_series, and
+	  the scalar reciprocal series 1/det(J) — no `J⁻¹` series is ever
+	  materialised; everywhere the weak form would need `inv(J)` we
+	  substitute `adj(J) / det(J)` and let one `1/det(J)` cancel the
+	  `det(J)` in `dV = det(J) · dV₀`
   (3) assemble the polynomial coefficient matrices K_k, M_k via
-	  `assemble_K_M_polynomial!`
+	  `assemble_K_M_polynomial!`  (linear K carries `(1/det)¹`, linear
+	  M carries `det¹`)
   (4) instantiate the quadratic and cubic parametric internal-force
-	  maps, ParametricGeometricNonlinearity{2|3}, and wrap each
-	  θ-power as a MORFE.MultilinearMap of external arity k
+	  maps, ParametricGeometricNonlinearity{2|3} (which precompute
+	  `(1/det)²` and `(1/det)³` respectively), and wrap each θ-power
+	  as a MORFE.MultilinearMap of external arity k
   (5) solve the eigenproblem at θ = 0, augment the system with the
 	  external state θ (eigenvalue 0, trivial dynamics), and call
 	  `solve_cohomological_problem` on the (z₁, z₂, θ) variables
@@ -108,21 +113,27 @@ const J₁ = Tensor{2, 3, Float64}((i, j) -> (i == 1 && j == 1) ? 1.0 : 0.0)    
 
 const N_θ = 5                                          # series truncation order
 
-detJ_coeffs = det_series(J₀, J₁)                       # exact, length 4
-invJ_coeffs = inv_series(J₀, J₁, N_θ)                  # truncated, length N_θ + 1
+# Joint computation of det and adj: shares the matrix products
+# (A², B², AB, BA) and traces between the two series, and avoids
+# any inversion of J₀ (so the routine is correct even for J₀ ≠ I).
+detJ_coeffs, adjJ_coeffs = det_and_adj_series(J₀, J₁)        # lengths 4 and 3
+inv_detJ_coeffs          = reciprocal_series(detJ_coeffs, N_θ)  # length N_θ + 1
 
 println("\nParametric geometry:")
 println("  det J(θ) coefficients : ", detJ_coeffs)
-println("  J⁻¹(θ) at θ⁰ (= J₀⁻¹) : ", invJ_coeffs[1])
-println("  J⁻¹(θ) at θ¹          : ", invJ_coeffs[2])
+println("  adj J(θ) at θ⁰        : ", adjJ_coeffs[1])
+println("  adj J(θ) at θ¹        : ", adjJ_coeffs[2])
+println("  1/det J(θ) coefficients (first few): ", inv_detJ_coeffs[1:min(end, 4)])
 
-# Recurrence sanity check
-inv_resid = check_inv_series(J₀, J₁, invJ_coeffs, N_θ)
-@printf "  Recurrence residual ‖J · J⁻¹ − I‖:\n"
-for (k, r) in pairs(inv_resid)
+# Recurrence sanity check.  We verify the polynomial identity
+# J(θ) · adj(J(θ)) ≡ det(J(θ)) · I  exactly (no reciprocal involved),
+# which is the defining property of the adjugate.
+adj_resid = check_adj_det_identity(J₀, J₁, adjJ_coeffs, detJ_coeffs)
+@printf "  Identity residual ‖J·adj(J) − det(J)·I‖:\n"
+for (k, r) in pairs(adj_resid)
 	@printf "    θ^%d :  %.3e\n" (k - 1) r
 end
-@assert all(<(1e-12), inv_resid) "Reciprocal-series recurrence failed."
+@assert all(<(1e-12), adj_resid) "adj/det polynomial identity failed."
 
 # ==================================================================
 # 4.  Linear assembly:  K(θ) = Σ θ^k K_k,  M(θ) = Σ θ^k M_k
@@ -136,7 +147,7 @@ M_full_coeffs = [allocate_matrix(dh) for _ in 0:N_M_used]
 println("\nAssembling K_k (k = 0…$N_K_used) and M_k (k = 0…$N_M_used) …")
 @time assemble_K_M_polynomial!(K_full_coeffs, M_full_coeffs,
 	dh, cv, λ_lame, μ_lame, ρ,
-	invJ_coeffs, detJ_coeffs)
+	adjJ_coeffs, detJ_coeffs, inv_detJ_coeffs)
 
 # Apply Dirichlet BCs by restricting to free DOFs
 free          = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
@@ -220,15 +231,15 @@ println("  linear K-corrections : ", length(linear_K_corrections),
 println("\nBuilding ParametricGeometricNonlinearity{2} and {3} …")
 pgn_quad = ParametricGeometricNonlinearity{2}(
 	dh, cv, free_to_local, n_free, λ_lame, μ_lame;
-	invJ_coeffs = invJ_coeffs,
-	detJ_coeffs = detJ_coeffs,
-	N_θ = N_θ,
+	adjJ_coeffs     = adjJ_coeffs,
+	inv_detJ_coeffs = inv_detJ_coeffs,
+	N_θ            = N_θ,
 )
 pgn_cube = ParametricGeometricNonlinearity{3}(
 	dh, cv, free_to_local, n_free, λ_lame, μ_lame;
-	invJ_coeffs = invJ_coeffs,
-	detJ_coeffs = detJ_coeffs,
-	N_θ = N_θ,
+	adjJ_coeffs     = adjJ_coeffs,
+	inv_detJ_coeffs = inv_detJ_coeffs,
+	N_θ            = N_θ,
 )
 
 quad_maps = multilinear_maps(pgn_quad)   # N_θ + 1 maps with external arity 0…N_θ
