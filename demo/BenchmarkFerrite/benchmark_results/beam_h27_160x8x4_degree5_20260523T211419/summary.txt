@@ -1,0 +1,15 @@
+mesh        = beam_h27_160x8x4
+FOM         = 146421
+ROM         = 2
+N_EXT       = 2
+max_degree  = 5
+monomials   = 125
+timestamp   = 20260523T211419
+
+eig_time_s        = 12.978474958
+eig_bytes         = 5410389456
+eig_gctime_s      = 0.471283875
+solve_time_s      = 4871.482369209
+solve_bytes       = 413116943040
+solve_gctime_s    = 12.883619752
+total_time_s      = 4884.460844167001

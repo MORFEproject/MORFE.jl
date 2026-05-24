@@ -146,26 +146,31 @@ def plot_01_scaling(runs: list[dict]) -> None:
     fig, ax = plt.subplots(figsize=(12, 7))
 
     for ci, order in enumerate(all_orders):
-        times_min = np.array([
-            float(r["df_order"].set_index("order").loc[order, "order_total_time_s"]) / 60
-            for r in runs_sorted
-        ])
+        order_rows = []
+        for r in runs_sorted:
+            idx = r["df_order"].set_index("order")
+            if order in idx.index:
+                order_rows.append((r["FOM"], float(idx.loc[order, "order_total_time_s"]) / 60))
+        if not order_rows:
+            continue
+        foms_o    = np.array([x[0] for x in order_rows], dtype=float)
+        times_min = np.array([x[1] for x in order_rows])
         c = colors[ci]
-        ax.scatter(foms, times_min, color=c, s=50, zorder=5)
-        ax.plot(foms, times_min, color=c, lw=2, label=f"order {order}")
+        ax.scatter(foms_o, times_min, color=c, s=50, zorder=5)
+        ax.plot(foms_o, times_min, color=c, lw=2, label=f"order {order}")
 
-        if len(foms) >= 2:
-            log_f, log_t = np.log(foms), np.log(times_min)
+        if len(foms_o) >= 2:
+            log_f, log_t = np.log(foms_o), np.log(times_min)
             alpha, log_C = np.polyfit(log_f, log_t, 1)
             C = np.exp(log_C)
             ss_res = np.sum((log_t - (alpha * log_f + log_C)) ** 2)
             ss_tot = np.sum((log_t - log_t.mean()) ** 2)
             r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 1.0
-            fom_s = np.logspace(np.log10(foms[0]), np.log10(foms[-1]), 300)
+            fom_s = np.logspace(np.log10(foms_o[0]), np.log10(foms_o[-1]), 300)
             ax.plot(fom_s, C * fom_s ** alpha, color=c, lw=1.2, ls="--", alpha=0.75)
             ax.annotate(
                 f"{C:.2e}·x^{alpha:.2f}  R²={r2:.4f}",
-                xy=(foms[-1], times_min[-1]),
+                xy=(foms_o[-1], times_min[-1]),
                 xytext=(6, 0), textcoords="offset points",
                 fontsize=7.5, color=c, va="center",
             )
@@ -594,6 +599,116 @@ def plot_12_allocation_heatmap(runs: list[dict]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Helpers shared by plots 13 & 14
+# ---------------------------------------------------------------------------
+
+
+def _fixed_order_rows(runs: list[dict], target_order: int) -> list[tuple]:
+    """
+    For each unique FOM, return exactly one per-order CSV row for target_order.
+    When multiple runs share a FOM, the one with the lowest degree is preferred
+    (minimises any interaction with later orders).
+    Returns list of (fom, row_series) sorted by FOM.
+    """
+    best: dict[int, dict] = {}
+    for r in runs:
+        df = r["df_order"]
+        if target_order not in df["order"].values:
+            continue
+        fom = r["FOM"]
+        if fom not in best or r["degree"] < best[fom]["degree"]:
+            row = df[df["order"] == target_order].iloc[0]
+            best[fom] = {"degree": r["degree"], "fom": fom, "row": row}
+    return [(v["fom"], v["row"]) for v in sorted(best.values(), key=lambda x: x["fom"])]
+
+
+def _power_fit_log(x, y):
+    """Fit y = C * x^alpha in log space. Returns (C, alpha, R²)."""
+    lx, ly = np.log(x), np.log(y)
+    alpha, lc = np.polyfit(lx, ly, 1)
+    C = np.exp(lc)
+    r2 = 1.0 - np.sum((ly - (alpha * lx + lc)) ** 2) / np.sum((ly - ly.mean()) ** 2)
+    return C, alpha, r2
+
+
+# ---------------------------------------------------------------------------
+# Plot 13 — Fixed-order time costs vs mesh size (log-log)
+# ---------------------------------------------------------------------------
+
+
+def plot_13_fixed_order_time(runs: list[dict], target_order: int = 5) -> None:
+    rows = _fixed_order_rows(runs, target_order)
+    if not rows:
+        print(f"  No runs contain order {target_order} — skipping plot 13.")
+        return
+
+    foms  = np.array([fom for fom, _ in rows], dtype=float)
+    rhs   = np.array([row["rhs_time_s"]         for _, row in rows]) / 60
+    sol   = np.array([row["solve_time_s"]        for _, row in rows]) / 60
+    total = rhs + sol
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    ax.fill_between(foms, rhs,   0,     color="#4c72b0", alpha=0.8, label="RHS assembly")
+    ax.fill_between(foms, total, rhs,   color="#55a868", alpha=0.8, label="Linear solve")
+    ax.plot(foms, total, color="black", lw=2, marker="o", ms=5, label="Total")
+
+    if len(foms) >= 2:
+        C, alpha, r2 = _power_fit_log(foms, total)
+        fom_s = np.linspace(foms[0], foms[-1], 300)
+        ax.plot(fom_s, C * fom_s ** alpha, color="black", ls="--", lw=1.5, alpha=0.8,
+                label=f"Total fit  {C:.2e}·FOM^{alpha:.2f}  R²={r2:.3f}")
+
+    ax.set_ylim(0)
+    ax.set_xlabel("FOM size (DOFs)")
+    ax.set_ylabel(f"Order {target_order} time (min)")
+    ax.set_title(f"Time costs at order {target_order} vs mesh size")
+    ax.legend(fontsize=9)
+    ax.grid(axis="y", ls=":", alpha=0.4)
+    fig.tight_layout()
+    _save(fig, f"plot_13_order{target_order}_time_vs_fom.png")
+
+
+# ---------------------------------------------------------------------------
+# Plot 14 — Fixed-order memory allocation vs mesh size (log-log)
+# ---------------------------------------------------------------------------
+
+
+def plot_14_fixed_order_memory(runs: list[dict], target_order: int = 5) -> None:
+    rows = _fixed_order_rows(runs, target_order)
+    if not rows:
+        print(f"  No runs contain order {target_order} — skipping plot 14.")
+        return
+
+    foms  = np.array([fom for fom, _ in rows], dtype=float)
+    rhs   = np.array([row["rhs_alloc_bytes"]   for _, row in rows]) / (1024**3)
+    sol   = np.array([row["solve_alloc_bytes"]  for _, row in rows]) / (1024**3)
+    total = rhs + sol
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    ax.fill_between(foms, rhs,   0,     color="#4c72b0", alpha=0.8, label="RHS assembly")
+    ax.fill_between(foms, total, rhs,   color="#55a868", alpha=0.8, label="Linear solve")
+    ax.plot(foms, total, color="black", lw=2, marker="o", ms=5, label="Total")
+
+    if len(foms) >= 2:
+        C, alpha, r2 = _power_fit_log(foms, total)
+        fom_s = np.logspace(np.log10(foms[0]), np.log10(foms[-1]), 300)
+        ax.plot(fom_s, C * fom_s ** alpha, color="black", ls="--", lw=1.5, alpha=0.8,
+                label=f"Total fit  {C:.2e}·FOM^{alpha:.2f}  R²={r2:.3f}")
+
+    ax.set_xscale("log")
+    ax.set_ylim(0)
+    ax.set_xlabel("FOM size (DOFs)")
+    ax.set_ylabel(f"Order {target_order} allocation (GB)")
+    ax.set_title(f"Memory allocation at order {target_order} vs mesh size")
+    ax.legend(fontsize=9)
+    ax.grid(axis="y", ls=":", alpha=0.4)
+    fig.tight_layout()
+    _save(fig, f"plot_14_order{target_order}_memory_vs_fom.png")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -628,8 +743,10 @@ def main() -> None:
     plot_10_top20_slowest(runs)
     plot_11_rhs_fraction(runs)
     plot_12_allocation_heatmap(runs)
+    plot_13_fixed_order_time(runs, target_order=5)
+    plot_14_fixed_order_memory(runs, target_order=5)
 
-    print(f"\nAll 12 plots written to {RESULTS_DIR}")
+    print(f"\nAll 14 plots written to {RESULTS_DIR}")
 
 
 if __name__ == "__main__":
