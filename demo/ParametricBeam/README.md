@@ -18,7 +18,7 @@ reduced model is a *parametric* ROM in `(z₁, z₂, θ)`.
 | --- | --- |
 | `parametric_beam_demo.jl`   | Main script: load mesh, build parametric geometry, assemble, solve. |
 | `parametric_assembly.jl`    | `assemble_K_M_polynomial!` and `ParametricGeometricNonlinearity{2|3}` with `evaluate_kth_quadratic!` / `evaluate_kth_cubic!`. |
-| `parametric_geometry.jl`    | Closed-form `det_series`, `adj_series`, `inv_series` for an affine `J = J₀ + θ J₁` in 3D. |
+| `parametric_geometry.jl`    | Closed-form `det_series`, `adj_series` for an affine `J = J₀ + θ J₁` in 3D, plus `check_adj_det_identity`. |
 | `theta_polynomials.jl`      | Generic truncated power-series algebra: `poly_mul`, `poly_contract`, `reciprocal_series`. |
 
 The demo depends only on the same packages as `benchmark_ferrite.jl`
@@ -49,18 +49,33 @@ x(θ, x₀) = x₀ + θ φ(x₀)                  ⇒   J(θ) = J₀ + θ J₁
 
 For uniform stretch, `φ(x₀) = (x₀₁, 0, 0)`, so `J₁ = e₁ ⊗ e₁` and `J₀ = I`.
 
-### Why `adj(J) / det(J)`
+### Why `adj(J) / det(J)` — never materialised as `J⁻¹`
 
-The pulled-back weak form needs `J⁻¹(θ)`.  In 3D:
+The pulled-back weak form *would* need `J⁻¹(θ)`.  In 3D:
 
 * `det J(θ)` is **exact** polynomial of degree ≤ 3
 * `adj J(θ)` is **exact** polynomial of degree ≤ 2
 * `J⁻¹(θ) = adj J(θ) / det J(θ)` is *rational*
 
-Only the scalar series `1 / det J(θ)` requires a Taylor expansion.
-We obtain its coefficients from the **reciprocal-series recurrence**:
+But we never assemble a series for `J⁻¹`.  Instead, wherever
+`inv(J)` appears in the weak form we substitute `adj(J) / det(J)`
+and let one factor of `1/det(J)` **cancel** the `det(J)` in the
+volume differential `dV = det(J) · dV₀`.  After cancellation, an
+`N_input`-displacement elastic form carries `(1/det(J))^{N_input}`
+as its **only** reciprocal factor:
 
-Given `p(θ) = Σ_k p_k θ^k` with `p₀ ≠ 0`, the series `q(θ) = 1 / p(θ)`
+| Form        | `N_input` | residual reciprocal |
+| ----------- | --------- | ------------------- |
+| Linear K    | 1         | `(1/det)¹`          |
+| Linear M    | 0         | (none — has `det¹`) |
+| Quadratic G | 2         | `(1/det)²`          |
+| Cubic H     | 3         | `(1/det)³`          |
+
+The scalar series `1/det(J(θ))` is the **only** rational quantity
+in the whole construction.  We compute it from the standard
+**reciprocal-series recurrence**:
+
+Given `p(θ) = Σ_k p_k θ^k` with `p₀ ≠ 0`, the series `q(θ) = 1/p(θ)`
 satisfies, by matching coefficients of `θ^k` in `p · q ≡ 1`:
 
 ```
@@ -69,39 +84,49 @@ q_k = − (1 / p₀) · Σ_{j=1}^{k} p_j q_{k-j}      for k ≥ 1
 ```
 
 implemented in `reciprocal_series(p, N)` in `theta_polynomials.jl`.
+The required power `(1/det)^{N_input}` is built once at construction
+time of each `ParametricGeometricNonlinearity{N_input}` and then
+applied in the assembly as a single `poly_mul` at the end of every
+QP loop — no tensor-valued reciprocal series ever appears.
 
 ### Truncation order
 
 The truncation order `N_θ` is an arbitrary positive integer.  The cost
-of building `invJ_coeffs` is `O(N_θ²)` for the reciprocal step plus one
-truncated convolution; for an affine `J` this is negligible compared
-to a single FE assembly pass.
+of building `inv_detJ_coeffs` (and its precomputed powers
+`(1/det)^{N_input}`) is `O(N_θ²)` per `poly_mul`; for an affine `J`
+this is negligible compared to a single FE assembly pass.
 
-The K-assembly produces `K(θ) = Σ_k θ^k K_k` truncated at any user-chosen
-`N_K_used` (default = `N_θ`).  The M-assembly produces only
-`length(detJ_coeffs)` non-zero coefficients (since the mass integrand
-has no `J⁻¹` dependence).
+The K-assembly produces `K(θ) = Σ_k θ^k K_k` truncated at any
+user-chosen `N_K_used` (default = `N_θ`).  The M-assembly produces
+only `length(detJ_coeffs) = 4` non-zero coefficients (since the mass
+integrand has a *positive* power of `det J`, not a reciprocal one).
 
 ### Sanity check baked into the script
 
 ```
-inv_resid = check_inv_series(J₀, J₁, invJ_coeffs, N_θ)
-@assert all(<(1e-12), inv_resid)
+adj_resid = check_adj_det_identity(J₀, J₁, adjJ_coeffs, detJ_coeffs)
+@assert all(<(1e-12), adj_resid)
 ```
 
-verifies `J(θ) · J⁻¹(θ) ≡ I (mod θ^{N_θ+1})` to machine precision.
+verifies the **polynomial identity** `J(θ) · adj(J(θ)) ≡ det(J(θ)) · I`
+to machine precision.  This is exact polynomial algebra (no
+reciprocal series involved), so the assertion holds for any affine
+`(J₀, J₁)`.
 
 ### Quadratic and cubic FEM terms
 
-Exactly the same St-Venant–Kirchhoff multilinear forms as the original
-benchmark, with all gradients replaced by their parametric counterparts:
+Same St-Venant–Kirchhoff multilinear forms as the original benchmark,
+written with gradients pulled back through `adj(J(θ))` instead of
+`J⁻¹(θ)`:
 
 ```
-∇_θ u = ∇₀ u · J⁻¹(θ) ,    ε_θ u = sym(∇_θ u) ,    σ(ε) = λ tr(ε) I + 2μ ε
+∇_adj u = ∇₀ u · adj(J(θ))     ε_adj u = sym(∇_adj u)     σ(ε) = λ tr(ε) I + 2μ ε
 ```
 
-and the integration measure replaced by `det J(θ) · dV₀`.  Both forms
-truncate naturally at `θ^{N_θ}`.
+After integrating over `Ω₀` and absorbing one `1/det(J)` factor into
+the `dV` cancellation, each form picks up a residual `(1/det(J))^{N_input}`
+applied as one final `poly_mul` at the end of every QP loop.  Both
+forms truncate naturally at `θ^{N_θ}`.
 
 ### θ as a DPIM external variable
 
@@ -180,5 +205,5 @@ const J₀ = ...                         # ∇x at θ = 0  (usually I)
 const J₁ = ...                         # ∇φ at θ = 0
 ```
 
-Everything downstream (`det_series`, `adj_series`, `inv_series`,
+Everything downstream (`det_series`, `adj_series`, `reciprocal_series`,
 the assembly, the ROM) is parametrisation-agnostic.

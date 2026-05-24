@@ -1,67 +1,79 @@
 """
 	parametric_geometry.jl
 
-Build the θ-power-series coefficients of `det J(θ)`, `adj J(θ)` and
-`J⁻¹(θ)` for an **affine** reference map
+Build the θ-power-series coefficients of `det J(θ)` and `adj J(θ)`
+for an **affine** reference map
 
 	x(θ, x₀) = x₀ + θ φ(x₀)                  ⇒   J(θ) = J₀ + θ J₁
 
-in 3D.  No closed-form expressions for the *specific* φ are used —
-the routines are written for a general pair (J₀, J₁) and they may
-be called per quadrature point if J₁ varies on the domain (e.g. a
-bending or curving map).  For the uniform-stretch demo J₁ is constant.
+in 3D.  We deliberately do *not* assemble a series for `J⁻¹(θ)`:
+wherever the weak form would call for `inv(J)`, we substitute the
+exact identity
+
+	J⁻¹  =  adj(J) / det(J)
+
+and apply `adj(J)` (a degree-2 exact polynomial in θ) and
+`1/det(J)` (a scalar reciprocal series) **separately** in the
+assembly.  One factor of `1/det(J)` then cancels the `det(J)` from
+the volume differential `dV = det(J) · dV₀`, leaving fewer reciprocal
+factors and avoiding any tensor-valued reciprocal-series accumulation.
+
+The routines are written for a general pair `(J₀, J₁)` and may be
+called per quadrature point if `J₁` varies on the domain (e.g. a
+bending or curving map).  For the uniform-stretch demo `J₁` is
+constant.
 
 ──────────────────────────────────────────────────────────────────────
-DET J(θ) — exact, degree ≤ 3
+JOINT DET / ADJ COMPUTATION  (closed form, no inverse)
 ──────────────────────────────────────────────────────────────────────
-Factor out J₀:  det J(θ) = det J₀ · det(I + θ A),  A := J₀⁻¹ J₁.
-In 3D,
+For a 3D affine `J(θ) = J₀ + θ J₁`, `det J(θ)` is an *exact* polynomial
+of degree ≤ 3 in θ, `adj J(θ)` of degree ≤ 2.  Their coefficients can
+be computed directly from `J₀, J₁` *without* forming `inv(J₀)` and
+without any Cayley–Hamilton-style cancellation: define the shared
+intermediates
 
-	det(I + θ A) = 1 + a θ + b θ² + c θ³
+	A² = J₀ J₀     B² = J₁ J₁     AB = J₀ J₁     BA = J₁ J₀
+	term_A = A² − J₀ · tr J₀      term_B = B² − J₁ · tr J₁
+	tr_term_A = ½ tr(term_A)      tr_term_B = ½ tr(term_B)
 
-with the classical invariants
+and read off
 
-	a = tr A
-	b = ½ (a² − tr A²) = ½ (tr²A − tr A²)
-	c = det A.
+	det J(θ):   c₀ = det J₀
+				c₁ = tr(A² J₁) − tr_term_A · tr J₁ − tr J₀ · tr(AB)
+				c₂ = tr(B² J₀) − tr_term_B · tr J₀ − tr J₁ · tr(AB)
+				c₃ = det J₁
 
-Hence
+	adj J(θ):   C₀ = term_A − tr_term_A · I
+				C₁ = (tr J₀ · tr J₁ − tr(AB)) · I
+					   − (J₀ · tr J₁ + J₁ · tr J₀) + AB + BA
+				C₂ = term_B − tr_term_B · I.
 
-	detJ_coeffs = [det J₀, det J₀ · a, det J₀ · b, det J₀ · c]      (length 4).
-
-──────────────────────────────────────────────────────────────────────
-ADJ J(θ) — exact, degree ≤ 2
-──────────────────────────────────────────────────────────────────────
-From Cayley–Hamilton in 3D,
-
-	adj J = J² − (tr J) J + ½ (tr²J − tr J²) I.
-
-J(θ) is degree 1 in θ, so J²(θ) is degree 2, (tr J)(θ) is degree 1, etc.
-Convolving the relevant series gives an exact length-3 coefficient
-vector (the θ³ contribution from J² · (1) cancels against the
-remaining terms, as it must — `adj J` is degree d − 1 = 2 in dimension
-3).  We verify this cancellation by an `@assert` in `adj_series`.
+Both expansions are produced in one pass by `det_and_adj_series`; the
+backward-compatible wrappers `det_series` and `adj_series` simply
+take the first and second component of the returned tuple.
 
 ──────────────────────────────────────────────────────────────────────
-J⁻¹(θ) — rational, expanded via the recurrence
+INVERSE DETERMINANT via reciprocal recurrence
 ──────────────────────────────────────────────────────────────────────
-Finally
-
-	J⁻¹(θ) = adj J(θ) · (1/det J(θ)) ,
-
-so the only series that needs the recurrence is 1/det J(θ); after that
-J⁻¹ is one truncated convolution away.  Truncation order N_θ is a
-free parameter of `inv_series`.
+The scalar series `1/det(J(θ))` is the *only* rational quantity in
+the construction.  We obtain its coefficients from
+`reciprocal_series(detJ_coeffs, N_θ)` in `theta_polynomials.jl`, a
+generic O(N_θ²) recurrence valid for any polynomial p(θ) with
+p(0) ≠ 0.  We don't specialise the reciprocal to the degree-3 case
+(via the 3D multinomial closed-form) because the recurrence has the
+same arithmetic cost and stays general.
 
 ──────────────────────────────────────────────────────────────────────
 SANITY CHECK
 ──────────────────────────────────────────────────────────────────────
-`check_inv_series(J₀, J₁, invJ_coeffs, N_θ)` returns the norms of
-J(θ) · J⁻¹(θ) − I at each θ-power: 0, 1, …, N_θ.  All should be
-≤ 1e−12 (machine ε scaled by ‖J₁‖).
+`check_adj_det_identity(J₀, J₁, adjJ_coeffs, detJ_coeffs)` returns
+the norms of `[J(θ) · adj(J(θ)) − det(J(θ)) · I]_k` at each θ-power.
+All should be ≤ 1e−12 (machine ε scaled by ‖J₁‖).  This verifies the
+*polynomial* identity that underpins the whole construction, without
+involving the reciprocal series.
 
-Requires `theta_polynomials.jl` to be already loaded (poly_mul,
-reciprocal_series).
+Requires `theta_polynomials.jl` to be already loaded (`poly_mul`,
+`poly_dot`).
 """
 
 using Tensors
@@ -80,79 +92,128 @@ const Tens3 = Tensor{2, 3, Float64, 9}
 # Reuse the tolerance from theta_polynomials.jl (assumed already included).
 
 """
+	det_and_adj_series(J₀, J₁) -> (detJ_coeffs, adjJ_coeffs)
+
+Joint computation of `det(J₀ + θ J₁)` and `adj(J₀ + θ J₁)` as exact
+polynomials in θ for 3D, sharing the intermediate matrix products
+`A² = J₀ J₀`, `B² = J₁ J₁`, `AB = J₀ J₁`, `BA = J₁ J₀` and the scalar
+traces `tr A`, `tr B`, `tr(AB)`, etc.
+
+Returns
+-------
+- `detJ_coeffs :: Vector{Float64}`  of length 4:
+		`det(J₀ + θ J₁) = c₀ + c₁ θ + c₂ θ² + c₃ θ³`
+- `adjJ_coeffs :: Vector{Tens3}`    of length 3:
+		`adj(J₀ + θ J₁) = C₀ + θ C₁ + θ² C₂`
+
+Formulas
+--------
+	c₀  =  det J₀
+	c₁  =  tr(J₀² J₁) − tr_term_J₀ · tr J₁ − tr J₀ · tr(J₀ J₁)
+	c₂  =  tr(J₁² J₀) − tr_term_J₁ · tr J₀ − tr J₁ · tr(J₀ J₁)
+	c₃  =  det J₁
+
+	C₀  =  term_J₀ − tr_term_J₀ · I
+	C₁  =  (tr J₀ · tr J₁ − tr(J₀ J₁)) · I − (J₀ · tr J₁ + J₁ · tr J₀)
+											  + J₀ J₁ + J₁ J₀
+	C₂  =  term_J₁ − tr_term_J₁ · I
+
+where  `term_X    := X² − X · tr X`
+	   `tr_term_X := ½ · tr(term_X) = ½ (tr(X²) − (tr X)²)`.
+
+Notes
+-----
+These formulas are **direct**: they do not involve `inv(J₀)`, which
+the older `det_series` did via `A = J₀⁻¹ J₁`.  For a general invertible
+`J₀` this avoids one explicit inverse and one `inv(J₀)`-driven matrix
+multiplication; for the demo's `J₀ = I` the saving is structural
+rather than numerical, but the routine is now correct even for
+singular *or* near-singular `J₀` (only `det J₀ = 0` is excluded, and
+even then only because the constant term `c₀` vanishes).
+
+Likewise the adjugate formula is the **closed-form 3D cofactor
+expansion**, with no Cayley–Hamilton-style θ³ cancellation that the
+previous `adj_series` had to verify post-hoc.
+
+Source
+------
+Adapted from the Python reference
+`determinant_and_adjugate_expansions_of_3x3_1parameter_degree1_matrix`
+(see code review thread); cross-checked numerically against direct
+`det(J₀ + xJ₁)` / `det·inv(J₀ + xJ₁)` evaluations at multiple `x`.
+"""
+function det_and_adj_series(J₀::Tens3, J₁::Tens3)
+	I₃ = one(Tens3)
+
+	# ---- traces and matrix products (each computed once) ----
+	trA = tr(J₀)
+	trB = tr(J₁)
+
+	A_sq = J₀ ⋅ J₀
+	B_sq = J₁ ⋅ J₁
+	AB   = J₀ ⋅ J₁
+	BA   = J₁ ⋅ J₀
+
+	trAB = tr(AB)
+
+	# term_X := X² − X · tr X        (used in both det and adj)
+	term_A = A_sq - J₀ * trA
+	term_B = B_sq - J₁ * trB
+
+	# tr_term_X := ½ tr(term_X) = ½ (tr(X²) − (tr X)²)
+	tr_term_A = 0.5 * tr(term_A)
+	tr_term_B = 0.5 * tr(term_B)
+
+	# ---- determinant coefficients ----
+	c₀ = det(J₀)
+	c₁ = tr(A_sq ⋅ J₁) - tr_term_A * trB - trA * trAB
+	c₂ = tr(B_sq ⋅ J₀) - tr_term_B * trA - trB * trAB
+	c₃ = det(J₁)
+	detJ_coeffs = [c₀, c₁, c₂, c₃]
+
+	# ---- adjugate coefficients ----
+	C₀ = term_A - tr_term_A * I₃
+	C₁ = (trA * trB - trAB) * I₃ - (J₀ * trB + J₁ * trA) + AB + BA
+	C₂ = term_B - tr_term_B * I₃
+	adjJ_coeffs = [C₀, C₁, C₂]
+
+	return detJ_coeffs, adjJ_coeffs
+end
+
+"""
 	det_series(J₀, J₁) -> Vector{Float64}   (length 4)
 
-Coefficients of `det(J₀ + θ J₁)` as a polynomial in θ.  Exact (no
-truncation).  Errors if `J₀` is singular.
+Coefficients of `det(J₀ + θ J₁)`.  Thin wrapper around
+`det_and_adj_series` for callers that only need the determinant.
 """
-function det_series(J₀::Tens3, J₁::Tens3)
-	d₀ = det(J₀)
-	abs(d₀) > ZERO_TOL || error("det_series: det J₀ = 0 (reference map singular)")
-	A = inv(J₀) ⋅ J₁                  # single contraction = matrix product
-	a = tr(A)
-	b = 0.5 * (a^2 - tr(A ⋅ A))
-	c = det(A)
-	return [d₀, d₀ * a, d₀ * b, d₀ * c]
-end
+det_series(J₀::Tens3, J₁::Tens3) = det_and_adj_series(J₀, J₁)[1]
 
 """
-	adj_series(J₀, J₁) -> Vector{Tensor{2,3,Float64,9}}   (length 3)
+	adj_series(J₀, J₁) -> Vector{Tens3}   (length 3)
 
-Coefficients of `adj(J₀ + θ J₁)` as a polynomial in θ, using
-
-	adj J = J² − (tr J) J + ½ (tr²J − tr J²) I.
-
-Verifies internally that the θ^3 coefficient vanishes (it must, by the
-cofactor identity in 3D), with tolerance scaled by ‖J₁‖.
+Coefficients of `adj(J₀ + θ J₁)`.  Thin wrapper around
+`det_and_adj_series` for callers that only need the adjugate.
 """
-function adj_series(J₀::Tens3, J₁::Tens3)
+adj_series(J₀::Tens3, J₁::Tens3) = det_and_adj_series(J₀, J₁)[2]
+
+"""
+	check_adj_det_identity(J₀, J₁, adjJ_coeffs, detJ_coeffs) -> Vector{Float64}
+
+Residual norms `‖[J(θ) · adj(J(θ)) − det(J(θ)) · I]_k‖` for `k = 0, 1,
+2, 3`.  All four should be at machine precision; the identity
+`J · adj(J) = det(J) · I` is the *defining* property of the adjugate
+and is what makes `J⁻¹ = adj(J) / det(J)` correct.  This replaces the
+older `check_inv_series` (which composed adj and 1/det and verified
+`J · J⁻¹ = I`) — by checking the underlying identity directly we
+sidestep the reciprocal-series truncation and only test the exact
+polynomial algebra in `adj_series` and `det_series`.
+"""
+function check_adj_det_identity(J₀::Tens3, J₁::Tens3,
+	adjJ_coeffs::Vector{Tens3},
+	detJ_coeffs::Vector{Float64})
 	I₃ = one(Tens3)
-
-	# Note: `*` between two `Tensor{2}`s is single contraction in Tensors.jl,
-	# but we use `⋅` explicitly throughout to keep intent unambiguous.
-	J_ser     = [J₀, J₁]                                              # length 2
-	J2_ser    = [J₀ ⋅ J₀, (J₀ ⋅ J₁) + (J₁ ⋅ J₀), J₁ ⋅ J₁]              # length 3
-	trJ_ser   = [tr(J₀), tr(J₁)]                                   # length 2
-	trJ2_ser  = [tr(J2_ser[1]), tr(J2_ser[2]), tr(J2_ser[3])]      # length 3
-	trJsq_ser = poly_mul(trJ_ser, trJ_ser, 3)     # length 4 ; θ^3 entry must vanish
-	trJ_x_J   = poly_mul(trJ_ser, J_ser, 3)       # length 4 ; θ^3 entry must vanish
-
-	out = Vector{Tens3}(undef, 3)
-	@inbounds for k in 1:3
-		out[k] = J2_ser[k] - trJ_x_J[k] +
-				 (0.5 * (trJsq_ser[k] - trJ2_ser[k])) * I₃
-	end
-
-	# Cayley–Hamilton sanity: the formal θ^3 coefficient of adj J must vanish.
-	res3 = -trJ_x_J[4] + (0.5 * trJsq_ser[4]) * I₃
-	tol  = 1e-12 * max(1.0, norm(J₁))
-	@assert norm(res3) ≤ tol "adj_series: θ^3 coefficient = $(norm(res3)) > tol = $tol"
-
-	return out
-end
-
-"""
-	inv_series(J₀, J₁, N_θ) -> Vector{Tensor{2,3,Float64,9}}   (length N_θ + 1)
-
-Coefficients of `J⁻¹(θ) = adj J(θ) / det J(θ)` truncated at order N_θ.
-"""
-function inv_series(J₀::Tens3, J₁::Tens3, N_θ::Int)
-	adjJ     = adj_series(J₀, J₁)            # length 3
-	detJ     = det_series(J₀, J₁)            # length 4
-	inv_detJ = reciprocal_series(detJ, N_θ)  # length N_θ + 1
-	return poly_mul(adjJ, inv_detJ, N_θ)      # length N_θ + 1
-end
-
-"""
-	check_inv_series(J₀, J₁, invJ_coeffs, N_θ) -> Vector{Float64}
-
-Residual norms ‖[J(θ) · J⁻¹(θ) − I]_k‖ for k = 0, 1, …, N_θ.  Useful
-as a single-line unit test of `inv_series`.
-"""
-function check_inv_series(J₀::Tens3, J₁::Tens3,
-	invJ_coeffs::Vector{Tens3}, N_θ::Int)
-	I₃ = one(Tens3)
-	J_ser = [J₀, J₁]
-	JinvJ = poly_dot(J_ser, invJ_coeffs, N_θ)             # J(θ) ⋅ J⁻¹(θ)
-	return [norm(JinvJ[1] - I₃); [norm(JinvJ[k+1]) for k in 1:N_θ]]
+	J_ser = [J₀, J₁]                          # length 2
+	# J(θ)·adj(J(θ)) has degree 1 + 2 = 3 in θ — same as det(J(θ)).
+	J_adj = poly_dot(J_ser, adjJ_coeffs, 3)   # length 4
+	return [norm(J_adj[k+1] - detJ_coeffs[k+1] * I₃) for k in 0:3]
 end
