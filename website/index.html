@@ -13,6 +13,7 @@
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
 <link rel="stylesheet" href="assets/site.css" />
 <script src="assets/team-data.js"></script>
+<script src="assets/feat-grid.js"></script>
 <style>
 /* Landing-specific */
 .hero {
@@ -462,7 +463,7 @@ section { padding: 110px 0; position: relative; }
     <h1><span class="accent-2">M</span>odel <span class="accent-2">O</span>rder <span class="accent-2">R</span>eduction<br/> for <span class="accent-2">F</span>inite <span class="accent-2">E</span>lements</h1>
     <p class="lede">
       MORFE.jl computes <em>invariant manifolds</em> of large finite-element models in a single pass —
-      collapsing million-DOF nonlinear oscillators into ROMs of two or four equations
+      collapsing million-DOF nonlinear oscillators into ROMs of usually two to four variables
       that run in microseconds while preserving the true backbone, internal resonances and bifurcations.
     </p>
     <div class="hero-cta">
@@ -504,7 +505,7 @@ section { padding: 110px 0; position: relative; }
     <div class="hero-meta">
       <div>
         <div class="k">INVARIANT MANIFOLD REDUCTION</div>
-        <div class="v" style="font-family:var(--mono); font-size:18px; letter-spacing:0">$n = 2 \sim 6 \ll N$</div>
+        <div class="v" style="font-family:var(--mono); font-size:18px; letter-spacing:0">$n = 2 \sim 4 \ll N$</div>
       </div>
       <div>
         <div class="k">MULTIPHYSICS FEM</div>
@@ -548,44 +549,7 @@ section { padding: 110px 0; position: relative; }
       </p>
     </div>
 
-    <div class="feat-grid">
-      <div class="feat">
-        <div class="accent-bar"></div>
-        <div class="num">F.01</div>
-        <h3>Spectral Submanifold</h3>
-        <p>An $n$-dimensional invariant manifold tangent to the chosen eigenspace, with "curved" coordinates — not a Galerkin projection.</p>
-      </div>
-      <div class="feat">
-        <div class="accent-bar"></div>
-        <div class="num">F.02</div>
-        <h3>Large-scale FEM</h3>
-        <p>Reads sparse $\mathbf{M}, \mathbf{C}, \mathbf{K}$ directly. Nonlinear terms assembled element-by-element — no full tensor formed. Tested at $>10^6$ DOFs.</p>
-      </div>
-      <div class="feat">
-        <div class="accent-bar"></div>
-        <div class="num">F.03</div>
-        <h3>Modal interactions</h3>
-        <p>Arbitrary $p$:$q$ internal resonances detected from the spectrum and retained automatically — 1:2, 1:3, 2:1, and more.</p>
-      </div>
-      <div class="feat">
-        <div class="accent-bar"></div>
-        <div class="num">F.04</div>
-        <h3>Quasi-periodic &amp; chaotic forcing</h3>
-        <p>External excitation is a small autonomous system with bounded trajectories. Linear systems can describe periodic or quasi-periodic forcing. Nonlinear dynamics can describe chaotic dynamics.</p>
-      </div>
-      <div class="feat">
-        <div class="accent-bar"></div>
-        <div class="num">F.05</div>
-        <h3>Multiphysics</h3>
-        <p>Physics-agnostic interface: structural, electrostatic, MEMS, thermal. Any $p$-th order polynomial ODE on FE matrices is reducible.</p>
-      </div>
-      <div class="feat">
-        <div class="accent-bar"></div>
-        <div class="num">F.06</div>
-        <h3>Julia ecosystem</h3>
-        <p>Ferrite.jl, Gridap.jl, BifurcationKit, DifferentialEquations. Open-source, MIT licensed.</p>
-      </div>
-    </div>
+    <div id="feat-grid-mount"></div>
   </div>
 </section>
 

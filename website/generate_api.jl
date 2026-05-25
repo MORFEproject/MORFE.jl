@@ -1,5 +1,5 @@
-# scripts/generate_api.jl
-# Run from repo root:  julia --project scripts/generate_api.jl
+# website/generate_api.jl
+# Run from repo root:  julia --project website/generate_api.jl
 # Loads MORFE, extracts every documented symbol via Base.Docs,
 # writes website/api.html in the site's own style.
 
@@ -442,5 +442,5 @@ end
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 mods    = extract_all()
-outpath = joinpath(@__DIR__, "..", "website", "api.html")
+outpath = joinpath(@__DIR__, "api.html")
 write_page(mods, outpath)

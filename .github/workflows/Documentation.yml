@@ -31,7 +31,7 @@ jobs:
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
       - name: Generate API reference
-        run: julia --project=. scripts/generate_api.jl
+        run: julia --project=. website/generate_api.jl
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
