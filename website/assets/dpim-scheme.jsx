@@ -334,8 +334,8 @@
 
           <line x1="5" y1="110" x2="215" y2="110" stroke="#b8b8c4" strokeWidth="1" markerEnd="url(#d-arr-ink)"/>
           <line x1="110" y1="215" x2="110" y2="5" stroke="#b8b8c4" strokeWidth="1" markerEnd="url(#d-arr-ink)"/>
-          <TeX x={207} y={122} tex="q_1" color="#e8e8ee" size={14}/>
-          <TeX x={90} y={6}   tex="q_2" color="#e8e8ee" size={14}/>
+          <TeX x={207} y={122} tex="z_1" color="#e8e8ee" size={14}/>
+          <TeX x={90} y={6}   tex="z_2" color="#e8e8ee" size={14}/>
           <circle cx="110" cy="110" r="2.2" fill="#b8b8c4"/>
           <text x="96" y="126" fontSize="10" fill="#6e6e7e">0</text>
 
@@ -360,8 +360,8 @@
 
           {/*<TeX x={0} y={240} tex="\dot{q} = f(q)" color="#b8b8c4" size={11}/>*/}
           <text x="0"  y="240" fontSize="10" fill="#6e6e7e" textAnchor="start">t={animT.toFixed(2)}s</text>
-          <text x="88" y="240" fontSize="10" fill="#6e6e7e" textAnchor="start">q₁={q1.toFixed(2)}</text>
-          <text x="172" y="240" fontSize="10" fill="#6e6e7e" textAnchor="start">q₂={q2.toFixed(2)}</text>
+          <text x="88" y="240" fontSize="10" fill="#6e6e7e" textAnchor="start">z₁={q1.toFixed(2)}</text>
+          <text x="172" y="240" fontSize="10" fill="#6e6e7e" textAnchor="start">z₂={q2.toFixed(2)}</text>
         </g>
 
         {/* ───────── Ψ arrow ───────── */}
@@ -419,13 +419,13 @@
             <TeX key={i}
               x={yC.cx + p[0] + (p[0] > 0 ? 8 : -8)}
               y={yC.cy + p[1] + (p[1] > 0 ? 8 : -8)}
-              tex={`y_${i + 1}`} color="#e8e8ee" size={14}
+              tex={`u_${i + 1}`} color="#e8e8ee" size={14}
               anchor={p[0] > 0 ? 'start' : 'end'} italic/>
           ))}
 
           {!isDragging && (
             <TeX x={yC.cx + yProj[0] + 10} y={yC.cy + yProj[1] - 10}
-              tex="W(q(t))" color={ACCENT} size={12} italic/>
+              tex="\mathbf{W}(\mathbf{z}(t))" color={ACCENT} size={12} italic/>
           )}
 
           <text x={yBox.x + 14} y={yBox.y + 22} fontSize="10" fill="#7a92dc" fontStyle="italic" style={{ pointerEvents: 'none' }}>
@@ -439,7 +439,7 @@
             FULL-ORDER FE MODEL
           </text>
           <text x={yBox.x + yBox.w} y={yBox.y + yBox.h + 22} fontSize="10" fill="#6e6e7e" textAnchor="end">
-            y₁={y1.toFixed(2)}  y₂={y2.toFixed(2)}  y₃={y3.toFixed(2)}
+            u₁={y1.toFixed(2)}  u₂={y2.toFixed(2)}  u₃={y3.toFixed(2)}
           </text>
           <text x={yBox.x + yBox.w} y={yBox.y + yBox.h + 38} fontSize="10" fill="#6e6e7e" textAnchor="end">
             yaw={(yaw * 180 / Math.PI).toFixed(0)}°  pitch={(pitch * 180 / Math.PI).toFixed(0)}°
