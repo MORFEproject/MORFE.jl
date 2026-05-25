@@ -19,6 +19,8 @@ demo/.DS_Store
 # Generated documentation
 docs/build/
 docs/site/
+website/MORFE_website/api.html
+website/*.zip
 
 # Temporary files from editors and OS
 .DS_Store
@@ -40,7 +42,7 @@ docs/site/
 
 .claude
 CLAUDE.md
-/website
+/website_copy
 /publications
 /legacy_morfe
 .DS_Store

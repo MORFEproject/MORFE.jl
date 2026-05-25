@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Team — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/team-data.js"></script>
+<style>
+.page-hero { padding: 80px 0 40px; }
+.page-hero h1 { font-size: clamp(40px, 5vw, 64px); margin: 18px 0 18px; }
+.page-hero .lede { max-width: 60ch; color: var(--ink-2); font-size: 18px; }
+
+/* Team grid */
+.team-section { padding-top: 0; }
+.team-section + .team-section { padding-top: 0; }
+.page-hero + .team-section .team-head { padding-top: 0px; }
+
+.team-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 48px;
+  align-items: end;
+  padding: 56px 0 28px;
+}
+.team-head h2 { font-size: clamp(24px, 2.6vw, 32px); font-weight: 500; letter-spacing: -0.02em; margin: 0; }
+.team-head .num {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+}
+.team-head .desc { color: var(--ink-2); margin: 0; max-width: none; }
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--hair);
+  border-left: 1px solid var(--hair);
+}
+.team-grid.two-col { grid-template-columns: repeat(2, 1fr); }
+.team-grid.four-col { grid-template-columns: repeat(4, 1fr); }
+
+.member {
+  padding: 32px 32px 36px;
+  border-right: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  background: rgba(10,10,15,0.55);
+  position: relative;
+  transition: background .25s;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.member .portrait {
+  width: 96px;
+  height: 96px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #1a1a26 0%, #0a0a0f 100%);
+  border: 1px solid var(--hair);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  color: var(--ink-3);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.member .portrait::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(149,88,178,0.04) 1px, transparent 1px) 0 0/100% 12px,
+    linear-gradient(90deg, rgba(149,88,178,0.04) 1px, transparent 1px) 0 0/12px 100%;
+}
+.member .portrait span { position: relative; z-index: 1; color: var(--ink); font-weight: 500; }
+.member .portrait.purple { background: linear-gradient(135deg, rgba(149,88,178,0.18) 0%, #14141d 100%); }
+.member .portrait.purple span { color: #c79be0; }
+.member .portrait.red    { background: linear-gradient(135deg, rgba(203,60,51,0.18) 0%, #14141d 100%); }
+.member .portrait.red span { color: #e58b85; }
+.member .portrait.green  { background: linear-gradient(135deg, rgba(56,152,38,0.18) 0%, #14141d 100%); }
+.member .portrait.green span { color: #6dba5d; }
+.member .portrait.blue   { background: linear-gradient(135deg, rgba(64,99,216,0.18) 0%, #14141d 100%); }
+.member .portrait.blue span { color: #7aa2ff; }
+.member .portrait.amber  { background: linear-gradient(135deg, rgba(212,160,86,0.18) 0%, #14141d 100%); }
+.member .portrait.amber span { color: #e8c084; }
+
+.member h3 {
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.member .role {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: -8px 0 0;
+}
+.member .role .accent { color: var(--jl-purple); }
+.member .affil {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0;
+}
+.member .bio {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  flex-grow: 1;
+}
+.member .links {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.member .links a {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+  padding: 4px 10px;
+  border: 1px solid var(--hair-2);
+  border-radius: 3px;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.member .links a:hover { color: #fff; border-color: var(--jl-purple); background: rgba(149,88,178,0.08); }
+
+/* Contributing block */
+.contrib {
+  border-top: 1px solid var(--hair);
+  margin-top: 96px;
+  padding: 80px 0;
+}
+.contrib-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.contrib h2 { font-size: clamp(28px, 3.4vw, 44px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; max-width: 18ch; }
+.contrib .ascii {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-3);
+  background: rgba(7,7,11,0.6);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 28px;
+  white-space: pre;
+  overflow-x: auto;
+}
+.contrib .ascii .acc { color: var(--jl-purple); }
+.contrib .ascii .ink { color: var(--ink); }
+.contrib .ascii .grn { color: var(--jl-green); }
+
+@media (max-width: 900px) {
+  .team-grid, .team-grid.four-col { grid-template-columns: repeat(2, 1fr); }
+  .team-head { grid-template-columns: 1fr; }
+  .contrib-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .team-grid, .team-grid.four-col, .team-grid.two-col { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav"></nav>
+<script src="assets/nav.js"></script>
+
+<section class="page-hero">
+  <div class="wrap">
+    <span class="kicker">People · Behind MORFE.jl</span>
+    <h1>Team.</h1>
+    <p class="lede">
+      MORFE.jl is built by a small group of researchers across nonlinear dynamics, structural mechanics
+      and scientific computing — joined by a wider circle of collaborators and contributors who shape
+      the method, the code, and the applications it ships with.
+    </p>
+  </div>
+</section>
+
+<!-- ─── Developers ─── -->
+<section class="team-section">
+  <div class="wrap">
+    <script>document.write(TeamData.developers)</script>
+  </div>
+</section>
+
+<!-- ─── Project team ─── -->
+<section class="team-section">
+  <div class="wrap">
+    <script>document.write(TeamData.projectTeam)</script>
+  </div>
+</section>
+
+<!-- ─── Contributors to MORFE Project ─── -->
+<section class="team-section" style="margin-top: 96px; border-top: 1px solid var(--hair); padding-top: 0;">
+  <div class="wrap">
+    <div class="team-head" style="border-top: none;">
+      <div>
+        <div class="num">Group · 03</div>
+        <h2 style="white-space: nowrap; font-size: clamp(20px, 2.2vw, 28px);">Contributors to MORFE Project.</h2>
+      </div>
+      <p class="desc">Researchers who shaped the theory, applications, and earlier generations of MORFE.</p>
+    </div>
+
+    <div class="team-grid">
+
+      <div class="member">
+        <div class="portrait green"><img src="assets/portraits/cyril-touze.jpg" alt="Cyril Touzé" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>
+        <h3>Cyril Touzé</h3>
+        <p class="role"><span style="color: var(--jl-green);">Scientific advisor</span> · Theory</p>
+        <p class="affil">IMSIA · ENSTA Paris</p>
+        <p class="bio">Long-standing work on nonlinear normal forms, parametrisation methods, and reduction for thin structures. Provides the theoretical backbone of DPIM.</p>
+        <div class="links">
+          <a href="https://perso.ensta-paris.fr/~touze/index_en.html" target="_blank" rel="noopener">Profile ↗</a>
+          <a href="https://scholar.google.com/citations?user=FrR5k1MAAAAJ" target="_blank" rel="noopener">Scholar</a>
+        </div>
+      </div>
+
+      <div class="member">
+        <div class="portrait blue"><img src="assets/portraits/attilio-frangi.jpg" alt="Attilio Frangi" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>
+        <h3>Attilio Frangi</h3>
+        <p class="role"><span style="color: var(--jl-blue);">PI</span> · MEMS · Multiphysics</p>
+        <p class="affil">Politecnico di Milano · DICA</p>
+        <p class="bio">Coupling DPIM with the MEMS pipeline at PoliMi: electrostatic, fluid-damping, thermo-elastic. Hosts the application case studies.</p>
+        <div class="links">
+          <a href="https://frangi.faculty.polimi.it/" target="_blank" rel="noopener">Profile ↗</a>
+          <a href="https://scholar.google.com/citations?user=PkKrBGEAAAAJ" target="_blank" rel="noopener">Scholar</a>
+        </div>
+      </div>
+
+      <div class="member">
+        <div class="portrait amber"><img src="assets/portraits/loic-salles.jpg" alt="Loïc Salles" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>
+        <h3>Loïc Salles</h3>
+        <p class="role"><span style="color: #d4a056;">Contributor</span> · Rotors</p>
+        <p class="affil">University of Liège · Aerospace &amp; Mechanical Engineering</p>
+        <p class="bio">Application of DPIM to rotating machinery, friction interfaces, mistuned bladed disks. Drives the rotor benchmarks.</p>
+        <div class="links">
+          <a href="https://www.am.uliege.be/cms/c_3482665/en/am-repertoire?uid=u240714" target="_blank" rel="noopener">Profile ↗</a>
+          <a href="https://scholar.google.com/citations?user=vU8sEKwAAAAJ" target="_blank" rel="noopener">Scholar</a>
+        </div>
+      </div>
+
+      <div class="member">
+        <div class="portrait red"><img src="assets/portraits/andrea-opreni.jpg" alt="Andrea Opreni" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>
+        <h3>Andrea Opreni</h3>
+        <p class="role"><span style="color: var(--jl-red);">Contributor</span> · Forcing · MEMS</p>
+        <p class="affil">Politecnico di Milano · MEMS Lab</p>
+        <p class="bio">Time-periodic invariant manifolds and non-autonomous forcing. Drives the MEMS micromirror benchmark and piezoelectric actuator applications.</p>
+        <div class="links">
+          <a href="https://scholar.google.com/citations?user=X-zIDhsAAAAJ" target="_blank" rel="noopener">Scholar</a>
+        </div>
+      </div>
+
+      <div class="member">
+        <div class="portrait purple"><img src="assets/portraits/giorgio-gobat.jpg" alt="Giorgio Gobat" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>
+        <h3>Giorgio Gobat</h3>
+        <p class="role"><span class="accent">Developer</span> · Shells · MEMS</p>
+        <p class="affil">Politecnico di Milano · DICA</p>
+        <p class="bio">Geometrically nonlinear shell reduction and MEMS frequency combs. Built multiphysics shell benchmarks and contributed to MORFE2.0.</p>
+        <div class="links">
+          <a href="https://scholar.google.it/citations?user=_5RO9G8AAAAJ" target="_blank" rel="noopener">Scholar</a>
+          <a href="https://github.com/jerry92GG" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
+
+      <div class="member">
+        <div class="portrait"><img src="assets/portraits/andre-stabile.jpg" alt="André Stabile" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>
+        <h3>André Stabile</h3>
+        <p class="role">Developer · MORFE2.0</p>
+        <p class="affil">ENSTA Paris</p>
+        <p class="bio">Contributor to MORFE2.0. Nonlinear dynamics and finite element methods.</p>
+        <div class="links">
+          <a href="https://scholar.google.com/citations?user=LGQh_isAAAAJ" target="_blank" rel="noopener">Scholar</a>
+          <a href="https://github.com/andre-stabile" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── Contribute ─── -->
+<section class="contrib">
+  <div class="wrap">
+    <div class="contrib-grid">
+      <div>
+        <span class="kicker">Get involved</span>
+        <h2 style="margin: 18px 0 14px;">Join the team.</h2>
+        <p style="color:var(--ink-2); max-width: 48ch;">MORFE.jl is open source. Contributions of code, tutorials, benchmarks and applications are all welcome. If you're using DPIM in your research and would like to collaborate, get in touch.</p>
+        <div style="display:flex; gap:14px; margin-top: 24px; flex-wrap: wrap;">
+          <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/issues">Open an issue <span class="arrow">→</span></a>
+          <a class="btn" href="https://github.com/MORFEproject/MORFE.jl/blob/main/CONTRIBUTING.md">Contribution guide</a>
+        </div>
+      </div>
+      <div class="ascii"><span class="ink">$ git clone https://github.com/MORFEproject/MORFE.jl</span>
+<span class="ink">$ cd MORFE.jl && julia --project</span>
+<span class="acc">julia&gt;</span> ] test MORFE
+<span class="grn">[ Info: tests passed ]</span>
+
+<span class="acc">julia&gt;</span> using Pkg
+<span class="acc">julia&gt;</span> Pkg.add(url=<span class="grn">"https://github.com/MORFEproject/MORFE.jl.git"</span>)</div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
+        <p style="color:var(--ink-3); font-size:13px; max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
+      </div>
+      <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="tutorials.html">Tutorials</a></li><li><a href="api.html">Documentation</a></li></ul></div>
+      <div><h4>People</h4><ul><li><a href="team.html">Team</a></li><li><a href="publications.html">Publications</a></li></ul></div>
+      <div><h4>Code</h4><ul><li><a href="#">GitHub</a></li><li><a href="#">Releases</a></li></ul></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); color:var(--ink-3); font-size:12px;">
+      <div>© MORFE contributors · MIT license</div>
+      <div class="mono">build · 2026.05 · julia 1.11.2</div>
+    </div>
+  </div>
+</footer>
+
+</div>
+<script src="assets/manifold-bg.js"></script>
+</body>
+</html>

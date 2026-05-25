@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roadmap — Tutorials — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="assets/site.css" />
+<link rel="stylesheet" href="assets/docs.css" />
+</head>
+<body class="docs-page">
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav" data-active="tutorials.html"></nav>
+<script src="assets/nav.js"></script>
+
+<div class="docs-shell">
+
+  <aside class="docs-side">
+    <div class="ver"><span>Tutorials</span></div>
+
+    <h4>Getting started</h4>
+    <ul>
+      <li><a href="nopage.html#install">Installation</a></li>
+      <li><a href="api.html">Current API</a></li>
+      <li><a href="nopage.html#concepts">Concepts &amp; vocabulary</a></li>
+    </ul>
+
+    <h4>Demos</h4>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
+    </ul>
+
+    <h4>Tutorials</h4>
+    <ul>
+      <li><a href="tutorial-micromirror.html">MEMS micromirror</a></li>
+      <li><a href="tutorial-roadmap.html">Cantilever beam 🚧</a></li>
+      <li><a href="tutorial-roadmap.html">Shallow arch 🚧</a></li>
+      <li><a href="tutorial-roadmap.html">Cylindrical shell 🚧</a></li>
+    </ul>
+
+    <h4>Manual</h4>
+    <ul>
+      <li><a href="nopage.html#fe-input">FE input format</a></li>
+      <li><a href="nopage.html#master">Master subspace</a></li>
+      <li><a href="nopage.html#order">Choosing order</a></li>
+      <li><a href="nopage.html#forcing">Forcing &amp; resonances</a></li>
+      <li><a href="nopage.html#continuation">Continuation</a></li>
+    </ul>
+  </aside>
+
+  <main class="docs-main">
+
+    <div class="crumbs">
+      <a href="api.html">MORFE.jl</a>
+      <span class="sep">/</span>
+      <a href="tutorials.html">Tutorials</a>
+      <span class="sep">/</span>
+      <span>Roadmap</span>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <span class="tag" style="color:var(--jl-purple); border-color:rgba(149,88,178,0.3); background:rgba(149,88,178,0.06);">ROADMAP</span>
+      <span class="tag" style="color:var(--ink-3);">TARGET API</span>
+    </div>
+
+    <h1 id="overview">Tutorial in development</h1>
+    <p class="lede">
+      This tutorial is on the roadmap — the method, mesh, and reference results are all planned,
+      but the high-level API it depends on is not yet implemented. Check back as MORFE.jl matures.
+    </p>
+
+    <!-- Construction zone figure -->
+    <div class="fig" style="margin: 28px 0 36px;">
+      <div style="aspect-ratio: 2/1; position:relative; background:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px) 0 0/100% 28px,
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px) 0 0/28px 100%,
+        #07070b;">
+        <svg viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet" style="position:absolute; inset:0; width:100%; height:100%;">
+          <defs>
+            <pattern id="rmbg" width="22" height="22" patternUnits="userSpaceOnUse">
+              <path d="M0 22 L22 0" stroke="#171720" stroke-width="0.6" fill="none"/>
+            </pattern>
+            <pattern id="caution" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="11" height="22" fill="#d4a056" opacity="1.00"/>
+            </pattern>
+          </defs>
+
+          <rect width="800" height="400" fill="#07070b"/>
+          <rect width="800" height="400" fill="url(#rmbg)"/>
+
+          <!-- ═══ INCOMPLETE SECTION — upper two bays (y 100–215), dashed/ghost ═══ -->
+
+          <!-- verticals — dashed -->
+          <line x1="190" y1="100" x2="190" y2="215" stroke="#9558b2" stroke-width="2.2" stroke-dasharray="6 5" opacity="0.30"/>
+          <line x1="400" y1="100" x2="400" y2="215" stroke="#9558b2" stroke-width="2.2" stroke-dasharray="6 5" opacity="0.30"/>
+          <line x1="610" y1="100" x2="610" y2="215" stroke="#9558b2" stroke-width="2.2" stroke-dasharray="6 5" opacity="0.30"/>
+
+          <!-- ledgers — dashed -->
+          <line x1="176" y1="157" x2="624" y2="157" stroke="#9558b2" stroke-width="1.5" stroke-dasharray="6 5" opacity="0.26"/>
+          <line x1="176" y1="100" x2="624" y2="100" stroke="#9558b2" stroke-width="1.5" stroke-dasharray="6 5" opacity="0.26"/>
+
+          <!-- diagonal braces — ghost (alternating chevron) -->
+          <line x1="190" y1="215" x2="400" y2="157" stroke="#9558b2" stroke-width="1" stroke-dasharray="4 5" opacity="0.18"/>
+          <line x1="400" y1="157" x2="190" y2="100" stroke="#9558b2" stroke-width="1" stroke-dasharray="4 5" opacity="0.18"/>
+          <line x1="610" y1="215" x2="400" y2="157" stroke="#9558b2" stroke-width="1" stroke-dasharray="4 5" opacity="0.18"/>
+          <line x1="400" y1="157" x2="610" y2="100" stroke="#9558b2" stroke-width="1" stroke-dasharray="4 5" opacity="0.18"/>
+
+          <!-- joint markers — hollow, ghost -->
+          <circle cx="190" cy="157" r="3.5" fill="none" stroke="#9558b2" stroke-width="1.2" opacity="0.25"/>
+          <circle cx="400" cy="157" r="3.5" fill="none" stroke="#9558b2" stroke-width="1.2" opacity="0.25"/>
+          <circle cx="610" cy="157" r="3.5" fill="none" stroke="#9558b2" stroke-width="1.2" opacity="0.25"/>
+          <circle cx="190" cy="100" r="3.5" fill="none" stroke="#9558b2" stroke-width="1.2" opacity="0.25"/>
+          <circle cx="400" cy="100" r="3.5" fill="none" stroke="#9558b2" stroke-width="1.2" opacity="0.25"/>
+          <circle cx="610" cy="100" r="3.5" fill="none" stroke="#9558b2" stroke-width="1.2" opacity="0.25"/>
+
+          <!-- ═══ WORK FRONTIER — platform at y=215 ═══ -->
+
+          <!-- platform ledger -->
+          <line x1="176" y1="215" x2="624" y2="215" stroke="#9558b2" stroke-width="2.4"/>
+
+          <!-- platform planks (sitting on the ledger, spanning x 190–610) -->
+          <rect x="190" y="207" width="82" height="8" rx="1" fill="#9558b2" opacity="0.45"/>
+          <rect x="275" y="207" width="82" height="8" rx="1" fill="#9558b2" opacity="0.45"/>
+          <rect x="360" y="207" width="82" height="8" rx="1" fill="#9558b2" opacity="0.45"/>
+          <rect x="445" y="207" width="82" height="8" rx="1" fill="#9558b2" opacity="0.45"/>
+          <rect x="530" y="207" width="80" height="8" rx="1" fill="#9558b2" opacity="0.45"/>
+
+          <!-- joint markers at platform level — solid -->
+          <circle cx="190" cy="215" r="4" fill="#9558b2"/>
+          <circle cx="400" cy="215" r="4" fill="#9558b2"/>
+          <circle cx="610" cy="215" r="4" fill="#9558b2"/>
+
+          <!-- ═══ COMPLETE SECTION — lower two bays (y 215–325), solid ═══ -->
+
+          <!-- verticals -->
+          <line x1="190" y1="215" x2="190" y2="325" stroke="#9558b2" stroke-width="2.8"/>
+          <line x1="400" y1="215" x2="400" y2="325" stroke="#9558b2" stroke-width="2.8"/>
+          <line x1="610" y1="215" x2="610" y2="325" stroke="#9558b2" stroke-width="2.8"/>
+
+          <!-- ledgers -->
+          <line x1="176" y1="270" x2="624" y2="270" stroke="#9558b2" stroke-width="1.8"/>
+          <line x1="176" y1="325" x2="624" y2="325" stroke="#9558b2" stroke-width="1.8"/>
+
+          <!-- diagonal braces — alternating chevron -->
+          <line x1="190" y1="325" x2="400" y2="270" stroke="#9558b2" stroke-width="1.8" opacity="0.80"/>
+          <line x1="400" y1="270" x2="190" y2="215" stroke="#9558b2" stroke-width="1.8" opacity="0.80"/>
+          <line x1="610" y1="325" x2="400" y2="270" stroke="#9558b2" stroke-width="1.8" opacity="0.80"/>
+          <line x1="400" y1="270" x2="610" y2="215" stroke="#9558b2" stroke-width="1.8" opacity="0.80"/>
+
+          <!-- joint markers — filled -->
+          <circle cx="190" cy="270" r="4" fill="#9558b2"/>
+          <circle cx="400" cy="270" r="4" fill="#9558b2"/>
+          <circle cx="610" cy="270" r="4" fill="#9558b2"/>
+          <circle cx="190" cy="325" r="4" fill="#9558b2"/>
+          <circle cx="400" cy="325" r="4" fill="#9558b2"/>
+          <circle cx="610" cy="325" r="4" fill="#9558b2"/>
+
+          <!-- base plates -->
+          <rect x="177" y="325" width="26" height="5" rx="1" fill="#9558b2" opacity="0.85"/>
+          <rect x="387" y="325" width="26" height="5" rx="1" fill="#9558b2" opacity="0.85"/>
+          <rect x="597" y="325" width="26" height="5" rx="1" fill="#9558b2" opacity="0.85"/>
+
+          <!-- caution stripe just above the platform ledger -->
+           <rect x="176" y="250" width="448" height="18" fill="#000000"/>
+          <rect x="176" y="250" width="448" height="18" fill="url(#caution)"/>
+          <rect x="176" y="250" width="448" height="18" fill="none" stroke="#d4a056" stroke-width="0.8" opacity="0.50"/>
+
+          <!-- ═══ WORKER — installing ledger beam between left and centre column ═══ -->
+
+          <!-- beam fully supported at both columns -->
+          <line x1="190" y1="215" x2="400" y2="157" stroke="#9558b2" stroke-width="1.8" opacity="0.80"/>
+          <!-- couplers at both ends -->
+          <circle cx="190" cy="215" r="4" fill="#9558b2"/>
+          <circle cx="400" cy="157" r="4" fill="#9558b2"/>
+
+          <!-- worker — feet at y=207, reaching left to tighten right coupler -->
+          <g stroke-linecap="round" stroke-linejoin="round">
+            <!-- right leg -->
+            <line x1="426" y1="185" x2="426" y2="213" stroke="#74408c" stroke-width="5.5" stroke-linecap="round"/>
+            <!-- right foot -->
+            <line x1="420" y1="213" x2="426" y2="213" stroke="#74408c" stroke-width="4" stroke-linecap="round"/>
+            <!-- left leg -->
+            <line x1="430" y1="185" x2="430" y2="213" stroke="#9558b2" stroke-width="5.5" stroke-linecap="round"/>
+            <!-- left foot -->
+            <line x1="424" y1="213" x2="430" y2="213" stroke="#9558b2" stroke-width="4" stroke-linecap="round"/>
+            <!-- right upper arm -->
+            <line x1="428" y1="153" x2="413" y2="165" stroke="#74408c" stroke-width="4.5" stroke-linecap="round"/>
+            <!-- right forearm -->
+            <line x1="413" y1="165" x2="400" y2="155" stroke="#74408c" stroke-width="3.5" stroke-linecap="round"/>
+            <!-- coupler -->
+            <circle cx="400" cy="157" r="4" fill="#9558b2"/>
+            <!-- torso -->
+            <line x1="428" y1="155" x2="428" y2="182" stroke="#9558b2" stroke-width="10" stroke-linecap="round"/>
+            <!-- neck -->
+            <line x1="428" y1="145" x2="428" y2="150" stroke="#9558b2" stroke-width="5" stroke-linecap="round"/>
+            <!-- head -->
+            <circle cx="428" cy="135" r="10" fill="#9558b2" stroke="#9558b2" stroke-width="2"/>
+            <!-- hard hat dome — yellow accent -->
+            <path d="M 415 135 A 13 13 0 0 1 441 135 Z" fill="#d4a056" stroke="none"/>
+            <!-- hard hat brim -->
+            <rect x="412" y="133" width="29" height="2" rx="1" fill="#d4a056" stroke="none"/>
+            <!-- left upper arm -->
+            <line x1="430" y1="155" x2="415" y2="167" stroke="#9558b2" stroke-width="4.5" stroke-linecap="round"/>
+            <!-- left forearm -->
+            <line x1="414" y1="168" x2="398" y2="159" stroke="#9558b2" stroke-width="3.5" stroke-linecap="round"/>
+          </g>
+
+          <!-- ═══ FLANKING ELEMENTS ═══ -->
+
+          <!-- traffic cone — left -->
+          <g transform="translate(118 325)">
+            <rect x="-22" y="0" width="44" height="7" rx="1" fill="#cb3c33" opacity="0.75"/>
+            <polygon points="-15,0 15,0 5,-44 -5,-44" fill="#cb3c33" opacity="0.85"/>
+            <polygon points="-12,-14 12,-14 9,-22 -9,-22" fill="rgba(255,255,255,0.50)"/>
+          </g>
+          <!-- traffic cone — right -->
+          <g transform="translate(682 325)">
+            <rect x="-22" y="0" width="44" height="7" rx="1" fill="#cb3c33" opacity="0.75"/>
+            <polygon points="-15,0 15,0 5,-44 -5,-44" fill="#cb3c33" opacity="0.85"/>
+            <polygon points="-12,-14 12,-14 9,-22 -9,-22" fill="rgba(255,255,255,0.50)"/>
+          </g>
+
+          <!-- ground line -->
+          <line x1="80" y1="333" x2="720" y2="333" stroke="#252535" stroke-width="1.5"/>
+
+          <!-- annotations -->
+          <g font-family="JetBrains Mono" font-size="10" fill="#6e6e7e">
+            <text x="40" y="36">TARGET API · IN DEVELOPMENT</text>
+          </g>
+        </svg>
+      </div>
+      <div class="fig-cap"><span class="lab">FIG · 01</span> Scaffold framework. This tutorial is planned but not yet implemented.</div>
+    </div>
+
+    <div class="adm warn" style="border-left:4px solid #f59e0b; background:rgba(245,158,11,0.06); border-radius:0 4px 4px 0; padding:0.6rem 1rem; margin:0 0 1.8rem;">
+      <div class="adm-head" style="font-weight:600; font-size:0.88rem; color:var(--ink); margin-bottom:0.3rem;">Target API — not yet runnable</div>
+      <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">This tutorial depends on the planned high-level API (<code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>) which is still under development. For a working entry point today, see the <a href="api.html">current API docs</a> and the <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">demo scripts</a>.</div>
+    </div>
+
+    <h2 id="today">What works today</h2>
+    <p>While this tutorial is being written, the best starting point is the parametrisation method demo — it covers the same core pipeline against the current API and runs end-to-end on any Julia 1.10+ installation.</p>
+
+    <div style="margin-top:32px; padding:24px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:200px;">
+        <div class="kicker">Works today</div>
+        <h3 style="margin-top:12px; font-size:18px;">Demo scripts</h3>
+        <p style="font-size:14px; color:var(--ink-2); margin:6px 0 0;">Full pipeline examples running against the current API, shipping inside the package.</p>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">View demos <span class="arrow">→</span></a>
+        <a class="btn" href="api.html">Current API</a>
+      </div>
+    </div>
+
+    <div style="margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--ink-3);">
+      <a href="tutorials.html">← Tutorials</a>
+      <a href="tutorial-micromirror.html">MEMS micromirror →</a>
+    </div>
+
+  </main>
+
+</div>
+
+</div>
+<script src="assets/manifold-bg.js"></script>
+</body>
+</html>

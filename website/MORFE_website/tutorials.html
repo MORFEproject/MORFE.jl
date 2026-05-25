@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tutorials — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="assets/site.css" />
+<link rel="stylesheet" href="assets/docs.css" />
+<style>
+.pre-wrap { position: relative; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 3px 9px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(255,255,255,0.06); color: var(--ink-3);
+  border: 1px solid var(--hair); border-radius: 4px;
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.6;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--ink); border-color: var(--ink-3); }
+.copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.4); background: rgba(56,152,38,0.08); }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.docs-main pre').forEach(function (pre) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pre-wrap';
+    wrap.style.position = 'relative';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(pre.innerText).then(function () {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    wrap.appendChild(btn);
+  });
+});
+</script>
+</head>
+<body class="docs-page">
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav"></nav>
+<script src="assets/nav.js"></script>
+
+<div class="docs-shell">
+
+  <!-- Sidebar -->
+  <aside class="docs-side">
+    <div class="ver"><span><a href="tutorials.html">Tutorials</a></span></div>
+    <h4>Getting started</h4>
+    <ul>
+      <li><a href="nopage.html">Installation</a></li>
+      <li><a href="api.html">Current API</a></li>
+      <li><a href="nopage.html">Concepts &amp; vocabulary</a></li>
+    </ul>
+
+    <h4>Demos</h4>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
+    </ul>
+
+    <h4>Tutorials</h4>
+    <ul>
+      <li><a href="tutorial-micromirror.html">MEMS micromirror</a></li>
+      <li><a href="tutorial-roadmap.html">Cantilever beam 🚧</a></li>
+      <li><a href="tutorial-roadmap.html">Shallow arch 🚧</a></li>
+      <li><a href="tutorial-roadmap.html">Cylindrical shell 🚧</a></li>
+    </ul>
+
+    <h4>Manual</h4>
+    <ul>
+      <li><a href="nopage.html">FE input format</a></li>
+      <li><a href="nopage.html">Master subspace</a></li>
+      <li><a href="nopage.html">Choosing order</a></li>
+      <li><a href="nopage.html">Forcing &amp; resonances</a></li>
+      <li><a href="nopage.html">Continuation</a></li>
+      <li><a href="nopage.html">Post-processing</a></li>
+    </ul>
+
+  </aside>
+
+  <!-- Main -->
+  <main class="docs-main">
+    <div class="crumbs">
+      <a href="api.html">MORFE.jl</a>
+      <span class="sep">/</span>
+      <span>Tutorials</span>
+    </div>
+
+    <h1>Tutorials</h1>
+    <p class="lede">
+      Hands-on walkthroughs that take you from a finite-element mesh to a closed, continuable ROM
+      in under fifty lines of Julia. Each tutorial is reproducible — meshes and scripts ship with the package.
+    </p>
+
+    <div class="adm tip">
+      <div class="adm-head">Pick your starting point</div>
+      <div class="adm-body">
+        <p>The quickest way to get MORFE running is to open one of the <strong>demo scripts</strong> — they work today against the current API. The named tutorials below are written against the planned high-level API and show what the workflow <em>will</em> look like, but are not yet runnable.</p>
+      </div>
+    </div>
+
+    <h2 id="featured">Featured demo — works today</h2>
+
+    <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener" style="display:block; margin:18px 0 28px; border:1px solid var(--hair); border-radius:6px; overflow:hidden; background:rgba(10,10,15,0.55); transition:border-color .2s;" onmouseover="this.style.borderColor='var(--jl-purple)'" onmouseout="this.style.borderColor='var(--hair)'">
+      <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:0;">
+        <div style="padding: 30px 32px;">
+          <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <span class="tag"><span class="tag-dot" style="background:var(--jl-green)"></span> CURRENT API</span>
+            <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
+          </div>
+          <h3 style="font-size:24px; margin:6px 0 12px;">Parametrisation method demo</h3>
+          <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current API: <code>NDOrderModel</code> → eigenproblem → resonance detection → <code>solve_cohomological_problem</code>. Ships in <code>demo/ParametrisationMethod/</code>.</p>
+          <div style="display:flex; gap:24px; font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:0.06em;">
+            <span>JULIA 1.10+</span>
+            <span>CURRENT API</span>
+            <span>GITHUB ↗</span>
+          </div>
+        </div>
+        <div style="position:relative; min-height:200px; border-left:1px solid var(--hair); background:#07070b; display:flex; align-items:center; padding:20px 24px; overflow:hidden;">
+          <pre style="margin:0; font-size:10.5px; color:#d6d6df; line-height:1.6; overflow:hidden;"><span style="color:#6e6e7e">using</span> MORFE
+
+model = NDOrderModel(M, C, K, G)
+ep    = compute_eigenproblem(model)
+m     = select_master_modes_by_hand(ep, [1,2])
+res   = resonance_set_from_graph_style(m)
+W, R  = solve_cohomological_problem(
+            model, m, res; order=7)</pre>
+        </div>
+      </div>
+    </a>
+
+    <h2 id="all">All tutorials</h2>
+
+    <h3 id="demos" style="margin-top:0; font-size:16px; color:var(--ink-2); font-weight:500; letter-spacing:0.02em;">Available now — current API</h3>
+
+    <div class="tut-grid">
+      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">
+        <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current API</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+        <h3>Parametrisation method</h3>
+        <p>Complete pipeline: <code>NDOrderModel</code> → resonance detection → <code>solve_cohomological_problem</code>. The recommended starting point.</p>
+        <div class="meta"><span>NDOrderModel</span><span>DPIM core</span></div>
+      </a>
+      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">
+        <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current API</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+        <h3>Ferrite.jl beam</h3>
+        <p>Nonlinear mechanical beam assembled with the Ferrite FEM backend via <code>FEMMultilinearMap</code>.</p>
+        <div class="meta"><span>Ferrite.jl</span><span>FEMMultilinearMap</span></div>
+      </a>
+      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">
+        <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current API</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+        <h3>Gridap.jl beam</h3>
+        <p>Same mechanical problem via the Gridap FEM backend — illustrates how to swap backends.</p>
+        <div class="meta"><span>Gridap.jl</span><span>FEMMultilinearMap</span></div>
+      </a>
+    </div>
+
+    <h3 id="all" style="margin-top:40px; font-size:16px; color:var(--ink-2); font-weight:500; letter-spacing:0.02em;">🚧 Roadmap tutorials — target API</h3>
+    <div class="tut-grid">
+      <a class="tut-card" href="tutorial-micromirror.html" style="position:relative;">
+        <div style="position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+        <div class="row"><span class="lvl intro">Tutorial · target API</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-01</span></div>
+        <h3>MEMS micromirror</h3>
+        <p>Full pipeline via <code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>. Shows the planned high-level API — not yet runnable.</p>
+        <div class="meta"><span>Ferrite.jl</span><span>BifurcationKit</span><span>4-DOF ROM</span></div>
+      </a>
+      <div class="tut-card" style="opacity:0.5; cursor:default; position:relative;">
+        <div style="position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 coming soon</div>
+        <div class="row"><span class="lvl intro">Intro · 18 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-02</span></div>
+        <h3>Cantilever beam</h3>
+        <p>The hello-world of geometric nonlinearity. Single-mode reduction, hardening backbone.</p>
+        <div class="meta"><span>Gridap.jl</span><span>2-DOF ROM</span></div>
+      </div>
+      <div class="tut-card" style="opacity:0.5; cursor:default; position:relative;">
+        <div style="position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 coming soon</div>
+        <div class="row"><span class="lvl mid">Mid · 35 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-03</span></div>
+        <h3>Shallow arch — snap-through</h3>
+        <p>Bistable wells, sub-harmonic 1:2 resonance, homoclinic transition.</p>
+        <div class="meta"><span>Ferrite.jl</span><span>2-DOF ROM</span><span>order 9</span></div>
+      </div>
+      <div class="tut-card" style="opacity:0.5; cursor:default; position:relative;">
+        <div style="position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 coming soon</div>
+        <div class="row"><span class="lvl mid">Mid · 40 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-04</span></div>
+        <h3>Cylindrical shell — companion modes</h3>
+        <p>Travelling- vs standing-wave bifurcation under harmonic forcing.</p>
+        <div class="meta"><span>Ferrite.jl</span><span>6-DOF ROM</span><span>1:1:1 IR</span></div>
+      </div>
+      <div class="tut-card" style="opacity:0.5; cursor:default; position:relative;">
+        <div style="position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 coming soon</div>
+        <div class="row"><span class="lvl adv">Advanced · 50 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-05</span></div>
+        <h3>Piezoelectric energy harvester</h3>
+        <p>Coupled electro-mechanical FE; ROM exposes load resistance as a continuation parameter.</p>
+        <div class="meta"><span>multi-physics</span><span>3-DOF ROM</span></div>
+      </div>
+      <div class="tut-card" style="opacity:0.5; cursor:default; position:relative;">
+        <div style="position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 coming soon</div>
+        <div class="row"><span class="lvl adv">Advanced · 60 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-06</span></div>
+        <h3>Rotating beam — Coriolis &amp; centrifugal</h3>
+        <p>Speed-dependent ROM; Campbell diagram and veering automatically resolved.</p>
+        <div class="meta"><span>parametric ROM</span><span>6-DOF</span></div>
+      </div>
+    </div>
+
+    <div class="adm note" style="margin-top:36px;">
+      <div class="adm-head">Reproducibility</div>
+      <div class="adm-body"><p>Every tutorial pins a Julia version and Project.toml. Mesh files (Gmsh format) are downloaded automatically by the script. See <a href="nopage.html">Installation</a> for how to add MORFE.jl from GitHub.</p></div>
+    </div>
+
+  </main>
+
+  <!-- ToC -->
+  <aside class="docs-toc">
+    <h5>On this page</h5>
+    <ul>
+      <li><a href="#featured" class="active">Featured demo</a></li>
+      <li><a href="#demos">Working demos</a></li>
+      <li><a href="#all">Roadmap tutorials</a></li>
+    </ul>
+    <h5 style="margin-top:32px;">Edit</h5>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">Demo scripts ↗</a></li>
+    </ul>
+  </aside>
+
+</div>
+
+</div>
+<script src="assets/manifold-bg.js"></script>
+</body>
+</html>
