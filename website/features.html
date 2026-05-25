@@ -177,7 +177,7 @@
 <section style="padding-top: 0; padding-bottom: 60px;">
   <div class="wrap">
     <div style="display:flex; justify-content:space-between; align-items:end; flex-wrap:wrap; gap:24px; margin-bottom: 10px;">
-      <p class="mono" style="font-size:12px; color:var(--ink-3); max-width: 200ch; margin: 0; letter-spacing: 0.02em;">Reduced $q$-coordinates on the left flow under $\dot q = f(q)$. The lift $\mathbf{W}:\mathbb{R}^d\to\mathbb{R}^N$ embeds them onto the invariant manifold inside the full FE space on the right.</p>
+      <p class="mono" style="font-size:12px; color:var(--ink-3); max-width: 200ch; margin: 0; letter-spacing: 0.02em;">Reduced $\mathbf{z}$-coordinates on the left flow under $\dot{\mathbf{z}} = \mathbf{f}(\mathbf{z})$. The lift $\mathbf{W}:\mathbb{R}^d\to\mathbb{R}^N$ embeds them onto the invariant manifold inside the full FE space on the right.</p>
     </div>
 
     <div class="dpim-preview">
@@ -185,15 +185,15 @@
     </div>
 
     <div class="dpim-legend">
-      <span><span class="sw" style="background:#389826"></span>q-space trajectory</span>
-      <span><span class="sw" style="background:#9558b2"></span>ambient trajectory Ψ(q(t))</span>
+      <span><span class="sw" style="background:#389826"></span>$\mathbf{z}$-space trajectory</span>
+      <span><span class="sw" style="background:#9558b2"></span>ambient trajectory $\mathbf{W}(\mathbf{z}(t))$</span>
       <span><span class="sw" style="background:#4063d8;"></span>master eigenspace</span>
       <span><span class="sw" style="background:#b8b8c4"></span>orthonormal y-axes</span>
     </div>
     <div class="dpim-hint">
-      🖱 <span>Drag the ring</span> in q-space to set the initial state
+      🖱 <span>Drag the ring</span> in $\mathbf{z}$-space to set the initial state
       <span class="sep">·</span>
-      <span>Drag inside y-space</span> to orbit in 3D
+      <span>Drag inside $\mathbf{u}$-space</span> to orbit in 3D
       <span class="sep">·</span>
       view auto-rotates
     </div>
@@ -210,7 +210,7 @@
           <h3>Parametrise, don&rsquo;t project</h3>
         </div>
         <div class="right">
-          <p>Most ROMs project the dynamics onto a linear subspace and pretend the rest is small. DPIM searches for an <em>invariant manifold</em> $\mathcal{W}$ tangent to a chosen master subspace and seeks a smooth parametrisation $\mathbf{W}: \mathbb{R}^d \to \mathbb{R}^N$.</p>
+          <p>Most ROMs project the dynamics onto a linear subspace and pretend the rest is small. DPIM searches for an <em>invariant manifold</em> $\mathcal{W}$ tangent to a chosen master subspace and seeks a smooth parametrisation $\mathbf{W}: \mathbb{R}^d \to \mathbb{R}^N$</p>
           <div class="math">$$ \mathbf{u}(t) = \mathbf{W}\!\left(\mathbf{z}(t)\right), \qquad \dot{\mathbf{z}} = \mathbf{f}(\mathbf{z}) $$</div>
           <p>Both $\mathbf{W}$ and $\mathbf{f}$ are computed as polynomial expansions in $\mathbf{z}$, order by order, satisfying invariance exactly at every order.</p>
         </div>

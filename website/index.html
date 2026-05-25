@@ -264,7 +264,11 @@ section { padding: 110px 0; position: relative; }
 }
 .code-head .dots { display: flex; gap: 6px; margin-right: 8px; }
 .code-head .dots span { width: 9px; height: 9px; border-radius: 50%; background: #25253a; }
+.code-head .dots span:nth-child(1) { background: #ff5f56; }
+.code-head .dots span:nth-child(2) { background: #ffbd2e; }
+.code-head .dots span:nth-child(3) { background: #27c93f; }
 .code-head .file { color: var(--ink-2); }
+.code-wrap .code { border: none; border-radius: 0; margin: 0; }
 
 /* Use-case strip */
 .cases-grid {
@@ -484,7 +488,7 @@ section { padding: 110px 0; position: relative; }
       </div>
     
       <div style="grid-column: 1 / -1; border-top:1px solid var(--hair); padding-top:18px;">
-        <div class="label">To 1st order reduced order model with $n$ DoFs ($n \ll N$)</div>
+        <div class="label">To a 1st order reduced order model with $n$ DoFs ($n \ll N$)</div>
         <div style="margin-top:8px; font-size:18px;">
           $$ \dot{\mathbf{z}} = \mathbf{f}(\mathbf{z}, \mathbf{r}) \,, \qquad \qquad \mathbf{u} = \mathbf{W}(\mathbf{z}, \mathbf{r}) $$
         </div>
@@ -732,6 +736,7 @@ section { padding: 110px 0; position: relative; }
     <div class="cases-grid">
       <a class="case" href="gallery.html">
         <div class="case-thumb">
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
           <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet">
             <defs>
               <pattern id="g1" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -762,6 +767,7 @@ section { padding: 110px 0; position: relative; }
       </a>
       <a class="case" href="gallery.html">
         <div class="case-thumb">
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
           <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet">
             <!-- cantilever beam with deflection -->
             <g transform="translate(40 100)">
@@ -782,6 +788,7 @@ section { padding: 110px 0; position: relative; }
       </a>
       <a class="case" href="gallery.html">
         <div class="case-thumb">
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
           <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet">
             <!-- shallow arch -->
             <g transform="translate(160 130)">
