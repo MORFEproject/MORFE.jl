@@ -1,7 +1,7 @@
 # scripts/generate_api.jl
 # Run from repo root:  julia --project scripts/generate_api.jl
 # Loads MORFE, extracts every documented symbol via Base.Docs,
-# writes website/MORFE_website/api.html in the site's own style.
+# writes website/api.html in the site's own style.
 
 using Pkg: Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="docs-shell">
 
 <aside class="docs-side">
-  <div class="ver"><span>API Reference</span></div>
+  <div class="ver"><span><a href="api.html">API Reference</a></span></div>
   <div class="search">
 	<span class="ic mono">⌕</span>
 	<input type="search" id="api-search" placeholder="Filter…" autocomplete="off" />
@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   <h4>Resources</h4>
   <ul>
-	<li><a href="docs.html">Getting started</a></li>
+	<li><a href="index.html">Getting started</a></li>
 	<li><a href="tutorials.html">Demo scripts</a></li>
 	<li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li>
   </ul>
@@ -442,5 +442,5 @@ end
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 mods    = extract_all()
-outpath = joinpath(@__DIR__, "..", "website", "MORFE_website", "api.html")
+outpath = joinpath(@__DIR__, "..", "website", "api.html")
 write_page(mods, outpath)

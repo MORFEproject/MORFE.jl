@@ -10,7 +10,6 @@
 Manifest.toml
 docs/Manifest.toml
 .JuliaFormatter.toml
-.DS_Store
 demo/.DS_Store
 
 # Package artifacts (stores downloaded dependencies)
@@ -19,7 +18,7 @@ demo/.DS_Store
 # Generated documentation
 docs/build/
 docs/site/
-website/MORFE_website/api.html
+website/api.html
 website/*.zip
 
 # Temporary files from editors and OS
@@ -45,5 +44,3 @@ CLAUDE.md
 /website_copy
 /publications
 /legacy_morfe
-.DS_Store
-.DS_Store
