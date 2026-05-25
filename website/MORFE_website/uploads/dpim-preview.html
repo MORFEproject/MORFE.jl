@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>DPIM scheme — 3D interactive</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+  integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous"/>
+<style>
+  :root {
+    --bg-1: #0a0a0f;
+    --bg-2: #0e0e15;
+    --hair: #1f1f2c;
+    --hair-2: #2a2a3a;
+    --ink: #e8e8ee;
+    --ink-2: #b8b8c4;
+    --ink-3: #6e6e7e;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --accent: #9558b2;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg-1);
+    color: var(--ink);
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    padding: 48px 0;
+    min-height: 100vh;
+    display: flex; justify-content: center; align-items: flex-start;
+  }
+  .wrap { width: 1100px; max-width: 98vw; padding: 0 24px; }
+  .kicker {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3);
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .kicker::before { content:""; width:22px; height:1px; background: var(--ink-3); }
+  h2 { font-weight: 500; font-size: 28px; letter-spacing: -0.02em; line-height:1.1; }
+  .sub {
+    color: var(--ink-3); font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 20px;
+  }
+  .preview {
+    background: var(--bg-2);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 24px 18px 18px;
+    position: relative;
+  }
+  .preview svg { width: 100%; height: auto; display: block; user-select: none; -webkit-user-select: none; }
+  .draggable-area { cursor: crosshair; }
+  .draggable-area.dragging { cursor: grabbing; }
+  .rotate-area { cursor: grab; }
+  .rotate-area.rotating { cursor: grabbing; }
+  .legend {
+    display: flex; gap: 28px; margin-top: 22px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-2);
+  }
+  .legend .sw { display:inline-block; width:18px; height:2.5px; vertical-align:middle; margin-right:8px; border-radius:1px; }
+  .hint { margin-top: 14px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .hint span { color: #c79be0; }
+  .hint .sep { display:inline-block; margin:0 12px; color: var(--hair-2); }
+
+  /* katex inside foreignObject */
+  .tex { color: var(--ink); white-space: nowrap; line-height: 1; display: inline-block; }
+  .tex .katex { font-size: 1em; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+  integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+  integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+  integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+  integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrap">
+  <span class="kicker">Method · DPIM</span>
+  <h2 style="margin:12px 0 8px;">Direct Parametrisation of Invariant Manifolds.</h2>
+  <p class="sub">
+    Drag in q-space to set initial state · drag in y-space to orbit (yaw + pitch) · y-space auto-rotates
+  </p>
+  <div id="root"></div>
+  <div class="legend">
+    <span><span class="sw" style="background:#389826"></span>q-space trajectory</span>
+    <span><span class="sw" style="background:#9558b2"></span>ambient trajectory Ψ(q(t))</span>
+    <span><span class="sw" style="background:#4063d8;"></span>master eigenspace</span>
+    <span><span class="sw" style="background:#b8b8c4"></span>y-space axes (rotated orthogonally)</span>
+  </div>
+  <div class="hint">
+    🖱 <span>Drag the ring</span> in q-space to set initial state
+    <span class="sep">·</span>
+    <span>Drag inside y-space</span> to orbit in 3D
+  </div>
+</div>
+
+<script type="text/babel">
+/* ════════════════════════════════════════════════════════════════════
+   ★ EDIT THE DPIM EQUATIONS HERE ★
+   ──────────────────────────────────────────────────────────────────── */
+
+// Nonlinear parametrisation Ψ : (q₁, q₂, t) → (y₁, y₂, y₃)
+function mapToY(q1, q2, t) {
+  return [
+    q1,// + q2 * q2 * Math.sin(t),   // y₁
+    q2 + 0.01 * q1 * q1, // + q1 * q1 * q1 * Math.sin(t),   // y₂
+    0.3 * q1 + 0.2 * Math.cos(t) + 0.01 * Math.sin(t) * (q1 * q1 * q1 + q2 * q2 * q2 * q2),              // y₃
+  ];
+}
+
+// Reduced dynamics on q-space: r(t) → R_SS exponentially; angles evolve linearly
+const R_SS = 2.0;
+const B    = 2.0;
+const W    = 1.0;
+const LAM  = 0.1;
+
+function qOfT(t, r0, delta, epsilon) {
+  const r_t = R_SS - (R_SS - r0) * Math.exp(-LAM * t);
+  const q1 = 0.6 * r_t * Math.cos(B * t + delta); //* Math.cos(W * t + epsilon);
+  const q2 = 0.8 * r_t * Math.sin(B * t + delta + 0.5);// * Math.sin(W * t + epsilon);
+  return [q1, q2, r_t];
+}
+
+const U_MIN = -2.8, U_MAX = 2.8;
+const V_MIN = -2.8, V_MAX = 2.8;
+
+// Scene / view ─────────────────────────────────────────────────────────
+const Q_SCALE   = 50;     // px/unit, q-space
+const Y_SCALE   = 70;    // px/unit, y-space
+const ROT_SPEED = 0.1;   // rad/s — slow yaw auto-rotate
+const TRAIL_LEN = 300;
+const MESH_N    = 12;     // manifold subdivisions per axis (MESH_N² quads)
+
+/* ══════════════════════════════════════════════════════════════════ */
+
+const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
+
+// Proper orthonormal 3D camera: yaw around z, then pitch around x.
+function rotate3D(p, yaw, pitch) {
+  const [x, y, z] = p;
+  const cY = Math.cos(yaw),  sY = Math.sin(yaw);
+  const cP = Math.cos(pitch), sP = Math.sin(pitch);
+  const xr =  x*cY - y*sY;
+  const yr =  x*sY + y*cY;
+  const yp =  yr*cP - z*sP;   // depth into screen (positive = away)
+  const zp =  yr*sP + z*cP;   // vertical
+  return [xr, yp, zp];
+}
+function project(p, yaw, pitch) {
+  const [xr, , zp] = rotate3D(p, yaw, pitch);
+  return [xr, -zp];
+}
+function depthOf(p, yaw, pitch) {
+  return rotate3D(p, yaw, pitch)[1];
+}
+
+function computeParams(q10, q20) {
+  const A = Math.cos(0.5); 
+  const B = Math.sin(0.5);
+  const x = q10/0.6;
+  const y = ((q20/0.8) - x*B)/A;
+  const r0 = Math.sqrt(x*x + y*y);
+  if (r0 < 1e-6) return { r0: 0.001, delta: 0, epsilon: 0 };
+  // 3 * q2 - 4 * q1 * B = 4 * q1 * A * tan(delta) 
+  const delta = Math.atan2(3 * q20 - 4 * q10 * B, 4 * q10 * A);
+  const epsilon = 0.0; //Math.atan2(Math.sqrt(Bp), Math.sqrt(Ap));
+  return { r0, delta, epsilon };
+}
+
+const ACCENT = '#9558b2';
+const MANIFOLD_OPACITY = 0.16;
+
+// ── KaTeX label in SVG via foreignObject ──
+function TeX({ x, y, tex, anchor='start', color='#e8e8ee', size=13, italic=false }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    if (ref.current && window.katex) {
+      try { window.katex.render(tex, ref.current, { throwOnError:false, displayMode:false }); }
+      catch(e) { ref.current.textContent = tex; }
+    }
+  }, [tex]);
+  const tx = anchor==='middle' ? 'translate(-50%, -50%)'
+           : anchor==='end'    ? 'translate(-100%, -50%)'
+           :                     'translate(0, -50%)';
+  return (
+    <foreignObject x={x} y={y} width="1" height="1" style={{overflow:'visible'}}>
+      <div xmlns="http://www.w3.org/1999/xhtml"
+        className="tex"
+        style={{
+          position:'absolute', transform: tx,
+          color, fontSize: size+'px',
+          fontStyle: italic ? 'italic' : 'normal',
+        }}>
+        <span ref={ref}/>
+      </div>
+    </foreignObject>
+  );
+}
+
+function App() {
+  const [animT, setAnimT] = useState(0);
+  const [initQ1, setInitQ1] = useState(1.5);
+  const [initQ2, setInitQ2] = useState(1.8);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragQ1, setDragQ1] = useState(1.5);
+  const [dragQ2, setDragQ2] = useState(1.8);
+
+  // 3D camera: yaw (around z) + pitch (around x)
+  const [yaw, setYaw] = useState(-0.55);
+  const [pitch, setPitch] = useState(0.45);
+  const [isRotating, setIsRotating] = useState(false);
+  const rotStartRef = useRef({ x: 0, y: 0, yaw: 0, pitch: 0 });
+
+  const svgRef = useRef(null);
+  const rafRef = useRef(null);
+  const wallClockStartRef = useRef(performance.now());
+  const trailQRef = useRef([]);
+  const trailYRef = useRef([]);
+  const lastSampleRef = useRef(0);
+
+  const effective = isDragging ? { q1: dragQ1, q2: dragQ2 } : { q1: initQ1, q2: initQ2 };
+  const { r0, delta, epsilon } = useMemo(
+    () => computeParams(effective.q1, effective.q2),
+    [effective.q1, effective.q2]
+  );
+
+  const [q1, q2, r_t] = useMemo(
+    () => qOfT(animT, r0, delta, epsilon),
+    [animT, r0, delta, epsilon]
+  );
+  const [y1, y2, y3] = mapToY(q1, q2, animT);
+
+  const qToSvg = useCallback((u, v) => [110 + u*Q_SCALE, 110 - v*Q_SCALE], []);
+  const svgToQ = useCallback((sx, sy) => [(sx-110)/Q_SCALE, (110-sy)/Q_SCALE], []);
+  const clampQ = (a, b) => [Math.max(-2.1, Math.min(2.1, a)), Math.max(-2.1, Math.min(2.1, b))];
+
+  // animation + auto-rotate
+  useEffect(() => {
+    let lastNow = performance.now();
+    const loop = (now) => {
+      const dt = (now - lastNow) / 1000;
+      lastNow = now;
+      if (!isDragging) setAnimT((now - wallClockStartRef.current) / 1000);
+      if (!isRotating) setYaw((y) => y + ROT_SPEED * dt);
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [isDragging, isRotating]);
+
+  // trail
+  useEffect(() => {
+    if (isDragging) { trailQRef.current = []; trailYRef.current = []; lastSampleRef.current = 0; return; }
+    if (animT - lastSampleRef.current < 0.025 && trailQRef.current.length > 0) return;
+    lastSampleRef.current = animT;
+    trailQRef.current = [...trailQRef.current.slice(-(TRAIL_LEN-1)), qToSvg(q1, q2)];
+    trailYRef.current = [...trailYRef.current.slice(-(TRAIL_LEN-1)), [y1, y2, y3]];
+  }, [animT, q1, q2, y1, y2, y3, isDragging, qToSvg]);
+
+  useEffect(() => {
+    trailQRef.current = []; trailYRef.current = []; lastSampleRef.current = 0;
+  }, [initQ1, initQ2]);
+
+  // pointer
+  const getPosInSvg = useCallback((e) => {
+    const rect = svgRef.current.getBoundingClientRect();
+    const vw = 1040, vh = 440;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return [(cx-rect.left)*vw/rect.width, (cy-rect.top)*vh/rect.height];
+  }, []);
+
+  // boxes (in viewBox coords)
+  const qBox = { x: 40,  y: 90,  w: 220, h: 220 };
+  const yBox = { x: 430, y: 40,  w: 580, h: 360 };
+
+  const handleDown = useCallback((e) => {
+    const [sx, sy] = getPosInSvg(e);
+    if (sx >= yBox.x && sx <= yBox.x+yBox.w && sy >= yBox.y && sy <= yBox.y+yBox.h) {
+      e.preventDefault();
+      setIsRotating(true);
+      rotStartRef.current = { x: sx, y: sy, yaw, pitch };
+      return;
+    }
+    if (sx >= qBox.x && sx <= qBox.x+qBox.w && sy >= qBox.y && sy <= qBox.y+qBox.h) {
+      e.preventDefault();
+      const [a, b] = clampQ(...svgToQ(sx - qBox.x, sy - qBox.y));
+      setDragQ1(a); setDragQ2(b);
+      setInitQ1(a); setInitQ2(b);
+      setIsDragging(true);
+      setAnimT(0); wallClockStartRef.current = performance.now();
+      trailQRef.current = []; trailYRef.current = []; lastSampleRef.current = 0;
+    }
+  }, [getPosInSvg, svgToQ, yaw, pitch]);
+
+  const handleMove = useCallback((e) => {
+    if (isRotating) {
+      e.preventDefault();
+      const [sx, sy] = getPosInSvg(e);
+      const dx = sx - rotStartRef.current.x;
+      const dy = sy - rotStartRef.current.y;
+      setYaw(rotStartRef.current.yaw + dx * 0.012);
+      const newPitch = rotStartRef.current.pitch - dy * 0.012;
+      setPitch(Math.max(-1.4, Math.min(1.4, newPitch)));
+      return;
+    }
+    if (!isDragging) return;
+    e.preventDefault();
+    const [sx, sy] = getPosInSvg(e);
+    const bx = Math.max(0, Math.min(qBox.w, sx - qBox.x));
+    const by = Math.max(0, Math.min(qBox.h, sy - qBox.y));
+    const [a, b] = clampQ(...svgToQ(bx, by));
+    setDragQ1(a); setDragQ2(b);
+    setInitQ1(a); setInitQ2(b);
+  }, [isDragging, isRotating, getPosInSvg, svgToQ]);
+
+  const handleUp = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
+      setAnimT(0); wallClockStartRef.current = performance.now();
+      trailQRef.current = []; trailYRef.current = []; lastSampleRef.current = 0;
+    }
+    if (isRotating) setIsRotating(false);
+  }, [isDragging, isRotating]);
+
+  useEffect(() => {
+    if (!isDragging && !isRotating) return;
+    const m = (e) => handleMove(e);
+    const u = () => handleUp();
+    window.addEventListener('mousemove', m);
+    window.addEventListener('mouseup', u);
+    window.addEventListener('touchmove', m, { passive: false });
+    window.addEventListener('touchend', u);
+    return () => {
+      window.removeEventListener('mousemove', m);
+      window.removeEventListener('mouseup', u);
+      window.removeEventListener('touchmove', m);
+      window.removeEventListener('touchend', u);
+    };
+  }, [isDragging, isRotating, handleMove, handleUp]);
+
+  // projection helpers
+  const proj  = useCallback((p3) => project([p3[0]*Y_SCALE, p3[1]*Y_SCALE, p3[2]*Y_SCALE], yaw, pitch), [yaw, pitch]);
+  const projU = useCallback((p3) => project(p3, yaw, pitch), [yaw, pitch]);
+  const depth = useCallback((p3) => depthOf([p3[0]*Y_SCALE, p3[1]*Y_SCALE, p3[2]*Y_SCALE], yaw, pitch), [yaw, pitch]);
+
+  // ── manifold mesh quads (depth-sorted for correct rendering) ──
+  const meshQuads = useMemo(() => {
+    const N = MESH_N;
+    const quads = [];
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        const u0 = U_MIN + (U_MAX-U_MIN)*i/N;
+        const u1 = U_MIN + (U_MAX-U_MIN)*(i+1)/N;
+        const v0 = V_MIN + (V_MAX-V_MIN)*j/N;
+        const v1 = V_MIN + (V_MAX-V_MIN)*(j+1)/N;
+        const c1 = mapToY(u0, v0, animT);
+        const c2 = mapToY(u1, v0, animT);
+        const c3 = mapToY(u1, v1, animT);
+        const c4 = mapToY(u0, v1, animT);
+        const p1 = proj(c1), p2 = proj(c2), p3 = proj(c3), p4 = proj(c4);
+        const d = (depth(c1)+depth(c2)+depth(c3)+depth(c4))/4;
+        quads.push({
+          pts: `${p1[0].toFixed(2)},${p1[1].toFixed(2)} ${p2[0].toFixed(2)},${p2[1].toFixed(2)} ${p3[0].toFixed(2)},${p3[1].toFixed(2)} ${p4[0].toFixed(2)},${p4[1].toFixed(2)}`,
+          d
+        });
+      }
+    }
+    quads.sort((a,b) => b.d - a.d); // far → near
+    return quads;
+  }, [animT, proj, depth]);
+
+  // ridges (v = const lines) for emphasis
+  const ridges = useMemo(() => {
+    const vs = [V_MIN, 0.0, 0.6, 1.4, V_MAX];
+    const samples = 48;
+    return vs.map(v => {
+      const pts = [];
+      for (let i = 0; i <= samples; i++) {
+        const u = U_MIN + (U_MAX-U_MIN)*i/samples;
+        pts.push(proj(mapToY(u, v, animT)));
+      }
+      return pts.map(p => p.join(',')).join(' ');
+    });
+  }, [animT, proj]);
+
+  // eigenspace plane
+  const eigenPoly = useMemo(() => {
+    const w = 70, d = 70;
+    return [[-w,-d,-0.3*w],[w,-d,0.3*w],[w,d,0.3*w],[-w,d,-0.3*w]]
+      .map(c => projU(c).map(n => n.toFixed(2)).join(','))
+      .join(' ');
+  }, [projU]);
+
+  // axes (orthonormal, projected)
+  const axesLen = 70;
+  const axEnds = [0,1,2].map(i => {
+    const v = [0,0,0]; v[i] = axesLen;
+    return projU(v);
+  });
+
+  // current points
+  const [qSvgX, qSvgY] = qToSvg(q1, q2);
+  const [iSvgX, iSvgY] = qToSvg(effective.q1, effective.q2);
+  const yProj = proj([y1, y2, y3]);
+
+  const qTrailStr = trailQRef.current.map(p => p.join(',')).join(' ');
+  const yTrailStr = trailYRef.current.map(p3 => proj(p3).join(',')).join(' ');
+
+  const ringColor = isDragging ? '#e8c84a' : '#389826'; //ACCENT;
+  const envR = 0.8771 * R_SS * Q_SCALE;
+
+  // y-space view center
+  const yC = { cx: yBox.x + yBox.w/2, cy: yBox.y + yBox.h/2 + 30 };
+
+  return (
+    <div className="preview">
+      <svg ref={svgRef} viewBox="0 0 1040 440"
+        style={{ fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" }}
+        onMouseDown={handleDown} onTouchStart={handleDown}>
+        <defs>
+          <marker id="d-arr-ink" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+            <path d="M0,0 L9,4.5 L0,9 z" fill="#b8b8c4"/>
+          </marker>
+          <marker id="d-arr-acc" markerWidth="8" markerHeight="8" refX="7.5" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill={ACCENT}/>
+          </marker>
+          <pattern id="d-grid" width="22" height="22" patternUnits="userSpaceOnUse">
+            <path d="M22 0 H0 V22" stroke="#1f1f2c" strokeWidth="0.6" fill="none"/>
+          </pattern>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="1.8" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        {/* corner registration */}
+        <g stroke="#2a2a3a" strokeWidth="1" fill="none">
+          <path d="M16 16 H40 M16 16 V40"/>
+          <path d="M1024 16 H1000 M1024 16 V40"/>
+          <path d="M16 424 H40 M16 424 V400"/>
+          <path d="M1024 424 H1000 M1024 424 V400"/>
+        </g>
+        <text x="48" y="34" fontSize="10" letterSpacing="1.6" fill="#6e6e7e">METHOD · DPIM</text>
+        <text x="992" y="34" fontSize="10" letterSpacing="1.6" fill="#6e6e7e" textAnchor="end">
+          SCHEMATIC · LIVE 3D
+        </text>
+
+        {/* ========== q-space ========== */}
+        <g transform={`translate(${qBox.x},${qBox.y})`}>
+          <text x="0" y="-30" fontSize="10" letterSpacing="1.5" fill="#6e6e7e">REDUCED · MASTER COORDS</text>
+          <TeX x={150} y={-22} tex="\mathbb{R}^d" color="#6e6e7e" size={11}/>
+          <text x="0" y="-12" fontSize="14" fill="#e8e8ee" fontStyle="italic">q-space</text>
+
+          <rect x="0" y="0" width="220" height="220" fill="url(#d-grid)"
+            stroke="#2a2a3a" strokeWidth="1"
+            className={'draggable-area' + (isDragging ? ' dragging' : '')}/>
+
+          <line x1="5" y1="110" x2="215" y2="110" stroke="#b8b8c4" strokeWidth="1" markerEnd="url(#d-arr-ink)"/>
+          <line x1="110" y1="215" x2="110" y2="5" stroke="#b8b8c4" strokeWidth="1" markerEnd="url(#d-arr-ink)"/>
+          <TeX x={222} y={114} tex="q_1" color="#e8e8ee" size={14}/>
+          <TeX x={102} y={6}   tex="q_2" color="#e8e8ee" size={14}/>
+          <circle cx="110" cy="110" r="2.2" fill="#b8b8c4"/>
+          <text x="96" y="126" fontSize="10" fill="#6e6e7e">0</text>
+
+          <circle cx="110" cy="110" r={envR}
+            stroke="#389826" strokeWidth="0.5" strokeDasharray="3 5" fill="none" opacity="0.35"/>
+
+          {qTrailStr && <polyline points={qTrailStr} stroke="#389826" strokeWidth="1.2" fill="none"
+            strokeLinecap="round" strokeLinejoin="round" opacity="0.6" style={{pointerEvents:'none'}}/>}
+
+          <circle cx={iSvgX} cy={iSvgY} r="7" fill="none" stroke={ringColor}
+            strokeWidth={isDragging ? 2.4 : 1.8} strokeOpacity={isDragging ? 1 : 0.75}
+            filter={isDragging ? 'url(#glow)' : 'none'} style={{pointerEvents:'none'}}/>
+          <circle cx={iSvgX} cy={iSvgY} r="2" fill={ringColor} style={{pointerEvents:'none'}}/>
+
+          {!isDragging && (
+            <g style={{pointerEvents:'none'}}>
+              <circle cx={qSvgX} cy={qSvgY} r="3.5" fill="#389826" filter="url(#glow)"/>
+              <circle cx={qSvgX} cy={qSvgY} r="7" fill="none" stroke="#389826" strokeWidth="0.8" strokeOpacity="0.5"/>
+              <TeX x={qSvgX+8} y={qSvgY-5} tex="q(t)" color="#389826" size={12} italic/>
+            </g>
+          )}
+
+          <TeX x={0} y={240} tex="\dot{q} = f(q)" color="#b8b8c4" size={11}/>
+          <text x="220" y="244" fontSize="10" fill="#6e6e7e" textAnchor="end">
+            q₁={q1.toFixed(2)}  q₂={q2.toFixed(2)}
+          </text>
+          <text x="220" y="260" fontSize="10" fill="#6e6e7e" textAnchor="end">t={animT.toFixed(2)}s</text>
+        </g>
+
+        {/* ========== Ψ arrow ========== */}
+        <g transform="translate(290,220)">
+          <line x1="0" y1="22" x2="130" y2="22" stroke="#1f1f2c" strokeWidth="1" strokeDasharray="2 4"/>
+          <path d="M 4,2 C 36,-32 96,-32 128,2" stroke={ACCENT} strokeWidth="1.4" fill="none" markerEnd="url(#d-arr-acc)"/>
+          <TeX x={66} y={-30} tex="\Psi:\mathbb{R}^d \to \mathbb{R}^N" color="#e8e8ee" size={13} anchor="middle"/>
+          <rect x="38" y="14" width="56" height="18" rx="2" fill={ACCENT+'1f'} stroke={ACCENT} strokeWidth="0.8"/>
+          <text x="66" y="26" fontSize="10" letterSpacing="1.6" fill={ACCENT} textAnchor="middle">DPIM</text>
+          <text x="66" y="48" fontSize="9" letterSpacing="1.2" fill="#6e6e7e" textAnchor="middle">ORDER p · POLYNOMIAL</text>
+        </g>
+
+        {/* ========== y-space ========== */}
+        <g>
+          <text x={yBox.x} y={yBox.y - 18} fontSize="10" letterSpacing="1.5" fill="#6e6e7e">AMBIENT · FE COORDS</text>
+          <TeX x={yBox.x + 158} y={yBox.y - 10} tex="\mathbb{R}^N" color="#6e6e7e" size={11}/>
+          <text x={yBox.x} y={yBox.y - 2} fontSize="14" fill="#e8e8ee" fontStyle="italic">y-space</text>
+
+          {/* hit-target for rotation */}
+          <rect x={yBox.x} y={yBox.y} width={yBox.w} height={yBox.h}
+            fill="transparent" stroke="#2a2a3a" strokeWidth="1"
+            className={'rotate-area' + (isRotating ? ' rotating' : '')}/>
+
+          <g transform={`translate(${yC.cx},${yC.cy})`} style={{pointerEvents:'none'}}>
+            {/* eigenspace plane (behind manifold) */}
+            <polygon points={eigenPoly} fill="#4063d8" fillOpacity="0.06"
+              stroke="#4063d8" strokeWidth="0.7" strokeDasharray="3 3"/>
+
+            {/* manifold mesh (depth sorted) */}
+            {meshQuads.map((q, i) => (
+              <polygon key={i} points={q.pts}
+                fill={ACCENT} fillOpacity={MANIFOLD_OPACITY}
+                stroke={ACCENT} strokeWidth="0.35" strokeOpacity="0.5"/>
+            ))}
+
+            {/* ridges */}
+            {ridges.map((pts, i) => (
+              <polyline key={i} points={pts} stroke={ACCENT} strokeWidth="0.7"
+                strokeOpacity={0.55} fill="none" strokeDasharray="2 3"/>
+            ))}
+
+            {/* axes — orthonormal, rotated with view */}
+            {axEnds.map((p, i) => (
+              <line key={i} x1="0" y1="0" x2={p[0]} y2={p[1]}
+                stroke="#b8b8c4" strokeWidth="1" markerEnd="url(#d-arr-ink)"/>
+            ))}
+            <circle cx="0" cy="0" r="2.4" fill="#b8b8c4"/>
+
+            {/* trail */}
+            {yTrailStr && <polyline points={yTrailStr} stroke={ACCENT} strokeWidth="1.2" fill="none"
+              strokeLinecap="round" strokeLinejoin="round" opacity="0.6"/>}
+
+            {/* current point */}
+            {!isDragging && (
+              <g>
+                <circle cx={yProj[0]} cy={yProj[1]} r="4.5" fill={ACCENT} filter="url(#glow)"/>
+                <circle cx={yProj[0]} cy={yProj[1]} r="9" fill="none" stroke={ACCENT}
+                  strokeWidth="0.9" strokeOpacity="0.45"/>
+              </g>
+            )}
+          </g>
+
+          {/* axis labels — placed at projected tip, in screen coords */}
+          {axEnds.map((p, i) => (
+            <TeX key={i}
+              x={yC.cx + p[0] + (p[0] > 0 ? 8 : -8)}
+              y={yC.cy + p[1] + (p[1] > 0 ? 8 : -8)}
+              tex={`y_${i+1}`} color="#e8e8ee" size={14}
+              anchor={p[0] > 0 ? 'start' : 'end'} italic/>
+          ))}
+
+          {/* Ψ(q(t)) label */}
+          {!isDragging && (
+            <TeX x={yC.cx + yProj[0] + 10} y={yC.cy + yProj[1] - 10}
+              tex="\Psi(q(t))" color={ACCENT} size={12} italic/>
+          )}
+
+          {/* legend in y-space corner */}
+          <text x={yBox.x + 14} y={yBox.y + 22} fontSize="10" fill="#7a92dc" fontStyle="italic" style={{pointerEvents:'none'}}>
+            E · master eigenspace
+          </text>
+          <text x={yBox.x + 14} y={yBox.y + 38} fontSize="11" fill="#c79be0" fontStyle="italic" style={{pointerEvents:'none'}}>
+            W · invariant manifold
+          </text>
+
+          <text x={yBox.x} y={yBox.y + yBox.h + 22} fontSize="9" letterSpacing="1.3" fill="#6e6e7e">
+            FULL-ORDER FE MODEL
+          </text>
+          <text x={yBox.x + yBox.w} y={yBox.y + yBox.h + 22} fontSize="10" fill="#6e6e7e" textAnchor="end">
+            y₁={y1.toFixed(2)}  y₂={y2.toFixed(2)}  y₃={y3.toFixed(2)}
+          </text>
+          <text x={yBox.x + yBox.w} y={yBox.y + yBox.h + 38} fontSize="10" fill="#6e6e7e" textAnchor="end">
+            yaw={(yaw*180/Math.PI).toFixed(0)}°  pitch={(pitch*180/Math.PI).toFixed(0)}°
+          </text>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gallery — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/site.css" />
+<style>
+.page-hero { padding: 80px 0 40px; }
+.page-hero h1 { font-size: clamp(40px, 5vw, 64px); margin: 18px 0 18px; }
+.page-hero .lede { max-width: 60ch; color: var(--ink-2); font-size: 18px; }
+
+.gal-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 28px;
+  padding: 18px 0;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  align-items: center;
+}
+.gal-filters .label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-right: 8px; }
+.chip {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--hair-2);
+  border-radius: 20px;
+  color: var(--ink-2);
+  cursor: pointer;
+  background: transparent;
+  transition: all .15s;
+}
+.chip:hover { color: #fff; border-color: var(--ink-2); }
+.chip.active { background: var(--jl-purple); border-color: var(--jl-purple); color: #fff; }
+
+.gal-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+.gcard {
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  background: rgba(10,10,15,0.55);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color .2s, transform .2s;
+  position: relative;
+}
+.gcard:hover { border-color: var(--hair-2); transform: translateY(-2px); }
+.gcard.span-6 { grid-column: span 6; }
+.gcard.span-4 { grid-column: span 4; }
+.gcard.span-8 { grid-column: span 8; }
+.gcard .thumb {
+  position: relative;
+  aspect-ratio: 16/9;
+  background:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px) 0 0/100% 24px,
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px) 0 0/24px 100%,
+    #07070b;
+  border-bottom: 1px solid var(--hair);
+  overflow: hidden;
+}
+.gcard .thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gcard .thumb .corner {
+  position: absolute; top: 12px; left: 12px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-2); background: rgba(7,7,11,0.7); padding: 4px 8px; border: 1px solid var(--hair); border-radius: 3px;
+}
+.gcard .body { padding: 22px 24px 24px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.gcard .body h3 { font-size: 19px; font-weight: 500; margin: 0; }
+.gcard .body p { font-size: 14px; color: var(--ink-2); margin: 0; }
+.gcard .stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--hair);
+}
+.gcard .stats > div {
+  padding: 14px 16px;
+  border-right: 1px solid var(--hair);
+}
+.gcard .stats > div:last-child { border-right: 0; }
+.gcard .stats .k { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.gcard .stats .v { font-family: var(--mono); font-size: 14px; color: #fff; }
+
+.cat-mems   { color: var(--jl-purple); }
+.cat-struct { color: var(--jl-red); }
+.cat-civil  { color: var(--jl-blue); }
+.cat-rotor  { color: var(--jl-green); }
+.cat-shell  { color: #d4a056; }
+.cat-multi  { color: #7aa2ff; }
+
+@media (max-width: 1100px) {
+  .gcard.span-8 { grid-column: span 12; }
+  .gcard.span-6 { grid-column: span 12; }
+  .gcard.span-4 { grid-column: span 6; }
+}
+@media (max-width: 700px) {
+  .gcard.span-4 { grid-column: span 12; }
+}
+</style>
+</head>
+<body>
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav"></nav>
+<script src="assets/nav.js"></script>
+
+<section class="page-hero">
+  <div class="wrap">
+    <span class="kicker">Use cases · benchmarks · curiosities</span>
+    <h1>The gallery.</h1>
+    <p class="lede">A growing catalogue of nonlinear oscillators reduced with MORFE — from milligram MEMS resonators to 30-metre civil arches. Every entry links to a reproducible tutorial with the FE mesh and the ROM script.</p>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="wrap">
+    <div class="gal-filters">
+      <span class="label">Filter</span>
+      <button class="chip active">All</button>
+      <button class="chip">MEMS</button>
+      <button class="chip">Structural</button>
+      <button class="chip">Civil</button>
+      <button class="chip">Rotating</button>
+      <button class="chip">Shells</button>
+      <button class="chip">Multi-physics</button>
+    </div>
+
+    <div class="gal-grid">
+
+      <!-- Featured: micromirror -->
+      <a class="gcard span-8" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-01 · MEMS</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <pattern id="mp" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M0 20 L20 0" stroke="#1f1f2c" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <!-- mirror plate -->
+            <g transform="translate(400 220)">
+              <g transform="rotate(-8)">
+                <rect x="-180" y="-110" width="360" height="220" fill="url(#mp)" stroke="#9558b2" stroke-width="1.2"/>
+                <rect x="-180" y="-110" width="360" height="220" fill="rgba(149,88,178,0.05)"/>
+                <!-- modal pattern overlay -->
+                <g opacity="0.55">
+                  <ellipse cx="-90" cy="0" rx="60" ry="80" fill="none" stroke="#cb3c33" stroke-width="0.6"/>
+                  <ellipse cx="90" cy="0" rx="60" ry="80" fill="none" stroke="#cb3c33" stroke-width="0.6"/>
+                </g>
+                <!-- torsion bars -->
+                <line x1="-180" y1="0" x2="-260" y2="0" stroke="#cb3c33" stroke-width="2"/>
+                <line x1="180" y1="0" x2="260" y2="0" stroke="#cb3c33" stroke-width="2"/>
+                <rect x="-285" y="-18" width="25" height="36" fill="#1f1f2c" stroke="#3a3a4a"/>
+                <rect x="260" y="-18" width="25" height="36" fill="#1f1f2c" stroke="#3a3a4a"/>
+              </g>
+              <!-- swept beam paths -->
+              <g opacity="0.6">
+                <path d="M-260,-110 Q 0,-180 260,-110" stroke="#389826" stroke-width="0.8" fill="none" stroke-dasharray="3 3"/>
+                <path d="M-260,110 Q 0,180 260,110" stroke="#389826" stroke-width="0.8" fill="none" stroke-dasharray="3 3"/>
+                <path d="M-260,-60 Q 0,-100 260,-60" stroke="#389826" stroke-width="0.5" fill="none" stroke-dasharray="2 4"/>
+                <path d="M-260,60 Q 0,100 260,60" stroke="#389826" stroke-width="0.5" fill="none" stroke-dasharray="2 4"/>
+              </g>
+            </g>
+            <!-- annotations -->
+            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e">
+              <text x="40" y="380">Ω = 24.04 kHz</text>
+              <text x="40" y="398">θ_max = 12.6°</text>
+              <text x="40" y="416">parametric resonance</text>
+              <text x="640" y="416" text-anchor="end">DPIM order 7 · 4-DOF ROM</text>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> MEMS</span>
+            <span class="tag">FEATURED</span>
+          </div>
+          <h3>Scanning torsional micromirror — parametric resonance &amp; pull-in</h3>
+          <p>A 1×1 mm² silicon micromirror driven into 1:2 parametric resonance at 24 kHz. The 4-equation ROM captures both the stable scan window and the pull-in cliff, in 0.41 s of wall time vs. 14 hours of FE time-marching.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">DOFs</div><div class="v">412 308</div></div>
+          <div><div class="k">ROM size</div><div class="v">4 eq.</div></div>
+          <div><div class="k">Speedup</div><div class="v">×125 000</div></div>
+        </div>
+      </a>
+
+      <!-- Cantilever -->
+      <a class="gcard span-4" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-02 · STRUCTURAL</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(50 115)">
+              <rect x="-12" y="-50" width="12" height="100" fill="#1f1f2c"/>
+              <path d="M0,0 C 90,0 180,-30 300,-58" stroke="#cb3c33" stroke-width="2" fill="none"/>
+              <path d="M0,0 C 90,0 180,30 300,58" stroke="#cb3c33" stroke-width="2" fill="none" opacity="0.4"/>
+              <path d="M0,0 C 90,0 180,-12 300,-22" stroke="#cb3c33" stroke-width="1" fill="none" opacity="0.5"/>
+              <path d="M0,0 L300,0" stroke="#3a3a4a" stroke-width="1" stroke-dasharray="2 3"/>
+              <circle cx="300" cy="-58" r="3" fill="#cb3c33"/>
+              <text x="150" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6e6e7e">A/L = 0.34</text>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="tag"><span class="tag-dot" style="background:var(--jl-red)"></span> Structural</span>
+          <h3>Cantilever beam — large amplitude</h3>
+          <p>Hardening backbone of a slender cantilever well beyond the linear regime.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">DOFs</div><div class="v">12 044</div></div>
+          <div><div class="k">Order</div><div class="v">7</div></div>
+          <div><div class="k">Error</div><div class="v">0.04%</div></div>
+        </div>
+      </a>
+
+      <!-- Shallow arch -->
+      <a class="gcard span-4" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-03 · CIVIL</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(200 160)">
+              <path d="M-150,0 Q 0,-100 150,0" stroke="#4063d8" stroke-width="2" fill="none"/>
+              <path d="M-150,0 Q 0,-60 150,0" stroke="#4063d8" stroke-width="1" fill="none" opacity="0.5" stroke-dasharray="2 3"/>
+              <path d="M-150,0 Q 0,-25 150,0" stroke="#cb3c33" stroke-width="1.4" fill="none"/>
+              <line x1="-150" y1="0" x2="-150" y2="14" stroke="#1f1f2c" stroke-width="6"/>
+              <line x1="150" y1="0" x2="150" y2="14" stroke="#1f1f2c" stroke-width="6"/>
+              <line x1="-180" y1="14" x2="180" y2="14" stroke="#3a3a4a" stroke-width="1"/>
+              <path d="M0,-100 L0,-30" stroke="#389826" stroke-width="1.2" stroke-dasharray="3 3"/>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="tag"><span class="tag-dot" style="background:var(--jl-blue)"></span> Civil</span>
+          <h3>Shallow arch — snap-through</h3>
+          <p>Bistable wells, homoclinic transition, sub-harmonic 1:2.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">DOFs</div><div class="v">85 132</div></div>
+          <div><div class="k">Order</div><div class="v">9</div></div>
+          <div><div class="k">Wells</div><div class="v">2</div></div>
+        </div>
+      </a>
+
+      <!-- Rotating blade -->
+      <a class="gcard span-4" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-04 · ROTATING</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(200 115)">
+              <circle cx="0" cy="0" r="16" fill="#1f1f2c" stroke="#3a3a4a"/>
+              <circle cx="0" cy="0" r="3" fill="#389826"/>
+              <g>
+                <rect x="14" y="-4" width="160" height="8" fill="url(#mp)" stroke="#389826" stroke-width="0.8"/>
+                <path d="M174,-4 Q 184,-8 188,-22" stroke="#cb3c33" stroke-width="1.5" fill="none"/>
+                <path d="M174,4 Q 184,8 188,22" stroke="#cb3c33" stroke-width="1.5" fill="none"/>
+              </g>
+              <g transform="rotate(120)">
+                <rect x="14" y="-4" width="160" height="8" fill="url(#mp)" stroke="#389826" stroke-width="0.8" opacity="0.5"/>
+              </g>
+              <g transform="rotate(240)">
+                <rect x="14" y="-4" width="160" height="8" fill="url(#mp)" stroke="#389826" stroke-width="0.8" opacity="0.5"/>
+              </g>
+              <!-- spin arrow -->
+              <path d="M0,-50 A 50,50 0 0,1 43,-25" stroke="#9558b2" stroke-width="1.2" fill="none" stroke-dasharray="3 3"/>
+              <text x="0" y="-58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#9558b2">Ω</text>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="tag"><span class="tag-dot" style="background:var(--jl-green)"></span> Rotating</span>
+          <h3>Rotating blade — Coriolis &amp; centrifugal</h3>
+          <p>Speed-dependent Campbell diagram; veering and crossing detected automatically.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">Modes</div><div class="v">6</div></div>
+          <div><div class="k">Order</div><div class="v">5</div></div>
+          <div><div class="k">Ω range</div><div class="v">0–8 kHz</div></div>
+        </div>
+      </a>
+
+      <!-- Cylindrical shell -->
+      <a class="gcard span-6" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-05 · SHELL</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 600 338" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(300 169)">
+              <!-- cylinder isometric -->
+              <ellipse cx="-110" cy="0" rx="40" ry="100" fill="none" stroke="#3a3a4a" stroke-width="1"/>
+              <ellipse cx="110" cy="0" rx="40" ry="100" fill="none" stroke="#3a3a4a" stroke-width="1"/>
+              <line x1="-110" y1="-100" x2="110" y2="-100" stroke="#3a3a4a" stroke-width="1"/>
+              <line x1="-110" y1="100" x2="110" y2="100" stroke="#3a3a4a" stroke-width="1"/>
+              <!-- generators (the wireframe surface) -->
+              <g stroke="#d4a056" stroke-width="0.5" fill="none" opacity="0.85">
+                <path d="M-110,-92 Q 0,-90 110,-92"/>
+                <path d="M-110,-72 Q 0,-66 110,-72"/>
+                <path d="M-110,-46 Q 0,-38 110,-46"/>
+                <path d="M-110,-18 Q 0,-12 110,-18"/>
+                <path d="M-110,12 Q 0,18 110,12"/>
+                <path d="M-110,42 Q 0,50 110,42"/>
+                <path d="M-110,68 Q 0,76 110,68"/>
+                <path d="M-110,90 Q 0,94 110,90"/>
+              </g>
+              <!-- lobed mode pattern -->
+              <g stroke="#cb3c33" stroke-width="0.7" fill="none">
+                <path d="M-90,-95 C -60,-65 -60,65 -90,95"/>
+                <path d="M-30,-95 C 0,-65 0,65 -30,95"/>
+                <path d="M30,-95 C 60,-65 60,65 30,95"/>
+                <path d="M90,-95 C 60,-65 60,65 90,95" opacity="0.5"/>
+              </g>
+            </g>
+            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e">
+              <text x="40" y="40">CIRCUMFERENTIAL MODES m=5</text>
+              <text x="40" y="58" fill="#d4a056">1:1:1 internal resonance</text>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="tag"><span class="tag-dot" style="background:#d4a056"></span> Shell</span>
+          <h3>Cylindrical shell — companion-mode coupling</h3>
+          <p>Two near-degenerate driven and companion modes with a 1:1:1 internal resonance. The 6-equation ROM reproduces the travelling-wave bifurcation and standing-wave hysteresis observed in the FE reference.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">DOFs</div><div class="v">238 540</div></div>
+          <div><div class="k">ROM size</div><div class="v">6 eq.</div></div>
+          <div><div class="k">Order</div><div class="v">7</div></div>
+        </div>
+      </a>
+
+      <!-- Piezoelectric -->
+      <a class="gcard span-6" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-06 · MULTI-PHYSICS</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 600 338" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(60 200)">
+              <!-- substrate beam -->
+              <rect x="0" y="0" width="480" height="14" fill="#1f1f2c" stroke="#3a3a4a"/>
+              <!-- piezo patch -->
+              <rect x="80" y="-12" width="160" height="12" fill="rgba(122,162,255,0.18)" stroke="#7aa2ff" stroke-width="1.2"/>
+              <text x="160" y="-18" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7aa2ff">PZT</text>
+              <!-- electrodes -->
+              <line x1="100" y1="-12" x2="100" y2="-50" stroke="#cb3c33" stroke-width="1"/>
+              <line x1="220" y1="-12" x2="220" y2="-50" stroke="#cb3c33" stroke-width="1"/>
+              <line x1="100" y1="-50" x2="220" y2="-50" stroke="#cb3c33" stroke-width="1"/>
+              <text x="160" y="-58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#cb3c33">V(t)</text>
+              <!-- deflection -->
+              <path d="M0,7 Q 240,-28 480,40" stroke="#cb3c33" stroke-width="1.3" fill="none" opacity="0.7"/>
+              <path d="M0,7 Q 240,42 480,-30" stroke="#cb3c33" stroke-width="1" fill="none" opacity="0.4"/>
+              <line x1="0" y1="14" x2="-12" y2="14" stroke="#3a3a4a" stroke-width="2"/>
+              <rect x="-22" y="0" width="10" height="40" fill="#1f1f2c"/>
+            </g>
+            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e">
+              <text x="40" y="40">COUPLED ELECTRO-MECHANICS</text>
+              <text x="40" y="58" fill="#7aa2ff">k₃₁ = 0.31 · linear coupling</text>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="tag"><span class="tag-dot" style="background:#7aa2ff"></span> Multi-physics</span>
+          <h3>Piezoelectric energy harvester</h3>
+          <p>Geometrically nonlinear cantilever with a PZT patch, parametrised together with the electrical circuit. ROM exposes the optimal load resistance as a continuous parameter.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">Phys.</div><div class="v">M ⊕ E</div></div>
+          <div><div class="k">ROM size</div><div class="v">3 eq.</div></div>
+          <div><div class="k">Power</div><div class="v">+24%</div></div>
+        </div>
+      </a>
+
+      <!-- Plate with cutout -->
+      <a class="gcard span-4" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-07 · STRUCTURAL</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(200 115)">
+              <rect x="-150" y="-80" width="300" height="160" fill="url(#mp)" stroke="#cb3c33" stroke-width="1"/>
+              <circle cx="0" cy="0" r="34" fill="#0a0a0f" stroke="#cb3c33" stroke-width="1"/>
+              <g stroke="#9558b2" stroke-width="0.6" fill="none" opacity="0.75">
+                <ellipse cx="-80" cy="-40" rx="38" ry="22"/>
+                <ellipse cx="80" cy="-40" rx="38" ry="22"/>
+                <ellipse cx="-80" cy="40" rx="38" ry="22"/>
+                <ellipse cx="80" cy="40" rx="38" ry="22"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="tag"><span class="tag-dot" style="background:var(--jl-red)"></span> Structural</span>
+          <h3>Perforated plate</h3>
+          <p>Mode localization around a circular cutout — 1:3:5 internal-resonance pocket.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">DOFs</div><div class="v">68 200</div></div>
+          <div><div class="k">Order</div><div class="v">7</div></div>
+          <div><div class="k">Modes</div><div class="v">3</div></div>
+        </div>
+      </a>
+
+      <!-- Suspension cable -->
+      <a class="gcard span-4" href="tutorials.html">
+        <div class="thumb">
+          <span class="corner">CASE-08 · CIVIL</span>
+          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
+          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(200 80)">
+              <path d="M-160,0 Q 0,90 160,0" stroke="#4063d8" stroke-width="1.6" fill="none"/>
+              <path d="M-160,0 Q 0,108 160,0" stroke="#4063d8" stroke-width="1" fill="none" opacity="0.5" stroke-dasharray="2 3"/>
+              <path d="M-160,0 Q -40,72 0,72 Q 40,72 160,0" stroke="#cb3c33" stroke-width="1.2" fill="none"/>
+              <rect x="-170" y="-20" width="20" height="20" fill="#1f1f2c"/>
+              <rect x="150" y="-20" width="20" height="20" fill="#1f1f2c"/>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="tag"><span class="tag-dot" style="background:var(--jl-blue)"></span> Civil</span>
+          <h3>Suspension cable — wind-induced</h3>
+          <p>Galloping &amp; sub-harmonic resonance under steady wind &amp; gusty forcing.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">DOFs</div><div class="v">9 800</div></div>
+          <div><div class="k">Order</div><div class="v">5</div></div>
+          <div><div class="k">Sag</div><div class="v">1/40</div></div>
+        </div>
+      </a>
+
+      <!-- Coming soon -->
+      <div class="gcard span-4" style="opacity:0.6;">
+        <div class="thumb" style="display:flex; align-items:center; justify-content:center;">
+          <span class="corner">SUBMIT YOUR OWN</span>
+          <div style="font-family:var(--mono); font-size:13px; color:var(--ink-3); text-align:center; padding:0 24px;">
+            Have a benchmark we should publish?<br/>
+            <span style="color:#fff;">Open a PR with your mesh + ROM script.</span>
+          </div>
+        </div>
+        <div class="body">
+          <span class="tag">CONTRIBUTE</span>
+          <h3>Add your case</h3>
+          <p>The gallery is community-driven. Each entry is a runnable tutorial.</p>
+        </div>
+        <div class="stats">
+          <div><div class="k">Status</div><div class="v">Open</div></div>
+          <div><div class="k">Reviewer</div><div class="v">2 weeks</div></div>
+          <div><div class="k">License</div><div class="v">CC-BY</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
+        <p style="color:var(--ink-3); font-size:13px; max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
+      </div>
+      <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="tutorials.html">Tutorials</a></li><li><a href="api.html">Documentation</a></li></ul></div>
+      <div><h4>Code</h4><ul><li><a href="#">GitHub</a></li><li><a href="#">Releases</a></li><li><a href="#">Contributing</a></li></ul></div>
+      <div><h4>Cite</h4><ul><li><a href="#">JOSS paper</a></li><li><a href="#">BibTeX</a></li></ul></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); color:var(--ink-3); font-size:12px;">
+      <div>© MORFE contributors · MIT license</div>
+      <div class="mono">build · 2026.05 · julia 1.11.2</div>
+    </div>
+  </div>
+</footer>
+
+</div>
+<script src="assets/manifold-bg.js"></script>
+<script>
+// chip filter (visual only — animates active state)
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

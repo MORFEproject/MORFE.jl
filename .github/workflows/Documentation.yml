@@ -23,25 +23,20 @@ jobs:
 
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1.10'
+          version: '1'
 
       - uses: julia-actions/cache@v2
 
-      - name: Install documentation dependencies
-        run: |
-          julia --project=docs -e '
-            using Pkg
-            Pkg.develop(PackageSpec(path="."))
-            Pkg.instantiate()
-          '
+      - name: Install dependencies
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
-      - name: Build documentation
-        run: julia --project=docs docs/make.jl
+      - name: Generate API reference
+        run: julia --project=. scripts/generate_api.jl
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/build/
+          path: website/MORFE_website/
 
   deploy:
     needs: build

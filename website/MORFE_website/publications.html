@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Publications — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="assets/site.css" />
+<style>
+.page-hero { padding: 80px 0 40px; }
+.page-hero h1 { font-size: clamp(40px, 5vw, 64px); margin: 18px 0 18px; }
+.page-hero .lede { max-width: 60ch; color: var(--ink-2); font-size: 18px; }
+
+/* Year-split timeline */
+.pubs {
+  border-top: 1px solid var(--hair);
+}
+.pub-year {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--hair);
+}
+.pub-year .year {
+  padding: 36px 32px 36px 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  border-right: 1px solid var(--hair);
+  background: rgba(7,7,11,0.4);
+  position: relative;
+}
+.pub-year .year .y {
+  display: block;
+  font-family: var(--sans);
+  font-size: 44px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.pub-year .year .count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pub-year .year { padding-left: 32px; padding-right: 32px; }
+.pub-list { padding: 0; }
+
+.pub {
+  padding: 28px 32px 28px 16px;
+  border-bottom: 1px solid var(--hair);
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 24px;
+  align-items: start;
+  transition: background .2s;
+}
+.pub:last-child { border-bottom: 0; }
+.pub:hover { background: rgba(149,88,178,0.03); }
+.pub .tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 0 0px;
+  border: 0;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pub .tag.method   { color: var(--jl-purple); }
+.pub .tag.app      { color: #d4a056; }
+.pub .tag.software { color: var(--jl-green); }
+.pub .tag.review   { color: var(--jl-blue); }
+
+.pub .body { min-width: 0; }
+.pub h3 {
+  font-family: var(--sans);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.pub .auth {
+  color: var(--ink-2);
+  font-size: 14px;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+.pub .auth em { color: #fff; font-style: normal; }
+.pub .meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+.pub .meta .journal { color: var(--ink-2); }
+.pub .meta .vol     { color: var(--ink); }
+.pub .meta .sep     { color: var(--hair-2); }
+.pub .links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.pub .links a {
+  color: var(--ink-2);
+  padding: 4px 10px;
+  border: 1px solid var(--hair-2);
+  border-radius: 3px;
+  text-decoration: none;
+  transition: border-color .15s, background .15s, color .15s;
+  white-space: nowrap;
+}
+.pub .links a:hover { color: #fff; border-color: var(--jl-purple); background: rgba(149,88,178,0.08); }
+.pub .links .doi { color: var(--ink-3); padding: 4px 0; border: 0; font-size: 10px; }
+.pub .links .doi:hover { background: transparent; color: var(--ink); }
+
+/* Cite block */
+.cite-section {
+  border-top: 1px solid var(--hair);
+  padding: 80px 0;
+}
+.cite-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.cite-block {
+  background: rgba(7,7,11,0.6);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 24px;
+}
+.cite-block h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+  margin: 0 0 14px;
+}
+.cite-block pre {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+.cite-block pre .k { color: #c890e6; }
+.cite-block pre .v { color: #98c379; }
+
+/* Filters bar */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 0 28px;
+  flex-wrap: wrap;
+}
+.filters .lab {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3); margin-right: 6px;
+}
+.filters button {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid var(--hair-2);
+  border-radius: 4px;
+  color: var(--ink-2);
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.filters button:hover { color: #fff; border-color: var(--ink-3); }
+.filters button.active { color: #fff; border-color: var(--jl-purple); background: rgba(149,88,178,0.12); }
+.filters .count {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+}
+
+@media (max-width: 800px) {
+  .pub-year { grid-template-columns: 1fr; }
+  .pub-year .year { border-right: 0; border-bottom: 1px solid var(--hair); padding: 24px 32px; display: flex; align-items: baseline; gap: 16px; }
+  .pub-year .year .y { font-size: 28px; margin: 0; }
+  .pub { grid-template-columns: 1fr; }
+  .pub .links { flex-direction: row; align-items: flex-start; flex-wrap: wrap; }
+  .cite-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav"></nav>
+<script src="assets/nav.js"></script>
+
+<section class="page-hero">
+  <div class="wrap">
+    <span class="kicker">Bibliography · Method & applications</span>
+    <h1>Publications.</h1>
+    <p class="lede">
+      The DPIM method behind MORFE.jl is the result of a decade of work on nonlinear normal forms,
+      invariant manifolds, and FE-native reduction. The list below covers the theoretical foundations,
+      software releases, and applications across MEMS, civil structures, rotating machinery, and shells.
+    </p>
+
+    <div class="filters">
+      <span class="lab">Filter</span>
+      <button class="active" data-filter="all">All</button>
+      <button data-filter="method">Method</button>
+      <button data-filter="app">Applications</button>
+      <button data-filter="software">Software</button>
+      <button data-filter="review">Review</button>
+      <span class="count" id="pub-count"></span>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top: 0;">
+  <div class="wrap">
+    <div class="pubs">
+
+      <!-- ─── 2024 ─── -->
+      <div class="pub-year" data-year="2024">
+        <div class="year"><span class="y">2024</span><span class="count">1 entry</span></div>
+        <div class="pub-list">
+
+          <article class="pub" data-cat="method">
+            <span class="tag method">Method</span>
+            <div class="body">
+              <h3>Direct parametrisation of invariant manifolds for non-autonomous forced systems including superharmonic resonances.</h3>
+              <p class="auth"><em>A. Vizzaccaro</em>, G. Gobat, A. Frangi, C. Touzé.</p>
+              <p class="meta">
+                <span class="journal">Nonlinear Dynamics</span>
+                <span class="sep">·</span><span class="vol">112(8), 6255–6290</span>
+                <span class="sep">·</span><span>2024</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1007/s11071-024-09333-0">PDF ↗</a>
+              <a href="https://doi.org/10.1007/s11071-024-09333-0" class="doi">doi:10.1007/s11071-024-09333-0</a>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- ─── 2023 ─── -->
+      <div class="pub-year" data-year="2023">
+        <div class="year"><span class="y">2023</span><span class="count">3 entries</span></div>
+        <div class="pub-list">
+
+          <article class="pub" data-cat="method">
+            <span class="tag method">Method</span>
+            <div class="body">
+              <h3>High-order direct parametrisation of invariant manifolds for model order reduction of finite element structures: application to generic forcing terms and parametrically excited systems.</h3>
+              <p class="auth">A. Opreni, <em>A. Vizzaccaro</em>, C. Touzé, A. Frangi.</p>
+              <p class="meta">
+                <span class="journal">Nonlinear Dynamics</span>
+                <span class="sep">·</span><span class="vol">111(6), 5401–5447</span>
+                <span class="sep">·</span><span>2023</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1007/s11071-022-07978-3">PDF ↗</a>
+              <a href="https://doi.org/10.1007/s11071-022-07978-3" class="doi">doi:10.1007/s11071-022-07978-3</a>
+            </div>
+          </article>
+
+          <article class="pub" data-cat="app">
+            <span class="tag app">Application</span>
+            <div class="body">
+              <h3>Frequency combs in a MEMS resonator featuring 1:2 internal resonance: ab initio reduced order modelling and experimental validation.</h3>
+              <p class="auth">G. Gobat, L. Zega, P. Fedeli, C. Touzé, A. Frangi.</p>
+              <p class="meta">
+                <span class="journal">Nonlinear Dynamics</span>
+                <span class="sep">·</span><span class="vol">111(4), 2991–3017</span>
+                <span class="sep">·</span><span>2023</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1007/s11071-022-08029-7">PDF ↗</a>
+              <a href="https://doi.org/10.1007/s11071-022-08029-7" class="doi">doi:10.1007/s11071-022-08029-7</a>
+            </div>
+          </article>
+
+          <article class="pub" data-cat="app">
+            <span class="tag app">Application</span>
+            <div class="body">
+              <h3>Nonlinear model order reduction of resonant piezoelectric micro-actuators: an invariant manifold approach.</h3>
+              <p class="auth">A. Opreni, G. Gobat, C. Touzé, A. Frangi.</p>
+              <p class="meta">
+                <span class="journal">Computers &amp; Structures</span>
+                <span class="sep">·</span><span class="vol">289, 107154</span>
+                <span class="sep">·</span><span>2023</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1016/j.compstruc.2023.107154">PDF ↗</a>
+              <a href="https://doi.org/10.1016/j.compstruc.2023.107154" class="doi">doi:10.1016/j.compstruc.2023.107154</a>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- ─── 2022 ─── -->
+      <div class="pub-year" data-year="2022">
+        <div class="year"><span class="y">2022</span><span class="count">1 entry</span></div>
+        <div class="pub-list">
+
+          <article class="pub" data-cat="method">
+            <span class="tag method">Method</span>
+            <div class="body">
+              <h3>High order direct parametrisation of invariant manifolds for model order reduction of finite element structures: application to large amplitude vibrations and uncovering of a folding point.</h3>
+              <p class="auth"><em>A. Vizzaccaro</em>, A. Opreni, L. Salles, A. Frangi, C. Touzé.</p>
+              <p class="meta">
+                <span class="journal">Nonlinear Dynamics</span>
+                <span class="sep">·</span><span class="vol">110(1), 525–571</span>
+                <span class="sep">·</span><span>2022</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1007/s11071-022-07651-9">PDF ↗</a>
+              <a href="https://doi.org/10.1007/s11071-022-07651-9" class="doi">doi:10.1007/s11071-022-07651-9</a>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- ─── 2021 ─── -->
+      <div class="pub-year" data-year="2021">
+        <div class="year"><span class="y">2021</span><span class="count">3 entries</span></div>
+        <div class="pub-list">
+
+          <article class="pub" data-cat="method">
+            <span class="tag method">Method</span>
+            <div class="body">
+              <h3>Direct computation of nonlinear mapping via normal form for reduced-order models of finite element nonlinear structures.</h3>
+              <p class="auth"><em>A. Vizzaccaro</em>, Y. Shen, L. Salles, J. Blahoš, C. Touzé.</p>
+              <p class="meta">
+                <span class="journal">Computer Methods in Applied Mechanics and Engineering</span>
+                <span class="sep">·</span><span class="vol">384, 113957</span>
+                <span class="sep">·</span><span>2021</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1016/j.cma.2021.113957">PDF ↗</a>
+              <a href="https://doi.org/10.1016/j.cma.2021.113957" class="doi">doi:10.1016/j.cma.2021.113957</a>
+            </div>
+          </article>
+
+          <article class="pub" data-cat="app">
+            <span class="tag app">Application</span>
+            <div class="body">
+              <h3>Model order reduction based on direct normal form: application to large finite element MEMS structures featuring internal resonance.</h3>
+              <p class="auth">A. Opreni, <em>A. Vizzaccaro</em>, A. Frangi, C. Touzé.</p>
+              <p class="meta">
+                <span class="journal">Nonlinear Dynamics</span>
+                <span class="sep">·</span><span class="vol">105(2), 1237–1272</span>
+                <span class="sep">·</span><span>2021</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1007/s11071-021-06641-7">PDF ↗</a>
+              <a href="https://doi.org/10.1007/s11071-021-06641-7" class="doi">doi:10.1007/s11071-021-06641-7</a>
+            </div>
+          </article>
+
+          <article class="pub" data-cat="review">
+            <span class="tag review">Review</span>
+            <div class="body">
+              <h3>Model order reduction methods for geometrically nonlinear structures: a review of nonlinear techniques.</h3>
+              <p class="auth">C. Touzé, <em>A. Vizzaccaro</em>, O. Thomas.</p>
+              <p class="meta">
+                <span class="journal">Nonlinear Dynamics</span>
+                <span class="sep">·</span><span class="vol">105(2), 1141–1190</span>
+                <span class="sep">·</span><span>2021</span>
+              </p>
+            </div>
+            <div class="links">
+              <a href="https://doi.org/10.1007/s11071-021-06693-9">PDF ↗</a>
+              <a href="https://doi.org/10.1007/s11071-021-06693-9" class="doi">doi:10.1007/s11071-021-06693-9</a>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Cite block -->
+<section class="cite-section">
+  <div class="wrap">
+    <div class="section-head" style="display:grid; grid-template-columns:1fr 1fr; gap:64px; margin-bottom:32px; align-items:end;">
+      <div>
+        <span class="kicker">How to cite</span>
+        <h2 style="margin-top:18px; font-size: clamp(28px, 3.4vw, 44px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.05;">If MORFE shows up in your work, please cite the method papers.</h2>
+      </div>
+      <p style="color:var(--ink-2); max-width:48ch;">The CMAME 2021 paper is the primary reference for the FE-native DPIM algorithm. For high-order and forced extensions, also cite the Nonlinear Dynamics 2022 paper.</p>
+    </div>
+
+    <div class="cite-grid">
+      <div class="cite-block">
+        <h4>Primary method · BibTeX</h4>
+<pre><span class="k">@article</span>{vizzaccaro_dpim_2021,
+  <span class="k">title</span>   = <span class="v">"Direct computation of nonlinear mapping via normal form for reduced-order models of finite element nonlinear structures"</span>,
+  <span class="k">author</span>  = <span class="v">"Vizzaccaro, A. and Shen, Y. and Salles, L. and Blaho{\v{s}}, J. and Touz{\'e}, C."</span>,
+  <span class="k">journal</span> = <span class="v">"Computer Methods in Applied Mechanics and Engineering"</span>,
+  <span class="k">volume</span>  = <span class="v">"384"</span>,
+  <span class="k">pages</span>   = <span class="v">"113957"</span>,
+  <span class="k">year</span>    = <span class="v">"2021"</span>,
+  <span class="k">doi</span>     = <span class="v">"10.1016/j.cma.2021.113957"</span>
+}</pre>
+      </div>
+      <div class="cite-block">
+        <h4>High-order extension · BibTeX</h4>
+<pre><span class="k">@article</span>{vizzaccaro_hodpim_2022,
+  <span class="k">title</span>   = <span class="v">"High order direct parametrisation of invariant manifolds for model order reduction of finite element structures: application to large amplitude vibrations and uncovering of a folding point"</span>,
+  <span class="k">author</span>  = <span class="v">"Vizzaccaro, A. and Opreni, A. and Salles, L. and Frangi, A. and Touz{\'e}, C."</span>,
+  <span class="k">journal</span> = <span class="v">"Nonlinear Dynamics"</span>,
+  <span class="k">volume</span>  = <span class="v">"110"</span>,
+  <span class="k">number</span>  = <span class="v">"1"</span>,
+  <span class="k">pages</span>   = <span class="v">"525--571"</span>,
+  <span class="k">year</span>    = <span class="v">"2022"</span>,
+  <span class="k">doi</span>     = <span class="v">"10.1007/s11071-022-07651-9"</span>
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
+        <p style="color:var(--ink-3); font-size:13px; max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
+      </div>
+      <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="tutorials.html">Tutorials</a></li><li><a href="api.html">Documentation</a></li></ul></div>
+      <div><h4>People</h4><ul><li><a href="team.html">Team</a></li><li><a href="publications.html">Publications</a></li></ul></div>
+      <div><h4>Code</h4><ul><li><a href="#">GitHub</a></li><li><a href="#">Releases</a></li></ul></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); color:var(--ink-3); font-size:12px;">
+      <div>© MORFE contributors · MIT license</div>
+      <div class="mono">build · 2026.05 · julia 1.11.2</div>
+    </div>
+  </div>
+</footer>
+
+</div>
+<script src="assets/manifold-bg.js"></script>
+<script>
+(function () {
+  const btns = document.querySelectorAll('.filters button');
+  const pubs = document.querySelectorAll('.pub');
+  const years = document.querySelectorAll('.pub-year');
+  const countEl = document.getElementById('pub-count');
+
+  function applyFilter(f) {
+    let visible = 0;
+    pubs.forEach(p => {
+      const ok = (f === 'all' || p.dataset.cat === f);
+      p.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+    years.forEach(y => {
+      const anyVisible = y.querySelectorAll('.pub').length > 0 &&
+        Array.from(y.querySelectorAll('.pub')).some(p => p.style.display !== 'none');
+      y.style.display = anyVisible ? '' : 'none';
+    });
+    countEl.textContent = visible + (visible === 1 ? ' result' : ' results');
+  }
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    applyFilter(b.dataset.filter);
+  }));
+  applyFilter('all');
+})();
+</script>
+</body>
+</html>

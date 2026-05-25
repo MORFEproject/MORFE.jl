@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DPIM scheme — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+  integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous" />
+<link rel="stylesheet" href="assets/site.css" />
+<style>
+  .page-hero { padding: 80px 0 32px; }
+  .page-hero h1 { font-size: clamp(40px, 5vw, 64px); margin: 18px 0 18px; }
+  .page-hero .lede { max-width: 60ch; color: var(--ink-2); font-size: 18px; }
+  .dpim-preview {
+    background: var(--bg-2);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 28px 22px 22px;
+  }
+  .dpim-preview svg {
+    width: 100%; height: auto; display: block;
+    user-select: none; -webkit-user-select: none;
+  }
+  .dpim-draggable { cursor: crosshair; }
+  .dpim-draggable.dragging { cursor: grabbing; }
+  .dpim-rotate { cursor: grab; }
+  .dpim-rotate.rotating { cursor: grabbing; }
+  .dpim-tex { color: var(--ink); white-space: nowrap; line-height: 1; display: inline-block; }
+  .dpim-tex .katex { font-size: 1em; }
+  .legend {
+    display: flex; gap: 28px; margin-top: 22px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-2);
+  }
+  .legend .sw { display:inline-block; width:18px; height:2.5px; vertical-align:middle; margin-right:8px; border-radius:1px; }
+  .hint { margin-top: 16px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .hint span { color: #c79be0; }
+  .hint .sep { display:inline-block; margin:0 12px; color: var(--hair-2); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+  integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+  integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+  integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+  integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav" data-active="features.html"></nav>
+<script src="assets/nav.js"></script>
+
+<section class="page-hero">
+  <div class="wrap">
+    <span class="kicker">Method · Interactive scheme</span>
+    <h1>The map Ψ, in motion.</h1>
+    <p class="lede">
+      A live picture of the Direct Parametrisation of Invariant Manifolds. Drag the ring in
+      <em>q</em>-space to reset the initial state · drag inside <em>y</em>-space to orbit in 3D
+      · the view auto-rotates while you watch.
+    </p>
+  </div>
+</section>
+
+<section style="padding-top: 0;">
+  <div class="wrap">
+    <div class="dpim-preview">
+      <div id="dpim-root"></div>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:#389826"></span>q-space trajectory</span>
+      <span><span class="sw" style="background:#9558b2"></span>ambient trajectory Ψ(q(t))</span>
+      <span><span class="sw" style="background:#4063d8;"></span>master eigenspace</span>
+      <span><span class="sw" style="background:#b8b8c4"></span>orthonormal y-axes</span>
+    </div>
+    <div class="hint">
+      🖱 <span>Drag the ring</span> in q-space to set initial state
+      <span class="sep">·</span>
+      <span>Drag inside y-space</span> to orbit in 3D
+      <span class="sep">·</span>
+      auto-rotates at ~6°/s
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div style="display:flex; justify-content:space-between; align-items:end; flex-wrap:wrap; gap:24px;">
+      <div>
+        <span class="kicker">Next</span>
+        <h2 style="margin-top:18px; max-width:18ch; font-size: clamp(28px, 3.4vw, 44px); font-weight: 500; letter-spacing: -0.02em;">Read the method behind the picture.</h2>
+      </div>
+      <div style="display:flex; gap:14px;">
+        <a class="btn btn-primary" href="features.html">Method details <span class="arrow">→</span></a>
+        <a class="btn" href="publications.html">Source papers</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
+        <p style="color:var(--ink-3); font-size:13px; max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
+      </div>
+      <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="tutorials.html">Tutorials</a></li><li><a href="api.html">Documentation</a></li></ul></div>
+      <div><h4>People</h4><ul><li><a href="team.html">Team</a></li><li><a href="publications.html">Publications</a></li></ul></div>
+      <div><h4>Code</h4><ul><li><a href="#">GitHub</a></li><li><a href="#">Releases</a></li></ul></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); color:var(--ink-3); font-size:12px;">
+      <div>© MORFE contributors · MIT license</div>
+      <div class="mono">build · 2026.05 · julia 1.11.2</div>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<script src="assets/manifold-bg.js"></script>
+<script type="text/babel" src="assets/dpim-scheme.jsx"></script>
+</body>
+</html>
