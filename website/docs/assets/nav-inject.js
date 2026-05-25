@@ -21,7 +21,7 @@
           '<a href="' + siteRoot + 'tutorials.html">Tutorials</a>' +
           '<a href="' + siteRoot + 'publications.html">Publications</a>' +
           '<a href="' + siteRoot + 'team.html">Team</a>' +
-          '<a href="' + siteRoot + 'docs.html" class="active">Docs</a>' +
+          '<a href="' + siteRoot + 'api.html" class="active">API</a>' +
         '</div>' +
         '<a class="nav-cta" href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a>' +
       '</div>';
