@@ -13,6 +13,18 @@
 #   8. Validate via invariance error convergence
 # ==============================================================================
 
+# Bootstrap: activate a demo-local environment so weakdeps (Arpack, Plots, HDF5)
+# are not added to MORFE's root Project.toml.
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Arpack", "LinearMaps", "Plots", "HDF5"])
+end
+Pkg.instantiate()
+
+using Arpack, LinearMaps   # triggers MORFEArpackExt → real generalised_eigenpairs
+using Plots                # triggers MORFEPlotsExt  → real plot_invariance_convergence
 using MORFE.Eigensolvers: generalised_eigenpairs
 using MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
 using MORFE.Polynomials: DensePolynomial
@@ -24,9 +36,6 @@ using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficient
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.InvarianceError: invariance_error_norms, invariance_error_convergence,
 	plot_invariance_convergence
-using Plots: savefig
-
-using HDF5
 using LinearAlgebra
 using Random
 using StaticArrays
@@ -223,6 +232,7 @@ end
 # ------------------------------------------------------------------------------
 # 10. Export results to HDF5 for external validation (e.g. Python/h5py)
 # ------------------------------------------------------------------------------
+using HDF5: h5open
 output_path = joinpath(@__DIR__, "output.h5")
 h5open(output_path, "w") do f
 	f["W_coefficients"] = W.poly.coefficients

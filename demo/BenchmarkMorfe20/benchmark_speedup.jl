@@ -20,14 +20,23 @@ Run from the repo root:
 	julia --project=. demo/BenchmarkMorfe20/benchmark_speedup.jl
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Arpack", "LinearMaps", "StaticArrays", "KrylovKit", "BenchmarkTools"])
+end
+Pkg.instantiate()
+
 using MORFE
-include("Morfe_2_0/Morfe_2_0.jl")
+include(joinpath(@__DIR__, "Morfe_2_0/Morfe_2_0.jl"))
 using .Morfe_2_0
 
 using LinearAlgebra
 using SparseArrays
 using StaticArrays
 using Arpack
+using LinearMaps
 using KrylovKit
 using BenchmarkTools
 

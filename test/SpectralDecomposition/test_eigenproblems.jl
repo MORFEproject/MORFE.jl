@@ -236,18 +236,19 @@ end
 
             model = NDOrderModel((K, C, M))
 
-            A, B = linear_first_order_matrices(model)
+            _, B = linear_first_order_matrices(model)
 
-            ep = solve_eigenproblem(
-                model;
-                solver = DefaultEigensolver(),
-                sorter! = sort_by_magnitude!,
-                normalizer! = normalize_biorthogonal!
-            )
+            # Test normalize_biorthogonal! directly on raw 3-D arrays so the
+            # check is independent of what Eigenproblem chooses to store.
+            # Must replicate the sort + match steps from solve_eigenproblem so
+            # that left and right eigenvectors correspond index-by-index.
+            solver = DefaultEigensolver()
+            λ, Y         = MORFE.Eigenproblems.solve(model, solver)
+            sort_by_magnitude!(λ, Y)
+            λ_left, X    = MORFE.Eigenproblems.solve_left(model, solver)
+            _, X         = MORFE.Eigenproblems.sort_left_eigenmodes(λ, λ_left, X)
 
-            λ = ep.eigenvalues
-            Y = ep.eigenmodes
-            X = ep.left_eigenmodes
+            normalize_biorthogonal!(model, Y, X)
 
             neig = length(λ)
             for i in 1:neig

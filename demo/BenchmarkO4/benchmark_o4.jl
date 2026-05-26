@@ -24,6 +24,14 @@ Usage
 	julia --project demo/BenchmarkO4/benchmark_o4.jl
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Ferrite", "Arpack", "LinearMaps", "StaticArrays", "BenchmarkTools"])
+end
+Pkg.instantiate()
+
 using MORFE
 import MORFE.MultilinearTerms:
 	build_multilinear_terms_cache, compute_multilinear_terms!,
@@ -32,6 +40,7 @@ using Ferrite
 using SparseArrays
 using LinearAlgebra
 using Arpack
+using LinearMaps
 using StaticArrays
 using BenchmarkTools
 

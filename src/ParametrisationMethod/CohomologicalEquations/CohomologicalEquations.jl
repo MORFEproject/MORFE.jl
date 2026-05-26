@@ -90,8 +90,14 @@ using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using SparseArrays
 using KLU: klu, klu!
-using Pardiso: AbstractPardisoSolver, MKLPardisoSolver, solve as pardiso_solve
 using StaticArrays: SVector
+
+# Extension hooks: overridden by ext/MORFEPardisoExt.jl when Pardiso is loaded.
+_try_build_pardiso_solver(::Vararg{Any}) = nothing
+_pardiso_solve(args...; kwargs...) =
+    error("Pardiso solver object present but MORFEPardisoExt not active — internal error.")
+
+export _try_build_pardiso_solver, _pardiso_solve
 
 include("OperatorData.jl")
 include("SolverResources.jl")

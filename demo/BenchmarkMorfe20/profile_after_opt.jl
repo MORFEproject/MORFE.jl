@@ -9,13 +9,23 @@ Run from the repo root:
 	julia --project=. demo/BenchmarkMorfe20/profile_after_opt.jl
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Arpack", "LinearMaps", "StaticArrays", "KrylovKit", "ProfileCanvas"])
+end
+Pkg.instantiate()
+
 using MORFE
-include("Morfe_2_0/Morfe_2_0.jl")
+include(joinpath(@__DIR__, "Morfe_2_0/Morfe_2_0.jl"))
 using .Morfe_2_0
 
 using LinearAlgebra
 using SparseArrays
 using StaticArrays
+using Arpack
+using LinearMaps
 using KrylovKit
 using Profile
 using ProfileCanvas

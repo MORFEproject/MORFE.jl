@@ -34,24 +34,31 @@ cohomological problem.
 The truncation order in θ is a single knob, `N_θ`.
 """
 
+# ------------------------------------------------------------------
+# Bootstrap: activate a demo-local environment so that Ferrite and
+# other FEM packages are not added to MORFE's root Project.toml.
+# On first run this installs everything (~2–5 min); subsequent runs
+# skip straight to Pkg.instantiate (seconds).
+# ------------------------------------------------------------------
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add([
+        "Ferrite", "FerriteGmsh",
+        "Arpack", "LinearMaps",
+        "Tensors", "StaticArrays",
+    ])
+end
+Pkg.instantiate()
+
 using MORFE
 using Ferrite
 using FerriteGmsh
 using SparseArrays
 using LinearAlgebra
-using Arpack
+using Arpack, LinearMaps   # LinearMaps triggers MORFEArpackExt
 using Printf
-
-# ------------------------------------------------------------------
-# Ensure registry packages used by this demo are installed before the
-# corresponding `using` statements.  Both of these are transitive
-# dependencies of Ferrite, so they are likely already present in any
-# environment that can load Ferrite — but `Pkg.add` is idempotent and
-# cheap when the package is already registered, so this block is safe
-# to keep as a one-shot bootstrap.
-using Pkg: Pkg
-Pkg.add("Tensors")           # 3D tensor algebra (det, inv, ⋅, ⊡, …)
-Pkg.add("StaticArrays")      # SVector for MORFE's master_eigenvalues
 using Tensors
 using StaticArrays
 

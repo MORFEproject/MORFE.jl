@@ -84,7 +84,7 @@ allocation on the resonant sparse path.
 struct SparseLinearSolverState{T}
 	L_template::SparseMatrixCSC{T}
 	L_mappings::Vector{Vector{Int}}
-	pardiso::Union{Nothing, AbstractPardisoSolver}
+	pardiso::Any   # Nothing, or an AbstractPardisoSolver when Pardiso ext is loaded
 	klu_cache::Ref{Any}                    # Ref(nothing) until first factorisation; always allocated
 	rhs_extended::Matrix{T}              # FOM × (ROM+1); avoids hcat per resonant monomial
 end
@@ -101,21 +101,7 @@ function SparseLinearSolverState{T}(
 	FOM::Int,
 	ROM::Int,
 ) where {T}
-	ps = nothing
-	try
-		ps = MKLPardisoSolver()
-	catch
-	end
-	if ps === nothing
-		try
-			ps = Pardiso.PardisoSolver()
-		catch
-		end
-	end
-	if ps === nothing
-		@warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
-			  "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
-	end
+	ps = _try_build_pardiso_solver()
 	return SparseLinearSolverState{T}(
 		L_template, L_mappings, ps, Ref{Any}(nothing), Matrix{T}(undef, FOM, ROM + 1),
 	)

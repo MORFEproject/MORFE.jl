@@ -1,4 +1,6 @@
 # JordanChain.jl
+# NOTE: Dead code — not imported or called from anywhere in the codebase.
+# Retained for potential future use.
 """
 	JordanChain
 
