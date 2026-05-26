@@ -7,16 +7,16 @@ include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
 include("SpectralDecomposition/Eigenproblems.jl")
-include("SpectralDecomposition/JordanChain.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl")
 include("ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
-include("SpectralDecomposition/PropagateEigenmodes.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl")
+include("FEMUtility.jl")
+include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
 
 # Re‑export public API from submodules
@@ -27,16 +27,16 @@ using .ExternalSystems
 using .FullOrderModel
 using .Eigensolvers
 using .Eigenproblems
-using .JordanChain
 using .Realification
 using .Resonance
 using .InvarianceEquation
 using .MasterModeOrthogonality
 using .ParametrisationMethod
-using .PropagateEigenmodes
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 using .CohomologicalEquations
+using .FEMUtility
+using .BifurcationKitInterface
 using .InvarianceError
 
 # Multiindices
@@ -85,6 +85,14 @@ export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
        detect_conjugate_permutation
 export solve_cohomological_equations!, solve_cohomological_equations_benchmarked!,
        solve_single_monomial!, solve_cohomological_problem
+
+# FEMUtility
+export abaqus_to_gmsh, abaqus_to_gmsh_linear,
+       comsol_to_gmsh, comsol_to_gmsh_linear,
+       gmsh_to_comsol
+
+# BifurcationKit interface
+export make_bk_problem
 
 # Validation
 export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence

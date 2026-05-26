@@ -28,12 +28,22 @@ Usage:
   julia --project demo/BenchmarkFerrite/benchmark_suite.jl
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
+        "BenchmarkTools", "Gmsh"])
+end
+Pkg.instantiate()
+
 using MORFE
 using Ferrite
 using FerriteGmsh
 using SparseArrays
 using LinearAlgebra
 using Arpack
+using LinearMaps
 using StaticArrays
 using Dates
 using Printf

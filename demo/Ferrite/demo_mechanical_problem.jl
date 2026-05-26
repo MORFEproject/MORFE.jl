@@ -12,12 +12,21 @@ Geometry: clamped-clamped beam, 1000 × 10 × 24, 40×3×1 Hex8 elements, quadra
 Matches the Gridap demo (FOM=4977) — use this to benchmark the RHS-C FEM batched path.
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays"])
+end
+Pkg.instantiate()
+
 using MORFE
 using Ferrite
 using FerriteGmsh
 using SparseArrays
 using LinearAlgebra
 using Arpack
+using LinearMaps
 using StaticArrays
 
 include(joinpath(@__DIR__, "ferrite_assembly.jl"))

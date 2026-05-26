@@ -10,9 +10,16 @@
 #   abaqus_to_gmsh_linear – quadratic mesh downgraded to linear
 # -------------------------------------------------------------------
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "Gmsh")
+    Pkg.add("Gmsh")
+end
+Pkg.instantiate()
+
 using Printf
 
-include(joinpath(@__DIR__, "../../../src/FEMUtility/AbaqusToGmsh.jl"))
+include(joinpath(@__DIR__, "../../../ext/FEMUtility/AbaqusToGmsh.jl"))
 using .AbaqusToGmsh
 using Gmsh
 

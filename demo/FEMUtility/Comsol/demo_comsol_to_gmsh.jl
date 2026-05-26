@@ -11,10 +11,17 @@
 #   comsol_to_gmsh_linear – quadratic mesh downgraded to linear
 # -------------------------------------------------------------------
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "Gmsh")
+    Pkg.add("Gmsh")
+end
+Pkg.instantiate()
+
 using Printf
 
-include(joinpath(@__DIR__, "../../../src/FEMUtility/ComsolToGmsh.jl"))
-include(joinpath(@__DIR__, "../../../src/FEMUtility/GmshToComsol.jl"))
+include(joinpath(@__DIR__, "../../../ext/FEMUtility/ComsolToGmsh.jl"))
+include(joinpath(@__DIR__, "../../../ext/FEMUtility/GmshToComsol.jl"))
 using .ComsolToGmsh
 using .GmshToComsol
 using Gmsh

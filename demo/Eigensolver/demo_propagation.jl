@@ -1,15 +1,25 @@
-include(joinpath(@__DIR__, "../../src/MORFE.jl"))
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Arpack", "LinearMaps"])
+end
+Pkg.instantiate()
 
+using MORFE
+using Arpack, LinearMaps   # triggers MORFEArpackExt → real generalised_eigenpairs
 using LinearAlgebra
 using Printf
 using Random
 using Statistics
 using StaticArrays: SVector
 
-using .MORFE
-using .MORFE.PropagateEigenmodes
-using .MORFE.Eigensolvers: generalised_eigenpairs
-using .MORFE.ParametrisationMethod: Parametrisation
+# PropagateEigenmodes is not DPIM; include directly from ext/
+include(joinpath(@__DIR__, "../../ext/SpectralDecomposition/PropagateEigenmodes.jl"))
+using .PropagateEigenmodes: propagate_right_eigenvector_from_first,
+                             propagate_left_eigenvector_from_last
+using MORFE.Eigensolvers: generalised_eigenpairs
+using MORFE.ParametrisationMethod: Parametrisation
 
 # -------------------------------------------------------------------
 # 1. Setup: random matrices of non-trivial sise

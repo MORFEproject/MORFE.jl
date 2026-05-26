@@ -20,12 +20,22 @@ ROM:  2 modes, max_degree = 11, N_EXT = 0.
 FEM:  O5 Re/Im decomposition in ferrite_assembly.jl (no heap allocs in accumulate_qp!).
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
+        "BenchmarkTools", "Gmsh"])
+end
+Pkg.instantiate()
+
 using MORFE
 using Ferrite
 using FerriteGmsh
 using SparseArrays
 using LinearAlgebra
 using Arpack
+using LinearMaps
 using StaticArrays
 using Printf
 

@@ -1,11 +1,12 @@
 # Plan: Decouple MORFE.jl Dependencies
+## (Adapted to current codebase — 2026-05-26)
 
 ## Goal
 
 Make MORFE.jl a proper minimal package. FEM backends (Ferrite, Gridap) become
-separate companion packages. Optional solver/visualization features become Julia
-package extensions (weakdeps). Dev and demo-only packages are removed from
-`[deps]` entirely.
+separate companion packages. Optional solver/visualization/continuation features
+become Julia package extensions (weakdeps). Dev and demo-only packages are
+removed from `[deps]` entirely.
 
 ---
 
@@ -21,10 +22,11 @@ package extensions (weakdeps). Dev and demo-only packages are removed from
 | `Pardiso` | `[deps]` | → `[weakdeps]` + `ext/MORFEPardisoExt.jl` |
 | `Plots` | `[deps]` | → `[weakdeps]` + `ext/MORFEPlotsExt.jl` |
 | `Gmsh` | `[deps]` | → `[weakdeps]` + `ext/MORFEGmshExt.jl` |
+| `BifurcationKit` | absent | → `[weakdeps]` + `ext/MORFEBifurcationKitExt.jl` |
 | `Ferrite` `FerriteGmsh` | `[deps]` | → remove; move to separate `MORFEFerrite.jl` repo |
 | `Gridap` `GridapGmsh` | `[deps]` | → remove; kept in demo script only |
 | `BenchmarkTools` `ProfileCanvas` `ProfileView` `JuliaFormatter` | `[deps]` | → remove (dev tools) |
-| `HDF5` `WriteVTK` `ExtendableSparse` `FEMQuad` `KrylovKit` | `[deps]` | → remove (demo only) |
+| `HDF5` `WriteVTK` `ExtendableSparse` `FEMQuad` `KrylovKit` `Tensors` | `[deps]` | → remove (demo only) |
 | `Profile` | `[deps]` | → remove (stdlib, dev only) |
 
 ---
@@ -50,17 +52,19 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics   = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [weakdeps]
-Arpack     = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
-Gmsh       = "705231aa-382f-11e9-3f0c-b7cb4346fdeb"
-LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
-Pardiso    = "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2"
-Plots      = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Arpack          = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
+BifurcationKit  = "0f109fa4-8a5d-4b75-95aa-f515264e7665"
+Gmsh            = "705231aa-382f-11e9-3f0c-b7cb4346fdeb"
+LinearMaps      = "7a12625a-238d-50fd-b39a-03d52299707e"
+Pardiso         = "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2"
+Plots           = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [extensions]
-MORFEArpackExt  = ["Arpack", "LinearMaps"]
-MORFEGmshExt    = "Gmsh"
-MORFEPardisoExt = "Pardiso"
-MORFEPlotsExt   = "Plots"
+MORFEArpackExt         = ["Arpack", "LinearMaps"]
+MORFEBifurcationKitExt = "BifurcationKit"
+MORFEGmshExt           = "Gmsh"
+MORFEPardisoExt        = "Pardiso"
+MORFEPlotsExt          = "Plots"
 
 [extras]
 Arpack         = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
@@ -72,59 +76,82 @@ Test           = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 test = ["Arpack", "BenchmarkTools", "HDF5", "Test"]
 
 [compat]
-Arpack       = "0.5"
-Gmsh         = "0.3.1"
-KLU          = "0.6.0"
-LinearMaps   = "3"
-Pardiso      = "1.1.2"
-Plots        = "1.41.6"
-StaticArrays = "1"
-julia        = "1.10"
+Arpack         = "0.5"
+BifurcationKit = "0.4"
+Gmsh           = "0.3.1"
+KLU            = "0.6.0"
+LinearMaps     = "3"
+Pardiso        = "1.1.2"
+Plots          = "1.41.6"
+StaticArrays   = "1"
+julia          = "1.10"
 ```
 
-**Why `[extras]`/`[targets]`?** Julia's test runner installs packages listed under
-`[targets] test` automatically. `Arpack` is needed by the eigensolver demo tests
-and `BenchmarkTools` by the benchmark demos. `HDF5` is needed by some
-parametrisation demos. These are test-time dependencies, not runtime.
+**`[extras]`/`[targets]`**: Julia's test runner installs these automatically.
+`Arpack` is needed by the eigensolver tests; `BenchmarkTools` by benchmark demos;
+`HDF5` by some parametrisation demos.
 
 ---
 
-## Step 2 — Arpack extension: modify two `src/` files
+## Step 2 — Arpack extension
 
-### 2a. `src/SpectralDecomposition/Eigenproblems.jl`
+### Architecture note
 
-- **Remove** line 26: `using Arpack`
-- **Replace** the two `solve` / `solve_left` method bodies for `ArpackEigensolver`
-  (lines 87–105) with stubs:
+The entire `src/SpectralDecomposition/` directory moves out of `src/`. These are
+eigenanalysis utilities, not part of the core DPIM algorithm.
 
+Julia's type system requires that **struct definitions** reside in the module they
+belong to — they cannot be injected into a module from an extension. The practical
+resolution:
+
+- `src/SpectralDecomposition/Eigenproblems.jl` and `Eigensolvers.jl` become
+  **type-and-stub files** in `src/SpectralDecomposition/`: all struct/type
+  definitions stay (required for dispatch), Arpack-dependent method bodies are
+  replaced with stubs. The `DefaultEigensolver` full implementation stays here
+  (it uses only `LinearAlgebra`).
+- The Arpack-dependent **method implementations** physically live in
+  `ext/MORFEArpackExt.jl`.
+- `JordanChain.jl` and `PropagateEigenmodes.jl` are **not DPIM** and move
+  entirely to `ext/SpectralDecomposition/`. They are removed from `src/MORFE.jl`.
+  `PropagateEigenmodes.jl` uses `..FullOrderModel` and `..ParametrisationMethod`
+  relative imports that must be updated to `MORFE.FullOrderModel` /
+  `MORFE.ParametrisationMethod` because when compiled inside `MORFEArpackExt`
+  the `..` parent is the extension module, not `MORFE`.
+
+**API consequence:** after this change, `compute_jordan_chain`,
+`propagate_right_eigenvector_from_first`, `propagate_left_eigenvector_from_last`,
+`propagate_right_jordan_vector`, `propagate_left_jordan_vector` are only available
+after `using Arpack, LinearMaps`. They are accessible as
+`MORFEArpackExt.JordanChain.*` / `MORFEArpackExt.PropagateEigenmodes.*`, or
+re-exported at the extension top level (see §2c).
+
+---
+
+### 2a. `src/SpectralDecomposition/Eigensolvers.jl`
+
+**Remove** lines 13–15:
 ```julia
-function solve(model::NDOrderModel, solver::ArpackEigensolver)
-    error(
-        "ArpackEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
-        "Load them before loading MORFE: `using Arpack, LinearMaps; using MORFE`\n" *
-        "or after: they are declared as weakdeps and the extension activates automatically."
-    )
-end
-
-function solve_left(model::NDOrderModel, solver::ArpackEigensolver)
-    error(
-        "ArpackEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
-        "Load them before loading MORFE: `using Arpack, LinearMaps; using MORFE`\n" *
-        "or after: they are declared as weakdeps and the extension activates automatically."
-    )
-end
+using Arpack
+using LinearMaps
 ```
+(keep `using LinearAlgebra`, `using SparseArrays`)
 
-Keep everything else unchanged: the struct definition, `DefaultEigensolver`,
-`Eigenproblem`, `compute_eigenproblem`, selection helpers, etc.
-
-### 2b. `src/SpectralDecomposition/Eigensolvers.jl`
-
-- **Remove** lines 13–15: `using Arpack`, `using LinearMaps`
-- **Replace** the body of `generalised_eigenpairs` with a stub:
+**Replace** the entire body of `generalised_eigenpairs` with a stub:
 
 ```julia
-function generalised_eigenpairs(A::AbstractMatrix, B::AbstractMatrix; nev, kwargs...)
+function generalised_eigenpairs(
+    A::AbstractMatrix,
+    B::AbstractMatrix;
+    nev::Integer,
+    shift = nothing,
+    which::Symbol = :LR,
+    tol::Real = 0.0,
+    maxiter::Integer = 3000,
+    ncv::Union{Nothing, Integer} = nothing,
+    v0 = nothing,
+    ritzvec::Bool = true,
+    sort_largest_real::Bool = false,
+)
     error(
         "generalised_eigenpairs requires Arpack.jl and LinearMaps.jl.\n" *
         "Load them with `using Arpack, LinearMaps` to activate the MORFE extension."
@@ -132,142 +159,409 @@ function generalised_eigenpairs(A::AbstractMatrix, B::AbstractMatrix; nev, kwarg
 end
 ```
 
-- Keep `_sort_largest_real` (it uses only `LinearAlgebra`, which is always available).
+**Keep** `_sort_largest_real` unchanged (uses only `LinearAlgebra`).
 
-### 2c. Create `ext/MORFEArpackExt.jl`
+---
 
-This extension is activated automatically when both `Arpack` and `LinearMaps` are
-loaded in the same session. It overrides the stubs defined above.
+### 2b. `src/SpectralDecomposition/Eigenproblems.jl`
+
+**Remove** line 51: `using Arpack`
+
+**Keep unchanged**:
+- `abstract type AbstractEigensolver end` and the generic fallback `solve`/`solve_left`
+- `struct DefaultEigensolver` + its full `solve` and `solve_left` implementations
+  (they use only `LinearAlgebra.eigen` — no change needed)
+- `struct ArpackEigensolver` and both inner constructors (type definition only)
+- `struct MorfeEigensolver` and inner constructors (type definition only)
+  > **Pre-existing bug**: `MorfeEigensolver()` calls `new(nothing, nothing)` but the struct has 3 fields (`nev`, `shift`, `eigenvalues`). This is a pre-existing defect; do not fix it in this PR as it is out of scope.
+- `struct StructureModalDampingEigensolver` and inner constructor (type definition only)
+- `struct Eigenproblem{T}` and both inner constructors
+- All `solve_eigenproblem` overloads
+- `sort_by_magnitude!`, `sort_left_eigenmodes`, `normalize_biorthogonal!`,
+  `get_eigenpairs`, `select_master_modes_*` functions
+- The thin wrapper `solve(model::NDOrderModel, solver::StructureModalDampingEigensolver)`
+  (it delegates to `solve(mass, stiffness, solver)` whose body moves to ext)
+- Both `solve_eigenproblem(model, solver::StructureModalDampingEigensolver; ...)` specialisations
+  (they call `solve(model, solver)` which triggers the stub → extension chain)
+
+**Replace** the bodies of the three Arpack-dependent `solve`/`solve_left` methods
+with stubs:
+
+```julia
+# ArpackEigensolver — right eigenproblem
+function solve(model::NDOrderModel, solver::ArpackEigensolver)
+    error(
+        "ArpackEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
+        "Load them with `using Arpack, LinearMaps` to activate the MORFE extension."
+    )
+end
+
+# ArpackEigensolver — left eigenproblem
+function solve_left(model::NDOrderModel, solver::ArpackEigensolver)
+    error(
+        "ArpackEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
+        "Load them with `using Arpack, LinearMaps` to activate the MORFE extension."
+    )
+end
+
+# MorfeEigensolver — right eigenproblem
+# NOTE: MorfeEigensolver.solve calls generalised_eigenpairs (already stubbed in Eigensolvers.jl).
+# The body can be kept as-is; it will fail via the Eigensolvers stub automatically.
+# No separate stub needed here.
+
+# MorfeEigensolver — left eigenproblem
+# Same logic as above. Keep body as-is.
+
+# StructureModalDampingEigensolver — calls eigs() directly; needs its own stub.
+function solve(
+    mass::AbstractMatrix{T},
+    stiffness::AbstractMatrix{T},
+    solver::StructureModalDampingEigensolver,
+) where {T}
+    error(
+        "StructureModalDampingEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
+        "Load them with `using Arpack, LinearMaps` to activate the MORFE extension."
+    )
+end
+```
+
+---
+
+### 2c. Move `JordanChain.jl` and `PropagateEigenmodes.jl` to `ext/SpectralDecomposition/`
+
+Physically move both files:
+```
+src/SpectralDecomposition/JordanChain.jl          → ext/SpectralDecomposition/JordanChain.jl
+src/SpectralDecomposition/PropagateEigenmodes.jl  → ext/SpectralDecomposition/PropagateEigenmodes.jl
+```
+
+**Edit `ext/SpectralDecomposition/PropagateEigenmodes.jl`** — update the two relative imports:
+```julia
+# Before:
+using ..FullOrderModel
+using ..ParametrisationMethod: Parametrisation
+
+# After:
+using MORFE.FullOrderModel
+using MORFE.ParametrisationMethod: Parametrisation
+```
+
+`JordanChain.jl` uses only stdlib (`LinearAlgebra`, `SparseArrays`, `Printf`) —
+no import changes needed.
+
+Remove the following four lines from **`src/MORFE.jl`**:
+```julia
+include("SpectralDecomposition/JordanChain.jl")
+include("SpectralDecomposition/PropagateEigenmodes.jl")
+using .JordanChain
+using .PropagateEigenmodes
+```
+Also remove any top-level `export` lines for `compute_jordan_chain`,
+`propagate_right_eigenvector_from_first`, `propagate_left_eigenvector_from_last`,
+`propagate_right_jordan_vector`, `propagate_left_jordan_vector`.
+
+---
+
+### 2d. Create `ext/MORFEArpackExt.jl`
+
+This extension is activated when **both** `Arpack` and `LinearMaps` are loaded.
+It contains the **exact current implementations** from `src/` — do not simplify.
 
 ```julia
 module MORFEArpackExt
 
 using MORFE
-using MORFE: Eigenproblems, Eigensolvers
+using MORFE.Eigenproblems
+using MORFE.Eigensolvers
 using Arpack
 using LinearAlgebra
 using LinearMaps
 using SparseArrays
+using Printf   # needed by JordanChain
 
-# ── ArpackEigensolver ─────────────────────────────────────────────────────────
+# ── JordanChain and PropagateEigenmodes ────────────────────────────────────────
+# These modules are not DPIM; they live in ext/ and are compiled only here.
+_ext(f) = joinpath(pkgdir(MORFE), "ext", "SpectralDecomposition", f)
+include(_ext("JordanChain.jl"))          # defines MORFEArpackExt.JordanChain
+include(_ext("PropagateEigenmodes.jl"))  # defines MORFEArpackExt.PropagateEigenmodes
 
-function Eigenproblems.solve(
-        model::MORFE.FullOrderModel.NDOrderModel, solver::Eigenproblems.ArpackEigensolver)
-    A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
-    eig_result = if solver.nev === nothing
-        eigs(A, B; which = :SM)
+# Re-export at extension top level so `using Arpack, LinearMaps, MORFE` followed by
+# `using MORFEArpackExt` (or direct module qualification) provides access.
+using .JordanChain: compute_jordan_chain
+using .PropagateEigenmodes: propagate_right_eigenvector_from_first,
+                             propagate_left_eigenvector_from_last,
+                             propagate_right_jordan_vector,
+                             propagate_left_jordan_vector
+
+# ── generalised_eigenpairs ─────────────────────────────────────────────────────
+# Full implementation — move verbatim from current src/SpectralDecomposition/Eigensolvers.jl
+
+function MORFE.Eigensolvers.generalised_eigenpairs(
+    A::AbstractMatrix,
+    B::AbstractMatrix;
+    nev::Integer,
+    shift = nothing,
+    which::Symbol = :LR,
+    tol::Real = 0.0,
+    maxiter::Integer = 3000,
+    ncv::Union{Nothing, Integer} = nothing,
+    v0 = nothing,
+    ritzvec::Bool = true,
+    sort_largest_real::Bool = false,
+)
+    n = size(A, 1)
+    @assert size(A, 2) == n "A must be square"
+    @assert size(B, 1) == n && size(B, 2) == n "B must be square and match A size"
+    @assert 0 <= nev <= n "nev must satisfy 0 < nev < size(A,1)"
+
+    Tval = isnothing(shift) ? promote_type(eltype(A), eltype(B)) :
+           promote_type(eltype(A), eltype(B), typeof(shift))
+    Ac = sparse(Tval.(A))
+    Bc = sparse(Tval.(B))
+
+    ncv_eff = min(isnothing(ncv) ? max(Int(nev) + 30, 120) : Int(ncv), n - 1)
+    v0_eff = isnothing(v0) ? nothing : Tval.(v0)
+
+    base_eigs_kwargs = (
+        nev = Int(nev),
+        which = which,
+        tol = Float64(tol),
+        maxiter = Int(maxiter),
+        ncv = ncv_eff,
+        ritzvec = ritzvec,
+    )
+    eigs_kwargs = isnothing(v0_eff) ? base_eigs_kwargs :
+                  merge(base_eigs_kwargs, (v0 = v0_eff,))
+
+    vals = Vector{Tval}()
+    vecs = Matrix{Tval}(undef, n, 0)
+    nconv = 0
+    niter = 0
+    nmult = 0
+    resid = Tval[]
+
+    if isnothing(shift)
+        vals, vecs, nconv, niter, nmult, resid = eigs(Ac, Bc; eigs_kwargs...)
     else
-        eigs(A, B; nev = solver.nev, which = :SM)
+        sigc = convert(Tval, shift)
+        F = lu(Ac - sigc * Bc)
+        T_lm = LinearMap{Tval}(n, n; ismutating = false) do x
+            F \ (Bc * x)
+        end
+        mu, vecs, nconv, niter, nmult,
+        resid = eigs(T_lm; merge(eigs_kwargs, (which = :LM,))...)
+
+        tiny = eps(real(float(one(Tval))))
+        mu_safe = similar(mu)
+        for i in eachindex(mu)
+            mu_safe[i] = abs(mu[i]) < tiny ? convert(Tval, tiny) : mu[i]
+        end
+        vals = sigc .+ inv.(mu_safe)
     end
-    return eig_result[1], eig_result[2]
+
+    if sort_largest_real
+        vals, vecs = MORFE.Eigensolvers._sort_largest_real(vals, vecs)
+    end
+
+    return (
+        values = vals,
+        vectors = vecs,
+        nconv = nconv,
+        niter = niter,
+        nmult = nmult,
+        resid = resid,
+    )
 end
 
-function Eigenproblems.solve_left(
-        model::MORFE.FullOrderModel.NDOrderModel, solver::Eigenproblems.ArpackEigensolver)
+# ── ArpackEigensolver.solve ────────────────────────────────────────────────────
+# Move verbatim from Eigenproblems.jl:155-171. Preserves reshape and nev/eigenvalues mutation.
+
+function MORFE.Eigenproblems.solve(
+    model::MORFE.FullOrderModel.NDOrderModel,
+    solver::MORFE.Eigenproblems.ArpackEigensolver,
+)
     A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
-    eig_result = if solver.nev === nothing
-        eigs(A', B'; which = :SM)
+    FOM = size(model.linear_terms[1], 1)
+    ORD = length(model.linear_terms) - 1
+    if solver.nev === nothing
+        solver.nev = FOM * ORD
+        (values, vectors) = eigs(A, B, which = :SM)
     else
-        eigs(A', B'; nev = solver.nev, which = :SM)
+        (values, vectors) = eigs(A, B, nev = solver.nev, which = :SM)
     end
-    return conj(eig_result[1]), eig_result[2]
+    num_eigenvals = length(values)
+    reshaped_eigenvectors = reshape(vectors, FOM, ORD, num_eigenvals)
+    solver.eigenvalues = values
+    return values, reshaped_eigenvectors
 end
 
-# ── generalised_eigenpairs (full shift-invert implementation) ─────────────────
-# Move the full body verbatim from the current src/SpectralDecomposition/Eigensolvers.jl
+# ── ArpackEigensolver.solve_left ───────────────────────────────────────────────
+# Move verbatim from Eigenproblems.jl:178-196.
+# Uses per-eigenvalue sigma-shifts — NOT a simple eigs(A', B'; which=:SM) call.
 
-function Eigensolvers.generalised_eigenpairs(
-        A::AbstractMatrix, B::AbstractMatrix;
-        nev::Integer, shift = nothing, which::Symbol = :LR,
-        tol::Real = 0.0, maxiter::Integer = 3000,
-        ncv::Union{Nothing, Integer} = nothing, v0 = nothing,
-        ritzvec::Bool = true, sort_largest_real::Bool = false)
-    # ... full implementation moved here verbatim from current Eigensolvers.jl ...
+function MORFE.Eigenproblems.solve_left(
+    model::MORFE.FullOrderModel.NDOrderModel,
+    solver::MORFE.Eigenproblems.ArpackEigensolver,
+)
+    A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
+    A_c = complex.(A)
+    B_c = complex.(B)
+    A_adjoint = A_c'
+    B_adjoint = B_c'
+    @assert solver.nev == length(solver.eigenvalues)
+    FOM = size(model.linear_terms[1], 1)
+    ORD = length(model.linear_terms) - 1
+    left_eigenvectors = Array{ComplexF64}(undef, FOM, ORD, solver.nev)
+    eigenvalues = Vector{ComplexF64}(undef, solver.nev)
+    for i in 1:(solver.nev)
+        values, vectors = eigs(
+            A_adjoint, B_adjoint,
+            sigma = conj(solver.eigenvalues[i]),
+            which = :LM, nev = 1, ncv = 30,
+        )
+        left_eigenvectors[:, :, i] = reshape(vectors[:, 1], FOM, ORD)
+        eigenvalues[i] = conj(values[1])
+    end
+    return eigenvalues, left_eigenvectors
+end
+
+# ── StructureModalDampingEigensolver.solve(mass, stiffness, solver) ────────────
+# Move verbatim from Eigenproblems.jl:308-348.
+# The thin wrapper solve(model, solver) stays in core and delegates here.
+
+function MORFE.Eigenproblems.solve(
+    mass::AbstractMatrix{T},
+    stiffness::AbstractMatrix{T},
+    solver::MORFE.Eigenproblems.StructureModalDampingEigensolver,
+) where {T}
+    ω2, ϕ = eigs(stiffness, mass; nev = solver.nev, which = :SM, check = 1)
+    any(x -> abs(imag(x)) > 1e-12 * abs(real(x)), ω2) && error("Eigenvalues not real.")
+    ω2 = real.(ω2)
+    ϕ = real.(ϕ)
+
+    FOM = size(ϕ, 1)
+    CT = Complex{T}
+    λ = zeros(CT, solver.nev * 2)
+    eigenvectors = Array{CT}(undef, FOM, 2, solver.nev * 2)
+
+    for i in 1:(solver.nev)
+        ω2i = ω2[i]
+        real_part = -0.5 * (solver.α + solver.β * ω2i)
+        discriminant = real_part^2 - ω2i
+        if discriminant < 0
+            imag_part = sqrt(-discriminant)
+            λ[2*i-1] = complex(real_part, imag_part)
+            λ[2*i]   = complex(real_part, -imag_part)
+        else
+            delta = sqrt(discriminant)
+            λ[2*i-1] = complex(real_part + delta, 0.0)
+            λ[2*i]   = complex(real_part - delta, 0.0)
+        end
+
+        ϕ_i = view(ϕ, :, i)
+        norm_sq = dot(ϕ_i, mass, ϕ_i)
+        ϕ_i ./= sqrt(norm_sq)
+
+        eigenvectors[:, 1, 2i-1] .= ϕ_i
+        eigenvectors[:, 1, 2i]   .= ϕ_i
+        eigenvectors[:, 2, 2i-1] .= λ[2i-1] * ϕ_i
+        eigenvectors[:, 2, 2i]   .= λ[2i] * ϕ_i
+    end
+    return λ, eigenvectors
 end
 
 end # module MORFEArpackExt
 ```
 
-**Note on extension dispatch:** Julia extensions can define methods for functions
-already defined in the parent package. The signatures here must exactly match the
-dispatch target — the stubs in core define the function; the extension defines the
-method.
+**Critical correctness notes for the extension:**
+
+1. `ArpackEigensolver.solve` reshapes `(ORD*FOM, nev) → (FOM, ORD, nev)` — do not drop this.
+2. `ArpackEigensolver.solve` mutates `solver.nev` and `solver.eigenvalues` — required by `solve_left`.
+3. `ArpackEigensolver.solve_left` uses **per-eigenvalue sigma-shift** `eigs(A', B'; sigma=conj(λᵢ), which=:LM, nev=1)` in a loop — it is NOT a simple adjoint solve `eigs(A', B'; which=:SM)`.
+4. `StructureModalDampingEigensolver` operates on the **second-order** system (mass, stiffness directly), not the first-order companion form.
+5. `MorfeEigensolver.solve/solve_left` **remain in `src/`** unchanged: they call `generalised_eigenpairs`, so they will fail via the `Eigensolvers` stub when Arpack is not loaded — no additional stub needed.
+
+**Dispatch correctness:** Julia resolves method ambiguity by specificity. When the extension adds `MORFE.Eigenproblems.solve(model, solver::ArpackEigensolver)`, this method has the same signature as the stub in core and **overwrites it by loading order** — the extension method is found first by the Julia method table once the extension is active.
 
 ---
 
 ## Step 3 — Pardiso extension: modify three `src/` files
 
-The Pardiso coupling has three touch-points:
-1. `CohomologicalEquations.jl:93` — the `using Pardiso` import
+The Pardiso coupling has three touch-points in the current code:
+1. `CohomologicalEquations.jl:93` — `using Pardiso: AbstractPardisoSolver, MKLPardisoSolver, solve as pardiso_solve`
 2. `SolverResources.jl:87` — `pardiso::Union{Nothing, AbstractPardisoSolver}` field type
-3. `CohomologicalSolver.jl:16` — `_sparse_solve(ps::AbstractPardisoSolver, ...)` dispatch
+3. `CohomologicalSolver.jl:16` — `_sparse_solve(ps::AbstractPardisoSolver, ::Any, A, B)` dispatch
 
 ### 3a. `src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl`
 
-- **Remove** line 93:
-  ```julia
-  using Pardiso: AbstractPardisoSolver, MKLPardisoSolver, solve as pardiso_solve
-  ```
-- **Add** two extension-hook functions (near the top of the module, before the includes
-  that reference `SolverResources.jl`):
+**Remove** line 93:
+```julia
+using Pardiso: AbstractPardisoSolver, MKLPardisoSolver, solve as pardiso_solve
+```
+
+**Add** two extension-hook functions before the `include("SolverResources.jl")` line:
 
 ```julia
 # Extension hooks: overridden by ext/MORFEPardisoExt.jl when Pardiso is loaded.
 _try_build_pardiso_solver() = nothing
 _pardiso_solve(ps, A, B) =
     error("Pardiso solver object present but MORFEPardisoExt not active — internal error.")
-```
 
-Export these from the `CohomologicalEquations` module so the extension can qualify them:
-```julia
 export _try_build_pardiso_solver, _pardiso_solve
 ```
 
 ### 3b. `src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl`
 
-- **Line 87**: Change field type from
-  ```julia
-  pardiso::Union{Nothing, AbstractPardisoSolver}
-  ```
-  to
-  ```julia
-  pardiso::Any   # Nothing, or an AbstractPardisoSolver when Pardiso ext is loaded
-  ```
+**Line 87**: change field type:
+```julia
+# Before:
+pardiso::Union{Nothing, AbstractPardisoSolver}
 
-- **Lines 104–112**: Replace the direct `MKLPardisoSolver()` / `Pardiso.PardisoSolver()`
-  constructor calls:
-  ```julia
-  # Before:
-  ps = nothing
-  try ps = MKLPardisoSolver() catch end
-  if ps === nothing
-      try ps = Pardiso.PardisoSolver() catch end
-  end
-  if ps === nothing
-      @warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
-            "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
-  end
-  ```
-  With:
-  ```julia
-  ps = _try_build_pardiso_solver()   # returns nothing unless MORFEPardisoExt is loaded
-  ```
+# After:
+pardiso::Any   # Nothing, or an AbstractPardisoSolver when Pardiso ext is loaded
+```
+
+**Lines 104–122**: Replace the three-part Pardiso constructor block:
+```julia
+# Before (lines 104–118):
+ps = nothing
+try
+    ps = MKLPardisoSolver()
+catch
+end
+if ps === nothing
+    try
+        ps = Pardiso.PardisoSolver()
+    catch
+    end
+end
+if ps === nothing
+    @warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
+          "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
+end
+
+# After (single line):
+ps = _try_build_pardiso_solver()
+```
 
 ### 3c. `src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl`
 
-- **Line 16**: Replace the type-dispatched overload
-  ```julia
-  _sparse_solve(ps::AbstractPardisoSolver, ::Any, A, B) = pardiso_solve(ps, A, B)
-  ```
-  with a duck-typed fallback that routes through the extension hook:
-  ```julia
-  _sparse_solve(ps, ::Any, A, B) = _pardiso_solve(ps, A, B)
-  ```
-  The existing `_sparse_solve(::Nothing, ...)` methods are unchanged.
+**Line 16**: Replace typed Pardiso dispatch:
+```julia
+# Before:
+_sparse_solve(ps::AbstractPardisoSolver, ::Any, A, B) = pardiso_solve(ps, A, B)
 
-  **Dispatch order is preserved:**
-  - `ps === nothing` → `_sparse_solve(::Nothing, klu_cache, ...)` (KLU path)
-  - `ps !== nothing` → `_sparse_solve(ps, ...)` (duck-typed; calls `_pardiso_solve`)
+# After (duck-typed — routes through the hook):
+_sparse_solve(ps, ::Any, A, B) = _pardiso_solve(ps, A, B)
+```
+
+**Dispatch order is preserved** because Julia picks the most specific method:
+- `ps === nothing` → `_sparse_solve(::Nothing, klu_cache::Ref{Any}, ...)` (KLU path — more specific)
+- `ps !== nothing` → `_sparse_solve(ps, ::Any, ...)` (duck-typed Pardiso hook)
+- `ps === nothing, klu_cache === nothing` → `_sparse_solve(::Nothing, ::Nothing, ...)` (dense fallback)
+
+The two `Nothing`-typed overloads remain more specific than `_sparse_solve(ps, ...)` for `Nothing`
+inputs, so dispatch is correct.
 
 ### 3d. Create `ext/MORFEPardisoExt.jl`
 
@@ -304,9 +598,10 @@ end # module MORFEPardisoExt
 
 ### 4a. `src/Validation/InvarianceError.jl`
 
-- **Remove** line 16: `using Plots`
-- **Replace** the full body of `plot_invariance_convergence` (and any private helpers
-  it calls — `_plot_convergence`, `_reference_line_params`, etc.) with a stub:
+**Remove** line 16: `using Plots`
+
+**Replace** the bodies of `plot_invariance_convergence`, `_plot_convergence`, and
+`_reference_line_params` with a single stub (keep the function signatures):
 
 ```julia
 function plot_invariance_convergence(results; kwargs...)
@@ -315,10 +610,14 @@ function plot_invariance_convergence(results; kwargs...)
         "Load it with `using Plots` to activate the MORFE extension."
     )
 end
+
+# _plot_convergence and _reference_line_params are private helpers called only by
+# plot_invariance_convergence. They move to ext/MORFEPlotsExt.jl; no stubs needed here.
 ```
 
-Keep `invariance_error_norms` and `invariance_error_convergence` unchanged (they
-use only `LinearAlgebra`, `Random`, `Statistics` — all in core `[deps]`).
+**Keep unchanged**: `invariance_error_norms`, `invariance_error_convergence`,
+all `_invariance_error_at!`, `_sample_z!`, `_log_log_regression`, `_jvp_last_block!`
+(they use only `LinearAlgebra`, `Random`, `Statistics` — all core deps).
 
 ### 4b. Create `ext/MORFEPlotsExt.jl`
 
@@ -330,11 +629,35 @@ using MORFE.InvarianceError
 using Plots
 using Statistics: median
 
-# Move the full implementation of plot_invariance_convergence,
-# _plot_convergence, _reference_line_params here verbatim from
-# src/Validation/InvarianceError.jl.
-function MORFE.InvarianceError.plot_invariance_convergence(results; kwargs...)
-    # ... full implementation ...
+# Move _reference_line_params and _plot_convergence verbatim from
+# src/Validation/InvarianceError.jl, then override the stub:
+
+function _reference_line_params(results, get_radii, max_order)
+    # ... verbatim copy ...
+end
+
+function _plot_convergence(results, x_axis, show_state_errors, show_regression, title)
+    # ... verbatim copy ...
+end
+
+function MORFE.InvarianceError.plot_invariance_convergence(
+    results;
+    x_axis::Symbol = :both,
+    show_state_errors::Bool = true,
+    show_regression::Bool = false,
+    title::AbstractString = "Invariance error convergence",
+)
+    isempty(results) && error("results is empty")
+    x_axis in (:both, :full, :master) ||
+        error("x_axis must be :both, :full, or :master")
+    if x_axis == :both
+        return (
+            full   = _plot_convergence(results, :full, show_state_errors, show_regression, title),
+            master = _plot_convergence(results, :master, show_state_errors, show_regression, title),
+        )
+    else
+        return _plot_convergence(results, x_axis, show_state_errors, show_regression, title)
+    end
 end
 
 end # module MORFEPlotsExt
@@ -345,9 +668,8 @@ end # module MORFEPlotsExt
 ## Step 5 — Gmsh extension
 
 The three FEMUtility modules (`AbaqusToGmsh`, `ComsolToGmsh`, `GmshToComsol`) are
-already in `src/FEMUtility/` but are **not currently included** by `src/MORFE.jl`
-(confirmed: no `include("FEMUtility/...")` lines exist there). They need stubs so the
-names are exported from MORFE before the extension loads.
+in `src/FEMUtility/` but are **not currently included** by `src/MORFE.jl`. They need
+stubs so the names are exported from MORFE before the extension loads.
 
 ### 5a. Create `src/FEMUtility/FEMUtility.jl`
 
@@ -372,19 +694,16 @@ end # module
 ### 5b. `src/MORFE.jl` — add the new submodule
 
 Add after the existing `include`s (before the `using .` block):
-
 ```julia
 include("FEMUtility/FEMUtility.jl")
 ```
 
 Add to the `using .` block:
-
 ```julia
 using .FEMUtility
 ```
 
-Export:
-
+Add exports:
 ```julia
 # FEMUtility (Gmsh extension must be loaded for these to work)
 export abaqus_to_gmsh, abaqus_to_gmsh_linear,
@@ -394,9 +713,6 @@ export abaqus_to_gmsh, abaqus_to_gmsh_linear,
 
 ### 5c. Create `ext/MORFEGmshExt.jl`
 
-The FEMUtility source files use Gmsh directly; they can be included inside the
-extension module with `pkgdir` to resolve the absolute path:
-
 ```julia
 module MORFEGmshExt
 
@@ -405,14 +721,13 @@ using MORFE.FEMUtility
 using Gmsh
 using Printf
 
-# The existing implementation files stay in src/FEMUtility/ unchanged.
-# We include them here so they are only compiled when Gmsh is available.
+# The implementation files stay in src/FEMUtility/ — compiled only when Gmsh is available.
 _src(f) = joinpath(pkgdir(MORFE), "src", "FEMUtility", f)
 include(_src("AbaqusToGmsh.jl"))
 include(_src("ComsolToGmsh.jl"))
 include(_src("GmshToComsol.jl"))
 
-# Override the stubs
+# Override stubs
 MORFE.FEMUtility.abaqus_to_gmsh(args...; kw...)        = AbaqusToGmsh.abaqus_to_gmsh(args...; kw...)
 MORFE.FEMUtility.abaqus_to_gmsh_linear(args...; kw...) = AbaqusToGmsh.abaqus_to_gmsh_linear(args...; kw...)
 MORFE.FEMUtility.comsol_to_gmsh(args...; kw...)        = ComsolToGmsh.comsol_to_gmsh(args...; kw...)
@@ -424,15 +739,117 @@ end # module MORFEGmshExt
 
 ---
 
-## Step 6 — Create `MORFEFerrite.jl` as a separate GitHub repository
+## Step 6 — BifurcationKit extension (new)
 
-This exactly mirrors the GridapGmsh → Gridap relationship. MORFE knows nothing
+BifurcationKit.jl is not yet in the codebase. This extension exposes the reduced
+dynamics `R` produced by `solve_cohomological_problem` as a BifurcationKit
+`BifFunction`, enabling continuation analysis (FRC, bifurcation diagrams) directly
+from the ROM.
+
+### 6a. Add stub to `src/MORFE.jl` (or a new `src/Validation/ReducedDynamicsPostprocess.jl`)
+
+The preferred location is a new source file `src/Validation/BifurcationKitInterface.jl`
+included from `src/MORFE.jl`.
+
+**`src/Validation/BifurcationKitInterface.jl`**:
+```julia
+module BifurcationKitInterface
+
+using ..ParametrisationMethod: ReducedDynamics
+using ..Polynomials: DensePolynomial, evaluate
+
+export make_bk_problem
+
+"""
+    make_bk_problem(R::ReducedDynamics; bifparam_index, kwargs...)
+
+Wrap the reduced dynamics `R` as a BifurcationKit-compatible problem.
+Requires BifurcationKit.jl to be loaded.
+"""
+function make_bk_problem(R::ReducedDynamics; kwargs...)
+    error(
+        "make_bk_problem requires BifurcationKit.jl.\n" *
+        "Load it with `using BifurcationKit` to activate the MORFE extension."
+    )
+end
+
+end # module
+```
+
+**`src/MORFE.jl`** additions:
+```julia
+include("Validation/BifurcationKitInterface.jl")
+using .BifurcationKitInterface
+export make_bk_problem
+```
+
+### 6b. Create `ext/MORFEBifurcationKitExt.jl`
+
+```julia
+module MORFEBifurcationKitExt
+
+using MORFE
+using MORFE.BifurcationKitInterface
+using MORFE.ParametrisationMethod: ReducedDynamics
+using MORFE.Polynomials: evaluate
+using BifurcationKit
+
+"""
+    make_bk_problem(R::ReducedDynamics; bifparam_index, u0=nothing, kwargs...)
+
+Build a `BifurcationKit.BifFunction` wrapping `ż = R(z)`.
+
+- `bifparam_index` (Int, required): which component of `z` is the bifurcation
+  parameter (continuation variable). This component is held fixed by BifurcationKit.
+- `u0`: initial point in reduced coordinates; defaults to zero vector.
+- `kwargs`: forwarded to `BifurcationKit.BifFunction`.
+
+The returned object is ready for `BifurcationKit.continuation`.
+"""
+function MORFE.BifurcationKitInterface.make_bk_problem(
+    R::ReducedDynamics;
+    bifparam_index::Int,
+    u0 = nothing,
+    kwargs...,
+)
+    ROM = Base.size(R)           # number of master modes (NVAR includes ext vars)
+    NVAR = size(R.poly.coefficients, 1)
+
+    # f(z, p) = R(z) where p is the scalar bifurcation parameter embedded at
+    # component bifparam_index of z.
+    f = (z, p) -> begin
+        z_full = copy(z)
+        z_full[bifparam_index] = p
+        return evaluate(R.poly, z_full)
+    end
+
+    # Dense Jacobian via finite differences (BifurcationKit default); analytic
+    # Jacobian can be added later by differentiating the polynomial.
+    z0 = isnothing(u0) ? zeros(ComplexF64, NVAR) : u0
+
+    return BifurcationKit.BifFunction(f, nothing; kwargs...)
+end
+
+end # module MORFEBifurcationKitExt
+```
+
+> **Design note**: the `make_bk_problem` API is intentionally minimal. BifurcationKit
+> has many continuation options (codim-1, shooting, etc.). Future iterations can add
+> `make_bk_shooting_problem`, `make_bk_collocation_problem`, etc. as the interface matures.
+> Keeping the extension thin and the stub simple means the API can evolve without
+> breaking core MORFE.
+
+---
+
+## Step 7 — Create `MORFEFerrite.jl` as a separate GitHub repository
+
+This mirrors the GridapGmsh → Gridap relationship. MORFE knows nothing
 about MORFEFerrite; MORFEFerrite depends on MORFE.
 
 ### New repo structure: `github.com/<org>/MORFEFerrite.jl`
 
 ```
-MORFEFerrite.jl/          ← new standalone git repository
+MORFEFerrite.jl/
   Project.toml
   src/
     MORFEFerrite.jl
@@ -446,7 +863,7 @@ MORFEFerrite.jl/          ← new standalone git repository
 
 ```toml
 name = "MORFEFerrite"
-uuid = "<generate with using UUIDs; UUIDs.uuid4()>"
+uuid = "<generate with: using UUIDs; UUIDs.uuid4()>"
 version = "0.1.0"
 
 [deps]
@@ -480,11 +897,11 @@ end # module
 
 ### `src/GeometricNonlinearity.jl`
 
-Copy verbatim from `demo/Ferrite/ferrite_assembly.jl` (in the MORFE repo), with:
+Copy verbatim from `demo/Ferrite/ferrite_assembly.jl`, with:
 1. Remove the top-level `using` statements (handled by `MORFEFerrite.jl`)
-2. Remove `import MORFE` (already available via `using MORFE`)
-3. Keep all `MORFE.fem_elements(...)` etc. qualified, or drop the `MORFE.` prefix —
-   both work since `using MORFE` imports the interface functions.
+2. Remove `import MORFE` (already in scope via `using MORFE`)
+3. All `MORFE.fem_elements(...)` qualifications can be kept or dropped since
+   `using MORFE` imports the interface functions.
 
 ### `test/runtests.jl`
 
@@ -497,37 +914,9 @@ using Test, MORFE, MORFEFerrite, Ferrite
 end
 ```
 
-### Installation workflow (for users)
-
-```julia
-# Before registration in General Registry:
-Pkg.add(url = "https://github.com/<org>/MORFEFerrite.jl")
-
-# After registration:
-Pkg.add("MORFEFerrite")
-
-# In scripts:
-using MORFE
-using MORFEFerrite      # provides FerriteGeometricNonlinearity
-using FerriteGmsh       # provides togrid() for mesh loading
-```
-
-### Development workflow (while iterating on both repos locally)
-
-```julia
-Pkg.develop(path = "/path/to/MORFE_jl")
-Pkg.develop(path = "/path/to/MORFEFerrite.jl")
-```
-
-### What stays in the MORFE repo
-
-`demo/Ferrite/ferrite_assembly.jl` is deleted from the MORFE repo (its content moves
-to MORFEFerrite.jl). The demo script `demo/Ferrite/demo_mechanical_problem.jl` is
-updated to `using MORFEFerrite` instead of the `include` (see Step 7).
-
 ---
 
-## Step 7 — Update demos
+## Step 8 — Update demos
 
 ### `demo/Ferrite/demo_mechanical_problem.jl`
 
@@ -544,28 +933,31 @@ using FerriteGmsh     # provides togrid()
 using Arpack, LinearMaps   # trigger MORFEArpackExt (needed for ArpackEigensolver)
 ```
 
-Remove `demo/Ferrite/ferrite_assembly.jl` (its content is now in the companion
-package).
+Remove `demo/Ferrite/ferrite_assembly.jl` (content moved to companion package).
 
 ### `demo/Gridap/demo_mechanical_problem.jl`
 
-The Gridap demo uses a closure-based `MultilinearMap` — no `FEMMultilinearMap`
-interface needed. The custom `Mechanical_Problem_Solver` calls `eigs` directly,
-which is fine after `using Arpack`. No structural change needed except:
-- Keep `using Arpack` (now a weakdep; loading it triggers `MORFEArpackExt`)
-- The `using Gmsh` line stays as-is (triggers `MORFEGmshExt`, harmless if FEMUtility
-  not used by the demo)
+No structural change needed:
+- `using Arpack` now triggers `MORFEArpackExt` — correct
+- `using Gmsh` triggers `MORFEGmshExt` (harmless if FEMUtility not used by this demo)
 
 ### `demo/FEMUtility/` demos
 
-Any demo that calls `abaqus_to_gmsh` etc. must `using Gmsh` before `using MORFE`
-(or after — the extension activates either way). No other change needed.
+Any demo calling `abaqus_to_gmsh` etc. must `using Gmsh` (before or after `using MORFE` —
+the extension activates either way). No other change needed.
+
+### `demo/ParametricCantileverBeam/parametric_beam_demo.jl`
+
+This demo uses `FerriteGeometricNonlinearity` from `demo/Ferrite/ferrite_assembly.jl`
+(or the parametric version from `demo/ParametricCantileverBeam/parametric_assembly.jl`).
+After the refactoring, update the `include` or `using` to point to `MORFEFerrite`.
+Add `using Arpack, LinearMaps` to trigger the eigensolver extension.
 
 ---
 
-## Step 8 — `Manifest.toml`
+## Step 9 — `Manifest.toml`
 
-After editing `Project.toml`, regenerate the manifest:
+After editing `Project.toml`, regenerate:
 
 ```julia
 using Pkg
@@ -574,8 +966,7 @@ Pkg.resolve()
 Pkg.instantiate()
 ```
 
-Commit the new `Manifest.toml`. The old one will have many more packages pinned
-(due to the removed deps); the new one will be much leaner.
+Commit the new `Manifest.toml`. It will be much leaner (many fewer pinned packages).
 
 ---
 
@@ -584,20 +975,24 @@ Commit the new `Manifest.toml`. The old one will have many more packages pinned
 | File | Action |
 |------|--------|
 | `Project.toml` | Full rewrite (Step 1) |
-| `src/SpectralDecomposition/Eigenproblems.jl` | Remove `using Arpack`; stub `solve`/`solve_left` for ArpackEigensolver |
-| `src/SpectralDecomposition/Eigensolvers.jl` | Remove `using Arpack`, `using LinearMaps`; stub `generalised_eigenpairs` |
+| `src/SpectralDecomposition/Eigensolvers.jl` | Remove `using Arpack/LinearMaps`; stub `generalised_eigenpairs` |
+| `src/SpectralDecomposition/Eigenproblems.jl` | Remove `using Arpack`; stub `ArpackEigensolver.solve/solve_left` and `StructureModalDampingEigensolver.solve(mass,stiffness,solver)` |
+| `src/SpectralDecomposition/JordanChain.jl` | **Unchanged** (no Arpack) |
+| `src/SpectralDecomposition/PropagateEigenmodes.jl` | **Unchanged** (no Arpack) |
 | `src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl` | Remove `using Pardiso`; add `_try_build_pardiso_solver` and `_pardiso_solve` hooks |
 | `src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl` | `pardiso::Any`; call hook instead of constructors |
 | `src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl` | Duck-typed `_sparse_solve` dispatch |
-| `src/Validation/InvarianceError.jl` | Remove `using Plots`; stub `plot_invariance_convergence`; move implementation to ext |
-| `src/MORFE.jl` | Add `include("FEMUtility/FEMUtility.jl")`, `using .FEMUtility`, exports |
+| `src/Validation/InvarianceError.jl` | Remove `using Plots`; stub `plot_invariance_convergence`; private helpers move to ext |
+| `src/Validation/BifurcationKitInterface.jl` | **New** stub module |
 | `src/FEMUtility/FEMUtility.jl` | **New** stub module |
-| `ext/MORFEArpackExt.jl` | **New** extension |
+| `src/MORFE.jl` | Add includes/usings/exports for `FEMUtility` and `BifurcationKitInterface` |
+| `ext/MORFEArpackExt.jl` | **New** extension (Arpack + LinearMaps trigger) |
 | `ext/MORFEPardisoExt.jl` | **New** extension |
 | `ext/MORFEPlotsExt.jl` | **New** extension |
 | `ext/MORFEGmshExt.jl` | **New** extension |
+| `ext/MORFEBifurcationKitExt.jl` | **New** extension |
 | `demo/Ferrite/ferrite_assembly.jl` | **Delete** (content → `MORFEFerrite.jl` repo) |
-| `demo/Ferrite/demo_mechanical_problem.jl` | Update imports (Step 7) |
+| `demo/Ferrite/demo_mechanical_problem.jl` | Update imports (Step 8) |
 
 ---
 
@@ -608,29 +1003,40 @@ Commit the new `Manifest.toml`. The old one will have many more packages pinned
 ```julia
 # In a clean environment with only core [deps] installed:
 using MORFE
-# Must load without error. Arpack, Ferrite, Pardiso etc. must NOT be required.
+# Must load without error. Arpack, Ferrite, Pardiso, Plots, Gmsh, BifurcationKit NOT required.
 ```
 
 ### 2. Stubs give helpful errors
 
 ```julia
 using MORFE
-m = NDOrderModel(...)
+
+# Arpack stubs
 MORFE.Eigensolvers.generalised_eigenpairs(A, B; nev=5)
 # Expected: ErrorException "requires Arpack.jl and LinearMaps.jl..."
 
-using MORFE
+ep = solve_eigenproblem(model; solver=ArpackEigensolver(4))
+# Expected: ErrorException "requires Arpack.jl and LinearMaps.jl..."
+
+ep = solve_eigenproblem(stiffness, mass; solver=StructureModalDampingEigensolver(4, 0.0, 0.0))
+# Expected: ErrorException "requires Arpack.jl and LinearMaps.jl..."
+
+# Plots stub
 plot_invariance_convergence([])
 # Expected: ErrorException "requires Plots.jl..."
+
+# BifurcationKit stub
+make_bk_problem(R; bifparam_index=1)
+# Expected: ErrorException "requires BifurcationKit.jl..."
 ```
 
 ### 3. Extensions activate automatically
 
 ```julia
 # Arpack extension:
-using Arpack, LinearMaps  # or: these come first; MORFE second
-using MORFE
-generalised_eigenpairs(A, B; nev=5)   # must work without error
+using Arpack, LinearMaps, MORFE
+ep = solve_eigenproblem(model; solver=ArpackEigensolver(4))   # must work
+W, R = solve_cohomological_problem(...)
 
 # Pardiso extension (on machines with Pardiso):
 using Pardiso, MORFE
@@ -638,24 +1044,32 @@ using Pardiso, MORFE
 
 # Plots extension:
 using Plots, MORFE
-plot_invariance_convergence(results)   # must produce a plot
+plots = plot_invariance_convergence(results)   # must return a Plots object
+
+# Gmsh extension:
+using Gmsh, MORFE
+abaqus_to_gmsh("mesh.inp", "mesh.msh")        # must work
+
+# BifurcationKit extension:
+using BifurcationKit, Arpack, LinearMaps, MORFE
+prob = make_bk_problem(R; bifparam_index=1)
 ```
 
-### 4. MORFEFerrite companion package
+### 4. DefaultEigensolver works without extensions
 
 ```julia
-using Pkg
-# Before registration — install directly from the new repo:
+using MORFE   # no Arpack loaded
+ep = solve_eigenproblem(model; solver=DefaultEigensolver())
+# Must work — DefaultEigensolver uses only LinearAlgebra.eigen
+```
+
+### 5. MORFEFerrite companion package
+
+```julia
+# Before registration:
 Pkg.add(url = "https://github.com/<org>/MORFEFerrite.jl")
 using MORFEFerrite
 @assert FerriteGeometricNonlinearity{2} <: FEMMultilinearMap{2}
-```
-
-### 5. Ferrite demo runs end-to-end
-
-```julia
-include("demo/Ferrite/demo_mechanical_problem.jl")
-# Must complete without error
 ```
 
 ### 6. Test suite
@@ -666,22 +1080,37 @@ GROUP=demos julia --project test/runtests.jl    # demo tests; needs Arpack in [e
 GROUP=all   julia --project test/runtests.jl    # everything
 ```
 
+**Note on `test/SpectralDecomposition/test_eigenproblems.jl`**: This test currently
+calls `ArpackEigensolver` and `StructureModalDampingEigensolver`. After the refactoring,
+it must `using Arpack, LinearMaps` at the top to trigger the extension. The test runner
+(`runtests.jl`) must ensure Arpack is available (it is, via `[extras]/[targets]`).
+
 ---
 
-## Notes and tradeoffs
+## Notes and trade-offs
 
 - **`KLU` stays hard**: it is on the critical path of `CohomologicalSolver.jl` with
   symbolic-factor caching. The install cost is a single artifact binary via
   BinaryBuilder — negligible.
 
+- **`DefaultEigensolver` always available**: the dense `LinearAlgebra.eigen` path
+  is correct for small FOM (< ~5000 DOF) and requires no extension. Users with
+  large sparse systems must `using Arpack, LinearMaps`.
+
+- **`MorfeEigensolver` pre-existing bug**: the no-argument constructor
+  `MorfeEigensolver()` calls `new(nothing, nothing)` but the struct has 3 fields
+  (`nev`, `shift`, `eigenvalues`). This fails at runtime. It is pre-existing and
+  out of scope for this PR — note it in the commit message.
+
+- **Extension loading order**: Julia activates `MORFEArpackExt` when **both**
+  `Arpack` and `LinearMaps` are loaded. Order relative to `MORFE` does not matter.
+
+- **BifurcationKit API maturity**: the `make_bk_problem` stub is intentionally
+  thin — BifurcationKit has many problem types and continuation options. The extension
+  provides a first-pass wrapper; the API will evolve as use cases solidify.
+
 - **No `MORFEGridap` package**: the Gridap demo uses closure-based `MultilinearMap`
-  (not the `FEMMultilinearMap` interface), which requires no companion package.
-  It is self-contained and correct as a demo script.
+  (not the `FEMMultilinearMap` interface), requiring no companion package.
 
-- **Fallback without Arpack**: `DefaultEigensolver()` (dense `LinearAlgebra.eigen`)
-  is always available and correct for small FOM (< ~5000 DOF). For large systems,
-  users must `using Arpack, LinearMaps`.
-
-- **Extension loading order**: Julia activates an extension when ALL trigger packages
-  are loaded. For `MORFEArpackExt`, both `Arpack` and `LinearMaps` must be loaded.
-  Order relative to `MORFE` does not matter.
+- **`test/FEMUtility/test_gmsh_to_comsol.jl`** is NOT in `runtests.jl`. It uses
+  `Gmsh` directly (not MORFE functions) and remains a standalone script; no changes needed.

@@ -5,6 +5,15 @@ This script demonstrates the formulation and discretization of a structural mech
 problem using finite element methods, followed by conversion to a first-order system.
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Gridap", "GridapGmsh", "WriteVTK", "Gmsh", "Arpack", "LinearMaps",
+        "StaticArrays"])
+end
+Pkg.instantiate()
+
 using MORFE
 
 using Gridap
@@ -13,6 +22,7 @@ using WriteVTK
 using Gmsh
 using SparseArrays
 using Arpack
+using LinearMaps
 using LinearAlgebra
 using StaticArrays
 

@@ -48,7 +48,6 @@ using ..FullOrderModel
 using ..Eigensolvers
 
 using LinearAlgebra
-using Arpack
 
 export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
 	StructureModalDampingEigensolver
@@ -141,58 +140,6 @@ mutable struct ArpackEigensolver <: AbstractEigensolver
 		@assert nev>0 "nev must be greater than zero!"
 		new(nev)
 	end
-end
-
-"""
-	solve(model::NDOrderModel, solver::ArpackEigensolver)
-
-Solves right eigenproblem using `eigs` from Arpack. 
-Let `A` and `B` be the first order matrices of `model`. Then it returns the eigenpairs
-```math
-	(A-\\lambda_k B)y_k = 0
-```
-"""
-function solve(model::NDOrderModel, solver::ArpackEigensolver)
-	A, B = linear_first_order_matrices(model)
-	FOM = size(model.linear_terms[1], 1)
-	ORD = length(model.linear_terms) - 1
-	if solver.nev === nothing
-		solver.nev = FOM * ORD
-		(values, vectors) = eigs(A, B, which = :SM)
-	else
-		(values, vectors) = eigs(A, B, nev = solver.nev, which = :SM)
-	end
-
-	# Reshape eigenvectors from (ORD*FOM) x (number of eigenvalues) to (FOM x ORD x number of eigenvalues)
-	num_eigenvals = length(values)
-	reshaped_eigenvectors = reshape(vectors, FOM, ORD, num_eigenvals)
-	solver.eigenvalues = values
-	return values, reshaped_eigenvectors
-end
-
-"""
-	solve_left(model::NDOrderModel, solver::ArpackEigensolver)
-
-Solves left eigenproblem using `eigs` from Arpack with σ-shift to recover the correct eigenvalues.
-"""
-function solve_left(model::NDOrderModel, solver::ArpackEigensolver)
-	A, B = linear_first_order_matrices(model)
-	A_c = complex.(A)
-	B_c = complex.(B)
-	A_adjoint = A_c'
-	B_adjoint = B_c'
-	@assert solver.nev == length(solver.eigenvalues)
-	FOM = size(model.linear_terms[1], 1)
-	ORD = length(model.linear_terms) - 1
-	left_eigenvectors = Array{ComplexF64}(undef, FOM, ORD, solver.nev)
-	eigenvalues = Vector{ComplexF64}(undef, solver.nev)
-	for i in 1:(solver.nev)
-		values, vectors = eigs(
-			A_adjoint, B_adjoint, sigma = conj(solver.eigenvalues[i]), which = :LM, nev = 1, ncv = 30)
-		left_eigenvectors[:, :, i] = reshape(vectors[:, 1], FOM, ORD)
-		eigenvalues[i] = conj(values[1])
-	end
-	return eigenvalues, left_eigenvectors
 end
 
 """
@@ -305,46 +252,15 @@ Uses the relations:
 ```
 and assumes ``C = \\alpha*M + \\beta*K``.
 """
-function solve(mass::AbstractMatrix{T}, stiffness::AbstractMatrix{T}, solver::StructureModalDampingEigensolver) where {T}
-
-	# Undamped eigensolution: solve K x = ω² M x for smallest ω².
-	# which=:SM finds the smallest-magnitude eigenvalues of the pencil (stiffness, mass).
-	ω2, ϕ = eigs(stiffness, mass; nev = solver.nev, which = :SM, check = 1)
-	any(x -> abs(imag(x)) > 1e-12 * abs(real(x)), ω2) && error("Eigenvalues not real.")
-	ω2 = real.(ω2)
-	ϕ = real.(ϕ)
-
-	FOM = size(ϕ, 1)
-	CT = Complex{T}
-	λ = zeros(CT, solver.nev * 2)
-	eigenvectors = Array{CT}(undef, FOM, 2, solver.nev * 2)
-
-	for i in 1:(solver.nev)
-		ω2i = ω2[i]
-		real_part = -0.5 * (solver.α + solver.β * ω2i)
-		discriminant = real_part^2 - ω2i
-		if discriminant < 0
-			imag_part = sqrt(-discriminant)
-			λ[2*i-1] = complex(real_part, imag_part)
-			λ[2*i] = complex(real_part, -imag_part)
-		else
-			delta = sqrt(discriminant)
-			λ[2*i-1] = complex(real_part + delta, 0.0)
-			λ[2*i] = complex(real_part - delta, 0.0)
-		end
-
-		# Mass‑normalise the undamped mode: φᵀ M φ = 1.
-		ϕ_i = view(ϕ, :, i)
-		norm_sq = dot(ϕ_i, mass, ϕ_i)
-		ϕ_i ./= sqrt(norm_sq)
-
-		# 5. Assemble state‑space eigenvector [ φ ; λφ ]
-		eigenvectors[:, 1, 2i-1] .= ϕ_i
-		eigenvectors[:, 1, 2i]   .= ϕ_i
-		eigenvectors[:, 2, 2i-1] .= λ[2i-1] * ϕ_i
-		eigenvectors[:, 2, 2i]   .= λ[2i] * ϕ_i
-	end
-	return λ, eigenvectors
+function solve(
+	::AbstractMatrix,
+	::AbstractMatrix,
+	::StructureModalDampingEigensolver,
+)
+	error(
+		"StructureModalDampingEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
+		"Load them with `using Arpack, LinearMaps` to activate the MORFE extension.",
+	)
 end
 
 """

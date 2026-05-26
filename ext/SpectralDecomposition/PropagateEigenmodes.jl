@@ -1,6 +1,6 @@
 """
-Module `PropagateEigenmodes` — propagate eigenvectors and Jordan vectors through
-the time-derivative structure of an `NDOrderModel`.
+Module `PropagateEigenmodes` — propagate eigenvectors through the time-derivative
+structure of an `NDOrderModel`.
 
 For an `ORD`-th order ODE the companion first-order system has state
 `x̃ = (x, ẋ, …, x^(ORD-1))`, so each eigenmode of the companion system is a
@@ -8,15 +8,17 @@ stacked vector.  This module extracts the physical-space eigenvector (the first 
 rows) and reconstructs the higher-order time-derivative slices that populate the
 `Parametrisation` coefficient tensor for `ORD > 1` systems.
 
-Four propagation functions are exported:
-`propagate_right_eigenvector_from_first`, `propagate_left_eigenvector_from_last`,
+Active functions:
+`propagate_right_eigenvector_from_first`, `propagate_left_eigenvector_from_last`.
+
+Dead code (not called anywhere, retained for potential future use):
 `propagate_right_jordan_vector`, `propagate_left_jordan_vector`.
 """
 module PropagateEigenmodes
 
 using LinearAlgebra
-using ..FullOrderModel
-using ..ParametrisationMethod: Parametrisation
+using MORFE.FullOrderModel
+using MORFE.ParametrisationMethod: Parametrisation
 
 export propagate_left_eigenvector_from_last, propagate_left_jordan_vector,
 	propagate_right_eigenvector_from_first, propagate_right_jordan_vector
@@ -60,6 +62,8 @@ end
 
 Fills the k‑th left Jordan vector (index) from the (k‑1)‑th vector (index‑1).
 Avoids temporary transposes and fixes a missing operator.
+
+NOTE: Dead code — not called from anywhere in the codebase.
 """
 function propagate_left_jordan_vector(
 	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
@@ -137,6 +141,8 @@ end
 
 Fills the k‑th right Jordan vector from the (k‑1)‑th vector.
 Fixes the recurrence bug: now uses column `j` (not `j+1`) on the right‑hand side.
+
+NOTE: Dead code — not called from anywhere in the codebase.
 """
 function propagate_right_jordan_vector(
 	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},

@@ -18,9 +18,16 @@ canonical beam_h27.{msh,mphtxt} files used by benchmark_ferrite.jl and the
 existing legacy benchmark.
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "Gmsh")
+    Pkg.add("Gmsh")
+end
+Pkg.instantiate()
+
 using Gmsh
 
-include(joinpath(@__DIR__, "../../src/FEMUtility/GmshToComsol.jl"))
+include(joinpath(@__DIR__, "../../ext/FEMUtility/GmshToComsol.jl"))
 using .GmshToComsol
 
 const _BEAM_L = 1000.0   # mm

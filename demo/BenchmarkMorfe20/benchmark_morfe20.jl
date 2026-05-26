@@ -3,24 +3,33 @@ Implementation of the MORFE module to reproduce and compare the system from Morf
 Different Morfe2.0 examples can be used by exchanging 'info_file' and 'mesh_file'.
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Arpack", "LinearMaps", "StaticArrays"])
+end
+Pkg.instantiate()
+
 using MORFE
-include("Morfe_2_0/Morfe_2_0.jl")
+include(joinpath(@__DIR__, "Morfe_2_0/Morfe_2_0.jl"))
 using .Morfe_2_0
 
 using LinearAlgebra
 using SparseArrays
 using StaticArrays
 using Arpack
+using LinearMaps
 using Profile
 # using ProfileView
 
 #Make info
 info = Infostruct()
-info_file = "beam_damp.jl"
+info_file = joinpath(@__DIR__, "beam_damp.jl")
 include(info_file)
 
 #Import mesh
-mesh_file = "./demo/BenchmarkMorfe20/beam.mphtxt"
+mesh_file = joinpath(@__DIR__, "beam.mphtxt")
 mesh = read_mesh(mesh_file, domains_list, materials_list, materials_dict,
 	boundaries_list, constrained_dof, bc_vals)
 

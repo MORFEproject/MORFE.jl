@@ -15,9 +15,18 @@ Run:
   julia --project demo/BenchmarkFerrite/test_forces.jl
 """
 
+import Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
+        "BenchmarkTools", "Gmsh"])
+end
+Pkg.instantiate()
+
 using MORFE
 using MORFE.MultilinearMaps: evaluate_term!
-using SparseArrays, LinearAlgebra, Arpack, StaticArrays, Ferrite, FerriteGmsh, Random
+using SparseArrays, LinearAlgebra, Arpack, LinearMaps, StaticArrays, Ferrite, FerriteGmsh, Random
 
 include(joinpath(@__DIR__, "../Ferrite/ferrite_assembly.jl"))
 

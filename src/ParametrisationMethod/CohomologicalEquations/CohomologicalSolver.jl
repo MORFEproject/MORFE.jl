@@ -13,7 +13,7 @@ Dispatch priority:
    is computed once on the first call and reused via `klu!(F, A)` on subsequent calls.
 3. **UMFPACK** (fallback) — plain `lu(A) \\ B` when `klu_cache` is `nothing`.
 """
-_sparse_solve(ps::AbstractPardisoSolver, ::Any, A, B) = pardiso_solve(ps, A, B)
+_sparse_solve(ps, ::Any, A, B) = _pardiso_solve(ps, A, B)
 
 function _sparse_solve(::Nothing, klu_cache::Ref{Any}, A::SparseMatrixCSC, B)
 	if klu_cache[] === nothing
