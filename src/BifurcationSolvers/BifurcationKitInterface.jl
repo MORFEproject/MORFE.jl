@@ -18,11 +18,6 @@ of `p` is the continuation parameter.
 Requires BifurcationKit.jl.  Load it with `using BifurcationKit` to activate
 the MORFE extension.
 """
-function make_bk_problem(R::ReducedDynamics; bifparam_index::Int = 1, z0 = nothing, p0 = nothing)
-    error(
-        "make_bk_problem requires BifurcationKit.jl.\n" *
-        "Load it with `using BifurcationKit` to activate the MORFE extension.",
-    )
-end
+function make_bk_problem end
 
 end # module BifurcationKitInterface

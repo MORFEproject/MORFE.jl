@@ -1,0 +1,9 @@
+MORFE.jl — Parametric Cantilever Beam ROM
+FOM          = 5925
+ROM          = 2
+N_EXT        = 1
+N_theta      = 5
+max_degree   = 5
+master_eigenvalues = ComplexF64[-0.0005369754008568333 + 0.5373926703531786im, -0.0005369754008568333 - 0.5373926703531786im]
+eigenproblem_time_s    = 3.235566709
+cohomological_time_s   = 375.858797375

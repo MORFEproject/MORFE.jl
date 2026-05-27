@@ -78,7 +78,7 @@ var TeamData = (function () {
     '  <div class="member">' +
     '    <div class="portrait red"><img src="assets/portraits/francesco-trainotti.jpg" alt="Francesco Trainotti" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>' +
     '    <h3>Francesco Trainotti</h3>' +
-    '    <p class="role"><span style="color: var(--jl-red);">Researcher</span> · Industrial Applications</p>' +
+    '    <p class="role"><span style="color: var(--jl-red);">Industrial Lead</span> · Applications</p>' +
     '    <p class="affil">Chair of Applied Mechanics · TU Munich</p>' +
     '    <p class="bio">Nonlinear vibration analysis, frequency-based substructuring, and dynamic system identification.</p>' +
     '    <div class="links">' +

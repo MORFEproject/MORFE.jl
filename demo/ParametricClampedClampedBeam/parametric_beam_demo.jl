@@ -40,15 +40,15 @@ The truncation order in θ is a single knob, `N_θ`.
 # On first run this installs everything (~2–5 min); subsequent runs
 # skip straight to Pkg.instantiate (seconds).
 # ------------------------------------------------------------------
-import Pkg
+using Pkg: Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
-    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-    Pkg.add([
-        "Ferrite", "FerriteGmsh",
-        "Arpack", "LinearMaps",
-        "Tensors", "StaticArrays",
-    ])
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.add([
+		"Ferrite", "FerriteGmsh",
+		"Arpack", "LinearMaps",
+		"Tensors", "StaticArrays",
+	])
 end
 Pkg.instantiate()
 
@@ -96,13 +96,13 @@ println("Total DOFs : ", ndofs(dh))
 # ==================================================================
 # 2.  Material constants (same as the benchmark)
 # ==================================================================
-E       = 160e3
-ν      = 0.22
-ρ      = 2.32e-3
+E = 160e3
+ν = 0.22
+ρ = 2.32e-3
 λ_lame = (E * ν) / ((1 + ν) * (1 - 2ν))
 μ_lame = E / (2(1 + ν))
-α      = 0.5369754008568333 / 500.0      # mass-proportional damping
-β      = 0.0                              # stiffness-proportional damping
+α = 0.5369754008568333 / 500.0      # mass-proportional damping
+β = 0.0                             # stiffness-proportional damping
 
 # ==================================================================
 # 3.  Parametric geometry
@@ -172,12 +172,12 @@ println("Free DOFs : ", n_free)
 # ==================================================================
 # 5.  Multiindex set on (z₁, z₂, θ)
 # ==================================================================
-const ROM        = 2
-const N_EXT      = 1                       # θ is one real external state
-const NVAR       = ROM + N_EXT
+const ROM = 2
+const N_EXT = 1                       # θ is one real external state
+const NVAR = ROM + N_EXT
 const max_degree = 5
-mset             = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
-_max_uniq        = length(mset)
+mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
+_max_uniq = length(mset)
 
 # ==================================================================
 # §1  Eigenproblem on the reference (θ = 0) configuration
@@ -339,3 +339,44 @@ println(@sprintf("  Monomials (max_degree=%d, NVAR=%d) = %d",
 println(sep)
 
 println("\nDemo finished successfully.")
+
+# ==================================================================
+# 10.  Save ROM to results/
+# ==================================================================
+using Serialization
+
+const _results_dir = joinpath(@__DIR__, "results")
+mkpath(_results_dir)
+
+serialize(joinpath(_results_dir, "W.jls"), W)
+serialize(joinpath(_results_dir, "R.jls"), R)
+
+open(joinpath(_results_dir, "summary.txt"), "w") do io
+	println(io, "MORFE.jl — Parametric Clamped-Clamped Beam ROM")
+	println(io, "FOM          = $FOM")
+	println(io, "ROM          = $ROM")
+	println(io, "N_EXT        = $N_EXT")
+	println(io, "N_theta      = $N_θ")
+	println(io, "max_degree   = $max_degree")
+	println(io, "master_eigenvalues = $(collect(master_eigenvalues))")
+	println(io, "eigenproblem_time_s    = $(r1.time)")
+	println(io, "cohomological_time_s   = $(r2.time)")
+end
+
+open(joinpath(_results_dir, "R_coefficients.csv"), "w") do io
+	exps = R.poly.multiindex_set.exponents
+	NVAR_R = size(R.poly.coefficients, 1)
+	header = join(["exp_$i" for i in 1:length(exps[1])], ",") * "," *
+			 join(["R$(i)_re,R$(i)_im" for i in 1:NVAR_R], ",")
+	println(io, header)
+	for (m, ex) in enumerate(exps)
+		c = R.poly.coefficients[:, m]
+		any(abs.(c) .> 1e-14) || continue
+		row = join(string.(Int.(ex)), ",") * "," *
+			  join(["$(real(c[i])),$(imag(c[i]))" for i in 1:NVAR_R], ",")
+		println(io, row)
+	end
+end
+
+println("ROM saved to $(_results_dir)/")
+println("  W.jls, R.jls, summary.txt, R_coefficients.csv")
