@@ -6,3 +6,6 @@ LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
 MORFE = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Tensors = "48a634ad-e948-5137-8d70-aa71f2a747f4"
+
+[compat]
+Arpack = "0.5.3"

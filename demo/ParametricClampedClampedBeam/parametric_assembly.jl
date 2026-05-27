@@ -12,10 +12,10 @@ into the pulled-back weak form and let one factor of `1/det(J)` cancel
 the `det(J)` from the volume differential `dV = det(J) · dV₀`.  What
 remains is the *minimal* number of reciprocal-series factors:
 
-	  a(u, v; θ)  :  bracket_K(adj)  ·  (1/det)¹           (linear K)
+	  a(u, v; θ)  :  bracket_K(adj)   ·  (1/det)¹          (linear K)
 	  m(u, v; θ)  :  ρ (u · v)        ·  det¹              (linear M)
-	  g(u₁,u₂,v;θ): bracket_G(adj)  ·  (1/det)²           (quadratic)
-	  h(u₁,u₂,u₃,v;θ): bracket_H(adj) · (1/det)³          (cubic)
+	  g(u₁,u₂,v;θ): bracket_G(adj)    ·  (1/det)²          (quadratic)
+	  h(u₁,u₂,u₃,v;θ): bracket_H(adj) ·  (1/det)³          (cubic)
 
 where the brackets are polynomials in θ obtained from products of
 `adj(J(θ))` (exact, degree ≤ 2 in 3D) and the reference gradients.
