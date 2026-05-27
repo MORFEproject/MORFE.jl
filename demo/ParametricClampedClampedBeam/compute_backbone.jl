@@ -240,3 +240,72 @@ savefig(plt1, joinpath(_results, "backbone_curves.png"))
 savefig(plt2, joinpath(_results, "backbone_shift.png"))
 println("Saved → $(_results)/backbone_curves.png")
 println("Saved → $(_results)/backbone_shift.png")
+
+# ------------------------------------------------------------------
+# 12.  Linear eigenfrequency vs (1+θ)  —  log‑log with slope -2 reference
+#
+# Euler-Bernoulli formula for the first bending mode of a clamped-clamped
+# beam under uniform axial stretch  L(θ) = L₀(1+θ)  (fixed cross-section):
+#
+#   ω₁(θ) = (β₁/L₀)² · √(E·I / ρ·A) · (1+θ)⁻²
+#
+# where β₁L₀ ≈ 4.73004 is the first root of  cos(βL)cosh(βL) = 1,
+# I = H·W³/12  (bending about z, displacement in y — the weak axis),
+# A = W·H  (cross-section area).
+#
+# Beam geometry from generate_beam_mesh.jl:
+#   L₀ = 1000 mm,  W = 10 mm (width),  H = 24 mm (height)
+# Material (same as parametric_beam_demo.jl):
+#   E = 160e3 N/mm²,  ρ = 2.32e-3 g/mm³
+# (natural time unit is ms → ω is in rad/ms = 10³ rad/s)
+# ------------------------------------------------------------------
+const _L₀ = 1000.0                     # mm
+const _W  = 10.0                        # mm
+const _H  = 24.0                        # mm
+const _E  = 160e3                       # N/mm²
+const _ρ  = 2.32e-3                     # g/mm³
+const _A  = _W * _H                     # mm²
+const _I  = _H * _W^3 / 12             # mm⁴  (weak-axis, displacement in y)
+const _β₁L = 4.730040744862704         # first root of cos(βL)cosh(βL) = 1
+
+const _ω₁_EB₀ = (_β₁L / _L₀)^2 * sqrt(_E * _I / (_ρ * _A))   # rad/ms at θ=0
+ω₁_EB(θ_val) = _ω₁_EB₀ * (1 + θ_val)^(-2)
+
+let ω_m = ω₀_of_θ(0.0)
+	@printf "EB analytical ω₁(0) = %.6f rad/ms\n" _ω₁_EB₀
+	@printf "MORFE ROM    ω₀(0)  = %.6f rad/ms\n" ω_m
+	@printf "Relative error      = %.4f %%\n" 100 * abs(_ω₁_EB₀ - ω_m) / _ω₁_EB₀
+end
+
+# Fine grid of θ (keep 1+θ > 0)
+θ_fine = range(-0.8, stop = 1.0, length = 200)
+ω_fine = ω₀_of_θ.(θ_fine)
+
+# (1+θ)^{-2} reference anchored to MORFE ω₀(0)
+ω₀_ref = ω₀_of_θ(0.0)
+ω_ref  = ω₀_ref .* (1 .+ θ_fine) .^ (-2)
+
+# EB analytical curve (independent anchor from beam parameters)
+ω_EB_fine = ω₁_EB.(θ_fine)
+
+# Log‑log plot
+plt3 = plot(1 .+ θ_fine, ω_fine;
+	xscale = :log10, yscale = :log10,
+	lw = 2.5, color = :black, label = "ω₀(θ) (MORFE)",
+	xlabel = "1 + θ", ylabel = "ω₀ (rad/ms)",
+	title = "Linear eigenfrequency scaling with parameter",
+	legend = :bottomright,
+	size = (600, 500), dpi = 150,
+)
+plot!(plt3, 1 .+ θ_fine, ω_ref;
+	lw = 2.0, ls = :dash, color = :red,
+	label = "MORFE ω₀(0)·(1+θ)⁻²  (slope –2)",
+)
+plot!(plt3, 1 .+ θ_fine, ω_EB_fine;
+	lw = 1.5, ls = :dot, color = :blue,
+	label = "EB: (β₁/L₀)²√(EI/ρA)·(1+θ)⁻²",
+)
+
+# Save
+savefig(plt3, joinpath(_results, "omega0_slope_minus2.png"))
+println("Saved → $(_results)/omega0_slope_minus2.png")

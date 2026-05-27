@@ -146,7 +146,7 @@ end
 # 4.  Linear assembly:  K(θ) = Σ θ^k K_k,  M(θ) = Σ θ^k M_k
 # ==================================================================
 const N_K_used = N_θ                                       # match DPIM order
-const N_M_used = length(detJ_coeffs) - 1                    # M's exact degree
+const N_M_used = length(detJ_coeffs) - 1                   # M's exact degree
 
 K_full_coeffs = [allocate_matrix(dh) for _ in 0:N_K_used]
 M_full_coeffs = [allocate_matrix(dh) for _ in 0:N_M_used]
@@ -200,9 +200,13 @@ master_modes       = Y[:, 1, 1:ROM]
 left_eigenmodes    = X[:, 1:ROM]
 
 ORD_model = size(eigenproblem.eigenmodes, 2)
-master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
-for r in 1:ROM, k in 1:(ORD_model-1)
-	master_modes_derivatives[:, k, r] .= Y[:, k+1, r]
+# Two derivative columns needed for ORD=3: λ·φ and λ²·φ.
+# The eigensolver provides only one (λ·φ = Y[:,2,:]); the second is computed
+# as λ² · φ = λ · (λ · φ), using the known eigenvalues.
+master_modes_derivatives = zeros(ComplexF64, FOM, 2, ROM)
+for r in 1:ROM
+	master_modes_derivatives[:, 1, r] .= Y[:, 2, r]                           # λ·φ
+	master_modes_derivatives[:, 2, r] .= master_eigenvalues[r] .* Y[:, 2, r]  # λ²·φ
 end
 
 # ==================================================================
@@ -215,22 +219,23 @@ end
 #
 #     M ẍ + C ẋ + K x  =  (sum of all multilinear terms).
 #
-# So a linear stiffness correction `θ^k K_k u` enters as
-# `-θ^k K_k u`, and likewise for damping.
+# So a linear stiffness correction `θ^k K_k u` enters as `-θ^k K_k u`,
+# a damping correction as `-θ^k C_k u̇`, and an inertial correction as
+# `-θ^k M_k ü`.
 #
-# NOTE on parametric mass.  MORFE's `MultilinearMap` supports modal
-# arity `(a_pos, a_vel)`, but has no acceleration slot, so a term of
-# the form `θ^k M_k ẍ` cannot be expressed.  We therefore *omit* the
-# M-corrections at this level; the inertial part of the mass change is
-# not captured here.  The *damping* part of the mass change, however,
-# IS captured through the Rayleigh formula `C(θ) = α M(θ) + β K(θ)`,
-# whose θ-corrections enter via `build_linear_C_corrections` below.
-# For our problem β = 0, so only `C_1 = α M_1` is non-zero (higher
-# corrections vanish because det J(θ) is degree 1).
+# The inertial correction requires the acceleration slot (multiindex (0,0,1)),
+# which is enabled by using ORD=3 in the NDOrderModel (B_3 = 0).  The third
+# column of W at each monomial α is then s²·W[:,1,α] (the acceleration),
+# initialized at linear monomials from the λ²·φ column of master_modes_derivatives.
+#
+# For β = 0, the damping correction reduces to C_k = α M_k, and only
+# M_k[2] = M_1 = M_0 is non-zero (det J(θ) is degree 1).
 linear_K_corrections = build_linear_K_corrections(K_k, N_K_used)
 linear_C_corrections = build_linear_C_corrections(K_k, M_k, α, β, N_K_used, N_M_used)
+linear_M_corrections = build_linear_M_corrections(M_k, N_M_used)
 println("  linear K-corrections : ", length(linear_K_corrections),
-	"  linear C-corrections : ", length(linear_C_corrections))
+	"  linear C-corrections : ", length(linear_C_corrections),
+	"  linear M-corrections : ", length(linear_M_corrections))
 
 # ==================================================================
 # 7.  Parametric quadratic and cubic geometric nonlinearities
@@ -257,12 +262,15 @@ cube_maps = multilinear_maps(pgn_cube)
 # ==================================================================
 ext_sys = ExternalSystem((complex(0.0, 0.0),))
 
+ZERO = spzeros(eltype(K), n_free, n_free)   # B₃ = 0  (ORD=3 expansion, no cubic-in-time term)
+
 model = NDOrderModel(
-	(K, C, M),
+	(K, C, M, ZERO),
 	(quad_maps...,
 		cube_maps...,
 		linear_K_corrections...,
-		linear_C_corrections...),
+		linear_C_corrections...,
+		linear_M_corrections...),
 	ext_sys,
 )
 
