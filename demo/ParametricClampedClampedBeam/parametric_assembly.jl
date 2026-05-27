@@ -599,6 +599,20 @@ for kk in 0:_MAX_EXT_ARITY
 	end
 end
 
+# Acceleration-type closure factory: M_k · ü · θ^k  (one acceleration slot).
+# These require ORD=3 in the NDOrderModel so that W has a third (acceleration)
+# column; the multiindex (0, 0, 1) selects that column.
+for kk in 0:_MAX_EXT_ARITY
+	ext_args = [Symbol("r$i") for i in 1:kk]
+	if kk == 0
+		@eval _wrap_linM(::Val{0}, Mk) = (res, a) -> (res .-= (Mk * a))
+	else
+		factor = Expr(:call, :*, [:(($r)[1]) for r in ext_args]...)
+		@eval _wrap_linM(::Val{$kk}, Mk) =
+			(res, a, $(ext_args...)) -> (res .-= ($factor) .* (Mk * a))
+	end
+end
+
 # Convenience dispatch helpers (these are what callers use).
 """
 	linear_K_correction_closure(Kk, k::Int)
@@ -617,6 +631,14 @@ arity `k + 2`.  Used to inject parametric Rayleigh damping
 `C(θ) = α M(θ) + β K(θ)`.
 """
 linear_C_correction_closure(Ck, k::Int) = _wrap_linC(Val(k), Ck)
+
+"""
+	linear_M_correction_closure(Mk, k::Int)
+
+Closure for the inertial correction  `−θ^k · Mk · ü`, arity `k + 2`.
+Requires the NDOrderModel to use ORD=3 (multiindex `(0, 0, 1)`).
+"""
+linear_M_correction_closure(Mk, k::Int) = _wrap_linM(Val(k), Mk)
 
 """
 	quad_external_closure(pgn, k::Int, buf)
@@ -646,14 +668,14 @@ cube_external_closure(pgn, k::Int, buf) = _wrap_cube(Val(k), pgn, k, buf)
 	build_linear_K_corrections(K_k::Vector, N_K_used::Int) -> Vector{MultilinearMap}
 
 Wrap each non-trivial θ^k coefficient `K_k[k+1]` (k = 1 … N_K_used) as a
-`MultilinearMap` of modal arity `(1, 0)` and external arity `k`.
+`MultilinearMap` of modal arity `(1, 0, 0)` and external arity `k`.
 """
 function build_linear_K_corrections(K_k::Vector, N_K_used::Int)
 	corr = MultilinearMap[]
 	for k in 1:N_K_used
 		Kk = K_k[k+1]
 		nnz(Kk) > 0 || continue
-		push!(corr, MultilinearMap(linear_K_correction_closure(Kk, k), (1, 0), k))
+		push!(corr, MultilinearMap(linear_K_correction_closure(Kk, k), (1, 0, 0), k))
 	end
 	return corr
 end
@@ -664,7 +686,7 @@ end
 Parametric Rayleigh damping  `C(θ) = α M(θ) + β K(θ)`.  Constructs
 `C_k = α M_k + β K_k` for k = 1 … max(N_K_used, N_M_used) and wraps
 each non-trivial coefficient as a `MultilinearMap` of modal arity
-`(0, 1)` and external arity `k`.
+`(0, 1, 0)` and external arity `k`.
 """
 function build_linear_C_corrections(K_k::Vector, M_k::Vector,
 	α::Float64, β::Float64,
@@ -677,7 +699,24 @@ function build_linear_C_corrections(K_k::Vector, M_k::Vector,
 		end
 		Ck === nothing && continue
 		nnz(Ck) > 0 || continue
-		push!(corr, MultilinearMap(linear_C_correction_closure(Ck, k), (0, 1), k))
+		push!(corr, MultilinearMap(linear_C_correction_closure(Ck, k), (0, 1, 0), k))
+	end
+	return corr
+end
+
+"""
+	build_linear_M_corrections(M_k::Vector, N_M_used::Int) -> Vector{MultilinearMap}
+
+Wrap each non-trivial θ^k coefficient `M_k[k+1]` (k = 1 … N_M_used) as a
+`MultilinearMap` of modal arity `(0, 0, 1)` (acceleration slot) and external arity `k`.
+Requires ORD=3 in the NDOrderModel so that W carries a third (acceleration) column.
+"""
+function build_linear_M_corrections(M_k::Vector, N_M_used::Int)
+	corr = MultilinearMap[]
+	for k in 1:N_M_used
+		Mk = M_k[k+1]
+		nnz(Mk) > 0 || continue
+		push!(corr, MultilinearMap(linear_M_correction_closure(Mk, k), (0, 0, 1), k))
 	end
 	return corr
 end
@@ -710,7 +749,7 @@ function multilinear_maps(pgn::ParametricGeometricNonlinearity{2})
 		# ComplexF64 buffer: DPIM evaluates the multilinear forms at
 		# complex modal inputs (parametrisation coefficients are complex).
 		buf = zeros(ComplexF64, pgn.n_free)
-		push!(maps, MultilinearMap(quad_external_closure(pgn, k, buf), (2, 0), k))
+		push!(maps, MultilinearMap(quad_external_closure(pgn, k, buf), (2, 0, 0), k))
 	end
 	return maps
 end
@@ -719,7 +758,7 @@ function multilinear_maps(pgn::ParametricGeometricNonlinearity{3})
 	maps = MultilinearMap[]
 	for k in 0:pgn.N_θ
 		buf = zeros(ComplexF64, pgn.n_free)
-		push!(maps, MultilinearMap(cube_external_closure(pgn, k, buf), (3, 0), k))
+		push!(maps, MultilinearMap(cube_external_closure(pgn, k, buf), (3, 0, 0), k))
 	end
 	return maps
 end
