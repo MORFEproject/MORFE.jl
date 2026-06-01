@@ -147,7 +147,7 @@ function MORFE.Eigenproblems.solve(
     stiffness::AbstractMatrix{T},
     solver::MORFE.Eigenproblems.StructureModalDampingEigensolver,
 ) where {T}
-    ω2, ϕ = eigs(stiffness, mass; nev = solver.nev, which = :SM, check = 1)
+    ω2, ϕ = eigs(stiffness, mass; nev = solver.nev, which = :LM, sigma = 0.0, check = 1)
     any(x -> abs(imag(x)) > 1e-12 * abs(real(x)), ω2) && error("Eigenvalues not real.")
     ω2 = real.(ω2)
     ϕ = real.(ϕ)

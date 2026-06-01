@@ -1,18 +1,19 @@
 """
 	compute_backbone.jl
 
-Post-processing script for the parametric cantilever beam ROM.
+Post-processing for the two-parameter parametric beam ROM in (z₁,z₂,θ₁,θ₂).
 
-Loads R from results/, realifies the z₁ equation, constructs the symbolic
-Jacobian polynomial, then for each θ value in θ_values:
+Loads R from results/, realifies the z₁ equation, and for each (θ₁,θ₂)
+in a user-defined grid:
 
-  (1) Extracts ω₀(θ) = Im[∂R1_cplx/∂x(0,0,θ)]  (linear eigenfrequency).
-  (2) Computes the analytical backbone  Ω(r, θ) = Im[R1_cplx(r,0,θ)] / r.
-  (3) Validates with BifurcationKit (equilibrium continuation of
-	  G(r,Ω)=0 with analytical Jacobian from the symbolic derivative).
+  (1) Extracts ω₀(θ₁,θ₂) = Im[∂R1/∂x(0,0,θ₁,θ₂)]  (linear eigenfrequency).
+  (2) Computes the analytical backbone Ω(r,θ₁,θ₂) = Im[R1(r,0,θ₁,θ₂)] / r.
+  (3) Validates with BifurcationKit (continuation of G(r,Ω)=0).
 
-Figure 1: absolute backbone  Ω vs |z₁|  for each θ.
-Figure 2: nonlinear shift  (Ω − ω₀(θ)) vs |z₁|  (all start at 0).
+Figures produced:
+  backbone_curves.png  — Ω vs |z₁| for various (θ₁,θ₂)
+  backbone_shift.png   — (Ω − ω₀) vs |z₁|
+  omega0_slope_minus2.png — ω₀(θ₁,0) vs (1+θ₁) log-log, slope -2 reference
 
 Run after parametric_beam_demo.jl has produced results/R.jls.
 """
@@ -33,6 +34,7 @@ using MORFE.Polynomials: DensePolynomial, evaluate, extract_component,
 using MORFE.Realification: realify
 using BifurcationKit
 using Plots
+ENV["GKSwstype"] = "nul"   # suppress GR pop-up window; plots are saved to file only
 using Printf
 
 # ------------------------------------------------------------------
@@ -46,9 +48,9 @@ println("Loading ROM …")
 R = deserialize(joinpath(_results, "R.jls"))
 
 # ------------------------------------------------------------------
-# 2.  R1_cplx : ℝ³→ℂ   (realified z₁ equation in (x, y, θ))
+# 2.  R1_cplx : ℝ⁴→ℂ   (realified z₁ equation in (x, y, θ₁, θ₂))
 # ------------------------------------------------------------------
-conj_map = [2, 1, 3]
+conj_map = [2, 1, 3, 4]    # z₁↔z₂; θ₁,θ₂ real → self-conjugate
 R1_cplx = extract_component(realify(R.poly, conj_map), 1)
 
 # ------------------------------------------------------------------
@@ -58,8 +60,7 @@ R1_cplx = extract_component(realify(R.poly, conj_map), 1)
 """
 	poly_deriv(p, var_idx)
 
-Return the partial derivative of scalar polynomial `p` w.r.t. variable `var_idx`
-as a new `DensePolynomial`.  Built from `each_term` + `similar_poly`.
+Partial derivative of scalar polynomial `p` w.r.t. variable `var_idx`.
 """
 function poly_deriv(p::DensePolynomial{T, NVAR, 1}, var_idx::Int) where {T, NVAR}
 	dict = Dict{SVector{NVAR, Int}, T}()
@@ -73,60 +74,72 @@ function poly_deriv(p::DensePolynomial{T, NVAR, 1}, var_idx::Int) where {T, NVAR
 end
 
 const dR1dx = poly_deriv(R1_cplx, 1)  # ∂R1_cplx/∂x
-const dR1dy = poly_deriv(R1_cplx, 2)  # ∂R1_cplx/∂y
+
+# Drop all monomials whose total parametric degree (sum of θ₁,θ₂ exponents) exceeds N.
+function truncate_param_degree(p::DensePolynomial{T, NVAR, 1}, N::Int) where {T, NVAR}
+	dict = Dict{SVector{NVAR, Int}, T}()
+	for (α, c) in each_term(p)
+		sum(α[i] for i in 3:NVAR) ≤ N || continue
+		dict[α] = c
+	end
+	return similar_poly(dict)
+end
+
+# Order-3 variants: drop θ-degree ≥ 4 terms (the ones that diverge for |θ₁| ≳ 0.2).
+const R1_cplx_3 = truncate_param_degree(R1_cplx, 3)
+const dR1dx_3   = poly_deriv(R1_cplx_3, 1)
 
 # ------------------------------------------------------------------
-# 4.  Linear eigenfrequency as a function of θ
-#     ω₀(θ) = Im[∂R1_cplx/∂x(0, 0, θ)]  =  Im[λ₁(θ)]
+# 4.  Linear eigenfrequency ω₀(θ₁,θ₂) and backbone  Ω(r,θ₁,θ₂)
 # ------------------------------------------------------------------
-ω₀_of_θ(θ_val) = imag(evaluate(dR1dx, [0.0, 0.0, θ_val]))
+ω₀_of(θ₁, θ₂) = imag(evaluate(dR1dx, [0.0, 0.0, θ₁, θ₂]))
+ω₀_of_3(θ₁, θ₂) = imag(evaluate(dR1dx_3, [0.0, 0.0, θ₁, θ₂]))
+backbone_Ω(r, θ₁, θ₂) = imag(evaluate(R1_cplx, [max(r, 1e-12), 0.0, θ₁, θ₂])) /
+						max(r, 1e-12)
 
-# Announce the θ=0 value for reference
-let ω₀ = ω₀_of_θ(0.0)
-	println(@sprintf("Linear frequency ω₀(0) = %.6f rad/s   T₀ = %.6f s", ω₀, 2π / ω₀))
+# Announce reference frequency
+let ω₀ = ω₀_of(0.0, 0.0)
+	println(@sprintf("Linear frequency ω₀(0,0) = %.6f rad/s   T₀ = %.6f s", ω₀, 2π / ω₀))
 end
 
 # ------------------------------------------------------------------
 # 5.  Parameters
 # ------------------------------------------------------------------
 const r_max = 5.0
-const r_seed = 0.5    # BK seed — large enough that dΩ/dr is non-negligible
-const θ_values = [-0.5, -0.25, 0.0, 0.25, 0.5]
+const r_seed = 0.5
+
+# Parameter grid: fix θ₂ at several arch levels, vary θ₁ (axial stretch)
+const θ₁_values = [-0.25, -0.12, 0.0, 0.12, 0.25]
+const θ₂_values = [0.0]   # arch amplitudes
+
+# For backbone figure: all (θ₁, θ₂) combinations
+all_params = [(θ₁, θ₂) for θ₂ in θ₂_values for θ₁ in θ₁_values]
 
 # ------------------------------------------------------------------
-# 6.  BifurcationKit backbone continuation for a single θ
-#
-# Backbone condition:
-#   G(r, Ω) = Im[R1_cplx(r, 0, θ)] / r  −  Ω  =  0
-#
-# Analytical Jacobian (quotient rule, using the symbolic dR1dx):
-#   dG/dr = (Im[dR1dx(r, 0, θ)] · r  −  Im[R1_cplx(r, 0, θ)]) / r²
+# 6.  BifurcationKit continuation for one (θ₁,θ₂)
 # ------------------------------------------------------------------
-function run_bk_backbone(θ_val)
-	ω₀ = ω₀_of_θ(θ_val)
-	Ω₀ = imag(evaluate(R1_cplx, [r_seed, 0.0, θ_val])) / r_seed
+function run_bk_backbone(θ₁_val, θ₂_val)
+	Ω₀ = backbone_Ω(r_seed, θ₁_val, θ₂_val)
 
-	G(x, p) = begin
-		r = max(x[1], 1e-10)
-		[imag(evaluate(R1_cplx, [r, 0.0, θ_val])) / r - p[1]]
-	end
+	G(x, p) = [backbone_Ω(x[1], θ₁_val, θ₂_val) - p[1]]
 
-	J(x, _) = begin
-		r = max(x[1], 1e-10)
-		val = imag(evaluate(R1_cplx, [r, 0.0, θ_val]))
-		dval = imag(evaluate(dR1dx, [r, 0.0, θ_val]))
-		reshape([(dval * r - val) / r^2], 1, 1)
+	J_fun(x, _) = begin
+		r  = max(x[1], 1e-10)
+		f0 = imag(evaluate(R1_cplx, [r, 0.0, θ₁_val, θ₂_val]))
+		df = imag(evaluate(dR1dx, [r, 0.0, θ₁_val, θ₂_val]))
+		reshape([(df * r - f0) / r^2], 1, 1)
 	end
 
 	prob = BifurcationProblem(
 		G, [r_seed], [Ω₀], @optic(_[1]);
-		J = J,
+		J = J_fun,
 		record_from_solution = (x, p; k...) -> (r = x[1], Ω = p),
 	)
 
+	ω₀ = ω₀_of(θ₁_val, θ₂_val)
 	opts = ContinuationPar(
-		p_min = ω₀ * 0.80,
-		p_max = ω₀ * 1.50,
+		p_min = min(ω₀ * 0.75, ω₀ * 1.60),
+		p_max = max(ω₀ * 0.75, ω₀ * 1.60),
 		max_steps = 2000,
 		ds = 0.01,
 		dsmax = 0.2,
@@ -135,7 +148,7 @@ function run_bk_backbone(θ_val)
 	return try
 		continuation(prob, PALC(), opts; verbosity = 0)
 	catch e
-		@warn "Continuation failed for θ=$θ_val: $e"
+		@warn "Continuation failed for (θ₁=$θ₁_val, θ₂=$θ₂_val): $e"
 		nothing
 	end
 end
@@ -144,96 +157,79 @@ end
 # 7.  Run all branches
 # ------------------------------------------------------------------
 println("Running BifurcationKit backbone continuations …")
-branches = map(θ_values) do θ_val
-	br = run_bk_backbone(θ_val)
+branches = map(all_params) do (θ₁, θ₂)
+	br = run_bk_backbone(θ₁, θ₂)
 	if !isnothing(br)
 		r_bk = [s.r for s in br.branch]
 		Ω_bk = [s.Ω for s in br.branch]
-		@printf "  θ=%.3f: %d pts, r ∈ [%.3f, %.3f], Ω ∈ [%.6f, %.6f]\n" θ_val length(br.branch) extrema(r_bk)... extrema(Ω_bk)...
+		@printf "  (θ₁,θ₂)=(%.2f,%.2f): %d pts, r ∈ [%.2f,%.2f], Ω ∈ [%.4f,%.4f]\n" θ₁ θ₂ length(br.branch) extrema(r_bk)... extrema(Ω_bk)...
 	end
 	br
 end
 
 # ------------------------------------------------------------------
-# 8.  Analytical curves
+# 8.  Analytical backbone curves
 # ------------------------------------------------------------------
 r_range = range(1e-6, r_max, 400)
 
-Ω_curves = map(θ_values) do θ_val
-	[imag(evaluate(R1_cplx, [r, 0.0, θ_val])) / r for r in r_range]
-end
-
-ω₀_vals = ω₀_of_θ.(θ_values)
+Ω_curves = [(θ₁, θ₂, [backbone_Ω(r, θ₁, θ₂) for r in r_range])
+			for (θ₁, θ₂) in all_params]
+ω₀_vals = [ω₀_of(θ₁, θ₂) for (θ₁, θ₂) in all_params]
 
 # ------------------------------------------------------------------
-# 9.  Figure 1: absolute backbone  Ω vs |z₁|
+# 9.  Figure 1: absolute backbone Ω vs |z₁|
 # ------------------------------------------------------------------
 println("Plotting …")
-
-all_Ω = vcat(Ω_curves...)
-Ω_lo = minimum(all_Ω) - 0.10 * (maximum(all_Ω) - minimum(all_Ω) + 1e-12)
-Ω_hi = maximum(all_Ω) + 0.20 * (maximum(all_Ω) - minimum(all_Ω) + 1e-12)
 
 clrs = palette(:tab10)
 
 plt1 = plot(;
 	xlabel = "Backbone frequency  Ω  (rad/s)",
 	ylabel = "Modal amplitude  |z₁|",
-	title = "Backbone curves — beam ROM",
-	xlims = (Ω_lo, Ω_hi),
+	title = "Two-parameter backbone curves",
 	ylims = (0, r_max * 1.05),
-	size = (700, 600),
+	size = (800, 600),
 	dpi = 150,
 )
 
-for (k, θ_val) in enumerate(θ_values)
-	plot!(plt1, Ω_curves[k], collect(r_range);
-		lw = 2.5, color = clrs[k], label = "θ=$(θ_val) analytical")
-	br = branches[k]
+for (k, ((θ₁, θ₂, Ωcurve), br)) in enumerate(zip(Ω_curves, branches))
+	lbl = "(θ₁,θ₂)=($(θ₁),$(θ₂))"
+	plot!(plt1, Ωcurve, collect(r_range); lw = 2.0, color = clrs[k], label = lbl)
 	if !isnothing(br) && length(br.branch) > 1
 		r_bk = [s.r for s in br.branch]
 		Ω_bk = [s.Ω for s in br.branch]
 		mask = r_bk .<= r_max
 		scatter!(plt1, Ω_bk[mask], r_bk[mask];
-			color = clrs[k], ms = 3, markerstrokewidth = 0,
-			label = "θ=$(θ_val) BK")
+			color = clrs[k], ms = 3, markerstrokewidth = 0, label = nothing)
 	end
 end
 
 # ------------------------------------------------------------------
-# 10.  Figure 2: nonlinear shift  (Ω − ω₀(θ)) vs |z₁|
+# 10.  Figure 2: nonlinear shift (Ω − ω₀) vs |z₁|
 # ------------------------------------------------------------------
-all_shift = vcat([Ω_curves[k] .- ω₀_vals[k] for k in eachindex(θ_values)]...)
-shift_lo = minimum(all_shift) - 0.10 * (maximum(all_shift) - minimum(all_shift) + 1e-12)
-shift_hi = maximum(all_shift) + 0.20 * (maximum(all_shift) - minimum(all_shift) + 1e-12)
-
 plt2 = plot(;
-	xlabel = "Nonlinear frequency shift  Ω − ω₀(θ)  (rad/s)",
+	xlabel = "Nonlinear frequency shift  Ω − ω₀(θ₁,θ₂)  (rad/s)",
 	ylabel = "Modal amplitude  |z₁|",
-	title = "Nonlinear backbone shift — beam ROM",
-	xlims = (shift_lo, shift_hi),
+	title = "Two-parameter backbone shift",
 	ylims = (0, r_max * 1.05),
-	size = (700, 600),
+	size = (800, 600),
 	dpi = 150,
 )
 
-for (k, θ_val) in enumerate(θ_values)
-	ω₀ = ω₀_vals[k]
-	plot!(plt2, Ω_curves[k] .- ω₀, collect(r_range);
-		lw = 2.5, color = clrs[k], label = "θ=$(θ_val) analytical")
-	br = branches[k]
+for (k, ((θ₁, θ₂, Ωcurve), br, ω₀)) in enumerate(zip(Ω_curves, branches, ω₀_vals))
+	lbl = "(θ₁,θ₂)=($(θ₁),$(θ₂))"
+	plot!(plt2, Ωcurve .- ω₀, collect(r_range); lw = 2.0, color = clrs[k], label = lbl)
 	if !isnothing(br) && length(br.branch) > 1
 		r_bk = [s.r for s in br.branch]
 		Ω_bk = [s.Ω for s in br.branch]
 		mask = r_bk .<= r_max
 		scatter!(plt2, Ω_bk[mask] .- ω₀, r_bk[mask];
-			color = clrs[k], ms = 3, markerstrokewidth = 0,
-			label = "θ=$(θ_val) BK")
+			color = clrs[k], ms = 3, markerstrokewidth = 0, label = nothing)
 	end
 end
 
 # ------------------------------------------------------------------
-# 11.  Save
+# 11.  Save figures 1 and 2
 # ------------------------------------------------------------------
 mkpath(_results)
 savefig(plt1, joinpath(_results, "backbone_curves.png"))
@@ -242,70 +238,56 @@ println("Saved → $(_results)/backbone_curves.png")
 println("Saved → $(_results)/backbone_shift.png")
 
 # ------------------------------------------------------------------
-# 12.  Linear eigenfrequency vs (1+θ)  —  log‑log with slope -2 reference
-#
-# Euler-Bernoulli formula for the first bending mode of a clamped-clamped
-# beam under uniform axial stretch  L(θ) = L₀(1+θ)  (fixed cross-section):
-#
-#   ω₁(θ) = (β₁/L₀)² · √(E·I / ρ·A) · (1+θ)⁻²
-#
-# where β₁L₀ ≈ 4.73004 is the first root of  cos(βL)cosh(βL) = 1,
-# I = H·W³/12  (bending about z, displacement in y — the weak axis),
-# A = W·H  (cross-section area).
-#
-# Beam geometry from generate_beam_mesh.jl:
-#   L₀ = 1000 mm,  W = 10 mm (width),  H = 24 mm (height)
-# Material (same as parametric_beam_demo.jl):
-#   E = 160e3 N/mm²,  ρ = 2.32e-3 g/mm³
-# (natural time unit is ms → ω is in rad/ms = 10³ rad/s)
+# 12.  ω₀(θ₁,0) vs (1+θ₁) — log-log with slope -2 reference
+#      (axial-stretch effect, arch fixed at θ₂=0)
 # ------------------------------------------------------------------
-const _L₀ = 1000.0                     # mm
-const _W  = 10.0                        # mm
-const _H  = 24.0                        # mm
-const _E  = 160e3                       # N/mm²
-const _ρ  = 2.32e-3                     # g/mm³
-const _A  = _W * _H                     # mm²
-const _I  = _H * _W^3 / 12             # mm⁴  (weak-axis, displacement in y)
-const _β₁L = 4.730040744862704         # first root of cos(βL)cosh(βL) = 1
+const _L₀ = 1000.0;
+const _W = 10.0;
+const _H = 24.0
+const _E = 160e3;
+const _ρ = 2.32e-3
+const _A = _W * _H;
+const _I = _H * _W^3 / 12
+const _β₁L = 4.730040744862704
+const _ω₁_EB₀ = (_β₁L / _L₀)^2 * sqrt(_E * _I / (_ρ * _A))
 
-const _ω₁_EB₀ = (_β₁L / _L₀)^2 * sqrt(_E * _I / (_ρ * _A))   # rad/ms at θ=0
-ω₁_EB(θ_val) = _ω₁_EB₀ * (1 + θ_val)^(-2)
+ω₁_EB(θ₁) = _ω₁_EB₀ * (1 + θ₁)^(-2)
 
-let ω_m = ω₀_of_θ(0.0)
-	@printf "EB analytical ω₁(0) = %.6f rad/ms\n" _ω₁_EB₀
-	@printf "MORFE ROM    ω₀(0)  = %.6f rad/ms\n" ω_m
-	@printf "Relative error      = %.4f %%\n" 100 * abs(_ω₁_EB₀ - ω_m) / _ω₁_EB₀
+let ω_m = ω₀_of(0.0, 0.0)
+	@printf "EB analytical ω₁(0,0) = %.6f rad/ms\n" _ω₁_EB₀
+	@printf "MORFE ROM    ω₀(0,0)  = %.6f rad/ms\n" ω_m
+	@printf "Relative error        = %.4f %%\n" 100 * abs(_ω₁_EB₀ - ω_m) / _ω₁_EB₀
 end
 
-# Fine grid of θ (keep 1+θ > 0)
-θ_fine = range(-0.8, stop = 1.0, length = 200)
-ω_fine = ω₀_of_θ.(θ_fine)
+θ₁_fine  = range(-0.8, 1.0, 200)
+ω_fine   = [ω₀_of(θ₁, 0.0) for θ₁ in θ₁_fine]
+ω_fine_3 = [ω₀_of_3(θ₁, 0.0) for θ₁ in θ₁_fine]
+ω₀_ref   = ω₀_of(0.0, 0.0) .* (1 .+ θ₁_fine) .^ (-2)
+ω_EB     = ω₁_EB.(θ₁_fine)
 
-# (1+θ)^{-2} reference anchored to MORFE ω₀(0)
-ω₀_ref = ω₀_of_θ(0.0)
-ω_ref  = ω₀_ref .* (1 .+ θ_fine) .^ (-2)
+# Mask: only plot ROM values where the polynomial gives a physically valid (positive)
+# frequency.  The degree-5 expansion diverges for |θ₁| ≳ 0.2; wrapping with abs()
+# would hide that failure rather than expose it.
+mask   = ω_fine .> 0
+mask_3 = ω_fine_3 .> 0
 
-# EB analytical curve (independent anchor from beam parameters)
-ω_EB_fine = ω₁_EB.(θ_fine)
-
-# Log‑log plot
-plt3 = plot(1 .+ θ_fine, ω_fine;
+# Analytical references are always positive — plot them over the full range.
+plt3 = plot(1 .+ θ₁_fine, ω₀_ref;
 	xscale = :log10, yscale = :log10,
-	lw = 2.5, color = :black, label = "ω₀(θ) (MORFE)",
-	xlabel = "1 + θ", ylabel = "ω₀ (rad/ms)",
-	title = "Linear eigenfrequency scaling with parameter",
+	lw = 2.0, ls = :dash, color = :red, label = "ω₀(0)·(1+θ₁)⁻²  (slope –2)",
+	xlabel = "1 + θ₁", ylabel = "ω₀ (rad/ms)",
+	title = "Axial-stretch eigenfrequency scaling (θ₂=0)",
 	legend = :bottomright,
 	size = (600, 500), dpi = 150,
 )
-plot!(plt3, 1 .+ θ_fine, ω_ref;
-	lw = 2.0, ls = :dash, color = :red,
-	label = "MORFE ω₀(0)·(1+θ)⁻²  (slope –2)",
-)
-plot!(plt3, 1 .+ θ_fine, ω_EB_fine;
-	lw = 1.5, ls = :dot, color = :blue,
-	label = "EB: (β₁/L₀)²√(EI/ρA)·(1+θ)⁻²",
-)
+plot!(plt3, 1 .+ θ₁_fine, ω_EB;
+	lw = 1.5, ls = :dot, color = :blue, label = "EB: (β₁/L₀)²√(EI/ρA)·(1+θ₁)⁻²")
+# Order-3 truncation (θ-degree ≤ 3): uses only the directly-assembled K/M coefficients.
+plot!(plt3, (1 .+ θ₁_fine)[mask_3], ω_fine_3[mask_3];
+	lw = 2.0, ls = :dashdot, color = :darkorange, label = "ω₀(θ₁,0) MORFE order-3")
+# Full degree-5 ROM restricted to the valid region where the polynomial hasn't diverged.
+plot!(plt3, (1 .+ θ₁_fine)[mask], ω_fine[mask];
+	lw = 2.5, color = :black, label = "ω₀(θ₁,0) MORFE order-5")
 
-# Save
 savefig(plt3, joinpath(_results, "omega0_slope_minus2.png"))
 println("Saved → $(_results)/omega0_slope_minus2.png")
