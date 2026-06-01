@@ -10,7 +10,6 @@
 Manifest.toml
 docs/Manifest.toml
 .JuliaFormatter.toml
-demo/.DS_Store
 
 # Package artifacts (stores downloaded dependencies)
 /artifacts/
@@ -23,6 +22,7 @@ website/*.zip
 
 # Temporary files from editors and OS
 .DS_Store
+*/.DS_Store
 *.swp
 *.swo
 *~
@@ -44,3 +44,4 @@ CLAUDE.md
 /website_copy
 /publications
 /legacy_morfe
+*/IFX

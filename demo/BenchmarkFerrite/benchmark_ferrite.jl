@@ -20,12 +20,12 @@ ROM:  2 modes, max_degree = 11, N_EXT = 0.
 FEM:  O5 Re/Im decomposition in ferrite_assembly.jl (no heap allocs in accumulate_qp!).
 """
 
-import Pkg
+using Pkg: Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
-    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
-        "BenchmarkTools", "Gmsh"])
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
+		"BenchmarkTools", "Gmsh"])
 end
 Pkg.instantiate()
 
@@ -97,12 +97,12 @@ println("Free DOFs  : ", n_free)
 # 3. Multiindex set
 # -----------------------------------------------------------------------
 
-const ROM        = 2
-const N_EXT      = 2
-const NVAR       = ROM + N_EXT
+const ROM = 2
+const N_EXT = 2
+const NVAR = ROM + N_EXT
 const max_degree = 5
 
-mset      = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
+mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 _max_uniq = length(mset)
 
 # -----------------------------------------------------------------------
@@ -125,10 +125,10 @@ FOM = n_free
 select_master_modes_by_sorting(eigenproblem, ROM)
 
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
-master_modes       = Y[:, 1, 1:ROM]   # position component of right eigenvectors
-left_eigenmodes    = X[:, 1:ROM]      # adjoint mode shapes — X is FOM × n_eigs from get_eigenpairs
+master_modes = Y[:, 1, 1:ROM]   # position component of right eigenvectors
+left_eigenmodes = X[:, 1:ROM]   # adjoint mode shapes — X is FOM × n_eigs from get_eigenpairs
 
-ORD_model                = size(eigenproblem.eigenmodes, 2)
+ORD_model = size(eigenproblem.eigenmodes, 2)
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
 	for k in 1:(ORD_model-1)
@@ -147,7 +147,7 @@ dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
 
 # Forcing frequency = damped natural frequency of mode 1; force shape = mode 1
 Ω_force = abs(eigenvalues[1])
-f_vec = 2.5 .* (M * master_modes[:, 1])
+f_vec = 2.5 .* (M * master_modes[:, 1]) # alpha = 5
 
 # Forcing matrix N×N_EXT (filled after eigenproblem; captured by closure).
 # f_vec · sum(r) = f_vec · (r₁+r₂) = f_vec · 2 cos(Ωt)
@@ -157,10 +157,11 @@ term_forcing = MultilinearMap(
 )
 
 ext_sys = ExternalSystem((complex(0.0, Ω_force), complex(0.0, -Ω_force)))
-model   = NDOrderModel(
-(K, C, M),
-(term_quad, term_cubic, term_forcing),
-ext_sys
+
+model = NDOrderModel(
+	(K, C, M),
+	(term_quad, term_cubic, term_forcing),
+	ext_sys,
 )
 
 # super_eigenvalues: one per NVAR variable (internal + external)

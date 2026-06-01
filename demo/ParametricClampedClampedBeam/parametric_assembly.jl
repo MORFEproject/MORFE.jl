@@ -762,3 +762,566 @@ function multilinear_maps(pgn::ParametricGeometricNonlinearity{3})
 	end
 	return maps
 end
+
+# ============================================================
+# 4.  Two-parameter (N_EXT = 2) bivariate assembly
+# ============================================================
+#
+# For the arch-parameter θ₂ = ∇φ₁ the Jacobian J(θ₁,θ₂,x₀) =
+# I + θ₁ J₁ + θ₂ J₂(x₀) varies per quadrature point, so all polynomial
+# series (det, adj, 1/det) are computed locally at each QP using
+# bivariate_geometry.jl.
+#
+# Bivariate coefficient matrices K_b[k₁+1,k₂+1] (and M_b) are assembled
+# over cells/QPs.  Each non-trivial pair (k₁,k₂) with k₁+k₂ ≥ 1 is
+# then wrapped as a MultilinearMap with external arity k₁+k₂, using the
+# N_EXT=2-aware closure factories below.
+
+# ============================================================
+# 4.1  N_EXT=2 fixed-arity closure factories
+# ============================================================
+#
+# For N_EXT=2, each external slot rᵢ is an SVector{2,Int}:
+#   rᵢ[1] = 1 iff the slot corresponds to θ₁ (unit_vectors[1] = [1,0])
+#   rᵢ[2] = 1 iff the slot corresponds to θ₂ (unit_vectors[2] = [0,1])
+#
+# A term K_{k₁,k₂}·θ₁^k₁·θ₂^k₂·u has k₁+k₂ external slots.
+# The first k₁ slots index component [1], the next k₂ index component [2].
+#
+# MORFE's bounded_index_tuples selects the canonical sorted tuple
+# (1,…,1,2,…,2) with permutation count C(k₁+k₂,k₁).  To cancel this
+# overcounting the closure scales by 1/C(k₁+k₂,k₁).
+
+for k1 in 0:_MAX_EXT_ARITY, k2 in 0:(_MAX_EXT_ARITY - k1)
+	k_total = k1 + k2
+	ext_args = [Symbol("r$i") for i in 1:k_total]
+	# Scale factor cancels MORFE's permutation count C(k_total, k1)
+	scale = 1.0 / binomial(k_total, k1)    # = k1! k2! / (k1+k2)!
+	if k_total == 0
+		@eval _wrap_linK2(::Val{0}, ::Val{0}, Kk) = (res, u) -> (res .-= (Kk * u))
+		@eval _wrap_linC2(::Val{0}, ::Val{0}, Cc) = (res, v) -> (res .-= (Cc * v))
+		@eval _wrap_linM2(::Val{0}, ::Val{0}, Mk) = (res, a) -> (res .-= (Mk * a))
+		@eval _wrap_quad2(::Val{0}, ::Val{0}, pgn, k1, k2, buf) =
+			(res, u₁, u₂) -> begin
+				evaluate_kth_quadratic_b!(buf, pgn, k1, k2, u₁, u₂)
+				res .-= buf
+			end
+		@eval _wrap_cube2(::Val{0}, ::Val{0}, pgn, k1, k2, buf) =
+			(res, u₁, u₂, u₃) -> begin
+				evaluate_kth_cubic_b!(buf, pgn, k1, k2, u₁, u₂, u₃)
+				res .-= buf
+			end
+	else
+		# First k1 ext args select θ₁ (component [1]), next k2 select θ₂ ([2]).
+		indices = vcat(fill(1, k1), fill(2, k2))
+		factor = Expr(:call, :*, scale,
+			[:($(ext_args[i])[$(indices[i])]) for i in 1:k_total]...)
+		@eval _wrap_linK2(::Val{$k1}, ::Val{$k2}, Kk) =
+			(res, u, $(ext_args...)) -> (res .-= ($factor) .* (Kk * u))
+		@eval _wrap_linC2(::Val{$k1}, ::Val{$k2}, Cc) =
+			(res, v, $(ext_args...)) -> (res .-= ($factor) .* (Cc * v))
+		@eval _wrap_linM2(::Val{$k1}, ::Val{$k2}, Mk) =
+			(res, a, $(ext_args...)) -> (res .-= ($factor) .* (Mk * a))
+		@eval _wrap_quad2(::Val{$k1}, ::Val{$k2}, pgn, k1b, k2b, buf) =
+			(res, u₁, u₂, $(ext_args...)) -> begin
+				evaluate_kth_quadratic_b!(buf, pgn, k1b, k2b, u₁, u₂)
+				res .-= ($factor) .* buf
+			end
+		@eval _wrap_cube2(::Val{$k1}, ::Val{$k2}, pgn, k1b, k2b, buf) =
+			(res, u₁, u₂, u₃, $(ext_args...)) -> begin
+				evaluate_kth_cubic_b!(buf, pgn, k1b, k2b, u₁, u₂, u₃)
+				res .-= ($factor) .* buf
+			end
+	end
+end
+
+# ============================================================
+# 4.2  ParametricGeometricNonlinearity2D struct
+# ============================================================
+"""
+	ParametricGeometricNonlinearity2D{N_input}
+
+Two-parameter analogue of `ParametricGeometricNonlinearity{N_input}`.
+Stores the arch-mode nodal vector so that J₂(x₀) = ∇φ₁(x₀) can be
+computed at each quadrature point via Ferrite's `function_gradient`.
+
+Fields
+------
+	dh, cv              — Ferrite DofHandler / CellValues
+	λ, μ               — Lamé parameters
+	J₁                 — constant axial-stretch Jacobian (Tens3)
+	arch_mode_free     — Vector{Float64} of length n_free:
+	                     real part of first master mode in free-DOF space
+	free_to_local      — Dict mapping global DOF → free-DOF index
+	n_free             — length of the free-DOF vector
+	N_θ               — truncation order in (θ₁, θ₂)
+"""
+struct ParametricGeometricNonlinearity2D{N_input}
+	dh             :: DofHandler
+	cv             :: CellValues
+	λ             :: Float64
+	μ             :: Float64
+	J₁            :: Tens3
+	arch_mode_free :: Vector{Float64}
+	free_to_local  :: Dict{Int, Int}
+	n_free         :: Int
+	N_θ           :: Int
+end
+
+# ============================================================
+# 4.3  Bivariate quadratic and cubic evaluations
+# ============================================================
+"""
+	evaluate_kth_quadratic_b!(res, pgn, k₁, k₂, u₁, u₂)
+
+Compute the (θ₁^k₁ θ₂^k₂)-coefficient of the bivariate quadratic
+Galerkin form `g(u₁, u₂; θ₁, θ₂)` and accumulate into `res`.
+
+At each QP, J₂_qp is obtained from `function_gradient` on the arch mode,
+the full bivariate adj/det series is computed, and the bivariate bracket
+is evaluated.  Overwrites `res`.
+"""
+function evaluate_kth_quadratic_b!(res::AbstractVector{T},
+	pgn::ParametricGeometricNonlinearity2D{2},
+	k₁::Int, k₂::Int,
+	u₁::AbstractVector{T},
+	u₂::AbstractVector{T}) where {T}
+	fill!(res, zero(T))
+	cv          = pgn.cv
+	λ, μ       = pgn.λ, pgn.μ
+	N_θ         = pgn.N_θ
+	J₁          = pgn.J₁
+	J₀          = one(Tens3)
+	n_basefuncs = getnbasefunctions(cv)
+	n_dofs_cell = ndofs_per_cell(pgn.dh)
+
+	u₁e   = zeros(T, n_dofs_cell)
+	u₂e   = zeros(T, n_dofs_cell)
+	φ₁e   = zeros(Float64, n_dofs_cell)
+	re    = zeros(T, n_dofs_cell)
+
+	for cell in CellIterator(pgn.dh)
+		reinit!(cv, cell)
+		dofs = celldofs(cell)
+		gather_local!(u₁e, u₁, dofs, pgn.free_to_local)
+		gather_local!(u₂e, u₂, dofs, pgn.free_to_local)
+		gather_local!(φ₁e, pgn.arch_mode_free, dofs, pgn.free_to_local)
+		fill!(re, zero(T))
+
+		for q_point in 1:getnquadpoints(cv)
+			dΩ₀ = getdetJdV(cv, q_point)
+
+			J₂_qp = Tens3(function_gradient(cv, q_point, φ₁e))
+
+			# Bivariate adj/det series (computed per QP)
+			det_b, adj_b = det_and_adj_bseries(J₀, J₁, J₂_qp, N_θ)
+			inv_det_b    = breciprocal_series(det_b, N_θ)
+			inv_det2_b   = bpoly_power(inv_det_b, 2, N_θ)
+
+			∇u1 = function_gradient(cv, q_point, u₁e)
+			∇u2 = function_gradient(cv, q_point, u₂e)
+
+			∇u1_adj_b = _assemble_grad_adj(∇u1, adj_b, N_θ)
+			∇u2_adj_b = _assemble_grad_adj(∇u2, adj_b, N_θ)
+
+			# Full (N_θ+1)×(N_θ+1) matrices; entries above the anti-diagonal
+			# (k1+k2 > N_θ) are zero because ∇u*_adj_b and E12_b are zero there.
+			σ_u1_b = [σ_lame(symmetric(∇u1_adj_b[k1p+1, k2p+1]), λ, μ)
+				      for k1p in 0:N_θ, k2p in 0:N_θ]
+			σ_u2_b = [σ_lame(symmetric(∇u2_adj_b[k1p+1, k2p+1]), λ, μ)
+				      for k1p in 0:N_θ, k2p in 0:N_θ]
+
+			E12_b  = _E_nl_adj_bseries(∇u1_adj_b, ∇u2_adj_b, N_θ)
+			σE12_b = [σ_lame(E12_b[k1p+1, k2p+1], λ, μ) for k1p in 0:N_θ, k2p in 0:N_θ]
+
+			for I in 1:n_basefuncs
+				∇NI       = shape_gradient(cv, q_point, I)
+				∇NI_adj_b = _assemble_grad_adj(∇NI, adj_b, N_θ)
+				ε_v_b     = [symmetric(∇NI_adj_b[k1p+1, k2p+1]) for k1p in 0:N_θ, k2p in 0:N_θ]
+
+				# t1 = ε_v ⊡ σ(E_nl(u₁,u₂))
+				t1 = bpoly_contract(ε_v_b, σE12_b, N_θ)
+
+				# t2 = ½ sym(∇u₁ᵀ·∇v) ⊡ σ(ε(u₂))
+				M2_b = bpoly_dot(_transpose_bseries(∇u1_adj_b, N_θ), ∇NI_adj_b, N_θ)
+				S2_b = _symmetric_bseries(M2_b, N_θ)
+				t2   = bpoly_contract(S2_b, σ_u2_b, N_θ)
+
+				# t3 = ½ sym(∇u₂ᵀ·∇v) ⊡ σ(ε(u₁))
+				M3_b = bpoly_dot(_transpose_bseries(∇u2_adj_b, N_θ), ∇NI_adj_b, N_θ)
+				S3_b = _symmetric_bseries(M3_b, N_θ)
+				t3   = bpoly_contract(S3_b, σ_u1_b, N_θ)
+
+				integ_b = zeros(T, N_θ + 1, N_θ + 1)
+				for k1p in 0:N_θ, k2p in 0:N_θ-k1p
+					integ_b[k1p+1, k2p+1] = t1[k1p+1, k2p+1] +
+						0.5 * (t2[k1p+1, k2p+1] + t3[k1p+1, k2p+1])
+				end
+
+				with_invdet2 = bpoly_mul(integ_b, inv_det2_b, N_θ)
+				re[I] += with_invdet2[k₁+1, k₂+1] * dΩ₀
+			end
+		end
+		scatter_local!(res, re, dofs, pgn.free_to_local)
+	end
+	return res
+end
+
+"""
+	evaluate_kth_cubic_b!(res, pgn, k₁, k₂, u₁, u₂, u₃)
+
+Bivariate analogue of `evaluate_kth_cubic!`.  Computes the
+(θ₁^k₁ θ₂^k₂)-coefficient of the cubic form `h(u₁,u₂,u₃; θ₁,θ₂)`.
+"""
+function evaluate_kth_cubic_b!(res::AbstractVector{T},
+	pgn::ParametricGeometricNonlinearity2D{3},
+	k₁::Int, k₂::Int,
+	u₁::AbstractVector{T},
+	u₂::AbstractVector{T},
+	u₃::AbstractVector{T}) where {T}
+	fill!(res, zero(T))
+	cv          = pgn.cv
+	λ, μ       = pgn.λ, pgn.μ
+	N_θ         = pgn.N_θ
+	J₁          = pgn.J₁
+	J₀          = one(Tens3)
+	n_basefuncs = getnbasefunctions(cv)
+	n_dofs_cell = ndofs_per_cell(pgn.dh)
+
+	u₁e = zeros(T, n_dofs_cell)
+	u₂e = zeros(T, n_dofs_cell)
+	u₃e = zeros(T, n_dofs_cell)
+	φ₁e = zeros(Float64, n_dofs_cell)
+	re  = zeros(T, n_dofs_cell)
+
+	for cell in CellIterator(pgn.dh)
+		reinit!(cv, cell)
+		dofs = celldofs(cell)
+		gather_local!(u₁e, u₁, dofs, pgn.free_to_local)
+		gather_local!(u₂e, u₂, dofs, pgn.free_to_local)
+		gather_local!(u₃e, u₃, dofs, pgn.free_to_local)
+		gather_local!(φ₁e, pgn.arch_mode_free, dofs, pgn.free_to_local)
+		fill!(re, zero(T))
+
+		for q_point in 1:getnquadpoints(cv)
+			dΩ₀ = getdetJdV(cv, q_point)
+
+			J₂_qp = Tens3(function_gradient(cv, q_point, φ₁e))
+
+			det_b, adj_b = det_and_adj_bseries(J₀, J₁, J₂_qp, N_θ)
+			inv_det_b    = breciprocal_series(det_b, N_θ)
+			inv_det3_b   = bpoly_power(inv_det_b, 3, N_θ)
+
+			∇u1 = function_gradient(cv, q_point, u₁e)
+			∇u2 = function_gradient(cv, q_point, u₂e)
+			∇u3 = function_gradient(cv, q_point, u₃e)
+
+			∇u1_adj_b = _assemble_grad_adj(∇u1, adj_b, N_θ)
+			∇u2_adj_b = _assemble_grad_adj(∇u2, adj_b, N_θ)
+			∇u3_adj_b = _assemble_grad_adj(∇u3, adj_b, N_θ)
+
+			E12_b = _E_nl_adj_bseries(∇u1_adj_b, ∇u2_adj_b, N_θ)
+			E13_b = _E_nl_adj_bseries(∇u1_adj_b, ∇u3_adj_b, N_θ)
+			E23_b = _E_nl_adj_bseries(∇u2_adj_b, ∇u3_adj_b, N_θ)
+			# Full (N_θ+1)×(N_θ+1) matrices; zero above anti-diagonal from E*_b.
+			σE12_b = [σ_lame(E12_b[k1p+1, k2p+1], λ, μ) for k1p in 0:N_θ, k2p in 0:N_θ]
+			σE13_b = [σ_lame(E13_b[k1p+1, k2p+1], λ, μ) for k1p in 0:N_θ, k2p in 0:N_θ]
+			σE23_b = [σ_lame(E23_b[k1p+1, k2p+1], λ, μ) for k1p in 0:N_θ, k2p in 0:N_θ]
+
+			for I in 1:n_basefuncs
+				∇NI       = shape_gradient(cv, q_point, I)
+				∇NI_adj_b = _assemble_grad_adj(∇NI, adj_b, N_θ)
+
+				A1 = bpoly_dot(_transpose_bseries(∇u1_adj_b, N_θ), ∇NI_adj_b, N_θ)
+				A2 = bpoly_dot(_transpose_bseries(∇u2_adj_b, N_θ), ∇NI_adj_b, N_θ)
+				A3 = bpoly_dot(_transpose_bseries(∇u3_adj_b, N_θ), ∇NI_adj_b, N_θ)
+				S1 = _symmetric_bseries(A1, N_θ)
+				S2 = _symmetric_bseries(A2, N_θ)
+				S3 = _symmetric_bseries(A3, N_θ)
+
+				t1 = bpoly_contract(S1, σE23_b, N_θ)
+				t2 = bpoly_contract(S2, σE13_b, N_θ)
+				t3 = bpoly_contract(S3, σE12_b, N_θ)
+
+				integ_b = zeros(T, N_θ + 1, N_θ + 1)
+				for k1p in 0:N_θ, k2p in 0:N_θ-k1p
+					integ_b[k1p+1, k2p+1] = (1 / 3) *
+						(t1[k1p+1, k2p+1] + t2[k1p+1, k2p+1] + t3[k1p+1, k2p+1])
+				end
+
+				with_invdet3 = bpoly_mul(integ_b, inv_det3_b, N_θ)
+				re[I] += with_invdet3[k₁+1, k₂+1] * dΩ₀
+			end
+		end
+		scatter_local!(res, re, dofs, pgn.free_to_local)
+	end
+	return res
+end
+
+# ============================================================
+# 4.4  Internal helper functions for bivariate tensor series
+# ============================================================
+
+# _assemble_grad_adj: compute ∇u · adj(J(θ₁,θ₂)) as a bivariate Tensor series.
+# Result is a (N_θ+1)×(N_θ+1) matrix of Tensor{2,3,T}.
+@inline function _assemble_grad_adj(∇u, adj_b::AbstractMatrix{Tens3}, N_θ::Int)
+	T = eltype(∇u)
+	out = Matrix{Tensor{2, 3, T, 9}}(undef, N_θ + 1, N_θ + 1)
+	zero_T = zero(Tensor{2, 3, T, 9})
+	for k1 in 0:N_θ, k2 in 0:N_θ
+		k1 + k2 ≤ N_θ || (out[k1+1, k2+1] = zero_T; continue)
+		# ∇u (3×3) ⋅ adj_b[k1,k2] (Tens3) = single contraction
+		out[k1+1, k2+1] = Tensor{2, 3, T, 9}(∇u ⋅ adj_b[k1+1, k2+1])
+	end
+	return out
+end
+
+# _E_nl_adj_bseries: bivariate version of E_nl_adj_series.
+function _E_nl_adj_bseries(∇uA_b::AbstractMatrix, ∇uB_b::AbstractMatrix, N_θ::Int)
+	∇uA_T_b = _transpose_bseries(∇uA_b, N_θ)
+	∇uB_T_b = _transpose_bseries(∇uB_b, N_θ)
+	AB = bpoly_dot(∇uA_T_b, ∇uB_b, N_θ)
+	BA = bpoly_dot(∇uB_T_b, ∇uA_b, N_θ)
+	T  = eltype(eltype(∇uA_b))
+	result = Matrix{SymmetricTensor{2, 3, T, 6}}(undef, N_θ + 1, N_θ + 1)
+	zero_sym = zero(SymmetricTensor{2, 3, T, 6})
+	for k1 in 0:N_θ, k2 in 0:N_θ
+		k1 + k2 ≤ N_θ || (result[k1+1, k2+1] = zero_sym; continue)
+		result[k1+1, k2+1] = symmetric(0.25 * (AB[k1+1, k2+1] + BA[k1+1, k2+1]))
+	end
+	return result
+end
+
+# _transpose_bseries: apply transpose element-wise.
+function _transpose_bseries(A::AbstractMatrix, N_θ::Int)
+	T = typeof(transpose(A[1, 1]))
+	out = Matrix{T}(undef, N_θ + 1, N_θ + 1)
+	fill!(out, zero(T))
+	for k1 in 0:N_θ, k2 in 0:N_θ-k1
+		out[k1+1, k2+1] = transpose(A[k1+1, k2+1])
+	end
+	return out
+end
+
+# _symmetric_bseries: apply symmetric element-wise.
+function _symmetric_bseries(A::AbstractMatrix, N_θ::Int)
+	T = typeof(symmetric(A[1, 1]))
+	out = Matrix{T}(undef, N_θ + 1, N_θ + 1)
+	fill!(out, zero(T))
+	for k1 in 0:N_θ, k2 in 0:N_θ-k1
+		out[k1+1, k2+1] = symmetric(A[k1+1, k2+1])
+	end
+	return out
+end
+
+# _pad_to_full: convert a lower-triangular array (indexed [k1+1,k2+1] for k1+k2≤N)
+# to a full (N+1)×(N+1) matrix with zeros above the diagonal (total degree > N).
+function _pad_to_full(arr::AbstractMatrix{T}, N_θ::Int) where {T}
+	out = Matrix{T}(undef, N_θ + 1, N_θ + 1)
+	fill!(out, zero(T))
+	for k1 in 0:N_θ, k2 in 0:N_θ-k1
+		out[k1+1, k2+1] = arr[k1+1, k2+1]
+	end
+	return out
+end
+
+# ============================================================
+# 4.5  Bivariate K/M assembly
+# ============================================================
+"""
+	assemble_K_M_bivariate!(K_b, M_b, dh, cv, λ, μ, ρ, J₁,
+	                         arch_mode_free, free_to_local, N_θ)
+
+Fill `K_b[k₁+1, k₂+1]` and `M_b[k₁+1, k₂+1]` with the (θ₁^k₁ θ₂^k₂)
+coefficient matrices of the linear stiffness and mass forms.
+
+`K_b` and `M_b` are `(N_θ+1)×(N_θ+1)` arrays of sparse matrices (same
+sparsity pattern); only entries with `k₁+k₂ ≤ N_θ` are filled.
+"""
+function assemble_K_M_bivariate!(K_b::Matrix, M_b::Matrix,
+	dh::DofHandler, cv::CellValues,
+	λ::Float64, μ::Float64, ρ::Float64,
+	J₁::Tens3, arch_mode_free::Vector{Float64},
+	free_to_local::Dict{Int, Int}, N_θ::Int)
+	J₀ = one(Tens3)
+
+	# Map (k1,k2) → linear index.  Built first so assemblers are placed at the
+	# SAME positions — a filtered comprehension uses column-major (k1 inner) order
+	# which differs from the plain for-loop order (k1 outer), causing a swap.
+	n_active = 0
+	idx_map = Dict{Tuple{Int, Int}, Int}()
+	for k1 in 0:N_θ, k2 in 0:N_θ
+		k1 + k2 ≤ N_θ || continue
+		n_active += 1
+		idx_map[(k1, k2)] = n_active
+	end
+
+	# Build assemblers with an explicit loop that matches idx_map order exactly.
+	assemblers_K = Vector{typeof(start_assemble(K_b[1, 1]))}(undef, n_active)
+	assemblers_M = Vector{typeof(start_assemble(M_b[1, 1]))}(undef, n_active)
+	for k1 in 0:N_θ, k2 in 0:N_θ
+		k1 + k2 ≤ N_θ || continue
+		m = idx_map[(k1, k2)]
+		assemblers_K[m] = start_assemble(K_b[k1+1, k2+1])
+		assemblers_M[m] = start_assemble(M_b[k1+1, k2+1])
+	end
+
+	n_basefuncs = getnbasefunctions(cv)
+	ke_all = [zeros(n_basefuncs, n_basefuncs) for _ in 1:n_active]
+	me_all = [zeros(n_basefuncs, n_basefuncs) for _ in 1:n_active]
+
+	φ₁e = zeros(Float64, ndofs_per_cell(dh))
+	σ_of(ε) = λ * tr(ε) * one(ε) + 2μ * ε
+
+	for cell in CellIterator(dh)
+		reinit!(cv, cell)
+		dofs = celldofs(cell)
+		gather_local!(φ₁e, arch_mode_free, dofs, free_to_local)
+		for m in 1:n_active
+			fill!(ke_all[m], 0.0)
+			fill!(me_all[m], 0.0)
+		end
+
+		for q_point in 1:getnquadpoints(cv)
+			dΩ₀ = getdetJdV(cv, q_point)
+
+			# Per-QP J₂ from arch mode gradient
+			J₂_qp  = Tens3(function_gradient(cv, q_point, φ₁e))
+			det_b, adj_b = det_and_adj_bseries(J₀, J₁, J₂_qp, N_θ)
+			inv_det_b    = breciprocal_series(det_b, N_θ)
+
+			for i in 1:n_basefuncs
+				∇Ni = shape_gradient(cv, q_point, i)
+				Ni  = shape_value(cv, q_point, i)
+				# Bivariate ε_adj(N_i) = sym(∇Ni · adj(J(θ₁,θ₂)))
+				∇Ni_adj_b = _assemble_grad_adj(∇Ni, adj_b, N_θ)
+				ε_adj_i_b = [symmetric(∇Ni_adj_b[k1+1, k2+1]) for k1 in 0:N_θ, k2 in 0:N_θ]
+
+				for j in 1:n_basefuncs
+					∇Nj = shape_gradient(cv, q_point, j)
+					Nj  = shape_value(cv, q_point, j)
+					∇Nj_adj_b = _assemble_grad_adj(∇Nj, adj_b, N_θ)
+					ε_adj_j_b = [symmetric(∇Nj_adj_b[k1+1, k2+1]) for k1 in 0:N_θ, k2 in 0:N_θ]
+					σ_adj_j_b = [σ_of(ε_adj_j_b[k1+1, k2+1]) for k1 in 0:N_θ, k2 in 0:N_θ]
+
+					# bracket_K = ε_adj_i ⊡ σ_adj_j
+					bracket = bpoly_contract(ε_adj_i_b, σ_adj_j_b, N_θ)
+					# K integrand: bracket · (1/det)
+					K_ser = bpoly_mul(bracket, inv_det_b, N_θ)
+
+					NiNj = Ni ⋅ Nj
+					for k1 in 0:N_θ, k2 in 0:N_θ
+						k1 + k2 ≤ N_θ || continue
+						m = idx_map[(k1, k2)]
+						ke_all[m][i, j] += K_ser[k1+1, k2+1] * dΩ₀
+						me_all[m][i, j] += ρ * NiNj * det_b[k1+1, k2+1] * dΩ₀
+					end
+				end
+			end
+		end
+
+		for k1 in 0:N_θ, k2 in 0:N_θ
+			k1 + k2 ≤ N_θ || continue
+			m = idx_map[(k1, k2)]
+			assemble!(assemblers_K[m], celldofs(cell), ke_all[m])
+			assemble!(assemblers_M[m], celldofs(cell), me_all[m])
+		end
+	end
+	return nothing
+end
+
+# ============================================================
+# 4.6  Builder convenience functions for bivariate corrections
+# ============================================================
+"""
+	build_bivariate_K_corrections(K_b, N_θ) -> Vector{MultilinearMap}
+
+Wrap all non-trivial (k₁+k₂ ≥ 1) bivariate stiffness coefficient matrices
+as MultilinearMaps of modal arity (1,0,0) and external arity k₁+k₂.
+"""
+function build_bivariate_K_corrections(K_b::AbstractMatrix, N_θ::Int)
+	corr = MultilinearMap[]
+	for k1 in 0:N_θ, k2 in 0:N_θ-k1
+		k1 + k2 ≥ 1 || continue
+		Kk = K_b[k1+1, k2+1]
+		nnz(Kk) > 0 || continue
+		cl = _wrap_linK2(Val(k1), Val(k2), Kk)
+		push!(corr, MultilinearMap(cl, (1, 0, 0), k1 + k2))
+	end
+	return corr
+end
+
+"""
+	build_bivariate_C_corrections(K_b, M_b, α, β, N_θ) -> Vector{MultilinearMap}
+
+Parametric Rayleigh damping C(θ₁,θ₂) = α M(θ₁,θ₂) + β K(θ₁,θ₂).
+"""
+function build_bivariate_C_corrections(K_b::AbstractMatrix, M_b::AbstractMatrix,
+	α::Float64, β::Float64, N_θ::Int)
+	corr = MultilinearMap[]
+	for k1 in 0:N_θ, k2 in 0:N_θ-k1
+		k1 + k2 ≥ 1 || continue
+		Ck = nothing
+		if β != 0
+			Ck = β * K_b[k1+1, k2+1]
+		end
+		if α != 0
+			Mk = M_b[k1+1, k2+1]
+			Ck = Ck === nothing ? α * Mk : Ck + α * Mk
+		end
+		Ck === nothing && continue
+		nnz(Ck) > 0 || continue
+		cl = _wrap_linC2(Val(k1), Val(k2), Ck)
+		push!(corr, MultilinearMap(cl, (0, 1, 0), k1 + k2))
+	end
+	return corr
+end
+
+"""
+	build_bivariate_M_corrections(M_b, N_θ) -> Vector{MultilinearMap}
+
+Inertial (acceleration) corrections θ₁^k₁ θ₂^k₂ M_{k₁,k₂} ü.
+Requires ORD=3 in the NDOrderModel.
+"""
+function build_bivariate_M_corrections(M_b::AbstractMatrix, N_θ::Int)
+	corr = MultilinearMap[]
+	for k1 in 0:N_θ, k2 in 0:N_θ-k1
+		k1 + k2 ≥ 1 || continue
+		Mk = M_b[k1+1, k2+1]
+		nnz(Mk) > 0 || continue
+		cl = _wrap_linM2(Val(k1), Val(k2), Mk)
+		push!(corr, MultilinearMap(cl, (0, 0, 1), k1 + k2))
+	end
+	return corr
+end
+
+"""
+	multilinear_maps(pgn::ParametricGeometricNonlinearity2D{2}) -> Vector{MultilinearMap}
+
+Wrap each bivariate coefficient (k₁,k₂) with k₁+k₂ ∈ 0:N_θ of the
+quadratic St-Venant–Kirchhoff force as a MultilinearMap.
+"""
+function multilinear_maps(pgn::ParametricGeometricNonlinearity2D{2})
+	maps = MultilinearMap[]
+	for k1 in 0:pgn.N_θ, k2 in 0:pgn.N_θ-k1
+		buf = zeros(ComplexF64, pgn.n_free)
+		cl  = _wrap_quad2(Val(k1), Val(k2), pgn, k1, k2, buf)
+		push!(maps, MultilinearMap(cl, (2, 0, 0), k1 + k2))
+	end
+	return maps
+end
+
+"""
+	multilinear_maps(pgn::ParametricGeometricNonlinearity2D{3}) -> Vector{MultilinearMap}
+
+Wrap each bivariate coefficient of the cubic elastic force.
+"""
+function multilinear_maps(pgn::ParametricGeometricNonlinearity2D{3})
+	maps = MultilinearMap[]
+	for k1 in 0:pgn.N_θ, k2 in 0:pgn.N_θ-k1
+		buf = zeros(ComplexF64, pgn.n_free)
+		cl  = _wrap_cube2(Val(k1), Val(k2), pgn, k1, k2, buf)
+		push!(maps, MultilinearMap(cl, (3, 0, 0), k1 + k2))
+	end
+	return maps
+end
