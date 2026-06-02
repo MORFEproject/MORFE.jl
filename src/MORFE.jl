@@ -18,6 +18,7 @@ include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl"
 include("FEMUtility.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
+include("Export/ParaviewExport.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -38,6 +39,7 @@ using .CohomologicalEquations
 using .FEMUtility
 using .BifurcationKitInterface
 using .InvarianceError
+using .ParaviewExport
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
@@ -96,5 +98,9 @@ export make_bk_problem
 
 # Validation
 export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
+
+# Paraview export
+export write_paraview_mesh, write_paraview_modes, write_paraview_manifold,
+    write_paraview_deformation
 
 end # module
