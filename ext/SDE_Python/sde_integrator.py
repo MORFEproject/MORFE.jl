@@ -179,17 +179,16 @@ if __name__ == "__main__":
     # Oscillator parameters
     # ------------------------------------------------------------
     omega0 = 1.0      # natural frequency
-    gamma  = 0.1      # damping
+    gamma  = 1.0      # damping
     sigma  = 0.2      # noise intensity
 
     # Stratonovich drift (same as the physical model)
     def drift(x, t):
-        return np.array([x[1],
-                        -omega0**2 * x[0] - gamma * x[1]])
+        return np.array([x[1], -omega0**2 * x[0] - gamma * x[1] - 0.0 * x[0]**3])
 
     # Diffusion (only velocity component is noisy)
     def diffusion(x, t):
-        return np.array([0.0, sigma * x[1]])
+        return np.array([0.0, sigma * x[1] + 5.0])
 
     # Derivative of diffusion w.r.t. state (diagonal of Jacobian)
     def diffusion_der(x, t):
@@ -199,9 +198,9 @@ if __name__ == "__main__":
     # Simulation settings
     # ------------------------------------------------------------
     x0 = np.array([1.0, 0.0])     # start with position = 1, velocity = 0
-    t_span = (0.0, 20.0)
+    t_span = (0.0, 100.0)
     n_steps = 2000
-    n_sims = 100
+    n_sims = 500
     seed = 2024
 
     # Create integrator (Stratonovich by default)
