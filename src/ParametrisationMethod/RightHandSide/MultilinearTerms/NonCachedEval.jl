@@ -43,8 +43,7 @@ end
 function _accumulate_split!(accum, scratch,
 	t, ::GroupwiseSymmetric, W, set, rem, deg, candidate_indices, args_ext)
 	orders = _derivative_orders(t)
-	for entry in
-		factorisations_groupwise_symmetric(set, rem, t.multiindex, candidate_indices)
+	for entry in factorisations_groupwise_symmetric(set, rem, t.multiindex, candidate_indices)
 		fill!(scratch, 0)
 		@inbounds args = ntuple(i -> @view(W[:, orders[i], entry.factor_indices[i]]), Val(deg))
 		t.f!(scratch, args..., args_ext...)

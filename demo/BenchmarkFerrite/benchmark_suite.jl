@@ -28,12 +28,12 @@ Usage:
   julia --project demo/BenchmarkFerrite/benchmark_suite.jl
 """
 
-import Pkg
+using Pkg: Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
-    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
-        "BenchmarkTools", "Gmsh"])
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
+		"BenchmarkTools", "Gmsh"])
 end
 Pkg.instantiate()
 
@@ -54,19 +54,23 @@ include(joinpath(@__DIR__, "../Ferrite/ferrite_assembly.jl"))
 # Suite parameters (fixed across all mesh sizes)
 # -----------------------------------------------------------------------
 
-const SUITE_MESHES = [(160, 8, 4), (160, 8, 8)]
+const SUITE_MESHES = [
+(160, 2, 2),
+(320, 2, 2),
+(640, 2, 2)
+]
 const SUITE_ROM    = 2
 const SUITE_N_EXT  = 2
 const SUITE_NVAR   = SUITE_ROM + SUITE_N_EXT
 const SUITE_DEGREE = 5
 
-const E        = 160e3
+const E = 160e3
 const ν_ratio = 0.22
-const ρ_val   = 2.32e-3
-const α_damp  = 0.5369754008568333 / 500.0
-const β_damp  = 0.0
-const λ_lame  = (E * ν_ratio) / ((1 + ν_ratio) * (1 - 2ν_ratio))
-const μ_lame  = E / (2(1 + ν_ratio))
+const ρ_val = 2.32e-3
+const α_damp = 0.5369754008568333 / 500.0
+const β_damp = 0.0
+const λ_lame = (E * ν_ratio) / ((1 + ν_ratio) * (1 - 2ν_ratio))
+const μ_lame = E / (2(1 + ν_ratio))
 
 const BENCH_BASE = joinpath(@__DIR__, "benchmark_results")
 
@@ -85,7 +89,7 @@ Returns `(; mesh_name, n_free, r1, r2, bench_dir)`.
 """
 function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGREE)
 	mesh_name = "beam_h27_$(nx)x$(ny)x$(nz)"
-	msh_path  = joinpath(@__DIR__, "$(mesh_name).msh")
+	msh_path = joinpath(@__DIR__, "$(mesh_name).msh")
 	isfile(msh_path) ||
 		error("Mesh not found: $(msh_path)\nRun generate_beam_meshes.jl first.")
 
@@ -103,11 +107,11 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	# 1. Mesh and FE setup
 	# -------------------------------------------------------------------
 	println("Loading mesh …")
-	grid   = togrid(msh_path)
-	ip     = Lagrange{RefHexahedron, 2}()^3
+	grid = togrid(msh_path)
+	ip = Lagrange{RefHexahedron, 2}()^3
 	geo_ip = Lagrange{RefHexahedron, 2}()
-	qr     = QuadratureRule{RefHexahedron}(3)
-	cv     = CellValues(qr, ip, geo_ip)
+	qr = QuadratureRule{RefHexahedron}(3)
+	cv = CellValues(qr, ip, geo_ip)
 
 	dh = DofHandler(grid)
 	add!(dh, :u, ip)
@@ -127,9 +131,9 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	M_full = allocate_matrix(dh)
 	assemble_KM!(K_full, M_full, dh, cv, λ_lame, μ_lame, ρ_val)
 
-	free          = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
+	free = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
 	free_to_local = Dict(d => i for (i, d) in enumerate(free))
-	n_free        = length(free)
+	n_free = length(free)
 
 	K = K_full[free, free]
 	M = M_full[free, free]
@@ -140,7 +144,7 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	# -------------------------------------------------------------------
 	# 3. Multiindex set
 	# -------------------------------------------------------------------
-	mset     = all_multiindices_up_to(SUITE_NVAR, max_degree; min_degree = 1)
+	mset = all_multiindices_up_to(SUITE_NVAR, max_degree; min_degree = 1)
 	max_uniq = length(mset)
 
 	# -------------------------------------------------------------------
@@ -162,8 +166,8 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	select_master_modes_by_sorting(eigenproblem, SUITE_ROM)
 
 	master_eigenvalues = SVector{SUITE_ROM, ComplexF64}(eigenvalues[1:SUITE_ROM])
-	master_modes       = Y[:, 1, 1:SUITE_ROM]
-	left_eigenmodes    = X[:, 1:SUITE_ROM]
+	master_modes = Y[:, 1, 1:SUITE_ROM]
+	left_eigenmodes = X[:, 1:SUITE_ROM]
 
 	ORD_model = size(eigenproblem.eigenmodes, 2)
 	master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, SUITE_ROM)
@@ -174,10 +178,10 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	# -------------------------------------------------------------------
 	# 4. Force terms
 	# -------------------------------------------------------------------
-	term_quad  = FerriteGeometricNonlinearity{2}(
-	dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = max_uniq)
+	term_quad = FerriteGeometricNonlinearity{2}(
+		dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = max_uniq)
 	term_cubic = FerriteGeometricNonlinearity{3}(
-	dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = max_uniq)
+		dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = max_uniq)
 
 	Ω_force = abs(eigenvalues[1])
 	f_vec = 2.5 .* (M * master_modes[:, 1])
@@ -193,11 +197,11 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	ext_sys
 )
 
-	super_eigenvalues  = Vector{ComplexF64}([
-	master_eigenvalues..., complex(0.0, Ω_force), complex(0.0, -Ω_force)])
+	super_eigenvalues = Vector{ComplexF64}([
+		master_eigenvalues..., complex(0.0, Ω_force), complex(0.0, -Ω_force)])
 	target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-	resonance_set      = resonance_set_from_complex_normal_form_style(
-	SUITE_ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
+	resonance_set = resonance_set_from_complex_normal_form_style(
+		SUITE_ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
 
 	# -------------------------------------------------------------------
 	# §2 — Cohomological solve
@@ -209,8 +213,8 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 		master_modes, left_eigenmodes,
 		resonance_set;
 		master_modes_derivatives = master_modes_derivatives,
-		conjugate_permutation    = [2, 1, 4, 3],
-		benchmark_dir            = bench_dir,
+		conjugate_permutation = [2, 1, 4, 3],
+		benchmark_dir = bench_dir,
 	)
 	(_, R) = r2.value
 
@@ -255,44 +259,44 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
 
-println("=" ^ 70)
-println("MORFE.jl — Multi-Mesh Benchmark Suite (Ferrite path)")
-println("  ROM=$(SUITE_ROM)  N_EXT=$(SUITE_N_EXT)  max_degree=$(SUITE_DEGREE)")
-println("  Meshes: ", join(["beam_h27_$(nx)x$(ny)x$(nz)" for (nx,ny,nz) in SUITE_MESHES], ", "))
-println("=" ^ 70)
+	println("=" ^ 70)
+	println("MORFE.jl — Multi-Mesh Benchmark Suite (Ferrite path)")
+	println("  ROM=$(SUITE_ROM)  N_EXT=$(SUITE_N_EXT)  max_degree=$(SUITE_DEGREE)")
+	println("  Meshes: ", join(["beam_h27_$(nx)x$(ny)x$(nz)" for (nx, ny, nz) in SUITE_MESHES], ", "))
+	println("=" ^ 70)
 
-suite_results = []
-for (nx, ny, nz) in SUITE_MESHES
-	push!(suite_results, benchmark_mesh(nx, ny, nz))
-end
+	suite_results = []
+	for (nx, ny, nz) in SUITE_MESHES
+		push!(suite_results, benchmark_mesh(nx, ny, nz))
+	end
 
-# -----------------------------------------------------------------------
-# Consolidated summary table
-# -----------------------------------------------------------------------
+	# -----------------------------------------------------------------------
+	# Consolidated summary table
+	# -----------------------------------------------------------------------
 
-to_gb(b) = b / 1024^3
+	to_gb(b) = b / 1024^3
 
-println()
-println("=" ^ 85)
-println("MORFE.jl — Benchmark Suite Results  (Ferrite, H27 beam, degree=$(SUITE_DEGREE))")
-println("-" ^ 85)
-@printf("%-24s  %6s  %9s  %9s  %9s  %9s\n", "Mesh", "FOM", "eig (s)", "solve (s)", "eig (GB)", "solve (GB)")
-println("-" ^ 85)
-for r in suite_results
-    @printf("%-24s  %6d  %9.3f  %9.3f  %9.3f  %9.3f\n",
-        r.mesh_name, r.n_free, r.r1.time, r.r2.time, to_gb(r.r1.bytes), to_gb(r.r2.bytes))
-end
-println("-" ^ 85)
-total_t = sum(r.r1.time + r.r2.time for r in suite_results)
-@printf("%-24s  %6s  %9s  %9s  %9s  %9s\n", "Total wall time", "", "", "", "", "")
-@printf("  %.1f s\n", total_t)
-println("=" ^ 85)
-println()
-println("Per-run results in:")
-for r in suite_results
-	println("  ", r.bench_dir)
-end
-println()
-println("Suite finished successfully.")
+	println()
+	println("=" ^ 85)
+	println("MORFE.jl — Benchmark Suite Results  (Ferrite, H27 beam, degree=$(SUITE_DEGREE))")
+	println("-" ^ 85)
+	@printf("%-24s  %6s  %9s  %9s  %9s  %9s\n", "Mesh", "FOM", "eig (s)", "solve (s)", "eig (GB)", "solve (GB)")
+	println("-" ^ 85)
+	for r in suite_results
+		@printf("%-24s  %6d  %9.3f  %9.3f  %9.3f  %9.3f\n",
+			r.mesh_name, r.n_free, r.r1.time, r.r2.time, to_gb(r.r1.bytes), to_gb(r.r2.bytes))
+	end
+	println("-" ^ 85)
+	total_t = sum(r.r1.time + r.r2.time for r in suite_results)
+	@printf("%-24s  %6s  %9s  %9s  %9s  %9s\n", "Total wall time", "", "", "", "", "")
+	@printf("  %.1f s\n", total_t)
+	println("=" ^ 85)
+	println()
+	println("Per-run results in:")
+	for r in suite_results
+		println("  ", r.bench_dir)
+	end
+	println()
+	println("Suite finished successfully.")
 
 end # if abspath(PROGRAM_FILE) == @__FILE__
