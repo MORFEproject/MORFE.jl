@@ -15,11 +15,11 @@
 
 # Bootstrap: activate a demo-local environment so weakdeps (Arpack, Plots, HDF5)
 # are not added to MORFE's root Project.toml.
-import Pkg
+using Pkg: Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
-    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-    Pkg.add(["Arpack", "LinearMaps", "Plots", "HDF5"])
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.add(["Arpack", "LinearMaps", "Plots", "HDF5"])
 end
 Pkg.instantiate()
 
@@ -42,14 +42,14 @@ using StaticArrays
 
 # ------------------------------------------------------------------------------
 # 1. Define system matrices
-#    Second-order ODE:  M ẍ + C ẋ + K x = F_nl(x, ẋ) + f_ext(t)
+#    Second-order ODE:  M ẍ + C ẋ + K x = sum F_nl(x, ẋ, r(t))
 # ------------------------------------------------------------------------------
 FOM = 2
 
 # NDOrderModel stores linear terms as (B₀, B₁, …, B_ORD)
 B0 = [2.0 -1.0; -1.0 2.0] # stiffness
 B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
-B1 = 0.001 * B2 # light damping
+B1 = 0.001 * B2           # light damping
 
 # ------------------------------------------------------------------------------
 # 2. Nonlinear terms and external system
@@ -207,8 +207,7 @@ resonance_set = resonance_set_from_graph_style(
 # 8. Solve cohomological equations
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
-W,
-R = solve_cohomological_problem(
+W, R = solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
 	master_modes, left_eigenmodes,

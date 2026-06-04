@@ -709,6 +709,118 @@ def plot_14_fixed_order_memory(runs: list[dict], target_order: int = 5) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Plot 15 — Solve/RHS cost ratio vs mesh size (log-x, one line per order)
+# ---------------------------------------------------------------------------
+
+
+def plot_15_ratio_solve_rhs(runs: list[dict]) -> None:
+    all_orders = sorted({o for r in runs for o in r["df_order"]["order"].unique()})
+    cmap = plt.get_cmap("plasma", len(all_orders) + 2)
+    colors = [cmap(i + 1) for i in range(len(all_orders))]
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+
+    for ci, order in enumerate(all_orders):
+        rows = _fixed_order_rows(runs, order)
+        if not rows:
+            continue
+        foms  = np.array([fom for fom, _ in rows], dtype=float)
+        t_rat = np.array([row["solve_time_s"] / row["rhs_time_s"] for _, row in rows])
+        m_rat = np.array([row["solve_alloc_bytes"] / row["rhs_alloc_bytes"] for _, row in rows])
+        c = colors[ci]
+        ax.plot(foms, t_rat, color=c, lw=2,   marker="o", ms=5, label=f"order {order}")
+        ax.plot(foms, m_rat, color=c, lw=1.5, marker="s", ms=4, ls="--")
+
+    solid_h = mlines.Line2D([], [], color="grey", lw=2,   label="Time ratio (solid)")
+    dash_h  = mlines.Line2D([], [], color="grey", lw=1.5, ls="--", label="Memory ratio (dashed)")
+    order_handles = [mpatches.Patch(color=colors[i], label=f"order {o}") for i, o in enumerate(all_orders)]
+    ax.legend(handles=order_handles + [solid_h, dash_h], fontsize=8, ncol=2)
+
+    ax.set_xscale("log")
+    ax.set_xlabel("FOM size (DOFs)")
+    ax.set_ylabel("Ratio  solve / RHS")
+    ax.set_title("Solve-to-RHS cost ratio vs mesh size\n(solid = time, dashed = memory allocation)")
+    ax.grid(True, which="both", ls=":", alpha=0.4)
+    fig.tight_layout()
+    _save(fig, "plot_15_ratio_solve_rhs.png")
+
+
+# ---------------------------------------------------------------------------
+# Plot 16 — Time-cost fraction at fixed order vs mesh size (stacked area)
+# ---------------------------------------------------------------------------
+
+
+def plot_16_fraction_vs_fom(runs: list[dict], target_order: int = 5) -> None:
+    rows = _fixed_order_rows(runs, target_order)
+    if not rows:
+        print(f"  No runs contain order {target_order} — skipping plot 16.")
+        return
+
+    foms     = np.array([fom for fom, _ in rows], dtype=float)
+    rhs_frac = np.array([row["rhs_time_s"] / row["order_total_time_s"] for _, row in rows])
+    sol_frac = np.array([row["solve_time_s"] / row["order_total_time_s"] for _, row in rows])
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.stackplot(foms, rhs_frac, sol_frac,
+                 labels=["RHS assembly", "Linear solve"],
+                 colors=["#dd8452", "#4c72b0"])
+    ax.set_xscale("log")
+    ax.set_xlim(foms[0], foms[-1])
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("FOM size (DOFs)")
+    ax.set_ylabel("Fraction of order time")
+    ax.set_title(f"Time-cost fraction at order {target_order} vs mesh size")
+    ax.legend(fontsize=9, loc="upper left", framealpha=0.9)
+    ax.grid(axis="y", ls=":", alpha=0.4)
+    fig.tight_layout()
+    _save(fig, f"plot_16_fraction_order{target_order}_vs_fom.png")
+
+
+# ---------------------------------------------------------------------------
+# Plot 17 — Per-order time (left, log) and memory (right, log) vs mesh size
+# ---------------------------------------------------------------------------
+
+
+def plot_17_time_memory_vs_fom(runs: list[dict]) -> None:
+    all_orders = sorted({o for r in runs for o in r["df_order"]["order"].unique()})
+    cmap = plt.get_cmap("plasma", len(all_orders) + 2)
+    colors = [cmap(i + 1) for i in range(len(all_orders))]
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    ax2 = ax.twinx()
+
+    for ci, order in enumerate(all_orders):
+        rows = _fixed_order_rows(runs, order)
+        if not rows:
+            continue
+        foms  = np.array([fom for fom, _ in rows], dtype=float)
+        times = np.array([row["order_total_time_s"] / 60 for _, row in rows])
+        mems  = np.array([(row["rhs_alloc_bytes"] + row["solve_alloc_bytes"]) / 1e9
+                          for _, row in rows])
+        c = colors[ci]
+        ax.plot(foms,  times, color=c, lw=2,   marker="o", ms=5, label=f"order {order}")
+        ax2.plot(foms, mems,  color=c, lw=1.5, marker="s", ms=4, ls="--")
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax2.set_yscale("log")
+    ax.set_xlabel("FOM size (DOFs)")
+    ax.set_ylabel("Order total time (min)")
+    ax2.set_ylabel("Total allocation (GB)", color="grey")
+    ax2.tick_params(axis="y", labelcolor="grey")
+
+    solid_h = mlines.Line2D([], [], color="grey", lw=2,   label="Time (solid, left axis)")
+    dash_h  = mlines.Line2D([], [], color="grey", lw=1.5, ls="--", label="Memory (dashed, right axis)")
+    order_handles = [mpatches.Patch(color=colors[i], label=f"order {o}") for i, o in enumerate(all_orders)]
+    ax.legend(handles=order_handles + [solid_h, dash_h], fontsize=8, ncol=2, loc="upper left")
+
+    ax.set_title("Per-order total time and allocation vs mesh size")
+    ax.grid(True, which="both", ls=":", alpha=0.4)
+    fig.tight_layout()
+    _save(fig, "plot_17_time_memory_vs_fom.png")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -745,8 +857,11 @@ def main() -> None:
     plot_12_allocation_heatmap(runs)
     plot_13_fixed_order_time(runs, target_order=5)
     plot_14_fixed_order_memory(runs, target_order=5)
+    plot_15_ratio_solve_rhs(runs)
+    plot_16_fraction_vs_fom(runs, target_order=5)
+    plot_17_time_memory_vs_fom(runs)
 
-    print(f"\nAll 14 plots written to {RESULTS_DIR}")
+    print(f"\nAll 17 plots written to {RESULTS_DIR}")
 
 
 if __name__ == "__main__":

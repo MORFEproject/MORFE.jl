@@ -259,6 +259,10 @@ function build_multilinear_terms_cache(
 	fem_term_indices = [t_idx for (t_idx, t) in enumerate(model.nonlinear_terms)
 								  if t isa FEMMultilinearMap]
 
+	if !isempty(fem_term_indices)
+		@info "Using optimised FEM path: cached per-element loop" n_fem_terms = length(fem_term_indices)
+	end
+
 	global_fem_splits = Vector{Any}(undef, L)
 	for l in 1:L
 		global_fem_splits[l] = _build_global_fem_split(model, all_fem_splits[l], fem_term_indices)

@@ -39,11 +39,11 @@ Implementing the interface below enables the RHS-C batched accumulation path in
 rather than once per factorisation entry.
 
 Required methods (extend `MORFE.*`):
-- `fem_elements(t)`                                              → element iterator
+- `fem_elements(t)`                                             → element iterator
 - `fem_n_qp(t)`                                                 → quadrature points per element
 - `fem_ndofs_per_cell(t)`                                       → DOFs per element
 - `scatter_qp!(∇W_col, W_global, element, t)`                   → fill qp field values for one unique W column
-- `accumulate_qp!(Fe, ∇W_args::NTuple, mult, element, q, dΩ, t)` → add integrand at one qp
+- `accumulate_qp!(Fe, ∇W_args::NTuple, mult, element, q, dΩ, t)`→ add integrand at one qp
 - `assemble_element!(accum, Fe, element, t)`                    → scatter element residual to global
 - `fem_getdetJdV(element, q, t)`                                → integration weight at qp q
 - `fem_qp_buffer(t)`                                            → pre-allocated scratch buffer for one quadrature point

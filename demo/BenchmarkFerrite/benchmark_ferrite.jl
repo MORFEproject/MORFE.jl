@@ -51,7 +51,7 @@ isfile(_msh) || error("Mesh not found: run generate_beam_mesh.jl first.")
 println("Loading mesh …")
 grid = togrid(_msh)   # "Dirichlet" physical group already in .msh
 
-ip     = Lagrange{RefHexahedron, 2}()^3    # 27-node quadratic Lagrange, matches H27
+ip     = Lagrange{RefHexahedron, 2}()^3   # 27-node quadratic Lagrange, matches H27
 geo_ip = Lagrange{RefHexahedron, 2}()     # quadratic geometry (isoparametric H27)
 qr     = QuadratureRule{RefHexahedron}(3) # 27 QPs (integrates degree 5)
 cv     = CellValues(qr, ip, geo_ip)
@@ -97,8 +97,8 @@ println("Free DOFs  : ", n_free)
 # 3. Multiindex set
 # -----------------------------------------------------------------------
 
-const ROM = 2
-const N_EXT = 2
+const ROM = 2 * 1 # one physical mode
+const N_EXT = 2 * 1 # two external variables (r₁, r₂) for harmonic forcing, one "cosine term"
 const NVAR = ROM + N_EXT
 const max_degree = 5
 
@@ -140,10 +140,10 @@ end
 # 4. Force terms  (FEMMultilinearMap, O5 Re/Im path)
 # -----------------------------------------------------------------------
 
-term_quad  = FerriteGeometricNonlinearity{2}(
-dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
+term_quad = FerriteGeometricNonlinearity{2}(
+	dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
 term_cubic = FerriteGeometricNonlinearity{3}(
-dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
+	dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
 
 # Forcing frequency = damped natural frequency of mode 1; force shape = mode 1
 Ω_force = abs(eigenvalues[1])
@@ -155,8 +155,11 @@ term_forcing = MultilinearMap(
 	(res, r) -> (res .+= f_vec * sum(r)),
 	(0, 0), 1,
 )
+# r1' = i Ω_force r1 -> r1 = exp(im * Ω_force * t)
+# r2' = -i Ω_force r2 -> r2 = exp(-im * Ω_force * t)
+# 2 cos(Ωt) = exp(im * Ωt) + exp(-im * Ωt) = r1 + r2
 
-ext_sys = ExternalSystem((complex(0.0, Ω_force), complex(0.0, -Ω_force)))
+ext_sys = ExternalSystem((im * Ω_force, -im * Ω_force))
 
 model = NDOrderModel(
 	(K, C, M),
@@ -166,7 +169,7 @@ model = NDOrderModel(
 
 # super_eigenvalues: one per NVAR variable (internal + external)
 # target_eigenvalues: master modes only (CNF style — matches legacy 'c' style)
-super_eigenvalues = Vector{ComplexF64}([master_eigenvalues..., complex(0.0, Ω_force), complex(0.0, -Ω_force)])
+super_eigenvalues = Vector{ComplexF64}([master_eigenvalues..., im * Ω_force, -im * Ω_force])
 target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
 resonance_set = resonance_set_from_complex_normal_form_style(
 	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
