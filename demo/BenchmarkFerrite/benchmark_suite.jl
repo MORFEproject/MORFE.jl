@@ -55,9 +55,8 @@ include(joinpath(@__DIR__, "../Ferrite/ferrite_assembly.jl"))
 # -----------------------------------------------------------------------
 
 const SUITE_MESHES = [
-(160, 2, 2),
-(320, 2, 2),
-(640, 2, 2)
+(20, 4, 4),
+(40, 8, 8)# (640, 2, 2)
 ]
 const SUITE_ROM    = 2
 const SUITE_N_EXT  = 2
@@ -184,7 +183,7 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 		dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = max_uniq)
 
 	Ω_force = abs(eigenvalues[1])
-	f_vec = 2.5 .* (M * master_modes[:, 1])
+	f_vec = real(2.5 .* (M * master_modes[:, 1]))
 	term_forcing = MultilinearMap(
 		(res, r) -> (res .+= f_vec * sum(r)),
 		(0, 0), 1,
