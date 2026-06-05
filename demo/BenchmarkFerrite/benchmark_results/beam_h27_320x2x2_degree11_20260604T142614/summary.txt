@@ -1,0 +1,15 @@
+mesh        = beam_h27_320x2x2
+FOM         = 47925
+ROM         = 2
+N_EXT       = 2
+max_degree  = 11
+monomials   = 1364
+timestamp   = 20260604T142614
+
+eig_time_s        = 1.003087042
+eig_bytes         = 1019622464
+eig_gctime_s      = 0.00145625
+solve_time_s      = 11305.272549458
+solve_bytes       = 2803917133472
+solve_gctime_s    = 188.636655639
+total_time_s      = 11306.2756365

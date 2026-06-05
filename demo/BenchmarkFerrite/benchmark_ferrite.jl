@@ -147,7 +147,7 @@ term_cubic = FerriteGeometricNonlinearity{3}(
 
 # Forcing frequency = damped natural frequency of mode 1; force shape = mode 1
 Ω_force = abs(eigenvalues[1])
-f_vec = 2.5 .* (M * master_modes[:, 1]) # alpha = 5
+f_vec = real(2.5 .* (M * master_modes[:, 1])) # alpha = 5; real: physical forcing is a real spatial vector
 
 # Forcing matrix N×N_EXT (filled after eigenproblem; captured by closure).
 # f_vec · sum(r) = f_vec · (r₁+r₂) = f_vec · 2 cos(Ωt)

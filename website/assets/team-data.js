@@ -15,7 +15,7 @@ var TeamData = (function () {
     '  <div class="member">' +
     '    <div class="portrait purple"><img src="assets/portraits/tiago-martins.jpg" alt="Tiago Martins" style="width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;" /></div>' +
     '    <h3>Tiago Martins</h3>' +
-    '    <p class="role"><span class="accent">Developer</span> · MORFE.jl</p>' +
+    '    <p class="role"><span class="accent">Lead Developer & PI</span> · MORFE.jl</p>' +
     '    <p class="affil">Chair of Applied Mechanics · TU Munich</p>' +
     '    <p class="bio">Cohomological equations, multiindices, and polynomial algebra</p>' +
     '    <div class="links">' +
