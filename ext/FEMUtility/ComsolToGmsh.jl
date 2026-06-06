@@ -385,6 +385,10 @@ function comsol_to_gmsh(comsol_file::String, gmsh_file::String)
 end
 
 """
+    comsol_to_gmsh_linear(comsol_file::String, gmsh_file::String)
+
+Like `comsol_to_gmsh` but downgrades quadratic elements to their linear
+counterparts before writing the Gmsh `.msh` file.
 """
 function comsol_to_gmsh_linear(comsol_file::String, gmsh_file::String)
     (nn, n2c, e2nT6, e2gT6, e2nQ9, e2gQ9, e2nT10, e2gT10,

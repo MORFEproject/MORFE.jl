@@ -20,8 +20,6 @@ const MODS = [
 	(MORFE.FullOrderModel, "FullOrderModel"),
 	(MORFE.Eigenproblems, "Eigenproblems"),
 	(MORFE.Eigensolvers, "Eigensolvers"),
-	(MORFE.JordanChain, "JordanChain"),
-	(MORFE.PropagateEigenmodes, "PropagateEigenmodes"),
 	(MORFE.Realification, "Realification"),
 	(MORFE.Resonance, "Resonance"),
 	(MORFE.InvarianceEquation, "InvarianceEquation"),
@@ -30,7 +28,10 @@ const MODS = [
 	(MORFE.MultilinearTerms, "MultilinearTerms"),
 	(MORFE.LowerOrderCouplings, "LowerOrderCouplings"),
 	(MORFE.CohomologicalEquations, "CohomologicalEquations"),
+	(MORFE.FEMUtility, "FEMUtility"),
+	(MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
 	(MORFE.InvarianceError, "InvarianceError"),
+	(MORFE.ParaviewExport, "ParaviewExport"),
 ]
 
 # ── Extraction helpers ────────────────────────────────────────────────────────
