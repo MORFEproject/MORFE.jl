@@ -88,6 +88,10 @@ During evaluation the multilinear map is called as
 - If one i_k is larger than 1 we assume the input arguments are symmetric by permutation. For example:
 	multiindex = (0, 2,...)
 	f!(res, x^(1)_1, x^(1)_2, ...) = f!(res, x^(1)_2, x^(1)_1, ...)
+- Set `force_asymmetric = true` to override the symmetry assumption: the term is treated as
+  `FullyAsymmetric` regardless of `multiindex`, so every ordered argument permutation is
+  evaluated independently with multiplier 1. Use this when `f!` is **not** symmetric in
+  arguments that share a derivative order.
 
 """
 struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
@@ -95,6 +99,7 @@ struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
 	multiindex::NTuple{ORD, Int}
 	multiplicity_external::Int
 	deg::Int
+	force_asymmetric::Bool
 end
 
 """
@@ -106,7 +111,8 @@ Create a multilinear term for a system of order ORD without external dynamics.
 - `f!`: in-place evaluation function
 - `multiindex`: tuple specifying which derivatives are used
 """
-function MultilinearMap(f!, multiindex::NTuple{ORD, Int}) where {ORD}
+function MultilinearMap(f!, multiindex::NTuple{ORD, Int};
+	force_asymmetric::Bool = false) where {ORD}
 	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
 	deg = sum(multiindex)
 	# Check if input arguments of f matches deg
@@ -115,21 +121,22 @@ function MultilinearMap(f!, multiindex::NTuple{ORD, Int}) where {ORD}
 	@assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
 	@assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
 
-	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg)
+	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg, force_asymmetric)
 end
 
 # Create a multilinear term for a first order system.
-function MultilinearMap(f!)
+function MultilinearMap(f!; force_asymmetric::Bool = false)
 	ms = methods(f!)
 	@assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
 	deg = ms[1].nargs - 2 # subtract the function itself and `res`
 	@assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
 	multiindex = (UInt8(deg),)
-	return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg)
+	return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg, force_asymmetric)
 end
 
 function MultilinearMap(
-	f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int) where {ORD}
+	f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int;
+	force_asymmetric::Bool = false) where {ORD}
 	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
 	@assert multiplicity_external >= 0 "The argument multiplicity_external cannot be negative, but multiplicity_external=$multiplicity_external"
 	deg = sum(multiindex) + multiplicity_external
@@ -140,7 +147,8 @@ function MultilinearMap(
 	@assert (deg >= 2) || (multiplicity_external >= 1)
 	"Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
 
-	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg)
+	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg,
+		force_asymmetric)
 end
 
 """
