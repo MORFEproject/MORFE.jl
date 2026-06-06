@@ -72,6 +72,8 @@ export realify, compose_linear, realify_via_linear
 
 #Resonance
 export ResonanceSet,
+       n_internal,
+       empty_resonance_set,
        resonance_set_from_graph_style,
        resonance_set_from_complex_normal_form_style,
        resonance_set_from_real_normal_form_style,

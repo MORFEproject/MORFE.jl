@@ -306,12 +306,9 @@ model = NDOrderModel(
 	ext_sys,
 )
 
-# Two external eigenvalues (both 0) appended to master eigenvalues.
-super_eigenvalues  = Vector{ComplexF64}([master_eigenvalues..., 0.0 + 0im, 0.0 + 0im])
-target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-
 resonance_set = resonance_set_from_complex_normal_form_style(
-	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
+	mset, Vector{ComplexF64}(master_eigenvalues), 0.05;
+	external_eigenvalues = zeros(ComplexF64, 2))
 
 # ==================================================================
 # §2  Cohomological solve on the augmented (z₁, z₂, θ₁, θ₂) system

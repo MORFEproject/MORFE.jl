@@ -182,12 +182,10 @@ println("\n--- Outer eigenvalues (slave modes) ---\n")
 for (i, λ) in enumerate(outer_eigenvalues)
 	println("  mode $(ROM + i) →   λ = $λ")
 end
-# super_eigenvalues must cover all NVAR variables: [master | external]
-super_eigenvalues = vcat(
-	Vector{ComplexF64}(master_eigenvalues), Vector{ComplexF64}(external_system.eigenvalues))
-println("\n--- Super-eigenvalues (master + external) ---\n")
-for (i, λ) in enumerate(super_eigenvalues)
-	println("  var $i →   λ = $λ")
+external_eigenvalues = Vector{ComplexF64}(external_system.eigenvalues)
+println("\n--- External eigenvalues (forcing, enter superharmonic s) ---\n")
+for (i, λ) in enumerate(external_eigenvalues)
+	println("  ext $i →   λ = $λ")
 end
 
 max_degree = 7
@@ -195,8 +193,7 @@ mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
 resonance_set = resonance_set_from_graph_style(
-	ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05,
-)
+	mset, Vector{ComplexF64}(master_eigenvalues), external_eigenvalues, outer_eigenvalues, 0.05)
 
 #println("\nResonance set (graph style):")
 #for (idx, mi) in enumerate(mset.exponents)

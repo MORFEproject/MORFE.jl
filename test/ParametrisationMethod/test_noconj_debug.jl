@@ -81,10 +81,10 @@ function _make_model(f_vec::AbstractVector{ComplexF64})
 end
 
 function _make_resonance()
-    super_eigs  = Vector{ComplexF64}([_master_eigenvalues..., im * _Ω_force, -im * _Ω_force])
-    target_eigs = Vector{ComplexF64}(_master_eigenvalues)
+    ext_eigs = ComplexF64[im * _Ω_force, -im * _Ω_force]
     return resonance_set_from_complex_normal_form_style(
-        _ROM, _mset, super_eigs, target_eigs, 0.1)
+        _mset, Vector{ComplexF64}(_master_eigenvalues), 0.1;
+        external_eigenvalues = ext_eigs)
 end
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -281,7 +281,7 @@ for r in 1:ROM
 	mmd_s[:, 1, r] .= Y_s[(FOM_s+1):end, r];
 end
 rs_s = resonance_set_from_complex_normal_form_style(
-	ROM, mset_s, Vector{ComplexF64}(me_s), Vector{ComplexF64}(me_s), 0.05)
+	mset_s, Vector{ComplexF64}(me_s), 0.05)
 
 solve_args   = (model_s, mset_s, me_s, mm_s, lm_s, rs_s)
 solve_kwargs = (master_modes_derivatives = mmd_s, conjugate_permutation = [2, 1])

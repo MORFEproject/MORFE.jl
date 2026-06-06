@@ -205,17 +205,13 @@ All monomials in NVAR = $(NVAR) variables up to degree **$(max_degree)**.
 begin
     mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 
-    super_eigenvalues = vcat(
-        Vector{ComplexF64}(master_eigenvalues),
-        Vector{ComplexF64}(external_system.eigenvalues)
-    )
     outer_eigenvalues = sorted_vals[(ROM + 1):end]
 
     resonance_set = resonance_set_from_graph_style(
-        ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05
-    )
+        mset, Vector{ComplexF64}(master_eigenvalues),
+        Vector{ComplexF64}(external_system.eigenvalues), outer_eigenvalues, 0.05)
 
-    n_res = sum(any(resonance_set.resonances[:, l]) for l in 1:length(mset))
+    n_res = sum(any(resonant_targets(resonance_set, l)) for l in 1:length(mset))
     md"""Multiindex set: $(length(mset)) monomials. Resonant monomials: $(n_res)."""
 end
 

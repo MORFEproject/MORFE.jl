@@ -167,12 +167,9 @@ model = NDOrderModel(
 	ext_sys,
 )
 
-# super_eigenvalues: one per NVAR variable (internal + external)
-# target_eigenvalues: master modes only (CNF style — matches legacy 'c' style)
-super_eigenvalues = Vector{ComplexF64}([master_eigenvalues..., im * Ω_force, -im * Ω_force])
-target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
 resonance_set = resonance_set_from_complex_normal_form_style(
-	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
+	mset, Vector{ComplexF64}(master_eigenvalues), 0.05;
+	external_eigenvalues = ComplexF64[im * Ω_force, -im * Ω_force])
 
 # -----------------------------------------------------------------------
 # §2 — Cohomological solve  (quadratic + cubic, full model)

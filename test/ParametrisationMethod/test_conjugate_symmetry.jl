@@ -49,7 +49,7 @@ _mset = all_multiindices_up_to(_NVAR, _max_degree; min_degree = 1)
 _super_eigenvalues = Vector{ComplexF64}(_master_eigenvalues)
 
 _resonance_set = resonance_set_from_complex_normal_form_style(
-    _ROM, _mset, _super_eigenvalues, _super_eigenvalues, 0.05)
+    _mset, _super_eigenvalues, 0.05)
 
 const _conj_perm = [2, 1]
 
