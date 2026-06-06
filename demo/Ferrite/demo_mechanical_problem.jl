@@ -212,11 +212,8 @@ end
 
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
-super_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-
 resonance_set = resonance_set_from_complex_normal_form_style(
-	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
+	mset, Vector{ComplexF64}(master_eigenvalues), 0.05)
 
 #println("\nResonance set:")
 #for (idx, mi) in enumerate(mset.exponents)

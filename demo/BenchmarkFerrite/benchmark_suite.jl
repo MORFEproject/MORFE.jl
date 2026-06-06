@@ -196,11 +196,9 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	ext_sys
 )
 
-	super_eigenvalues = Vector{ComplexF64}([
-		master_eigenvalues..., complex(0.0, Ω_force), complex(0.0, -Ω_force)])
-	target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
 	resonance_set = resonance_set_from_complex_normal_form_style(
-		SUITE_ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
+		mset, Vector{ComplexF64}(master_eigenvalues), 0.05;
+		external_eigenvalues = ComplexF64[im * Ω_force, -im * Ω_force])
 
 	# -------------------------------------------------------------------
 	# §2 — Cohomological solve

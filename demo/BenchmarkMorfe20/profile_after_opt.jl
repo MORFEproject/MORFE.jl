@@ -135,12 +135,10 @@ for r in 1:ROM, k in 1:(ORD_model-1)
 end
 
 outer_eigenvalues = eigenvalues[(ROM+1):end]
-super_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
 max_degree = 3
 mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 resonance_set = resonance_set_from_complex_normal_form_style(
-	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05)
+	mset, Vector{ComplexF64}(master_eigenvalues), 0.05)
 
 # ===========================================================================
 # Warm-up (forces JIT compilation, not counted in profile)

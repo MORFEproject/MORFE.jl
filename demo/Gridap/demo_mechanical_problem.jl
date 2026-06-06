@@ -260,24 +260,20 @@ end
 # ------------------------------------------------------------------------------
 
 outer_eigenvalues = eigenvalues[(ROM+1):end] # ROM...2*10
-# no external system 
-super_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-target_eigenvalues = Vector{ComplexF64}(master_eigenvalues)
-
+# no external system — NVAR = ROM
 max_degree = 3
 mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 println("\nMultiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
 resonance_set = resonance_set_from_complex_normal_form_style(
-	ROM, mset, super_eigenvalues, target_eigenvalues, 0.05,
-)
+	mset, Vector{ComplexF64}(master_eigenvalues), 0.05)
 # resonance_set = resonance_set_from_graph_style(
-#     ROM, mset, super_eigenvalues, outer_eigenvalues, 0.05
+#     mset, Vector{ComplexF64}(master_eigenvalues), ComplexF64[], outer_eigenvalues, 0.05
 # )
 
 println("\nResonance set:")
 for (idx, mi) in enumerate(mset.exponents)
-	res_str = join(findall(resonance_set.resonances[:, idx]), ", ")
+	res_str = join(findall(resonant_targets(resonance_set, idx)), ", ")
 	isempty(res_str) && (res_str = "none")
 	println("  $mi → [$res_str]")
 end

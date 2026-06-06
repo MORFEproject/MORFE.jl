@@ -34,7 +34,7 @@ abstract type AbstractMultilinearMap{ORD} end
 
 Abstract type for FEM-backed multilinear terms that expose element-level primitives.
 
-Implementing the interface below enables the RHS-C batched accumulation path in
+Implementing the interface below enables the RHS batched accumulation path in
 `MultilinearTerms.jl`: the mesh is traversed exactly once per (monomial, term, split)
 rather than once per factorisation entry.
 
