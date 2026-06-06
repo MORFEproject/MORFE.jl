@@ -115,6 +115,15 @@ function html_escape(s)
 	return s
 end
 
+# Render one DocStr to HTML via the stable Markdown public API.
+# DocStr.text is a SimpleVector of String/Function elements; we join the strings.
+# This avoids Base.Docs.parsedoc / Base.Docs.doc(::Binding) which are unstable
+# internal APIs that have changed across Julia minor versions.
+function _docstr_html(ds)::String
+	text = join(t for t in ds.text if t isa AbstractString)
+	sprint(show, MIME("text/html"), Markdown.parse(text))
+end
+
 function get_doc_html(mod, sym)
 	binding = Base.Docs.Binding(mod, sym)
 	meta = try
@@ -125,12 +134,7 @@ function get_doc_html(mod, sym)
 	haskey(meta, binding) || return ""
 	multidoc = meta[binding]
 	isempty(multidoc.docs) && return ""
-	html = mapreduce(
-		ds -> sprint(show, MIME("text/html"), Base.Docs.parsedoc(ds)),
-		*,
-		values(multidoc.docs);
-		init = "",
-	)
+	html = mapreduce(_docstr_html, *, values(multidoc.docs); init = "")
 	# Strip the "@ Module /path/to/file.jl:line" source-location paragraphs
 	# that Julia's Docs renderer appends to each method docstring.
 	html = replace(html, r"<p>@ \S+ [^\n<]*:\d+\s*</p>" => "")
@@ -156,12 +160,7 @@ function get_module_doc_html(mod)
 		binding = Base.Docs.Binding(mod, nameof(mod))
 		meta    = Base.Docs.meta(mod)
 		haskey(meta, binding) && !isempty(meta[binding].docs) || return ""
-		html = mapreduce(
-			ds -> sprint(show, MIME("text/html"), Base.Docs.parsedoc(ds)),
-			*,
-			values(meta[binding].docs);
-			init = "",
-		)
+		html = mapreduce(_docstr_html, *, values(meta[binding].docs); init = "")
 		# Strip the tab-indented module name rendered as a leading code block
 		html = replace(html, r"^(<div class=\"markdown\">)<pre><code[^>]*>[^<]+</code></pre>\n?" => s"\1")
 		html = replace(html, r"<p>@ \S+ [^\n<]*:\d+\s*</p>" => "")
