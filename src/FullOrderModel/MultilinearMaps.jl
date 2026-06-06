@@ -51,14 +51,76 @@ Required methods (extend `MORFE.*`):
 abstract type FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD} end
 
 # Interface stubs — extend these in your concrete FEM type.
+
+"""
+	fem_elements(t::FEMMultilinearMap) -> iterator
+
+Return an iterator over the mesh elements (cells) for the FEM term `t`.
+Implement this for every concrete `FEMMultilinearMap` subtype.
+"""
 function fem_elements end
+
+"""
+	fem_n_qp(t::FEMMultilinearMap) -> Int
+
+Return the number of quadrature points per element for the FEM term `t`.
+"""
 function fem_n_qp end
+
+"""
+	fem_ndofs_per_cell(t::FEMMultilinearMap) -> Int
+
+Return the number of degrees of freedom per element (cell) for the FEM term `t`.
+"""
 function fem_ndofs_per_cell end
+
+"""
+	fem_reinit!(element, t::FEMMultilinearMap) -> nothing
+
+Reinitialise the FEM quadrature cache (e.g. `CellValues`) for `element`.
+Called once per element before any `scatter_qp!` or `accumulate_qp!` calls.
+"""
 function fem_reinit! end
+
+"""
+	scatter_qp!(∇W_col, W_global, element, t::FEMMultilinearMap) -> nothing
+
+Fill `∇W_col` in-place with the field values (e.g. gradients) at all quadrature
+points of `element` for one column of the parametrisation `W_global`.
+"""
 function scatter_qp! end
+
+"""
+	accumulate_qp!(Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap) -> nothing
+
+Accumulate the integrand contribution at quadrature point `q` (weight `dΩ`) into
+the element residual vector `Fe`.  `∇W_args` is an NTuple of pre-scattered W columns;
+`mult` is the combinatorial multiplicity of the term.
+"""
 function accumulate_qp! end
+
+"""
+	assemble_element!(accum, Fe, element, t::FEMMultilinearMap) -> nothing
+
+Scatter the element residual `Fe` into the global accumulator `accum` using the
+DOF map of `element`.
+"""
 function assemble_element! end
+
+"""
+	fem_getdetJdV(element, q, t::FEMMultilinearMap) -> Real
+
+Return the integration weight `det(J) · w_q` at quadrature point index `q` of
+`element`.
+"""
 function fem_getdetJdV end
+
+"""
+	fem_qp_buffer(t::FEMMultilinearMap)
+
+Return a pre-allocated scratch buffer sized for one quadrature point of the FEM
+term `t`.  Reused across calls to avoid allocation in the inner element loop.
+"""
 function fem_qp_buffer end
 
 """
