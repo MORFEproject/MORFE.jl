@@ -235,6 +235,22 @@ function solve_cohomological_problem(
 	_conj_perm = conjugate_permutation !== nothing ?
 				 SVector{NVAR, Int}(conjugate_permutation) : NoConjugatePermutation()
 
+	if !(_conj_perm isa NoConjugatePermutation)
+		@warn """
+		conjugate_permutation is active — the following assumptions must hold:
+		  1. Real-valued FOM: all matrices in model.linear_terms and all nonlinear/force \
+		     terms must have real-valued entries (eltype <: Real or purely-real complex).
+		  2. Each mode either comes in a complex conjugate pair with another mode \
+		     (perm[r] ≠ r), or is self-paired (perm[r] = r) meaning it has a real \
+		     eigenvalue and a real-valued mode shape.
+		  3. Eigenvalue conjugacy is necessary but NOT sufficient for paired modes; \
+		     the eigenvectors must satisfy master_modes[:, perm[r]] = conj(master_modes[:, r]).
+		  4. If external modes are present (N_EXT > 0): the same pairing rules apply \
+		     to the external eigenvalues, encoded in the NVAR-length permutation.
+		Passing an incorrect permutation silently corrupts W and R.
+		"""
+	end
+
 	sym = if _conj_perm isa NoConjugatePermutation
 		_build_conjugate_symmetry(_conj_perm, linear_skip_set, length(mset))
 	else
