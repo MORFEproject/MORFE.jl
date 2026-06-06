@@ -202,7 +202,7 @@ function write_entry(io, modlabel, e::Entry)
 	print(io, """    <span class="$(badge(e.kind))">$(e.kind)</span>\n""")
 	if isempty(e.signatures)
 		name_html = isempty(e.source_url) ? html_escape(e.name) :
-			"""<a href="$(e.source_url)" target="_blank" rel="noopener">$(html_escape(e.name))</a>"""
+					"""<a href="$(e.source_url)" target="_blank" rel="noopener">$(html_escape(e.name))</a>"""
 		print(io, """    <code>$(name_html)</code>\n""")
 	else
 		for sig in e.signatures
@@ -433,16 +433,24 @@ document.addEventListener('DOMContentLoaded', function () {
 // Temporarily set position:relative (same JS task, no repaint) so getBoundingClientRect
 // returns the natural flow top even when the heading is currently stuck.
 (function () {
+  // Increase this value to get more space above the heading
+  var VERTICAL_MARGIN = 60;   // pixels
+
   document.querySelectorAll('.docs-side a[href^="#"]').forEach(function (a) {
 	a.addEventListener('click', function (e) {
 	  var target = document.getElementById(this.getAttribute('href').slice(1));
 	  if (!target) return;
 	  e.preventDefault();
+
 	  var navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 60;
+
+	  // Temporarily switch to relative to measure the natural flow position
 	  target.style.setProperty('position', 'relative', 'important');
 	  var naturalTop = target.getBoundingClientRect().top + window.scrollY;
 	  target.style.removeProperty('position');
-	  window.scrollTo({ top: naturalTop - navH });
+
+	  // Scroll to the heading, leaving navH + VERTICAL_MARGIN space at the top
+	  window.scrollTo({ top: naturalTop - navH - VERTICAL_MARGIN });
 	});
   });
 })();
