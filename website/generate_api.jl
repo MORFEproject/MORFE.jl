@@ -116,8 +116,21 @@ function html_escape(s)
 end
 
 function get_doc_html(mod, sym)
-	doc  = Base.Docs.doc(Base.Docs.Binding(mod, sym))
-	html = sprint(show, MIME("text/html"), doc)
+	binding = Base.Docs.Binding(mod, sym)
+	meta = try
+		Base.Docs.meta(mod)
+	catch
+		return ""
+	end
+	haskey(meta, binding) || return ""
+	multidoc = meta[binding]
+	isempty(multidoc.docs) && return ""
+	html = mapreduce(
+		ds -> sprint(show, MIME("text/html"), Base.Docs.parsedoc(ds)),
+		*,
+		values(multidoc.docs);
+		init = "",
+	)
 	# Strip the "@ Module /path/to/file.jl:line" source-location paragraphs
 	# that Julia's Docs renderer appends to each method docstring.
 	html = replace(html, r"<p>@ \S+ [^\n<]*:\d+\s*</p>" => "")
@@ -143,8 +156,12 @@ function get_module_doc_html(mod)
 		binding = Base.Docs.Binding(mod, nameof(mod))
 		meta    = Base.Docs.meta(mod)
 		haskey(meta, binding) && !isempty(meta[binding].docs) || return ""
-		doc  = Base.Docs.doc(binding)
-		html = sprint(show, MIME("text/html"), doc)
+		html = mapreduce(
+			ds -> sprint(show, MIME("text/html"), Base.Docs.parsedoc(ds)),
+			*,
+			values(meta[binding].docs);
+			init = "",
+		)
 		# Strip the tab-indented module name rendered as a leading code block
 		html = replace(html, r"^(<div class=\"markdown\">)<pre><code[^>]*>[^<]+</code></pre>\n?" => s"\1")
 		html = replace(html, r"<p>@ \S+ [^\n<]*:\d+\s*</p>" => "")

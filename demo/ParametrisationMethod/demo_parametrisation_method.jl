@@ -15,15 +15,17 @@
 
 # Bootstrap: activate a demo-local environment so weakdeps (Arpack, Plots, HDF5)
 # are not added to MORFE's root Project.toml.
-using Pkg: Pkg
-Pkg.activate(@__DIR__)
-if !haskey(Pkg.project().dependencies, "MORFE")
-	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-	Pkg.add(["Arpack", "LinearMaps", "Plots", "HDF5"])
+if abspath(PROGRAM_FILE) == @__FILE__
+	using Pkg: Pkg
+	Pkg.activate(@__DIR__)
+	if !haskey(Pkg.project().dependencies, "MORFE")
+		Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+		Pkg.add(["Arpack", "LinearMaps", "Plots", "HDF5"])
+	end
+	Pkg.instantiate()
 end
-Pkg.instantiate()
 
-using Arpack, LinearMaps   # triggers MORFEArpackExt → real generalised_eigenpairs
+using Arpack               # triggers MORFEArpackExt
 using Plots                # triggers MORFEPlotsExt  → real plot_invariance_convergence
 using MORFE.Eigensolvers: generalised_eigenpairs
 using MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
