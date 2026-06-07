@@ -169,7 +169,7 @@ model = NDOrderModel(
 
 resonance_set = resonance_set_from_complex_normal_form_style(
 	mset, Vector{ComplexF64}(master_eigenvalues), 0.05;
-	external_eigenvalues = ComplexF64[im * Ω_force, -im * Ω_force])
+	external_eigenvalues = ComplexF64[im*Ω_force, -im*Ω_force])
 
 # -----------------------------------------------------------------------
 # §2 — Cohomological solve  (quadratic + cubic, full model)
@@ -204,17 +204,17 @@ sep = "=" ^ 67
 println()
 println(sep)
 println("MORFE.jl — Ferrite Benchmark   (clamped-clamped beam, beam_h27.msh)")
-println("  Mesh   : H27 quadratic Lagrange hex (40×2×2)    FOM = %d\n", FOM)
-println("  ROM    : %d modes   max_degree = %d   N_EXT = %d\n", ROM, max_degree, N_EXT)
+@printf("  Mesh   : H27 quadratic Lagrange hex (40×2×2)    FOM = %d\n", FOM)
+@printf("  ROM    : %d modes   max_degree = %d   N_EXT = %d\n", ROM, max_degree, N_EXT)
 println("-" ^ 67)
-println("  %-32s  %9s  %11s  %7s\n", "Phase", "Time (s)", "Memory (GB)", "GC (s)")
+@printf("  %-32s  %9s  %11s  %7s\n", "Phase", "Time (s)", "Memory (GB)", "GC (s)")
 println("-" ^ 67)
-println("  §1  %-28s  %9.3f  %11.2f  %7.3f\n",
+@printf("  §1  %-28s  %9.3f  %11.2f  %7.3f\n",
 	"Eigenproblem", r1.time, to_gb(r1.bytes), r1.gctime)
-println("  §2  %-28s  %9.3f  %11.2f  %7.3f\n",
+@printf("  §2  %-28s  %9.3f  %11.2f  %7.3f\n",
 	"Cohomological solve", r2.time, to_gb(r2.bytes), r2.gctime)
 println("-" ^ 67)
-println("  %-32s  %9.3f  %11.1f  %7.3f\n",
+@printf("  %-32s  %9.3f  %11.1f  %7.3f\n",
 	"Σ  Cumulative (§1+§2)", r1.time + r2.time, to_gb(r1.bytes)+to_gb(r2.bytes), r1.gctime+r2.gctime)
 println("Monomials (max_degree=$max_degree) =", length(mset.exponents))
 println(sep)

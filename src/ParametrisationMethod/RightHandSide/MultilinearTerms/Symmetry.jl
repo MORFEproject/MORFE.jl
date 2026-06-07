@@ -60,17 +60,18 @@ struct GroupwiseSymmetric <: SymmetryType end
 Classify a `AbstractMultilinearMap` as `FullyAsymmetric`, `FullySymmetric`,
 or `GroupwiseSymmetric` based on its `multiindex` field.
 
-For `MultilinearMap`, setting `force_asymmetric = true` on the term overrides the
-`multiindex`-based classification and always returns `FullyAsymmetric`.
+Setting `fully_asymmetric = true` on any term overrides the `multiindex`-based
+classification and always returns `FullyAsymmetric`.
 """
 function symmetry_type(t::MultilinearMap)
-	t.force_asymmetric && return FullyAsymmetric()
+	t.fully_asymmetric === true && return FullyAsymmetric()
 	all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
 	count(>(0), t.multiindex) == 1 && return FullySymmetric()
 	return GroupwiseSymmetric()
 end
 
 function symmetry_type(t::AbstractMultilinearMap)
+	t.fully_asymmetric === true && return FullyAsymmetric()
 	all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
 	count(>(0), t.multiindex) == 1 && return FullySymmetric()
 	return GroupwiseSymmetric()
