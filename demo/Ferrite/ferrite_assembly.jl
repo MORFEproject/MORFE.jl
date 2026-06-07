@@ -63,6 +63,7 @@ struct FerriteGeometricNonlinearity{DEG, DH, CV} <: MORFE.FEMMultilinearMap{2}
 	multiindex::NTuple{2, Int}
 	multiplicity_external::Int
 	deg::Int
+	fully_asymmetric::Union{Nothing, Bool}
 	∇W_qp::Matrix{Tensor{2, 3, ComplexF64}}
 	Fe::Vector{ComplexF64}
 	u_e::Vector{ComplexF64}
@@ -79,7 +80,8 @@ function FerriteGeometricNonlinearity{DEG}(
 	dh::DH, cv::CV,
 	free_to_local::Dict{Int, Int}, n_free::Int,
 	λ::Float64, μ::Float64;
-	max_unique_cols::Int = DEG) where {DEG, DH, CV}
+	max_unique_cols::Int = DEG,
+	fully_asymmetric::Union{Nothing, Bool} = false) where {DEG, DH, CV}
 	n_qp = getnquadpoints(cv)
 	n_dofs = ndofs_per_cell(dh)
 	∇W_qp = Matrix{Tensor{2, 3, ComplexF64}}(undef, max_unique_cols, n_qp)
@@ -89,7 +91,7 @@ function FerriteGeometricNonlinearity{DEG}(
 	u_e_im = zeros(Float64, n_dofs)
 	return FerriteGeometricNonlinearity{DEG, DH, CV}(
 		dh, cv, free_to_local, n_free, λ, μ,
-		(DEG, 0), 0, DEG, ∇W_qp, Fe, u_e, u_e_re, u_e_im)
+		(DEG, 0), 0, DEG, fully_asymmetric, ∇W_qp, Fe, u_e, u_e_re, u_e_im)
 end
 
 # -----------------------------------------------------------------------

@@ -15,15 +15,13 @@
 
 # Bootstrap: activate a demo-local environment so weakdeps (Arpack, Plots, HDF5)
 # are not added to MORFE's root Project.toml.
-if abspath(PROGRAM_FILE) == @__FILE__
-	using Pkg: Pkg
-	Pkg.activate(@__DIR__)
-	if !haskey(Pkg.project().dependencies, "MORFE")
-		Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-		Pkg.add(["Arpack", "LinearMaps", "Plots", "HDF5"])
-	end
-	Pkg.instantiate()
+using Pkg: Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.add(["Arpack", "LinearMaps", "Plots", "HDF5"])
 end
+Pkg.instantiate()
 
 using Arpack               # triggers MORFEArpackExt
 using Plots                # triggers MORFEPlotsExt  → real plot_invariance_convergence
@@ -230,6 +228,7 @@ end
 # ------------------------------------------------------------------------------
 # 10. Export results to HDF5 for external validation (e.g. Python/h5py)
 # ------------------------------------------------------------------------------
+super_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), external_eigenvalues)
 using HDF5: h5open
 output_path = joinpath(@__DIR__, "output.h5")
 h5open(output_path, "w") do f

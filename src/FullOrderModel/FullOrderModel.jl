@@ -19,12 +19,40 @@ using SparseArrays
 using StaticArrays: SVector
 
 using ..Polynomials: DensePolynomial
-using ..MultilinearMaps: AbstractMultilinearMap, MultilinearMap, evaluate_term!
+using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap,
+	evaluate_term!, fem_elements
 using ..ExternalSystems: ExternalSystem
 
 export NDOrderModel, FirstOrderModel, linear_first_order_matrices, evaluate_nonlinear_terms!
 
 abstract type AbstractFullOrderModel end
+
+function _term_label(t)
+	if t isa MultilinearMap
+		m = only(methods(t.f!))
+		return "MultilinearMap @ $(basename(String(m.file))):$(m.line)"
+	else
+		T_name = string(nameof(typeof(t)))
+		try
+			m = which(fem_elements, Tuple{typeof(t)})
+			return "$T_name @ $(basename(String(m.file))):$(m.line)"
+		catch
+		end
+		return T_name
+	end
+end
+
+function _info_implicit_symmetry(nonlinear_terms)
+	hits = [(i, t) for (i, t) in enumerate(nonlinear_terms)
+					   if any(x -> x > 1, t.multiindex) && t.fully_asymmetric === nothing]
+	isempty(hits) && return
+	lines = join(
+		["  · term $i: $(_term_label(t)), with multiindex=$(t.multiindex) and deg=$(t.deg)"
+		 for (i, t) in hits], "\n")
+	@info "NDOrderModel: the following terms did not set `fully_asymmetric`\n" *
+		  "(f! is assumed symmetric within each derivative-order argument group):\n" *
+		  lines * "\n  Pass `fully_asymmetric=true` to any term where this does not hold."
+end
 
 """
 
@@ -98,7 +126,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 		n_fom = size(linear_terms[1], 1)
 		@assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
 		max_nl_deg = N_NL > 0 ? maximum(t.deg-t.multiplicity_external for t in nonlinear_terms) : 1
-
+		_info_implicit_symmetry(nonlinear_terms)
 		new{ORD, ORDP1, N_NL, N_EXT, T, MT}(
 			n_fom, linear_terms, nonlinear_terms, external_system, max_nl_deg)
 	end
@@ -113,7 +141,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 		n_fom = size(linear_terms[1], 1)
 		@assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
 		max_nl_deg = N_NL > 0 ? maximum(t.deg for t in nonlinear_terms) : 1
-
+		_info_implicit_symmetry(nonlinear_terms)
 		new{ORD, ORDP1, N_NL, N_EXT, T, MT}(
 			n_fom, linear_terms, nonlinear_terms, ExternalSystem(external_dynamics), max_nl_deg)
 	end
@@ -127,7 +155,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 		n_fom = size(linear_terms[1], 1)
 		@assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
 		max_nl_deg = N_NL > 0 ? maximum(t.deg for t in nonlinear_terms) : 1
-
+		_info_implicit_symmetry(nonlinear_terms)
 		new{ORD, ORDP1, N_NL, 0, T, MT}(n_fom, linear_terms, nonlinear_terms, nothing, max_nl_deg)
 	end
 

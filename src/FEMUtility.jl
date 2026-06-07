@@ -15,9 +15,7 @@ B31, B32, T3D2, T3D3. Unknown element types are silently skipped.
 
 Requires `Gmsh.jl` — load it with `using Gmsh` to activate the MORFE extension.
 """
-function abaqus_to_gmsh(args...; kwargs...)
-    error("abaqus_to_gmsh requires Gmsh.jl.\nLoad it with `using Gmsh` to activate the MORFE extension.")
-end
+function abaqus_to_gmsh end
 
 """
     abaqus_to_gmsh_linear(inp_file::String, gmsh_file::String)
@@ -27,9 +25,7 @@ linear (corner-nodes-only) counterparts before writing the Gmsh `.msh` file.
 
 Requires `Gmsh.jl` — load it with `using Gmsh` to activate the MORFE extension.
 """
-function abaqus_to_gmsh_linear(args...; kwargs...)
-    error("abaqus_to_gmsh_linear requires Gmsh.jl.\nLoad it with `using Gmsh` to activate the MORFE extension.")
-end
+function abaqus_to_gmsh_linear end
 
 """
     comsol_to_gmsh(comsol_file::String, gmsh_file::String)
@@ -40,9 +36,7 @@ as-is.
 
 Requires `Gmsh.jl` — load it with `using Gmsh` to activate the MORFE extension.
 """
-function comsol_to_gmsh(args...; kwargs...)
-    error("comsol_to_gmsh requires Gmsh.jl.\nLoad it with `using Gmsh` to activate the MORFE extension.")
-end
+function comsol_to_gmsh end
 
 """
     comsol_to_gmsh_linear(comsol_file::String, gmsh_file::String)
@@ -52,9 +46,7 @@ linear counterparts before writing.
 
 Requires `Gmsh.jl` — load it with `using Gmsh` to activate the MORFE extension.
 """
-function comsol_to_gmsh_linear(args...; kwargs...)
-    error("comsol_to_gmsh_linear requires Gmsh.jl.\nLoad it with `using Gmsh` to activate the MORFE extension.")
-end
+function comsol_to_gmsh_linear end
 
 """
     gmsh_to_comsol(gmsh_file::String, comsol_file::String)
@@ -66,8 +58,6 @@ indexing.
 
 Requires `Gmsh.jl` — load it with `using Gmsh` to activate the MORFE extension.
 """
-function gmsh_to_comsol(args...; kwargs...)
-    error("gmsh_to_comsol requires Gmsh.jl.\nLoad it with `using Gmsh` to activate the MORFE extension.")
-end
+function gmsh_to_comsol end
 
 end # module FEMUtility

@@ -24,8 +24,8 @@ export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, evaluate_term!
 
 Abstract supertype for all multilinear terms accepted by `NDOrderModel`.
 
-Every concrete subtype must expose the fields `multiindex`, `multiplicity_external`, and `deg`
-with the same semantics as `MultilinearMap`.
+Every concrete subtype must expose the fields `multiindex`, `multiplicity_external`, `deg`,
+and `fully_asymmetric` with the same semantics as `MultilinearMap`.
 """
 abstract type AbstractMultilinearMap{ORD} end
 
@@ -37,6 +37,12 @@ Abstract type for FEM-backed multilinear terms that expose element-level primiti
 Implementing the interface below enables the RHS batched accumulation path in
 `MultilinearTerms.jl`: the mesh is traversed exactly once per (monomial, term, split)
 rather than once per factorisation entry.
+
+Required fields (same semantics as `MultilinearMap`):
+- `multiindex`, `multiplicity_external`, `deg`
+- `fully_asymmetric::Union{Nothing, Bool}` — `nothing` = not set (triggers `@info` at `NDOrderModel`
+  construction if multiindex implies symmetry); `false` = acknowledged symmetric; `true` = override to
+  `FullyAsymmetric`. FEM backends whose integrand is symmetric by construction should default to `false`.
 
 Required methods (extend `MORFE.*`):
 - `fem_elements(t)`                                             → element iterator
@@ -150,10 +156,36 @@ During evaluation the multilinear map is called as
 - If one i_k is larger than 1 we assume the input arguments are symmetric by permutation. For example:
 	multiindex = (0, 2,...)
 	f!(res, x^(1)_1, x^(1)_2, ...) = f!(res, x^(1)_2, x^(1)_1, ...)
-- Set `force_asymmetric = true` to override the symmetry assumption: the term is treated as
+- Set `fully_asymmetric = true` to override the symmetry assumption: the term is treated as
   `FullyAsymmetric` regardless of `multiindex`, so every ordered argument permutation is
   evaluated independently with multiplier 1. Use this when `f!` is **not** symmetric in
   arguments that share a derivative order.
+
+!!! note "Default: `fully_asymmetric` not set (`nothing`)"
+    When this keyword is omitted, the following assumptions hold (and an `@info`
+    message is emitted when the term is added to an `NDOrderModel`).
+    Explicitly passing `fully_asymmetric = false` applies the same behaviour
+    silently, without triggering the message.
+
+    1. **`f!` is symmetric within each derivative-order group.** For every `k` with
+       `multiindex[k] > 1`, permuting any two of the `multiindex[k]` argument slots
+       that belong to derivative order `k` leaves the result unchanged.
+
+    2. **Symmetry type is inferred automatically from `multiindex`:**
+       - All entries ≤ 1 → `FullyAsymmetric`: each factor slot uses a distinct
+         derivative order; `f!` is called directly with multiplier 1.
+       - Exactly one entry > 1 → `FullySymmetric`: all slots share one derivative
+         order; each unique unordered selection of factor indices is evaluated once,
+         scaled by the multinomial coefficient `deg! / ∏ mᵢ!`.
+       - Multiple entries > 1 → `GroupwiseSymmetric`: slots span several derivative
+         orders; each unique unordered selection is evaluated once, scaled by the
+         product of per-group multinomial coefficients.
+
+    3. **Permutations are never evaluated separately.** Only one representative per
+       equivalence class of argument orderings is passed to `f!`; the combinatorial
+       count is applied as a scalar multiplier on the output.
+
+    If `f!` does **not** satisfy assumption 1, pass `fully_asymmetric = true`.
 
 """
 struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
@@ -161,7 +193,7 @@ struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
 	multiindex::NTuple{ORD, Int}
 	multiplicity_external::Int
 	deg::Int
-	force_asymmetric::Bool
+	fully_asymmetric::Union{Nothing, Bool}
 end
 
 """
@@ -174,7 +206,7 @@ Create a multilinear term for a system of order ORD without external dynamics.
 - `multiindex`: tuple specifying which derivatives are used
 """
 function MultilinearMap(f!, multiindex::NTuple{ORD, Int};
-	force_asymmetric::Bool = false) where {ORD}
+	fully_asymmetric::Union{Nothing, Bool} = nothing) where {ORD}
 	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
 	deg = sum(multiindex)
 	# Check if input arguments of f matches deg
@@ -183,22 +215,22 @@ function MultilinearMap(f!, multiindex::NTuple{ORD, Int};
 	@assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
 	@assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
 
-	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg, force_asymmetric)
+	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg, fully_asymmetric)
 end
 
 # Create a multilinear term for a first order system.
-function MultilinearMap(f!; force_asymmetric::Bool = false)
+function MultilinearMap(f!; fully_asymmetric::Union{Nothing, Bool} = nothing)
 	ms = methods(f!)
 	@assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
 	deg = ms[1].nargs - 2 # subtract the function itself and `res`
 	@assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
 	multiindex = (UInt8(deg),)
-	return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg, force_asymmetric)
+	return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg, fully_asymmetric)
 end
 
 function MultilinearMap(
 	f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int;
-	force_asymmetric::Bool = false) where {ORD}
+	fully_asymmetric::Union{Nothing, Bool} = nothing) where {ORD}
 	@assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
 	@assert multiplicity_external >= 0 "The argument multiplicity_external cannot be negative, but multiplicity_external=$multiplicity_external"
 	deg = sum(multiindex) + multiplicity_external
@@ -210,7 +242,7 @@ function MultilinearMap(
 	"Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
 
 	return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg,
-		force_asymmetric)
+		fully_asymmetric)
 end
 
 """
