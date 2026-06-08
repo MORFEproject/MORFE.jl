@@ -1,13 +1,39 @@
 using MORFE
 using Test
+using Random
+using LinearAlgebra
+using SparseArrays
 
 const GROUP = get(ENV, "GROUP", "all")
-# Run tests
+
+should_run(group) = GROUP == "all" || GROUP == group
+
 @testset "MORFE Tests" begin
-    if GROUP in ("all", "tests")
+    if should_run("full_order_model")
         @testset "FullOrderModel" begin
             include("FullOrderModel/test_full_order_model.jl")
+            include("FullOrderModel/test_external_system.jl")
+            include("FullOrderModel/test_multilinear_maps.jl")
         end
+    end
+    if should_run("parametrisation_method")
+        @testset "ParametrisationMethod" begin
+            include("ParametrisationMethod/test_parametrisation_method.jl")
+            include("ParametrisationMethod/test_invariance_equation.jl")
+            @testset "Resonances" begin
+                include("ParametrisationMethod/test_resonances.jl")
+            end
+            @testset "ConjugateSymmetry" begin
+                include("ParametrisationMethod/test_conjugate_symmetry.jl")
+            end
+        end
+    end
+    if should_run("spectral_decomposition")
+        @testset "SpectralDecomposition" begin
+            include("SpectralDecomposition/test_eigenproblems.jl")
+        end
+    end
+    if should_run("utils")
         @testset "Utils" begin
             @testset "Multiindices" begin
                 include("Utils/test_multiindices.jl")
@@ -19,45 +45,10 @@ const GROUP = get(ENV, "GROUP", "all")
                 include("Utils/test_realification.jl")
             end
         end
-        @testset "SpectralDecomposition" begin
-            include("SpectralDecomposition/test_eigenproblems.jl")
-        end
     end
-    if GROUP in ("all", "parametrisation")
-        @testset "ParametrisationMethod" begin
-            @testset "ConjugateSymmetry" begin
-                include("ParametrisationMethod/test_conjugate_symmetry.jl")
-            end
-        end
-    end
-end
-
-#Run demos 
-@testset "Morfe Demos" begin
-    if GROUP in ("all", "demos")
-        @testset "FullOrderModel" begin
-            redirect_stdout(devnull) do
-                include(joinpath(
-                    @__DIR__, "..", "demo/FullOrderModel/demo_NDOrderModel.jl"))
-            end
-        end
-        @testset "ParametrisationMethod" begin
-            # ignore println
-            redirect_stdout(devnull) do
-                include(joinpath(
-                    @__DIR__, "..", "demo/ParametrisationMethod/demo_invariance_equation.jl"))
-                include(joinpath(
-                    @__DIR__, "..", "demo/ParametrisationMethod/demo_lower_order_couplings.jl"))
-                include(joinpath(
-                    @__DIR__, "..",
-                    "demo/ParametrisationMethod/demo_master_mode_orthogonality.jl"))
-                include(joinpath(
-                    @__DIR__, "..", "demo/ParametrisationMethod/demo_multilinear_terms.jl"))
-                include(joinpath(
-                    @__DIR__, "..", "demo/ParametrisationMethod/demo_parametrisation_method.jl"))
-                include(joinpath(
-                    @__DIR__, "..", "demo/ParametrisationMethod/demo_resonances.jl"))
-            end
+    if should_run("end_to_end")
+        @testset "EndToEnd" begin
+            #   
         end
     end
 end
