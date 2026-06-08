@@ -1,0 +1,251 @@
+"""
+	main.jl — Top-level driver for the Kármán vortex street DPIM demo.
+
+Pipeline
+────────
+1.  Generate Turek–Schäfer mesh (Gmsh)
+2.  Ferrite P2/P1 Taylor-Hood FEM setup
+3.  Newton steady-state solve at Re₀
+4.  Assemble linearised NSE operators B₀, B₁
+5.  Assemble K_visc (parametric coupling) and h₀ (base-flow forcing)
+6.  Shift-invert ARPACK eigenproblem → Hopf pair (λ₁, λ₂)
+7.  Build NDOrderModel + multiindex set
+8.  Solve cohomological equations (DPIM)
+9.  Realify reduced dynamics → Stuart-Landau coefficients
+
+All parameters in config.jl.
+"""
+
+using Pkg: Pkg
+Pkg.activate(@__DIR__)
+if !haskey(Pkg.project().dependencies, "MORFE")
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.add([
+		"Ferrite", "FerriteGmsh", "Gmsh",
+		"Arpack", "LinearMaps",
+		"StaticArrays", "KLU",
+	])
+end
+Pkg.instantiate()
+
+using MORFE
+using Ferrite
+using FerriteGmsh
+using Gmsh
+using Arpack
+using LinearMaps
+using StaticArrays
+using LinearAlgebra
+using SparseArrays
+using Printf
+using Serialization
+
+include("config.jl")
+include("mesh.jl")
+include("fem_setup.jl")
+include("steady_state.jl")
+include("linear_operators.jl")
+include("fluid_maps.jl")
+include("eigensolver.jl")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Results directory (deterministic name — same config overwrites previous run)
+# ─────────────────────────────────────────────────────────────────────────────
+
+const RESULTS_DIR = joinpath(@__DIR__, "results", @sprintf("Re%.2f_ord%d", Re₀, MAX_ORD))
+mkpath(RESULTS_DIR)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Logging: tee all output to stdout and summary.log simultaneously
+# ─────────────────────────────────────────────────────────────────────────────
+
+_log = open(joinpath(RESULTS_DIR, "summary.log"), "w")
+
+struct TeeIO <: IO
+	a::IO
+	b::IO
+end
+Base.unsafe_write(t::TeeIO, p::Ptr{UInt8}, n::UInt) =
+	(unsafe_write(t.a, p, n); unsafe_write(t.b, p, n); n)
+Base.flush(t::TeeIO) = (flush(t.a); flush(t.b))
+
+_out = TeeIO(stdout, _log)
+
+const _sep  = "=" ^ 60
+const _dash = "-" ^ 60
+
+println(_out, _sep)
+println(_out, "Kármán Vortex Street DPIM  (Re₀ = $Re₀,  order = $MAX_ORD)")
+println(_out, "  results → $RESULTS_DIR")
+println(_out, _sep)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1 — Mesh
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[1/9] Generating Turek–Schäfer mesh ...")
+r_mesh = @timed generate_mesh(;
+	h_cyl  = MESH_H_CYL,
+	h_wake = MESH_H_WAKE,
+	h_bulk = MESH_H_BULK,
+)
+meshfile = r_mesh.value
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2 — FEM setup
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[2/9] Ferrite P2/P1 Taylor-Hood FEM setup ...")
+r_fem = @timed setup_fem(meshfile)
+fom   = r_fem.value
+println(_out, "  Free DOFs (steady state): $(fom.n_free)")
+println(_out, "  Free DOFs (DPIM, inlet free): $(fom.n_free_dpim)")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3 — Steady-state Newton solve
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[3/9] Newton steady-state at Re₀ = $Re₀ ...")
+r_ss = @timed solve_steady_state(fom; Re0 = Re₀)
+(_, _, s₀_full) = r_ss.value
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4 — Linear operators B₀, B₁
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[4/9] Assembling linearised NSE operators ...")
+r_ops = @timed assemble_linear_operators(s₀_full, fom; Re0 = Re₀)
+(B₀, B₁) = r_ops.value
+println(_out, "  B₁ nnz = $(nnz(B₁)),  B₀ nnz = $(nnz(B₀))")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5 — K_visc (parametric coupling) + h₀ (base-flow forcing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[5/9] Assembling K_visc and base-flow forcing h₀ ...")
+r_kvisc = @timed assemble_K_visc(fom)
+K_visc = r_kvisc.value
+K_visc .*= _CYL_D                          # scale: ν = D/Re, so g₁(s,η′) = D·η′·K_raw·s
+h₀_vec = K_visc * s₀_full[fom.free_dpim]  # h₀(η′) = D·η′·K_raw·u₀  (base-flow forcing)
+println(_out, "  K_visc nnz = $(nnz(K_visc))")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6 — Hopf eigenpair
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[6/9] Shift-invert ARPACK eigenproblem ...")
+r_eig = @timed solve_hopf_eigenproblem(
+	-B₀, B₁;
+	nev      = EIG_NEV,
+	sigma_re = EIG_SIGMA_RE,
+	sigma_im = EIG_SIGMA_IM,
+)
+(master_eigenvalues, master_modes, left_eigenmodes) = r_eig.value
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7 — NDOrderModel + multiindex set
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[7/9] Building NDOrderModel and multiindex set ...")
+mset       = all_multiindices_up_to(NVAR, MAX_ORD; min_degree = 1)
+convection = FluidConvection(fom; max_unique_cols = length(mset))
+g₁       = make_param_coupling(K_visc)
+h₀       = make_base_forcing(h₀_vec)
+ext_sys    = ExternalSystem((0.0 + 0.0im,))
+
+model = NDOrderModel((B₀, B₁), (convection, g₁, h₀), ext_sys)
+println(_out, "  $(length(mset)) monomials (NVAR=$NVAR, order ≤ $MAX_ORD)")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8 — Resonance set + cohomological equations
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[8/9] Solving cohomological equations (order $MAX_ORD) ...")
+all_lambdas   = ComplexF64[master_eigenvalues..., 0.0+0.0im]
+resonance_set = resonance_set_from_complex_normal_form_style(
+mset, all_lambdas, 0.05 * abs(master_eigenvalues[1]))
+
+conj_map = [2, 1, 3]   # mode 1 (Im>0) ↔ mode 2 (Im<0); η′ self-conjugate
+r_dpim = @timed solve_cohomological_problem(
+	model, mset,
+	master_eigenvalues,
+	master_modes, left_eigenmodes,
+	resonance_set;
+	conjugate_permutation = conj_map,
+)
+(W, R) = r_dpim.value
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9 — Realify + write results
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[9/9] Realifying reduced dynamics ...")
+Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
+
+rdyn_path = joinpath(RESULTS_DIR, "reduced_dynamics.txt")
+open(rdyn_path, "w") do io
+	println(io, "Kármán Vortex Street — Reduced Dynamics (real form)")
+	@printf(io, "Re₀ = %.4f,  DPIM order = %d,  NVAR = %d\n", Re₀, MAX_ORD, NVAR)
+	println(io, "")
+	println(io, "Hopf eigenvalues:")
+	for (i, λ) in enumerate(master_eigenvalues)
+		@printf(io, "  λ[%d] = %+.10f %+.10f i\n", i, real(λ), imag(λ))
+	end
+	println(io, "")
+	println(io, "Nonzero reduced-dynamics monomials:")
+	for m in eachindex(Rr.poly.multiindex_set.exponents)
+		mi = Rr.poly.multiindex_set.exponents[m]
+		c  = Rr.poly.coefficients[:, m]
+		any(abs.(real.(c)) .> 1e-14) || continue
+		@printf(io, "  %-20s : %s\n", string(mi), string(round.(real.(c); sigdigits = 8)))
+	end
+end
+
+println(_out, "\nReduced dynamics (real form) — nonzero monomials:")
+for m in eachindex(Rr.poly.multiindex_set.exponents)
+	mi = Rr.poly.multiindex_set.exponents[m]
+	c  = Rr.poly.coefficients[:, m]
+	any(abs.(real.(c)) .> 1e-12) || continue
+	@printf(_out, "  %-20s : %s\n", string(mi), string(round.(c; sigdigits = 6)))
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Summary
+# ─────────────────────────────────────────────────────────────────────────────
+
+to_gb(b) = round(b / 1024^3; digits = 2)
+
+println(_out)
+println(_out, _sep)
+println(_out, "Kármán Vortex Street DPIM — Summary")
+println(_out, "  Re₀ = $Re₀,  order = $MAX_ORD,  NVAR = $NVAR,  FOM = $(fom.n_free)")
+@printf(_out, "  Hopf eigenvalue:  λ₁ = %+.6f %+.6f·i\n",
+	real(master_eigenvalues[1]), imag(master_eigenvalues[1]))
+println(_out, _dash)
+@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
+	"[1] Mesh generation", r_mesh.time, to_gb(r_mesh.bytes))
+@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
+	"[2] FEM setup", r_fem.time, to_gb(r_fem.bytes))
+@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
+	"[3] Newton steady-state", r_ss.time, to_gb(r_ss.bytes))
+@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
+	"[4] Linear operators", r_ops.time, to_gb(r_ops.bytes))
+@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
+	"[5] K_visc + h₀", r_kvisc.time, to_gb(r_kvisc.bytes))
+@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
+	"[6] Eigenproblem", r_eig.time, to_gb(r_eig.bytes))
+@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
+	"[8] Cohomological solve", r_dpim.time, to_gb(r_dpim.bytes))
+println(_out, _sep)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Save ROM
+# ─────────────────────────────────────────────────────────────────────────────
+
+serialize(joinpath(RESULTS_DIR, "W.jls"), W)
+serialize(joinpath(RESULTS_DIR, "R.jls"), R)
+
+println(_out, "\nResults saved to: $RESULTS_DIR")
+println(_out, "  reduced_dynamics.txt, W.jls, R.jls, summary.log")
+
+close(_log)

@@ -131,7 +131,7 @@ function set_resonance!(rs::ResonanceSet{ROM}, target::Int,
 	if target ≤ ROM
 		rs.inner_resonances[target, idx] = value
 	else
-		rs.outer_resonances[target - ROM, idx] = value
+		rs.outer_resonances[target-ROM, idx] = value
 	end
 	return rs
 end
@@ -154,7 +154,7 @@ function is_resonant(rs::ResonanceSet{ROM}, idx::Int, target::Int)::Bool where {
 	if target ≤ ROM
 		return rs.inner_resonances[target, idx]
 	elseif rs.outer_resonances !== nothing
-		return rs.outer_resonances[target - ROM, idx]
+		return rs.outer_resonances[target-ROM, idx]
 	else
 		return false
 	end
@@ -194,7 +194,7 @@ function resonant_multiindices(rs::ResonanceSet{ROM}, target::Int) where {ROM}
 		return findall(rs.inner_resonances[target, :])
 	end
 	rs.outer_resonances === nothing && return Int[]
-	return findall(rs.outer_resonances[target - ROM, :])
+	return findall(rs.outer_resonances[target-ROM, :])
 end
 
 # ======================================================================
@@ -543,7 +543,7 @@ function resonance_set_from_real_normal_form_style(
 	inner = _build_inner_matrix(NormalFormInternal(), inner_cond, _super, multiindices, n_int)
 	outer = if n_out > 0
 		# re-index outer conjugacy map entries to local 1:n_out
-		outer_conj = conjugacy_map[(n_int + 1):end] .- n_int
+		outer_conj = conjugacy_map[(n_int+1):end] .- n_int
 		outer_cond = RealEigenvalueCondition(outer_eigenvalues, outer_conj, tol, 1:n_out)
 		_build_outer_matrix(outer_cond, _super, multiindices, n_out)
 	else
@@ -587,7 +587,7 @@ function resonance_set_from_condition_number_estimate(
 	@assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
 	@assert length(target_condition_numbers) == n_int + n_out
 	inner_κ = target_condition_numbers[1:n_int]
-	outer_κ = target_condition_numbers[(n_int + 1):end]
+	outer_κ = target_condition_numbers[(n_int+1):end]
 	eff_inner = inner_target_indices === nothing ? (1:n_int) : inner_target_indices
 	inner_cond = ConditionNumberEstimateCondition(
 		master_eigenvalues, spectral_radius, inner_κ, max_cond, collect(eff_inner),

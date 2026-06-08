@@ -12,11 +12,11 @@ Geometry: clamped-clamped beam, 1000 × 10 × 24, 40×3×1 Hex8 elements, quadra
 Matches the Gridap demo (FOM=4977) — use this to benchmark the RHS-C FEM batched path.
 """
 
-import Pkg
+using Pkg: Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
-    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays"])
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays"])
 end
 Pkg.instantiate()
 
@@ -155,7 +155,7 @@ function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::Mechanical_Probl
 	end
 	solver.right_eig_result = evecs
 	solver.eigenvalues = λ_all
-	return λ_all, evecs
+	return λ_all, reshape(evecs, FOM, 2, 2 * solver.nev)
 end
 
 function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::Mechanical_Problem_Solver)
@@ -171,7 +171,7 @@ function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::Mechanical_
 	for (i, λ) in enumerate(solver.eigenvalues)
 		L[1:FOM, i] = -(1 / conj(λ)) * model.linear_terms[1]' * L[(FOM+1):end, i]
 	end
-	return solver.eigenvalues, L
+	return solver.eigenvalues, reshape(L, FOM, 2, size(L, 2))
 end
 
 eigenproblem = solve_eigenproblem(
@@ -195,14 +195,14 @@ FOM = n_free
 select_master_modes_by_sorting(eigenproblem, ROM)
 
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
-master_modes = Y[1:FOM, 1:ROM]
-left_eigenmodes = Y[(FOM+1):end, 1:ROM]
+master_modes = Y[:, 1, 1:ROM]
+left_eigenmodes = Y[:, 2, 1:ROM]
 
 ORD_model = length(model.linear_terms) - 1   # = 2
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
 	for k in 1:(ORD_model-1)
-		master_modes_derivatives[:, k, r] .= Y[(k*FOM+1):((k+1)*FOM), r]
+		master_modes_derivatives[:, k, r] .= Y[:, k+1, r]
 	end
 end
 
