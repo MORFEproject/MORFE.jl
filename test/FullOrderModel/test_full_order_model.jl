@@ -112,4 +112,4 @@ using SparseArrays
 
         @test res == zeros(n)
     end
-end
+end # @testset "FullOrderModel"

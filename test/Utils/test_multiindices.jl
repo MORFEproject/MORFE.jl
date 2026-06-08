@@ -1,5 +1,3 @@
-using Test
-
 using StaticArrays: SVector
 
 using MORFE.Multiindices
