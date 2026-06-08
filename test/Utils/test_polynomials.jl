@@ -1,10 +1,6 @@
-# test/runtests.jl (or a standalone test file for Polynomials module)
-
-using Test
 using StaticArrays: SVector
 
-using MORFE.Multiindices
-using MORFE.Multiindices: monomial_rank
+using MORFE.Multiindices: monomial_rank, find_in_set
 using MORFE.Polynomials
 
 # ----------------------------
@@ -91,8 +87,8 @@ end
         c[idx_00] = 1
         p_dense = DensePolynomial(c, set)
 
-        @test coefficients(p_dense) == p_dense.coefficients
-        @test multiindex_set(p_dense) == set
+        @test MORFE.Polynomials.coefficients(p_dense) == p_dense.coefficients
+        @test MORFE.Polynomials.multiindex_set(p_dense) == set
         @test nvars(p_dense) == 2
         @test length(p_dense) == length(set)
     end
