@@ -452,7 +452,7 @@ marked resonant with all `ROM` master modes.  Outer targets are flagged by eigen
 proximity `|λⱼ - s| < tol`.
 
 - `master_eigenvalues`: ROM eigenvalues; enter `s` and are inner targets.
-- `external_eigenvalues`: enter `s` only (e.g. forcing frequencies in the multiindex).
+- `external_eigenvalues`: enter `s` only (e.g. forcing frequencies in the multiindex, since external_eigenvalues cant be targets).
 - `outer_eigenvalues`: outer targets (e.g. forcing eigenvalues tested for near-resonance).
   Pass `ComplexF64[]` when there are no outer targets.
 """

@@ -1,4 +1,3 @@
-using Test
 using Random
 using StaticArrays: SVector
 
@@ -357,7 +356,8 @@ end
         f2 = Dict([1, 0] => 3.0, [0, 1] => 4.0)
         p1 = DensePolynomial(f1)
         p2 = DensePolynomial(f2)
-        @test multiindex_set(p1).exponents == multiindex_set(p2).exponents
+        @test MORFE.Polynomials.multiindex_set(p1).exponents ==
+              MORFE.Polynomials.multiindex_set(p2).exponents
     end
 
     @testset "empty polynomial" begin
