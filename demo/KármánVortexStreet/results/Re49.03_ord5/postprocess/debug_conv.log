@@ -1,0 +1,57 @@
+=== FluidConvection / Invariance Equation Debug ===
+
+[Setup] Mesh + FEM + Newton + linear operators + eigenproblem...
+λ₁ = -0.07147722 +16.93894493i
+‖φ₁‖ = 1.12976e+06,  ‖ψ₁‖ = 1
+ψ₁ᴴ B₁ φ₁ = +1 +1.31839e-16i  (should be 1+0i)
+
+[Load] Reading W.jls and R.jls...
+‖φ₁ from eigen‖ = 1.12976e+06
+‖φ₁ from W[1,0,0]‖ = 1.12976e+06  (should match)
+‖W[2,0,0]‖ = 3.06037e+10
+‖W[1,1,0]‖ = 1.08456e+11
+‖W[2,1,0]‖ = 1.73355e+25
+
+=== Test 1: Orthogonality ψ₁ᴴ B₁ W[α] == 0 ===
+  ψ₁ᴴ B₁ W[1,0,0] = +1.0000e+00 +1.3184e-16i
+  ψ₁ᴴ B₁ W[2,0,0] = +1.1007e+01 +1.9035e+01i
+  ψ₁ᴴ B₁ W[1,1,0] = -9.3606e-01 -3.5249e+01i
+  ψ₁ᴴ B₁ W[2,1,0] = +6.9463e+18 -1.3682e+19i
+
+  Normalization: ψ₁ᴴ B₁ φ₁ = +1 +1.3183898e-16i
+  Orthogonality deviation: ψ₁ᴴ B₁ W[2,1,0] = +6.9463e+18 -1.3682e+19i
+
+=== Test 2: Invariance equation at [2,0,0] ===
+  s[2,0,0] = -0.142954 +33.877890i
+  ‖L(2λ₁) W[2,0,0]‖ = 1.7973e+07
+  (ml_result[2,0,0] estimated from FD below)
+
+=== Test 3: FD sign test ===
+  ‖R(u₀)‖ at free_dpim = 0.05473  (should be ≈0)
+  ‖N₂_FD(φ₁,φ₁)‖ = 6.99447e+20
+  ‖LW200‖ = 1.7973e+07
+
+  |LW200 - (-N₂_FD)| / ‖N₂‖ = 1  (small → FC = -N₂, sign correct)
+  |LW200 - (+N₂_FD)| / ‖N₂‖ = 1  (small → FC = +N₂, sign WRONG)
+
+  → Magnitudes too different to determine sign from LW200 comparison
+
+  ‖LW200‖/‖N₂_FD‖ = 2.57e-14  (expect 1.0 if multiplier correct)
+
+=== Test 4: Reduced dynamics coefficients ===
+  c₁₀₀ = λ₁     = -0.0714772 +16.9389i
+  c₁₀₁          = -77.0554 +162.286i
+  c₂₁₀ (Landau) = +9.93005e+17 -1.95592e+18i
+
+  Re(c₂₁₀) sign: POSITIVE ✗  (expected NEGATIVE for supercritical Hopf)
+
+=== Test 5: Schur complement denominator [2,1,0] ===
+  s[2,1,0] = -0.21443166 +16.93894493i
+  |s[2,1,0] - λ₁| = 0.142954
+  Approx Schur denom ≈ 1/(s-λ₁) = -6.995 -0i
+
+  Expected ‖W[2,0,0]‖ ≈ ‖N₂‖/|2λ₁| = 6.994e+20/33.88 = 2.065e+19
+  Actual   ‖W[2,0,0]‖ = 3.06e+10
+  ‖W[2,0,0]‖ × |2λ₁| / ‖N₂_FD‖ = 1.482e-09  (should be ≈1)
+
+=== End ===

@@ -25,7 +25,7 @@ Run after arch_2_force.jl (autonomous config) has produced results/R.jls and res
 """
 
 using Pkg: Pkg
-const _backbone_env = joinpath(@__DIR__, "../../../backbone_env")
+const _backbone_env = joinpath(@__DIR__, "../..")
 Pkg.activate(_backbone_env)
 if !haskey(Pkg.project().dependencies, "MORFE")
 	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../../../../../..")))
@@ -261,10 +261,10 @@ all_results = map(ORDERS) do ord
 	Ω_bk = Float64[]
 	phys_bk = Float64[]
 	if !isnothing(br_k)
-		_m = [s.r <= r_max for s in br_k.branch]
-		r_bk   = [s.r for s in br_k.branch][_m]
+		_m      = [s.r <= r_max for s in br_k.branch]
+		r_bk    = [s.r for s in br_k.branch][_m]
 		Ω_bk   = [s.Ω for s in br_k.branch][_m]
-		z1_bk  = r_bk ./ ε
+		z1_bk   = r_bk ./ ε
 		phys_bk = [abs(evaluate(W_i_k, SVector(r, r))) for r in z1_bk]
 		@printf("%d pts, |z₁| ∈ [%.2e, %.2e]\n", length(r_bk), extrema(r_bk)...)
 	else
