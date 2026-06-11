@@ -23,7 +23,8 @@ include(joinpath(@__DIR__, "../../../ext/FEMUtility/AbaqusToGmsh.jl"))
 using .AbaqusToGmsh
 using Gmsh
 
-const OUTDIR = @__DIR__
+const OUTDIR = joinpath(@__DIR__, "output")
+mkpath(OUTDIR)
 
 # ===================================================================
 # 1.  Structured mesh generators

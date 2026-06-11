@@ -26,7 +26,8 @@ using .ComsolToGmsh
 using .GmshToComsol
 using Gmsh
 
-const OUTDIR = @__DIR__
+const OUTDIR = joinpath(@__DIR__, "output")
+mkpath(OUTDIR)
 
 # ===================================================================
 # 1.  COMSOL .mphtxt file generators
