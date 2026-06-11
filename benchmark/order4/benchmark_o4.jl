@@ -21,7 +21,7 @@ Structure
 
 Usage
 =====
-	julia --project demo/BenchmarkO4/benchmark_o4.jl
+	julia --project benchmark/order4/benchmark_o4.jl
 """
 
 import Pkg

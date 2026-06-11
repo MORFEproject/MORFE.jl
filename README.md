@@ -51,10 +51,10 @@ A, B = linear_first_order_matrices(model)
 result = generalised_eigenpairs(A, B; nev = 4, sigma = 0.0)
 
 # Build the resonance set and solve the parametrisation
-# See demo/ for complete worked examples
+# See examples/ for complete worked examples
 ```
 
-For detailed examples, see the [`demo/`](demo/) directory.
+For detailed examples, see the [`examples/`](examples/) directory.
 
 ---
 
@@ -70,7 +70,8 @@ MORFE.jl/
 │   ├── FullOrderModel/               # FOM types and nonlinear maps
 │   ├── SpectralDecomposition/        # Eigensolvers and mode propagation
 │   └── ParametrisationMethod/        # DPIM core: resonance, invariance equation, ROM
-├── demo/                             # Worked examples
+├── examples/                         # Worked examples (numbered) + internals/
+├── benchmark/                        # Benchmark scripts
 ├── test/                             # Test suite
 └── docs/                             # Documentation source
 ```

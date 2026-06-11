@@ -39,7 +39,7 @@ test = false
 # Load GMSH-Mesh
 gmsh.initialize()
 # gmsh.option.setNumber("General.Verbosity", 0)
-model = GmshDiscreteModel("demo/Gridap/clamped_clamped_beam.msh")
+model = GmshDiscreteModel(joinpath(@__DIR__, "clamped_clamped_beam.msh"))
 
 # Define FEM Space
 order = 2

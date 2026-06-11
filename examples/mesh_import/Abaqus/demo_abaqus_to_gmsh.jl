@@ -214,7 +214,7 @@ gmsh.finalize()
 
 # ===================================================================
 println("\n", "="^60)
-println("  Output files written to demo/FEMUtility/:")
+println("  Output files written to examples/mesh_import/Abaqus/:")
 for f in [inp_c3d8, msh_c3d8, inp_c3d20, msh_c3d20, msh_lin,
 	inp_single, msh_single]
 	println("    ", basename(f))

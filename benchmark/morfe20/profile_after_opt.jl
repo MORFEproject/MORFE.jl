@@ -6,7 +6,7 @@ to HTML (same format as the original profile_morfe.html) so that old vs new
 can be compared side-by-side.
 
 Run from the repo root:
-	julia --project=. demo/BenchmarkMorfe20/profile_after_opt.jl
+	julia --project=. benchmark/morfe20/profile_after_opt.jl
 """
 
 import Pkg

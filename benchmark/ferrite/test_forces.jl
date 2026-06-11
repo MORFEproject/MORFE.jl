@@ -12,7 +12,7 @@ Two comparisons are made, both on beam_h27.msh:
      ordering-independent.  Eigenvectors are mass-normalised in both backends.
 
 Run:
-  julia --project demo/BenchmarkFerrite/test_forces.jl
+  julia --project benchmark/ferrite/test_forces.jl
 """
 
 import Pkg

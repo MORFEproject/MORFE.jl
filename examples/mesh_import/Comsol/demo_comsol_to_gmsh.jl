@@ -368,7 +368,7 @@ println("  Element connectivity preserved across round-trip ✓")
 
 # ===================================================================
 println("\n", "="^60)
-println("  Output files written to demo/FEMUtility/Comsol/:")
+println("  Output files written to examples/mesh_import/Comsol/:")
 for f in [comsol_h27, gmsh_h27, gmsh_h27_lin, comsol_t10, gmsh_t10,
 	comsol_h27_1, gmsh_h27_1, comsol_rt, gmsh_rt]
 	println("    ", basename(f))

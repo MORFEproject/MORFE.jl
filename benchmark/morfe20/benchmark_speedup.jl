@@ -17,7 +17,7 @@ Sections
 	 OPT-4    per-monomial `zeros` vs preallocated scratch buffer
 
 Run from the repo root:
-	julia --project=. demo/BenchmarkMorfe20/benchmark_speedup.jl
+	julia --project=. benchmark/morfe20/benchmark_speedup.jl
 """
 
 import Pkg
