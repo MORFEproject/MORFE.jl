@@ -7,7 +7,7 @@ Computes and compares the cohomological bordered-system operators
   - Legacy convention    (what legacy MORFE2.0 homological_HALF! computes)
 
 Run from the repo root:
-	julia --project demo/BenchmarkFerrite/diagnose_operators.jl
+	julia --project benchmark/ferrite/diagnose_operators.jl
 """
 
 import Pkg

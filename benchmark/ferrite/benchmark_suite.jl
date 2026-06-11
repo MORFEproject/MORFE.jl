@@ -25,7 +25,7 @@ Prerequisites:
   Run generate_beam_meshes.jl once to create the .msh files.
 
 Usage:
-  julia --project demo/BenchmarkFerrite/benchmark_suite.jl
+  julia --project benchmark/ferrite/benchmark_suite.jl
 """
 
 using Pkg: Pkg

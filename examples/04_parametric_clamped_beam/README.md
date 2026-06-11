@@ -1,6 +1,6 @@
 # Parametric beam demo — uniform axial stretch
 
-Companion to `demo/BenchmarkFerrite/benchmark_ferrite.jl`.  A scalar
+Companion to `benchmark/ferrite/benchmark_ferrite.jl`.  A scalar
 parameter `θ ∈ ℝ` controls a *uniform axial stretch* of the beam:
 
 * every cross-section is left untouched
@@ -30,9 +30,9 @@ From the repository root:
 
 ```julia
 using Pkg
-Pkg.activate("demo/BenchmarkFerrite")           # reuse the benchmark env
-include("demo/BenchmarkFerrite/generate_beam_mesh.jl")  # once, to produce beam_h27.msh
-include("demo/ParametricBeam/parametric_beam_demo.jl")
+Pkg.activate("benchmark/ferrite")              # reuse the benchmark env
+include("benchmark/ferrite/generate_beam_mesh.jl")  # once, to produce beam_h27.msh
+include("examples/04_parametric_clamped_beam/parametric_beam_demo.jl")
 ```
 
 The `N_θ` constant near the top of the main script controls the

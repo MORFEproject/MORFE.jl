@@ -3,7 +3,7 @@ Generate beam mesh densities for the multi-mesh benchmark suite.
 
 Produces the following files for each (nx, ny, nz) in MESH_SUITE:
 
-  demo/BenchmarkFerrite/
+  benchmark/ferrite/
 	beam_h27_{nx}x{ny}x{nz}.msh          — GMSH format (Ferrite path)
 
   legacy_morfe/MORFE2.0/input/
@@ -25,7 +25,7 @@ Also copies the NX=40 output to the canonical `beam_h27.{msh,mphtxt}` so that
 `benchmark_ferrite.jl` and the existing legacy benchmark are unaffected.
 
 Run once before `benchmark_suite.jl`:
-  julia --project demo/BenchmarkFerrite/generate_beam_meshes.jl
+  julia --project benchmark/ferrite/generate_beam_meshes.jl
 """
 
 using Printf
