@@ -230,7 +230,9 @@ end
 # ------------------------------------------------------------------------------
 super_eigenvalues = vcat(Vector{ComplexF64}(master_eigenvalues), external_eigenvalues)
 using HDF5: h5open
-output_path = joinpath(@__DIR__, "output.h5")
+const _results_dir_pm = joinpath(@__DIR__, "results")
+mkpath(_results_dir_pm)
+output_path = joinpath(_results_dir_pm, "output.h5")
 h5open(output_path, "w") do f
 	f["W_coefficients"] = W.poly.coefficients
 	f["R_coefficients"] = R.poly.coefficients
@@ -268,9 +270,9 @@ for res in err_conv
 end
 
 plots = plot_invariance_convergence(err_conv)
-savefig(plots.full, joinpath(@__DIR__, "invariance_convergence_full.png"))
-savefig(plots.master, joinpath(@__DIR__, "invariance_convergence_master.png"))
-println("\nConvergence plots saved to: ", @__DIR__)
+savefig(plots.full, joinpath(_results_dir_pm, "invariance_convergence_full.png"))
+savefig(plots.master, joinpath(_results_dir_pm, "invariance_convergence_master.png"))
+println("\nConvergence plots saved to: ", _results_dir_pm)
 
 println("\n" * "="^80)
 println("Demo finished successfully.")

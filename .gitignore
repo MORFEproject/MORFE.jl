@@ -49,6 +49,8 @@ results/*
 !results/reference/
 !results/reference/**
 benchmark_results*/
+examples/mesh_import/Abaqus/output/
+examples/mesh_import/Comsol/output/
 *.h5
 *.jls
 *.vtu
