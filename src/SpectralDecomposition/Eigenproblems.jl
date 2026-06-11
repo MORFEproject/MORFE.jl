@@ -359,17 +359,18 @@ mutable struct Eigenproblem{T}
 
 	# Constructor accepting pre-extracted 2-D physical-space left eigenmodes
 	# (FOM × n_eigs).  Use when the relevant slice is already known — e.g.
-	# StructureModalDampingEigensolver, where X[:, ORD, k] == Y[:, 1, k].
+	# StructureModalDampingEigensolver (3-D eigenmodes, 2-D left) or
+	# Mechanical_Problem_Solver (2-D eigenmodes in first-order flat format,
+	# 2-D left eigenmodes). For the 3-D case the n_eigs axis is dim 3; for
+	# the 2-D (flat first-order) case it is dim 2.
 	function Eigenproblem(
 		solver::AbstractEigensolver,
 		eigenvalues::Array{Complex{T}},
 		eigenmodes::Array{Complex{T}},
 		left_eigenmodes::Matrix{Complex{T}}) where {T}
-		FOM = size(eigenmodes, 1)
-		n_eigs = size(eigenmodes, 3)
-		@assert ndims(eigenmodes) == 3 "eigenmodes must be a 3-D array (FOM × ORD × n_eigs)"
-		@assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal size(eigenmodes, 3)"
-		@assert size(left_eigenmodes) == (FOM, n_eigs) "left_eigenmodes must be FOM × n_eigs = ($FOM, $n_eigs)"
+		n_eigs = ndims(eigenmodes) == 3 ? size(eigenmodes, 3) : size(eigenmodes, 2)
+		@assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal n_eigs = $n_eigs"
+		@assert size(left_eigenmodes, 2) == n_eigs "left_eigenmodes must have n_eigs = $n_eigs columns"
 		new{T}(solver, eigenvalues, eigenmodes, left_eigenmodes, nothing, nothing)
 	end
 end
@@ -457,7 +458,8 @@ function sort_left_eigenmodes(eigenvalues, left_eigenvalues, left_eigenmodes)
 		perm[i] = j
 		used[j] = true
 	end
-	return left_eigenvalues[perm], left_eigenmodes[:, :, perm]
+	reordered = ndims(left_eigenmodes) == 3 ? left_eigenmodes[:, :, perm] : left_eigenmodes[:, perm]
+	return left_eigenvalues[perm], reordered
 end
 
 """
@@ -476,9 +478,17 @@ function normalize_biorthogonal!(
 	@assert size(eigenmodes)==size(left_eigenmodes) "Size of left and right eigenmodes must be the same!"
 
 	(_, B) = linear_first_order_matrices(model)
-	for i in 1:size(eigenmodes, 3)
-		tmp = vec(left_eigenmodes[:, :, i])' * B * vec(eigenmodes[:, :, i])
-		@views eigenmodes[:, :, i] ./= tmp
+	n = ndims(eigenmodes)
+	n_eigs = size(eigenmodes, n)
+	for i in 1:n_eigs
+		ψ = n == 3 ? vec(@view eigenmodes[:, :, i]) : @view eigenmodes[:, i]
+		φ = n == 3 ? vec(@view left_eigenmodes[:, :, i]) : @view left_eigenmodes[:, i]
+		tmp = φ' * B * ψ
+		if n == 3
+			@views eigenmodes[:, :, i] ./= tmp
+		else
+			@views eigenmodes[:, i] ./= tmp
+		end
 	end
 end
 
@@ -498,7 +508,8 @@ Define master_modes of Eigenproblem by passing a vector of booleans.
 	master_modes[i] = true  ===> eigen_modes[:,i] is a mastermode
 """
 function select_master_modes_by_hand(ep::Eigenproblem, mastermodes::Vector{Bool})
-	@assert length(mastermodes)==size(ep.eigenmodes, 3) "mastermodes has wrong length!"
+	n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
+	@assert length(mastermodes) == n "mastermodes has wrong length!"
 	ep.master_modes = mastermodes
 end
 
@@ -509,7 +520,7 @@ Defines master_modes as the first nev eigenpairs. Sorting was done in solve_eige
 """
 function select_master_modes_by_sorting(ep::Eigenproblem, nev::Int64)
 	@assert nev>0 "nev must be bigger then zero"
-	n = size(ep.eigenmodes, 3)
+	n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
 	ep.master_modes = [i <= nev for i in 1:n]
 end
 

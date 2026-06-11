@@ -49,9 +49,9 @@ results/visualise_geometry_and_modes/paraview/  — mesh.vtu + mode_0N.vtu files
 
 These are not version-controlled here; the durable copy is `MORFE_results_archive`.
 
-## Approximate runtime
+## Measured runtime
 
-~10–20 minutes depending on hardware (order-5 parametrisation, sparse Ferrite assembly).
+< 1 min (Julia 1.12.6, Apple M2, 16 GiB; first run including compilation; 3429 free DOFs, order-5)
 
 ## Subdirectories
 

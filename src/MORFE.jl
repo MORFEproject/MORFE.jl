@@ -80,7 +80,8 @@ export ResonanceSet,
 	resonance_set_from_complex_normal_form_style,
 	resonance_set_from_real_normal_form_style,
 	resonance_set_from_condition_number_estimate,
-	resonant_multiindices
+	resonant_multiindices,
+	resonant_targets
 
 # ParametrisationMethod
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects

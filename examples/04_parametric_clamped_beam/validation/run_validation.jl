@@ -47,19 +47,19 @@ include(joinpath(@__DIR__, "..", "plotting", "backbone_plots.jl"))
 # ------------------------------------------------------------------
 # Constants  (match main.jl)
 # ------------------------------------------------------------------
-const _msh       = joinpath(@__DIR__, "..", "..", "BenchmarkFerrite", "beam_h27.msh")
-const _data      = joinpath(@__DIR__, "..", "results", "data")
-const _figs      = joinpath(@__DIR__, "..", "results", "figures")
-const E_val      = 160e3
-const ν_val     = 0.22
-const ρ_val     = 2.32e-3
-const λ_lame    = (E_val * ν_val) / ((1 + ν_val) * (1 - 2ν_val))
-const μ_lame    = E_val / (2(1 + ν_val))
-const α_damp    = 0.5369754008568333 / 500.0
-const β_damp    = 0.0
-const J₁_def   = Tensor{2, 3, Float64}((i, j) -> (i == 1 && j == 1) ? 1.0 : 0.0)
-const ROM_VAL    = 2
-const MAX_DEG    = 5
+const _msh = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27.msh")
+const _data = joinpath(@__DIR__, "..", "results", "data")
+const _figs = joinpath(@__DIR__, "..", "results", "figures")
+const E_val = 160e3
+const ν_val = 0.22
+const ρ_val = 2.32e-3
+const λ_lame = (E_val * ν_val) / ((1 + ν_val) * (1 - 2ν_val))
+const μ_lame = E_val / (2(1 + ν_val))
+const α_damp = 0.5369754008568333 / 500.0
+const β_damp = 0.0
+const J₁_def = Tensor{2, 3, Float64}((i, j) -> (i == 1 && j == 1) ? 1.0 : 0.0)
+const ROM_VAL = 2
+const MAX_DEG = 5
 const CONJ_PARAM = [2, 1, 3, 4]
 const CONJ_EXACT = [2, 1]
 
@@ -68,10 +68,18 @@ const CONJ_EXACT = [2, 1]
 # ------------------------------------------------------------------
 const test_points = [
 	(0.0, 0.0),    # trivial: Δω₀_rel ≈ 0 (smoke test)
-	(0.05, 0.0),    # small axial stretch
-	(0.10, 0.0),    # moderate axial stretch
-	(0.0, 0.05),   # small arch
-	(0.05, 0.05),   # combined
+	(0.05, 0.0),
+	(0.10, 0.0),
+	(0.20, 0.0),
+	(-0.05, 0.0),
+	(-0.1, 0.0),
+	(-0.2, 0.0),
+	(0.0, 1.5),
+	(0.05, 1.5),
+	(0.0, 3.0),
+	(0.0, 4.5),
+	(0.0, 6.0),
+	(0.0, 7.0),
 ]
 
 # ------------------------------------------------------------------
@@ -145,7 +153,7 @@ backbone_Ω_param(r, θ₁, θ₂) =
 # ------------------------------------------------------------------
 # Validation loop
 # ------------------------------------------------------------------
-const r_range = range(1e-6, 5.0, 400)
+const r_range = range(1e-6, 50.0, 400)
 results_table = NamedTuple[]
 mkpath(_data)
 mkpath(_figs)

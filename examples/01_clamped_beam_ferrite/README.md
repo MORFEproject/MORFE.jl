@@ -35,9 +35,9 @@ Run `validate.jl` after a fresh run to compare against them:
 julia --project=examples/01_clamped_beam_ferrite validate.jl
 ```
 
-## Approximate runtime
+## Measured runtime
 
-~5–15 minutes depending on hardware (order-9 parametrisation of a ~5k-DOF sparse system).
+< 1 min (Julia 1.12.6, Apple M2, 16 GiB; first run including compilation)
 
 ## Notes
 

@@ -244,7 +244,7 @@ conj_map = zeros(Int, NVAR)
 for i in 1:NVAR
 	conj_map[i] = isodd(i) ? i + 1 : i - 1
 end
-Rr = ReducedDynamics(realify(extract_component(R.poly, 1), conj_map), R.external_system_size)
+Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
 
 println("\nReduced dynamics coefficients:")
 for m in 1:length(Rr.poly.multiindex_set.exponents)
