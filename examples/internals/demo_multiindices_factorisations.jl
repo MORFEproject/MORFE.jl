@@ -1,5 +1,6 @@
-include(joinpath(@__DIR__, "../../src/Multiindices.jl"))
-using .Multiindices
+using MORFE.Multiindices: all_multiindices_up_to, indices_in_box_with_bounded_degree,
+	factorisations_asymmetric, factorisations_fully_symmetric,
+	factorisations_groupwise_symmetric, bounded_index_tuples
 
 # -----------------------------------------------------------------------------
 # Setup: multiindex set, target exponent, candidate indices
