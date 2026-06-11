@@ -23,7 +23,7 @@ using Pkg
 Pkg.activate("examples/01_clamped_beam_ferrite")
 Pkg.develop(path=".")        # use local MORFE
 Pkg.instantiate()
-include("examples/01_clamped_beam_ferrite/demo_mechanical_problem.jl")
+include("examples/01_clamped_beam_ferrite/main.jl")
 ```
 
 Or equivalently from the shell:
@@ -31,7 +31,7 @@ Or equivalently from the shell:
 ```bash
 julia --project=examples/01_clamped_beam_ferrite -e '
   using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/01_clamped_beam_ferrite/demo_mechanical_problem.jl")'
+  include("examples/01_clamped_beam_ferrite/main.jl")'
 ```
 
 Each example has its own `Project.toml`. The MORFE package is developed in-place
