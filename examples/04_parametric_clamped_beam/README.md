@@ -1,62 +1,90 @@
-# 04 — Parametric clamped beam (uniform axial stretch + arch pre-deformation)
+# 04 — Parametric clamped beam (two-parameter ROM: axial stretch θ₁ + arch pre-deformation θ₂)
 
 ## Model
 
-Companion to `benchmark/ferrite/benchmark_ferrite.jl`.  A scalar
-parameter `θ ∈ ℝ` controls a *uniform axial stretch* of the beam:
+A 3D continuum clamped-clamped beam with two external parameters:
 
-* every cross-section is left untouched
-* every length-wise slice `dx₁` is scaled by `(1 + θ)`
-* the beam length goes `L → (1 + θ) · L`
+- **θ₁** — uniform axial stretch: every cross-section scaled by `(1+θ₁)` via constant Jacobian
+  contribution `J₁ = e₁⊗e₁`.
+- **θ₂** — arch pre-deformation: displacement along the first bending eigenmode `φ₁(x₀)`, with
+  per-quadrature-point Jacobian `J₂(x₀) = ∇₀φ₁(x₀)`.
 
-The reference mesh `beam_h27.msh` (the same file used by the original
-benchmark) is **never re-meshed**.  All `θ`-dependence enters through
-the pull-back of the weak form to the reference configuration; the
-reduced model is a *parametric* ROM in `(z₁, z₂, θ)`.
+Reference map: `x(θ₁,θ₂,x₀) = x₀ + θ₁ J₁ x₀ + θ₂ φ₁(x₀)`  
+Full Jacobian: `J(θ₁,θ₂,x₀) = I + θ₁ J₁ + θ₂ J₂(x₀)`
+
+Since `J₂` varies per quadrature point, the `det J`, `adj J`, and `1/det J` series are bivariate
+polynomials in `(θ₁,θ₂)` computed per QP. The reference mesh `beam_h27.msh` is **never re-meshed**;
+all parameter dependence enters through the pull-back of the weak form.
+
+The augmented dynamical system has `N_EXT = 2` external states and `NVAR = 4` reduced coordinates
+`(z₁, z₂, θ₁, θ₂)`.
 
 ## Files
 
 | File | Purpose |
 | ---- | ------- |
-| `main.jl`   | Main script: load mesh, build parametric geometry, assemble, solve. |
-| `parametric_assembly.jl`    | `assemble_K_M_polynomial!` and `ParametricGeometricNonlinearity{2|3}` with `evaluate_kth_quadratic!` / `evaluate_kth_cubic!`. |
-| `parametric_geometry.jl`    | Closed-form `det_series`, `adj_series` for an affine `J = J₀ + θ J₁` in 3D, plus `check_adj_det_identity`. |
-| `theta_polynomials.jl`      | Generic truncated power-series algebra: `poly_mul`, `poly_contract`, `reciprocal_series`. |
-
-The demo depends only on the same packages as `benchmark_ferrite.jl`
-plus `StaticArrays` (already a transitive dependency).
+| `main.jl` | Top-level driver (six steps: mesh → eigenproblem → bivariate assembly → nonlinear maps → multiindex set → DPIM solve) |
+| `fem/theta_polynomials.jl` | Truncated scalar power-series algebra for a single parameter θ: `poly_mul`, `poly_contract`, `reciprocal_series` |
+| `fem/parametric_geometry.jl` | Closed-form `det_series`, `adj_series` for an affine `J = J₀ + θ J₁` in 3D; `check_adj_det_identity` |
+| `fem/bivariate_polynomials.jl` | Truncated bivariate series `p(θ₁,θ₂)` stored as `(N+1)×(N+1)` matrices; `bpoly_mul`, `bpoly_dot`, `bpoly_contract`, `breciprocal_series`, `bpoly_power` |
+| `fem/bivariate_geometry.jl` | Per-QP bivariate `det J(θ₁,θ₂,x₀)` and `adj J(θ₁,θ₂,x₀)` from closed-form trace/matrix-product identities |
+| `fem/parametric_assembly.jl` | `assemble_K_M_bivariate!`, `ParametricGeometricNonlinearity2D{2\|3}`, bivariate K/M/C correction builders |
+| `backbone/compute_backbone.jl` | θ₁-sweep backbone curves: `backbone_curves.png`, `backbone_shift.png`, `omega0_slope_minus2.png` |
+| `backbone/compute_backbone_theta2.jl` | θ₂-sweep backbone curves: `backbone_theta2_curves.png`, `backbone_theta2_shift.png`, `omega0_vs_theta2.png` |
+| `backbone/backbone_derivation.md` | Mathematical derivation of the backbone from the normal-form ROM |
+| `plotting/backbone_plots.jl` | (loaded by validation) backbone overlay figures |
+| `validation/run_validation.jl` | Non-parametric validation: deform mesh to exact geometry, run full DPIM, compare |
+| `validation/check_eigenvalue_scaling.jl` | Direct FEM eigenvalue check of `dω₀/dθ` |
+| `validation/exact_geometry_assembly.jl` | Assembly on the exactly deformed mesh |
+| `validation/exact_nonlinear_maps.jl` | Exact (non-parametric) nonlinear maps for validation |
+| `validate.jl` | Lightweight smoke-test runner (used by CI) |
 
 ## How to run
 
-From the repository root:
+The example has its own `Project.toml`. Activate it from the repository root:
 
-```julia
-using Pkg
-Pkg.activate("benchmark/ferrite")              # reuse the benchmark env
-include("benchmark/ferrite/generate_beam_mesh.jl")  # once, to produce beam_h27.msh
-include("examples/04_parametric_clamped_beam/main.jl")
+```bash
+julia --project=examples/04_parametric_clamped_beam -e '
+  using Pkg; Pkg.develop(path="."); Pkg.instantiate();
+  include("examples/04_parametric_clamped_beam/main.jl")'
 ```
 
-The `N_θ` constant near the top of the main script controls the
-truncation order of every `θ`-expansion.  It is the only knob needed
-to push the parametric ROM to higher order.
+**Prerequisite:** `main.jl` loads the mesh from
+`examples/04_parametric_clamped_beam/../BenchmarkFerrite/beam_h27.msh`
+(i.e. `benchmark/ferrite/beam_h27.msh` relative to the repo root).
+Run `benchmark/ferrite/generate_beam_mesh.jl` once if the file does not exist; it is also
+restored from the archive into `benchmark/ferrite/` by Phase 2 of the examples-fixes plan.
+
+The `N_θ` constant near the top of `main.jl` (default: 4) controls the truncation order for both
+`θ₁`- and `θ₂`-expansions. `max_degree = 5` is the DPIM parametrisation order.
+
+Post-processing (run after `main.jl` has produced `results/data/R.jls`):
+
+```julia
+include("examples/04_parametric_clamped_beam/backbone/compute_backbone.jl")
+include("examples/04_parametric_clamped_beam/backbone/compute_backbone_theta2.jl")
+include("examples/04_parametric_clamped_beam/validation/run_validation.jl")
+```
 
 ## Expected outputs
 
 ```text
 results/
-  summary.txt              — model description, eigenfrequencies, timing, Julia version, git commit
   data/
-    W.jls                  — parametrisation (serialised)
-    R.jls                  — reduced dynamics (serialised)
-    arch_mode.jls          — first bending mode used for arch pre-deformation
+    W.jls                  — parametrisation W(z₁,z₂,θ₁,θ₂) (serialised)
+    R.jls                  — reduced dynamics R(z₁,z₂,θ₁,θ₂) (serialised)
+    arch_mode.jls          — first bending eigenmode φ₁ (used for θ₂ map)
     R_coefficients.csv     — reduced dynamics coefficients, one row per non-zero monomial
+    summary.txt            — model description, eigenfrequencies, timing, Julia version
   figures/
-    backbone_curves.png    — Ω vs |z₁| for various (θ₁,θ₂)
-    backbone_shift.png     — (Ω − ω₀) vs |z₁|
-    omega0_slope_minus2.png — ω₀(θ₁,0) vs (1+θ₁) log-log
-    backbone_theta2_*.png  — θ₂ sweep figures (from compute_backbone_theta2.jl)
-    validation_*.png       — comparison vs FEM (from validation/run_validation.jl)
+    backbone_curves.png           — Ω vs |z₁| for various (θ₁,θ₂)  [compute_backbone.jl]
+    backbone_shift.png            — (Ω − ω₀) vs |z₁|  [compute_backbone.jl]
+    omega0_slope_minus2.png       — ω₀(θ₁,0) vs (1+θ₁) log-log, slope -2 reference  [compute_backbone.jl]
+    backbone_theta2_curves.png    — Ω vs |z₁| for θ₂ sweep  [compute_backbone_theta2.jl]
+    backbone_theta2_shift.png     — (Ω − ω₀) vs |z₁|, θ₂ sweep  [compute_backbone_theta2.jl]
+    omega0_vs_theta2.png          — ω₀(0,θ₂) vs θ₂  [compute_backbone_theta2.jl]
+    validation_backbone_t1=*.png  — per test-point ROM vs exact overlay  [run_validation.jl]
+    validation_omega0.png         — ω₀ comparison bar chart  [run_validation.jl]
 ```
 
 ## Reference results
@@ -69,176 +97,97 @@ cp results/data/R_coefficients.csv results/reference/
 cp results/data/summary.txt results/reference/
 ```
 
-## Approximate runtime
+## Historical results
 
-~10–20 minutes for the default order-5 parametrisation (sparse Ferrite assembly,
-~5k-DOF system). Backbone and validation scripts add ~5 minutes each.
+A full archived run is restored untracked from the archive repo into:
+
+```text
+results/archived/
+  data/     — W.jls, R.jls, R_coefficients.csv, summary.txt, validation_metrics.csv
+  figures/  — all backbone and validation figures
+```
+
+These are not version-controlled here; the durable copy is `MORFE_results_archive`.
+
+## Measured runtime
+
+not yet measured
 
 ## Mathematical structure
 
-### Parametric reference map
+### Bivariate parametric reference map
+
+The two-parameter reference map is:
 
 ```
-x(θ, x₀) = x₀ + θ φ(x₀)                  ⇒   J(θ) = J₀ + θ J₁
+x(θ₁, θ₂, x₀) = x₀ + θ₁ J₁ x₀ + θ₂ φ₁(x₀)
+J(θ₁, θ₂, x₀) = I + θ₁ J₁ + θ₂ J₂(x₀)
 ```
 
-For uniform stretch, `φ(x₀) = (x₀₁, 0, 0)`, so `J₁ = e₁ ⊗ e₁` and `J₀ = I`.
+where `J₁ = e₁⊗e₁` (constant) and `J₂(x₀) = ∇₀φ₁(x₀)` (varies per QP).
 
 ### Why `adj(J) / det(J)` — never materialised as `J⁻¹`
 
-The pulled-back weak form *would* need `J⁻¹(θ)`.  In 3D:
+In 3D for an affine-in-θ Jacobian:
 
-* `det J(θ)` is **exact** polynomial of degree ≤ 3
-* `adj J(θ)` is **exact** polynomial of degree ≤ 2
-* `J⁻¹(θ) = adj J(θ) / det J(θ)` is *rational*
+- `det J(θ₁,θ₂)` is an exact bivariate polynomial of total degree ≤ 3
+- `adj J(θ₁,θ₂)` is an exact bivariate polynomial of total degree ≤ 2
+- `J⁻¹ = adj(J) / det(J)` is rational
 
-But we never assemble a series for `J⁻¹`.  Instead, wherever
-`inv(J)` appears in the weak form we substitute `adj(J) / det(J)`
-and let one factor of `1/det(J)` **cancel** the `det(J)` in the
-volume differential `dV = det(J) · dV₀`.  After cancellation, an
-`N_input`-displacement elastic form carries `(1/det(J))^{N_input}`
-as its **only** reciprocal factor:
+Rather than assembling a series for `J⁻¹`, we substitute `adj(J)/det(J)` and let one
+`1/det(J)` factor cancel the `det(J)` from `dV = det(J) dV₀`. Each form retains only a
+scalar reciprocal factor:
 
 | Form        | `N_input` | residual reciprocal |
 | ----------- | --------- | ------------------- |
 | Linear K    | 1         | `(1/det)¹`          |
-| Linear M    | 0         | (none — has `det¹`) |
+| Linear M    | 0         | none (has `det¹`)   |
 | Quadratic G | 2         | `(1/det)²`          |
 | Cubic H     | 3         | `(1/det)³`          |
 
-The scalar series `1/det(J(θ))` is the **only** rational quantity
-in the whole construction.  We compute it from the standard
-**reciprocal-series recurrence**:
-
-Given `p(θ) = Σ_k p_k θ^k` with `p₀ ≠ 0`, the series `q(θ) = 1/p(θ)`
-satisfies, by matching coefficients of `θ^k` in `p · q ≡ 1`:
-
-```
-q₀  = 1 / p₀
-q_k = − (1 / p₀) · Σ_{j=1}^{k} p_j q_{k-j}      for k ≥ 1
-```
-
-implemented in `reciprocal_series(p, N)` in `theta_polynomials.jl`.
-The required power `(1/det)^{N_input}` is built once at construction
-time of each `ParametricGeometricNonlinearity{N_input}` and then
-applied in the assembly as a single `poly_mul` at the end of every
-QP loop — no tensor-valued reciprocal series ever appears.
+The scalar bivariate series `1/det J(θ₁,θ₂)` is computed via `breciprocal_series` in
+`fem/bivariate_polynomials.jl`.
 
 ### Truncation order
 
-The truncation order `N_θ` is an arbitrary positive integer.  The cost
-of building `inv_detJ_coeffs` (and its precomputed powers
-`(1/det)^{N_input}`) is `O(N_θ²)` per `poly_mul`; for an affine `J`
-this is negligible compared to a single FE assembly pass.
+`N_θ` (default 4) truncates both `θ₁`- and `θ₂`-power series. The bivariate coefficient
+matrices `K_{k₁,k₂}`, `M_{k₁,k₂}` are assembled for all `k₁+k₂ ≤ N_θ`.
+The DPIM parametrisation order is `max_degree = 5`.
 
-The K-assembly produces `K(θ) = Σ_k θ^k K_k` truncated at any
-user-chosen `N_K_used` (default = `N_θ`).  The M-assembly produces
-only `length(detJ_coeffs) = 4` non-zero coefficients (since the mass
-integrand has a *positive* power of `det J`, not a reciprocal one).
+### DPIM external variables
 
-### Sanity check baked into the script
+Both `θ₁` and `θ₂` enter the augmented system as frozen real external states:
 
 ```
-adj_resid = check_adj_det_identity(J₀, J₁, adjJ_coeffs, detJ_coeffs)
-@assert all(<(1e-12), adj_resid)
+θ̇₁ = 0, θ̇₂ = 0   ⇒   λ_θ₁ = λ_θ₂ = 0,   N_EXT = 2
 ```
 
-verifies the **polynomial identity** `J(θ) · adj(J(θ)) ≡ det(J(θ)) · I`
-to machine precision.  This is exact polynomial algebra (no
-reciprocal series involved), so the assertion holds for any affine
-`(J₀, J₁)`.
+The multiindex set is built on `(z₁, z₂, θ₁, θ₂)` with `max_degree = 5`;
+`conjugate_permutation = [2, 1, 3, 4]` swaps `z₁ ↔ z₂` and leaves `θ₁, θ₂` self-conjugate.
 
-### Quadratic and cubic FEM terms
+### Analytical reference
 
-Same St-Venant–Kirchhoff multilinear forms as the original benchmark,
-written with gradients pulled back through `adj(J(θ))` instead of
-`J⁻¹(θ)`:
+For a clamped-clamped Euler-Bernoulli beam under uniform axial stretch:
 
 ```
-∇_adj u = ∇₀ u · adj(J(θ))     ε_adj u = sym(∇_adj u)     σ(ε) = λ tr(ε) I + 2μ ε
+ω_b(θ₁) / ω_b(0) ≈ (1 + θ₁)⁻²   (bending — lowest modes)
 ```
 
-After integrating over `Ω₀` and absorbing one `1/det(J)` factor into
-the `dV` cancellation, each form picks up a residual `(1/det(J))^{N_input}`
-applied as one final `poly_mul` at the end of every QP loop.  Both
-forms truncate naturally at `θ^{N_θ}`.
+This slope (-2) is verified by `omega0_slope_minus2.png` from `compute_backbone.jl`.
 
-### θ as a DPIM external variable
-
-`θ` enters the augmented dynamical system as one *real* external state
-with trivial dynamics
-
-```
-θ̇ = 0   ⇒   external eigenvalue λ_θ = 0,     N_EXT = 1.
-```
-
-The multiindex set is built on `(z₁, z₂, θ)` with `max_degree = 5`;
-`conjugate_permutation = [2, 1, 3]` swaps `z₁ ↔ z₂` and leaves `θ`
-self-conjugate (as a real parameter).
-
-## Analytical reference
-
-For a clamped-clamped beam in Euler–Bernoulli theory:
-
-```
-ω_b(θ) / ω_b(0) ≈ (1 + θ)⁻²        (bending — lowest modes)
-ω_a(θ) / ω_a(0) ≈ (1 + θ)⁻¹        (axial)
-```
-
-so the slope of the diagonal `z_i` entry of the reduced dynamics w.r.t.
-`θ` should match `−2 ω_i(0)` for bending masters and `−ω_i(0)` for
-axial masters.  The script prints both for visual comparison.
-
-## Caveats / known limitations
-
-* **MORFE arity contract.**  Each `MultilinearMap` closure must take
-  *exactly* `1 + a_pos + a_vel + a_ext` positional arguments.  We
-  metaprogram one closure factory per external multiplicity
-  `k = 0 … _MAX_EXT_ARITY` (currently 8) at the bottom of
-  `parametric_assembly.jl`.  Raise `_MAX_EXT_ARITY` if you need higher
-  truncation orders.
-
-* **Sign convention.**  Internal-force terms are added with a *minus*
-  sign because MORFE writes every `MultilinearMap` on the right-hand
-  side of `M ẍ + C ẋ + K x = Σ multilinear`.  This matches the
-  benchmark's `term_cubic = (…) -> res .+= -β · x₁·x₂·x₃` pattern.
-
-* **Parametric mass is approximated.**  `MultilinearMap`'s modal arity
-  `(a_pos, a_vel)` has no acceleration slot, so a term `θ^k M_k ẍ`
-  cannot be expressed directly.  We *omit* the inertial part of the
-  parametric mass and only capture its damping contribution through
-  Rayleigh `C(θ) = α M(θ) + β K(θ)`.  For our problem β = 0 and
-  det J(θ) is degree 1, so only `C₁ = α M₁` is non-zero — the
-  approximation is `O(θ)` accurate at small stretch.  For large `θ`
-  or applications sensitive to inertial detuning, the missing
-  `θ^k M_k ẍ` terms must be folded back into the rest of the model
-  by hand (e.g. by left-multiplying the entire ODE by `M(θ)⁻¹` and
-  re-deriving the `K(θ)`, `C(θ)`, internal-force expansions).
-
-* `multilinear_maps` does not cache the QP series across θ-powers for
-  the same input tuple — work scales as `N_θ²` rather than `N_θ` if
-  every map is called for the same `(u₁, …)`.  Acceptable for moderate
-  `N_θ`; profile-driven caching is left to follow-up.
-
-* `parametric_geometry.jl` is written for a *constant* `(J₀, J₁)` on
-  the whole domain.  For a spatially varying parametrisation (e.g. a
-  curved-beam map), the same routines are called per quadrature point
-  inside the assembly instead of once at the top of the demo.
-
-* The cubic-term prefactor `1/3` reflects the symmetric trilinear-form
-  convention; double-check against the convention used by your local
-  `ferrite_assembly.jl` before comparing ROM coefficients term-by-term.
-
-## Extending to other parametrisations
-
-To change the parametrisation (e.g. bending into an arch, twisting,
-non-uniform stretch) you only edit the geometry block in
-`main.jl`:
-
-```julia
-const J₀ = ...                         # ∇x at θ = 0  (usually I)
-const J₁ = ...                         # ∇φ at θ = 0
-```
-
-Everything downstream (`det_series`, `adj_series`, `reciprocal_series`,
-the assembly, the ROM) is parametrisation-agnostic.
+<!-- claims:
+  θ₁ axial stretch + J₁=e₁⊗e₁ → main.jl:4-7, main.jl:117
+  θ₂ arch pre-deformation + J₂(x₀) → main.jl:4-7
+  reference map formula → main.jl:8
+  N_EXT=2 → main.jl:130
+  NVAR=4 → main.jl:131
+  max_degree=5 → main.jl:132
+  N_θ default=4 → main.jl:119
+  conjugate_permutation=[2,1,3,4] → main.jl:323
+  bivariate adj/det computation → fem/bivariate_geometry.jl:1-22
+  breciprocal_series → fem/bivariate_polynomials.jl (header)
+  mesh path → main.jl:73
+  output paths → main.jl:383-422
+  backbone figures → backbone/compute_backbone.jl:14-16, backbone/compute_backbone_theta2.jl:12-15
+  validation figures → validation/run_validation.jl:13-15, plotting/backbone_plots.jl:13-14
+-->
