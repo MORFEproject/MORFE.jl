@@ -45,9 +45,11 @@ Curated reference outputs live in `results/reference/Re49.03_ord5/` (tracked in 
 | ---- | ------- |
 | `main.jl` | Top-level driver |
 | `config.jl` | Problem parameters (Re, mesh, ROM size) |
-| `mesh.jl` | Mesh loading and DOF setup |
-| `fem_setup.jl` | FEM spaces and boundary conditions |
-| `linear_operators.jl` | Linearised Navier-Stokes operators |
-| `steady_state.jl` | Newton solve for the base flow |
-| `fluid_maps.jl` | Nonlinear multilinear maps |
-| `eigensolver.jl` | Custom eigensolver for the non-symmetric problem |
+| `cylinder_flow.msh` | Input mesh (Turek-Schäfer cylinder geometry) |
+| `fem/mesh.jl` | Mesh loading and DOF setup |
+| `fem/fem_setup.jl` | FEM spaces and boundary conditions |
+| `fem/linear_operators.jl` | Linearised Navier-Stokes operators |
+| `fem/fluid_maps.jl` | Nonlinear multilinear maps |
+| `solver/steady_state.jl` | Newton solve for the base flow |
+| `solver/eigensolver.jl` | Custom eigensolver for the non-symmetric problem |
+| `backbone/backbone_env/` | Julia environment for post-processing scripts |

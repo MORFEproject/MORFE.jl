@@ -40,13 +40,13 @@ using SparseArrays
 using Printf
 using Serialization
 
-include("config.jl")
-include("mesh.jl")
-include("fem_setup.jl")
-include("steady_state.jl")
-include("linear_operators.jl")
-include("fluid_maps.jl")
-include("eigensolver.jl")
+include(joinpath(@__DIR__, "config.jl"))
+include(joinpath(@__DIR__, "fem", "mesh.jl"))
+include(joinpath(@__DIR__, "fem", "fem_setup.jl"))
+include(joinpath(@__DIR__, "solver", "steady_state.jl"))
+include(joinpath(@__DIR__, "fem", "linear_operators.jl"))
+include(joinpath(@__DIR__, "fem", "fluid_maps.jl"))
+include(joinpath(@__DIR__, "solver", "eigensolver.jl"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Results directory (deterministic name — same config overwrites previous run)
