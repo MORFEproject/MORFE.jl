@@ -53,7 +53,10 @@ include("eigensolver.jl")
 # ─────────────────────────────────────────────────────────────────────────────
 
 const RESULTS_DIR = joinpath(@__DIR__, "results", @sprintf("Re%.2f_ord%d", Re₀, MAX_ORD))
-mkpath(RESULTS_DIR)
+const DATA_DIR    = joinpath(RESULTS_DIR, "data")
+const FIGS_DIR    = joinpath(RESULTS_DIR, "figures")
+mkpath(DATA_DIR)
+mkpath(FIGS_DIR)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging: tee all output to stdout and summary.log simultaneously
@@ -193,7 +196,7 @@ r_dpim = @timed solve_cohomological_problem(
 println(_out, "\n[9/9] Realifying reduced dynamics ...")
 Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
 
-rdyn_path = joinpath(RESULTS_DIR, "reduced_dynamics.txt")
+rdyn_path = joinpath(DATA_DIR, "reduced_dynamics.txt")
 open(rdyn_path, "w") do io
 	println(io, "Kármán Vortex Street — Reduced Dynamics (real form)")
 	@printf(io, "Re₀ = %.4f,  DPIM order = %d,  NVAR = %d\n", Re₀, MAX_ORD, NVAR)
@@ -253,8 +256,8 @@ println(_out, _sep)
 # Save ROM
 # ─────────────────────────────────────────────────────────────────────────────
 
-serialize(joinpath(RESULTS_DIR, "W.jls"), W)
-serialize(joinpath(RESULTS_DIR, "R.jls"), R)
+serialize(joinpath(DATA_DIR, "W.jls"), W)
+serialize(joinpath(DATA_DIR, "R.jls"), R)
 
 # ── VTK data bundle (plain arrays, no Ferrite types) for visualise_paraview.jl ─
 let _nn = Ferrite.getnnodes(fom.grid)
@@ -270,10 +273,27 @@ let _nn = Ferrite.getnnodes(fom.grid)
 		all_eigenvalues = all_eigenvalues,
 		all_modes = Matrix{ComplexF64}(all_modes),
 	)
-	serialize(joinpath(RESULTS_DIR, "vtk_data.jls"), vtk_data)
+	serialize(joinpath(DATA_DIR, "vtk_data.jls"), vtk_data)
 end
 
 println(_out, "\nResults saved to: $RESULTS_DIR")
-println(_out, "  reduced_dynamics.txt, W.jls, R.jls, vtk_data.jls, summary.log")
+println(_out, "  summary.log, summary.txt")
+println(_out, "  data/: reduced_dynamics.txt, W.jls, R.jls, vtk_data.jls")
 
 close(_log)
+
+open(joinpath(RESULTS_DIR, "summary.txt"), "w") do io
+	println(io, "example: 05_karman_vortex_street")
+	@printf(io, "run_name: Re%.2f_ord%d\n", Re₀, MAX_ORD)
+	println(io, "model: 2D Navier-Stokes, Kármán vortex street, Ferrite P2/P1 Taylor-Hood")
+	println(io, "n_free: $(fom.n_free)")
+	println(io, "Re0: $Re₀")
+	println(io, "master_modes: 2  (Hopf pair)")
+	println(io, "master_eigenvalues: $(collect(master_eigenvalues))")
+	println(io, "parametrisation_order: $MAX_ORD")
+	@printf(io, "cohomological_solve_time_s: %.3f\n", r_dpim.time)
+	println(io, "julia_version: $(VERSION)")
+	commit = try readchomp(`git rev-parse --short HEAD`) catch; "unknown" end
+	println(io, "morfe_commit: $commit")
+	println(io, "timestamp: $(time())")
+end
