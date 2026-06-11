@@ -1,4 +1,6 @@
-# Parametric beam demo — uniform axial stretch
+# 04 — Parametric clamped beam (uniform axial stretch + arch pre-deformation)
+
+## Model
 
 Companion to `benchmark/ferrite/benchmark_ferrite.jl`.  A scalar
 parameter `θ ∈ ℝ` controls a *uniform axial stretch* of the beam:
@@ -15,8 +17,8 @@ reduced model is a *parametric* ROM in `(z₁, z₂, θ)`.
 ## Files
 
 | File | Purpose |
-| --- | --- |
-| `parametric_beam_demo.jl`   | Main script: load mesh, build parametric geometry, assemble, solve. |
+| ---- | ------- |
+| `main.jl`   | Main script: load mesh, build parametric geometry, assemble, solve. |
 | `parametric_assembly.jl`    | `assemble_K_M_polynomial!` and `ParametricGeometricNonlinearity{2|3}` with `evaluate_kth_quadratic!` / `evaluate_kth_cubic!`. |
 | `parametric_geometry.jl`    | Closed-form `det_series`, `adj_series` for an affine `J = J₀ + θ J₁` in 3D, plus `check_adj_det_identity`. |
 | `theta_polynomials.jl`      | Generic truncated power-series algebra: `poly_mul`, `poly_contract`, `reciprocal_series`. |
@@ -32,12 +34,45 @@ From the repository root:
 using Pkg
 Pkg.activate("benchmark/ferrite")              # reuse the benchmark env
 include("benchmark/ferrite/generate_beam_mesh.jl")  # once, to produce beam_h27.msh
-include("examples/04_parametric_clamped_beam/parametric_beam_demo.jl")
+include("examples/04_parametric_clamped_beam/main.jl")
 ```
 
 The `N_θ` constant near the top of the main script controls the
 truncation order of every `θ`-expansion.  It is the only knob needed
 to push the parametric ROM to higher order.
+
+## Expected outputs
+
+```text
+results/
+  summary.txt              — model description, eigenfrequencies, timing, Julia version, git commit
+  data/
+    W.jls                  — parametrisation (serialised)
+    R.jls                  — reduced dynamics (serialised)
+    arch_mode.jls          — first bending mode used for arch pre-deformation
+    R_coefficients.csv     — reduced dynamics coefficients, one row per non-zero monomial
+  figures/
+    backbone_curves.png    — Ω vs |z₁| for various (θ₁,θ₂)
+    backbone_shift.png     — (Ω − ω₀) vs |z₁|
+    omega0_slope_minus2.png — ω₀(θ₁,0) vs (1+θ₁) log-log
+    backbone_theta2_*.png  — θ₂ sweep figures (from compute_backbone_theta2.jl)
+    validation_*.png       — comparison vs FEM (from validation/run_validation.jl)
+```
+
+## Reference results
+
+Curated reference outputs live in `results/reference/` (tracked in git).
+Regenerate only in a reviewed commit by copying fresh outputs:
+
+```bash
+cp results/data/R_coefficients.csv results/reference/
+cp results/data/summary.txt results/reference/
+```
+
+## Approximate runtime
+
+~10–20 minutes for the default order-5 parametrisation (sparse Ferrite assembly,
+~5k-DOF system). Backbone and validation scripts add ~5 minutes each.
 
 ## Mathematical structure
 
@@ -198,7 +233,7 @@ axial masters.  The script prints both for visual comparison.
 
 To change the parametrisation (e.g. bending into an arch, twisting,
 non-uniform stretch) you only edit the geometry block in
-`parametric_beam_demo.jl`:
+`main.jl`:
 
 ```julia
 const J₀ = ...                         # ∇x at θ = 0  (usually I)

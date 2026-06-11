@@ -1,5 +1,5 @@
 """
-	parametric_beam_demo.jl
+	main.jl
 
 Demo: two-parameter parametric ROM for a 3D continuum beam:
 
@@ -397,6 +397,10 @@ open(joinpath(_results_dir, "summary.txt"), "w") do io
 	println(io, "master_eigenvalues = $(collect(master_eigenvalues))")
 	println(io, "eigenproblem_time_s    = $(r1.time)")
 	println(io, "cohomological_time_s   = $(r2.time)")
+	println(io, "julia_version: $(VERSION)")
+	commit = try readchomp(`git rev-parse --short HEAD`) catch; "unknown" end
+	println(io, "morfe_commit: $commit")
+	println(io, "timestamp: $(time())")
 end
 
 open(joinpath(_results_dir, "R_coefficients.csv"), "w") do io

@@ -45,7 +45,7 @@ include(joinpath(@__DIR__, "exact_nonlinear_maps.jl"))
 include(joinpath(@__DIR__, "..", "plotting", "backbone_plots.jl"))
 
 # ------------------------------------------------------------------
-# Constants  (match parametric_beam_demo.jl)
+# Constants  (match main.jl)
 # ------------------------------------------------------------------
 const _msh       = joinpath(@__DIR__, "..", "..", "BenchmarkFerrite", "beam_h27.msh")
 const _data      = joinpath(@__DIR__, "..", "results", "data")
@@ -97,7 +97,7 @@ free_to_local_ref = Dict(d => i for (i, d) in enumerate(free_ref))
 # Load parametric ROM + arch mode
 # ------------------------------------------------------------------
 isfile(joinpath(_data, "R.jls")) ||
-	error("results/data/R.jls not found.  Run parametric_beam_demo.jl first.")
+	error("results/data/R.jls not found.  Run main.jl first.")
 
 R_param = deserialize(joinpath(_data, "R.jls"))
 W_param = deserialize(joinpath(_data, "W.jls"))

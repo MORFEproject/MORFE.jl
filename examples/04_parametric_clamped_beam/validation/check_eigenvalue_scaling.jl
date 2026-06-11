@@ -27,7 +27,7 @@ include(joinpath(@__DIR__, "..", "fem", "parametric_geometry.jl"))
 include(joinpath(@__DIR__, "..", "fem", "parametric_assembly.jl"))
 
 # ------------------------------------------------------------------
-# 1.  Mesh and FE space  (same as parametric_beam_demo.jl)
+# 1.  Mesh and FE space  (same as main.jl)
 # ------------------------------------------------------------------
 const _msh = joinpath(@__DIR__, "..", "..", "BenchmarkFerrite", "beam_h27.msh")
 isfile(_msh) || error("Mesh not found.  Run generate_beam_mesh.jl in BenchmarkFerrite/ first.")
@@ -51,7 +51,7 @@ update!(ch, 0.0)
 free = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
 
 # ------------------------------------------------------------------
-# 2.  Material (same as parametric_beam_demo.jl)
+# 2.  Material (same as main.jl)
 # ------------------------------------------------------------------
 E_mod = 160e3
 ν = 0.22
