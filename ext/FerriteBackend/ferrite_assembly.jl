@@ -16,12 +16,6 @@ Higher-order material models (e.g. polynomial hyperelastic) are needed for
 quartic and higher terms.
 """
 
-using Ferrite
-using LinearAlgebra
-using SparseArrays
-
-using MORFE: MORFE
-
 # -----------------------------------------------------------------------
 # Concrete FEMMultilinearMap type
 # -----------------------------------------------------------------------

@@ -10,7 +10,7 @@ Nonlinear terms in the full-order ODE are encoded as `AbstractMultilinearMap` su
   primitives (`fem_elements`, `scatter_qp!`, `accumulate_qp!`, `assemble_element!`, …).
   Implementing these methods enables the O4 batched RHS-C assembly path in `MultilinearTerms`.
 
-See `demo/Gridap/` and `demo/Ferrite/` for reference FEM backend implementations.
+See `ext/FerriteBackend/` and `examples/02_clamped_beam_gridap/` for reference FEM backend implementations.
 """
 module MultilinearMaps
 
@@ -336,5 +336,24 @@ function _eval_fem_term_direct!(
 		assemble_element!(res, Fe, element, t)
 	end
 end
+
+"""
+    ferrite_nonlinearity(degree::Integer, args...; kwargs...)
+
+Construct a Ferrite-backed geometric nonlinearity term of the given polynomial
+`degree` (2 or 3). Requires `using Ferrite` (loads the `MORFEFerriteExt`
+extension). See `ext/FerriteBackend/ferrite_assembly.jl` for the argument list.
+"""
+function ferrite_nonlinearity end
+
+"""
+    ferrite_assemble_KM!(K, M, dh, cv, λ, μ, ρ)
+
+Assemble linear stiffness and mass matrices with the Ferrite backend.
+Requires `using Ferrite`.
+"""
+function ferrite_assemble_KM! end
+
+export ferrite_nonlinearity, ferrite_assemble_KM!
 
 end # module
