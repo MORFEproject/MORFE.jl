@@ -32,11 +32,11 @@ Every runnable example satisfies:
 
 | Folder | Model | Demonstrates | Status | Approx. runtime |
 | ------ | ----- | ------------ | ------ | --------------- |
-| `01_clamped_beam_ferrite/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Ferrite.jl FEM backend via `MORFEFerriteExt` | runnable | ~5–15 min |
-| `02_clamped_beam_gridap/` | Same beam | Full DPIM pipeline with Gridap.jl FEM backend | runnable | ~5–10 min |
-| `03_arch_comsol_wedge/` | Arch wedge (COMSOL mesh import) | COMSOL `.mphtxt` → MORFE pipeline | runnable | ~10–20 min |
+| `01_clamped_beam_ferrite/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Ferrite.jl FEM backend via `MORFEFerriteExt` | runnable | < 1 min |
+| `02_clamped_beam_gridap/` | Same beam | Full DPIM pipeline with Gridap.jl FEM backend | runnable | 8 min |
+| `03_arch_comsol_wedge/` | Arch wedge (COMSOL mesh import) | COMSOL `.mphtxt` → MORFE pipeline | runnable | < 1 min |
 | `04_parametric_clamped_beam/` | Two-parameter ROM: axial stretch θ₁ + arch pre-deformation θ₂ | Bivariate parametric ROM in (z₁, z₂, θ₁, θ₂) with N_EXT=2 | runnable | not yet measured |
-| `05_karman_vortex_street/` | Cylinder wake flow (Kármán vortex street) | Fluid DPIM with Ferrite.jl, non-symmetric FOM | runnable | ~30 min |
+| `05_karman_vortex_street/` | Cylinder wake flow (Kármán vortex street) | Fluid DPIM with Ferrite.jl, non-symmetric FOM (~57 954 free DOFs) | runnable | not yet measured |
 | `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator | **DRAFT** — design notes only, not yet runnable | draft | N/A |
 | `mesh_import/` | Test meshes | Abaqus/COMSOL → GMSH format conversion | utility | seconds |
 | `internals/` | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method | utility | seconds–1 min |

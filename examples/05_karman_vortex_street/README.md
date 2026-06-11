@@ -48,10 +48,9 @@ results/Re49.03_ord5/
 
 These are not version-controlled here; the durable copy is `MORFE_results_archive`.
 
-## Approximate runtime
+## Measured runtime
 
-~30 minutes on a modern workstation (order-5 parametrisation, sparse Ferrite assembly,
-~25k-DOF non-symmetric system). VTK export adds a few minutes.
+not yet measured (user approval required before running; ~57 954 free DOFs, order-5 parametrisation)
 
 ## Files
 

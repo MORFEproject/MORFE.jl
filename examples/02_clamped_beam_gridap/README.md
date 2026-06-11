@@ -36,9 +36,9 @@ Run `validate.jl` after a fresh run to compare against them:
 julia --project=examples/02_clamped_beam_gridap validate.jl
 ```
 
-## Approximate runtime
+## Measured runtime
 
-~5–10 minutes depending on hardware (order-3 parametrisation, Gridap assembly).
+8 min (Julia 1.12.6, Apple M2, 16 GiB; first run including compilation)
 
 ## Notes
 

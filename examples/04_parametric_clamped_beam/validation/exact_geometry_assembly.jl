@@ -1,4 +1,4 @@
-include(joinpath(@__DIR__, "..", "..", "Ferrite", "ferrite_assembly.jl"))
+include(joinpath(@__DIR__, "..", "..", "..", "ext", "FerriteBackend", "ferrite_assembly.jl"))
 
 function deform_grid(grid, dh::DofHandler,
                      θ₁::Float64, θ₂::Float64,
