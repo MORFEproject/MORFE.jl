@@ -1,25 +1,50 @@
 # 03 — Arch COMSOL wedge
 
-Arch structure loaded from a COMSOL `.mphtxt` mesh file, demonstrating the
-COMSOL → GMSH import pipeline and the full DPIM solve.
+## Model
 
-**Entry script:** `arch_2_force.jl`
-
-**Mesh:** `arch_2_force.mphtxt` (COMSOL export; converted to GMSH at runtime via `comsol_to_gmsh`)
-
-**Expected output:** eigenvalues, parametrisation W and reduced dynamics R, summary log.
+Arch structure (isotropic polysilicon, St. Venant-Kirchhoff) loaded from a COMSOL `.mphtxt`
+mesh (`arch_2_force.mphtxt`, P18 quadratic wedge elements). Demonstrates the COMSOL mesh
+import pipeline and forced/unforced DPIM.
 
 ## How to run
 
 ```bash
 julia --project=examples/03_arch_comsol_wedge -e '
   using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/03_arch_comsol_wedge/arch_2_force.jl")'
+  include("examples/03_arch_comsol_wedge/main.jl")'
 ```
+
+Pass an alternative config as a positional argument:
+
+```bash
+julia --project=examples/03_arch_comsol_wedge main.jl configs/mode_1_order_5_cnf.jl
+```
+
+## Expected outputs
+
+```text
+results/
+  mode_1_order_5_cnf/
+    summary.log              — verbose run log (tee'd to terminal)
+    summary.txt              — structured key:value summary with environment info
+    data/
+      W.jls                  — parametrisation (serialised)
+      R.jls                  — reduced dynamics (serialised)
+    figures/                 — (empty; use tools/ scripts for post-processing)
+```
+
+## Reference results
+
+Curated reference outputs live in `results/reference/mode_1_order_5_cnf/` (tracked in git).
+
+## Approximate runtime
+
+~10–20 minutes depending on hardware (order-5 parametrisation, sparse Ferrite assembly).
 
 ## Subdirectories
 
 | Folder | Contents |
-|--------|----------|
+| ------ | -------- |
+| `configs/` | Run configurations (tracked inputs; one `.jl` file per run) |
 | `setup/` | Assembly, mesh, and logging helpers included by the main script |
 | `tools/` | Post-processing utilities (node-DOF table, mode visualisation) |

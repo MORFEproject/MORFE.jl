@@ -1,20 +1,21 @@
 """
-MORFE.jl demo — arch_2_force (isotropic polysilicon, COMSOL P18 mesh, forced).
+MORFE.jl demo — 03_arch_comsol_wedge (isotropic polysilicon, COMSOL P18 mesh, forced).
 
 Runs the full DPIM pipeline: mesh → FEM → eigenproblem → model → ROM.
-All verbose output goes to both terminal and results/<config>/summary.log.
+All verbose output goes to both terminal and results/<run_name>/summary.log.
 
-  arch_2_force.jl          ← this file (pipeline driver)
+  main.jl                  ← this file (pipeline driver)
+  configs/<name>.jl        ← run configuration (tracked in git; inputs)
   setup/mesh.jl            ← mesh loading (P18 QuadraticWedge, Dirichlet BCs)
   setup/assembly.jl        ← SVK FEM assembler (isotropic, Ferrite backend)
   setup/logging.jl         ← TeeIO + structured print helpers
   tools/visualise_modes.jl ← export eigenmodes to VTK/browser viewer
   tools/node_dof_table.jl  ← build node → free-DOF mapping table
-  results/<config>/        ← config.jl, W.jls, R.jls, summary.log
-							  postprocess/compute_backbone.jl
-							  postprocess/visualise_deformation.jl
+  results/<run_name>/      ← summary.log, summary.txt
+  results/<run_name>/data/ ← W.jls, R.jls
 
-Usage:  julia --project arch_2_force.jl [results/<config>/config.jl]
+Usage:  julia --project main.jl [configs/<name>.jl]
+        Default config: configs/mode_1_order_5_cnf.jl
 """
 
 using Pkg: Pkg
@@ -32,9 +33,13 @@ include(joinpath(@__DIR__, "setup/assembly.jl"))
 include(joinpath(@__DIR__, "setup/logging.jl"))
 
 # ── Config ────────────────────────────────────────────────────────────────────
-config_path = get(ARGS, 1, joinpath(@__DIR__, "results/mode_1_order_5_cnf/config.jl"))
+config_path = get(ARGS, 1, joinpath(@__DIR__, "configs", "mode_1_order_5_cnf.jl"))
 cfg = include(config_path)
-results_dir = dirname(abspath(config_path))
+run_name    = splitext(basename(config_path))[1]
+results_dir = joinpath(@__DIR__, "results", run_name)
+data_dir    = joinpath(results_dir, "data")
+mkpath(data_dir)
+mkpath(joinpath(results_dir, "figures"))
 master_indices = vcat([[2n-1, 2n] for n in cfg.phys_modes]...)
 conjugate_permutation = vcat([[2i, 2i-1] for i in 1:length(cfg.phys_modes)]...)
 ROM = length(master_indices);
@@ -147,8 +152,26 @@ W, R = t_solve.value
 print_R_coefficients(out, R)
 
 # ── Save ──────────────────────────────────────────────────────────────────────
-serialize(joinpath(results_dir, "W.jls"), W);
-serialize(joinpath(results_dir, "R.jls"), R)
+serialize(joinpath(data_dir, "W.jls"), W)
+serialize(joinpath(data_dir, "R.jls"), R)
 print_summary(out, cfg, n_free, eigenvalues, master_indices, cfg.max_degree, NVAR, ncols,
 	t_eig, t_solve, results_dir)
 close_log(_log)
+
+open(joinpath(results_dir, "summary.txt"), "w") do io
+	println(io, "example: 03_arch_comsol_wedge")
+	println(io, "run_name: $run_name")
+	println(io, "model: arch wedge, St. Venant-Kirchhoff, COMSOL P18 mesh, Ferrite backend")
+	println(io, "n_dofs: $n_free")
+	println(io, "master_modes: $ROM  (physical modes: $(cfg.phys_modes))")
+	println(io, "master_eigenvalues: $(collect(eigenvalues[master_indices]))")
+	println(io, "parametrisation_order: $(cfg.max_degree)")
+	println(io, "n_monomials: $ncols")
+	println(io, "eigenproblem_time_s: $(t_eig.time)")
+	println(io, "cohomological_solve_time_s: $(t_solve.time)")
+	println(io, "julia_version: $(VERSION)")
+	commit = try readchomp(`git rev-parse --short HEAD`) catch; "unknown" end
+	println(io, "morfe_commit: $commit")
+	println(io, "timestamp: $(time())")
+end
+println("Results written to $results_dir")
