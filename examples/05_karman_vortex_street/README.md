@@ -34,6 +34,20 @@ results/
 
 Curated reference outputs live in `results/reference/Re49.03_ord5/` (tracked in git).
 
+## Historical results
+
+A full archived run is restored untracked from the archive repo into:
+
+```text
+results/Re49.03_ord5/
+  W.jls, R.jls, vtk_data.jls    — parametrisation and VTK bundle
+  reduced_dynamics.txt           — Stuart-Landau coefficients
+  summary.log                    — run log
+  paraview/                      — VTU files for mode and vortex visualisation
+```
+
+These are not version-controlled here; the durable copy is `MORFE_results_archive`.
+
 ## Approximate runtime
 
 ~30 minutes on a modern workstation (order-5 parametrisation, sparse Ferrite assembly,

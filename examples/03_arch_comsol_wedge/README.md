@@ -37,6 +37,18 @@ results/
 
 Curated reference outputs live in `results/reference/mode_1_order_5_cnf/` (tracked in git).
 
+## Historical results
+
+A full archived run (`W.jls`, `R.jls`, `postprocess/`, `paraview/` VTU files) is restored
+untracked from the archive repo into:
+
+```text
+results/mode_1_order_5_cnf/      — W.jls, R.jls, config.jl, summary.log
+results/visualise_geometry_and_modes/paraview/  — mesh.vtu + mode_0N.vtu files
+```
+
+These are not version-controlled here; the durable copy is `MORFE_results_archive`.
+
 ## Approximate runtime
 
 ~10–20 minutes depending on hardware (order-5 parametrisation, sparse Ferrite assembly).
