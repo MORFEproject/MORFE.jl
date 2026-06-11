@@ -1,33 +1,51 @@
 # Examples
 
 Self-contained, runnable examples demonstrating the MORFE.jl pipeline.
+Each example manages its own Julia environment (`Project.toml`) and writes
+all outputs under a `results/` subfolder that is git-ignored (except for
+`results/reference/` which is tracked as the blessed reference output).
 
-## Structure
+---
 
-| Folder | Model | Demonstrates | Approx. runtime |
-| ------ | ----- | ------------ | --------------- |
-| `01_clamped_beam_ferrite/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Ferrite.jl FEM backend via `MORFEFerriteExt` | ~5 min |
-| `02_clamped_beam_gridap/` | Same beam | Full DPIM pipeline with Gridap.jl FEM backend | ~5 min |
-| `03_arch_comsol_wedge/` | Arch wedge (COMSOL mesh import) | COMSOL `.mphtxt` → MORFE pipeline | ~10 min |
-| `04_parametric_clamped_beam/` | Clamped beam with axial-stretch parameter θ | Parametric ROM in (z₁, z₂, θ) with N_EXT=1 | ~10 min |
-| `05_karman_vortex_street/` | Cylinder wake flow (Kármán vortex street) | Fluid DPIM with Ferrite.jl, non-symmetric FOM | ~30 min |
-| `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator | **DRAFT** — design notes only, not yet runnable | N/A |
-| `mesh_import/` | Test meshes | Abaqus/COMSOL → GMSH format conversion | seconds |
-| `internals/` | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method | seconds–1 min |
+## Example contract
+
+Every runnable example satisfies:
+
+1. **Entry point** is `main.jl` at the example root. Running it end-to-end
+   produces files on disk — a run that only prints to the terminal is non-compliant.
+2. **Outputs** go under `results/` (never the CWD):
+   - *Single-run examples* (01, 02, 04): `results/data/` (W.jls, R.jls,
+     R_coefficients.csv), `results/figures/`, `results/summary.txt`.
+   - *Config-driven examples* (03, 05): `results/<run_name>/data/`,
+     `figures/`, `summary.txt`; `<run_name>` is derived from the config.
+3. **`summary.txt`** contains at minimum: model description, master modes,
+   eigenfrequencies, parametrisation order, wall-clock time, Julia version,
+   MORFE git commit, timestamp.
+4. **Reference results** live in `results/reference/` — small, curated, tracked
+   in git. Everything else under `results/` is git-ignored.
+5. **`validate.jl`** compares a fresh run's `R_coefficients.csv` against the
+   reference. Run after completing a fresh `main.jl` run.
+
+---
+
+## Example table
+
+| Folder | Model | Demonstrates | Status | Approx. runtime |
+| ------ | ----- | ------------ | ------ | --------------- |
+| `01_clamped_beam_ferrite/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Ferrite.jl FEM backend via `MORFEFerriteExt` | runnable | ~5–15 min |
+| `02_clamped_beam_gridap/` | Same beam | Full DPIM pipeline with Gridap.jl FEM backend | runnable | ~5–10 min |
+| `03_arch_comsol_wedge/` | Arch wedge (COMSOL mesh import) | COMSOL `.mphtxt` → MORFE pipeline | runnable | ~10–20 min |
+| `04_parametric_clamped_beam/` | Clamped beam with axial-stretch parameter θ | Parametric ROM in (z₁, z₂, θ₁, θ₂) with N_EXT=2 | runnable | ~10–20 min |
+| `05_karman_vortex_street/` | Cylinder wake flow (Kármán vortex street) | Fluid DPIM with Ferrite.jl, non-symmetric FOM | runnable | ~30 min |
+| `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator | **DRAFT** — design notes only, not yet runnable | draft | N/A |
+| `mesh_import/` | Test meshes | Abaqus/COMSOL → GMSH format conversion | utility | seconds |
+| `internals/` | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method | utility | seconds–1 min |
+
+---
 
 ## How to run an example
 
 From the repository root:
-
-```julia
-using Pkg
-Pkg.activate("examples/01_clamped_beam_ferrite")
-Pkg.develop(path=".")        # use local MORFE
-Pkg.instantiate()
-include("examples/01_clamped_beam_ferrite/main.jl")
-```
-
-Or equivalently from the shell:
 
 ```bash
 julia --project=examples/01_clamped_beam_ferrite -e '
@@ -35,13 +53,36 @@ julia --project=examples/01_clamped_beam_ferrite -e '
   include("examples/01_clamped_beam_ferrite/main.jl")'
 ```
 
-Each example has its own `Project.toml`. The MORFE package is developed in-place
-(`Pkg.develop`) so the local source is always used.
+Each example's own `README.md` has the exact command.
 
-## Advanced users
+## Validation
 
-- `examples/internals/` contains low-level API demos (polynomial algebra, multiindex
-  factorisations, eigensolver, invariance equation) that are fast to run and useful
-  when debugging or extending MORFE internals.
-- `ext/FerriteBackend/` contains the Ferrite FEM backend implementation loaded
-  automatically via the `MORFEFerriteExt` package extension when `using Ferrite`.
+After a fresh run, compare against the reference:
+
+```bash
+julia --project=examples/04_parametric_clamped_beam \
+  examples/04_parametric_clamped_beam/validate.jl
+```
+
+Reference results are regenerated only by deliberately blessing a verified run:
+
+```bash
+cp examples/04_parametric_clamped_beam/results/data/R_coefficients.csv \
+   examples/04_parametric_clamped_beam/results/reference/
+git add examples/04_parametric_clamped_beam/results/reference/
+git commit -m "Bless reference results for example 04"
+```
+
+## Notes on CI
+
+Examples 01–05 each call `Pkg.activate` and `Pkg.instantiate` at startup —
+they manage their own environments and cannot be `include()`d directly from the
+MORFE test suite (which uses a different environment). Run them as standalone
+processes or in a dedicated CI job. The lightweight internals demos do work from
+the test suite via `GROUP=examples julia --project test/runtests.jl`.
+
+## Historical result sets and large binaries
+
+Large binaries (`.jls`, `.h5`, `.vtu`, meshes, IFX data) and historical result
+sets live in the `MORFE_results_archive` repository (sibling folder — see its
+`INDEX.md`). They are never re-tracked here.
