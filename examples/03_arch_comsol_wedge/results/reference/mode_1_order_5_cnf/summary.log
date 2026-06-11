@@ -1,0 +1,65 @@
+
+======================================================================
+MORFE.jl — arch_2_force  |  mode_1_order_5_cnf
+----------------------------------------------------------------------
+  Phys. master modes : [1]   ROM = 2,  N_EXT = 0,  NVAR = 2
+  max_degree = 5,  neig = 10
+  Rayleigh:  α = 0,  β = 0
+  External forcing: none (autonomous)
+  Resonance: style = cnf,  tol_rel = 0.05
+  Results → /Users/tiago/Desktop/AM-TUM/Code/MORFE_jl/demo/ArchComsolWedge/results/mode_1_order_5_cnf
+======================================================================
+
+Material: isotropic polysilicon (mm·kg·s)
+  E = 1.6e+05 MPa,  ν = 0.22,  ρ = 0.00232 kg/mm³  →  λ = 5.152e+04,  μ = 6.557e+04 MPa
+
+§1  Mesh: arch_2_force.mphtxt
+     128 P18 cells,  1161 nodes
+
+§2  FEM: P18 quadratic prism (54 DOFs/cell)
+     3483 total DOFs,  54 constrained,  3429 free
+
+§3  Eigenproblem  (10 physical mode pairs)
+     --------------------------------------------------------------
+     Phys    EV idx  σ (decay)             f (Hz)          ω (rad/s)
+     --------------------------------------------------------------
+       1    1, 2   -0.000000e+00         0.1644           1.0327  ← MASTER ★
+       2    3, 4   -0.000000e+00         0.3689           2.3178
+       3    5, 6   -0.000000e+00         0.6565           4.1247
+       4    7, 8   -0.000000e+00         0.7297           4.5848
+       5    9,10   -0.000000e+00         1.1940           7.5020
+       6   11,12   -0.000000e+00         1.6377          10.2902
+       7   13,14   -0.000000e+00         1.7834          11.2057
+       8   15,16   -0.000000e+00         1.7836          11.2068
+       9   17,18   -0.000000e+00         2.4880          15.6324
+      10   19,20   -0.000000e+00         3.2679          20.5326
+     --------------------------------------------------------------
+
+§4  Resonance set  (NVAR=2, max_degree=5, tol_rel=0.05)
+     6 resonant / 40 total  across 2 targets
+     Target 1  (λ = -0.0000e+00 +1.0327e+00i):  3 monomials
+       [1, 0]  [2, 1]  [3, 2]
+     Target 2  (λ = -0.0000e+00 -1.0327e+00i):  3 monomials
+       [0, 1]  [1, 2]  [2, 3]
+
+Proceed with cohomological solve? [y/N]: 
+§5  Reduced dynamics R — nonzero coefficients:
+     [1, 0]   ComplexF64[-0.0 + 1.0327416573066432im, 0.0 + 0.0im]
+     [0, 1]   ComplexF64[0.0 + 0.0im, -0.0 - 1.0327416573066432im]
+     [2, 1]   ComplexF64[-0.0 - 0.00010802981057336809im, 0.0 + 0.0im]
+     [1, 2]   ComplexF64[0.0 - 0.0im, -0.0 + 0.00010802981057336809im]
+     [3, 2]   ComplexF64[-0.0 + 8.473921009418941e-8im, 0.0 + 0.0im]
+     [2, 3]   ComplexF64[0.0 - 0.0im, -0.0 - 8.473921009418941e-8im]
+
+======================================================================
+MORFE.jl — arch_2_force (isotropic polysilicon, P18 prisms)
+  Config: mode_1_order_5_cnf   FOM: 3429 free DOFs
+  Master modes: phys. [1]  →  0.1644 Hz
+  max_degree = 5,  NVAR = 2,  monomials = 20
+----------------------------------------------------------------------
+  §3  Eigenproblem                    2.906 s    0.82 GB
+  §5  Cohomological solve             8.687 s    2.80 GB
+======================================================================
+
+ROM saved → /Users/tiago/Desktop/AM-TUM/Code/MORFE_jl/demo/ArchComsolWedge/results/mode_1_order_5_cnf
+  W.jls,  R.jls,  summary.log
