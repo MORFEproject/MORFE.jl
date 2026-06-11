@@ -55,6 +55,8 @@ export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, ExternalSystem
 export fem_elements, fem_n_qp, fem_ndofs_per_cell,
 	scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
 	fem_reinit!
+# Ferrite extension entry points (populated by MORFEFerriteExt when Ferrite is loaded)
+export ferrite_nonlinearity, ferrite_assemble_KM!
 
 # FullOrderModel
 export FullOrderModel, FirstOrderModel, NDOrderModel,

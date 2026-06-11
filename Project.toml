@@ -26,6 +26,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 [extensions]
 MORFEArpackExt = ["Arpack", "LinearMaps"]
 MORFEBifurcationKitExt = "BifurcationKit"
+MORFEFerriteExt = "Ferrite"
 MORFEGmshExt = "Gmsh"
 MORFEPardisoExt = "Pardiso"
 MORFEPlotsExt = "Plots"
