@@ -29,15 +29,13 @@ using Arpack
 using LinearMaps
 using StaticArrays
 
-include(joinpath(@__DIR__, "ferrite_assembly.jl"))
-
 # -----------------------------------------------------------------------
 # 1. Mesh and FE setup
 # -----------------------------------------------------------------------
 
 # Load the same GMSH mesh used by the Gridap demo (40×3×1 Hex8, L=1000×b=10×h=24).
 # FerriteGmsh transfers the "Dirichlet" physical group directly as a facetset.
-msh_path = joinpath(@__DIR__, "..", "Gridap", "clamped_clamped_beam.msh")
+msh_path = joinpath(@__DIR__, "..", "02_clamped_beam_gridap", "clamped_clamped_beam.msh")
 grid = togrid(msh_path)
 
 ip = Lagrange{RefHexahedron, 2}()^3      # quadratic, 27-node Lagrange hex (= Gridap order 2)
@@ -70,7 +68,7 @@ E = 160e3
 K_full = allocate_matrix(dh)
 M_full = allocate_matrix(dh)
 
-assemble_KM!(K_full, M_full, dh, cv, λ, μ, ρ)
+ferrite_assemble_KM!(K_full, M_full, dh, cv, λ, μ, ρ)
 
 # Free DOFs = all DOFs minus the prescribed (Dirichlet) ones.
 free = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
@@ -98,8 +96,8 @@ _max_uniq = length(mset)
 # 4. Nonlinear terms (FEMMultilinearMap — RHS-C batched path)
 # -----------------------------------------------------------------------
 
-term_quad  = FerriteGeometricNonlinearity{2}(dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = _max_uniq)
-term_cubic = FerriteGeometricNonlinearity{3}(dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = _max_uniq)
+term_quad  = ferrite_nonlinearity(2, dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = _max_uniq)
+term_cubic = ferrite_nonlinearity(3, dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = _max_uniq)
 
 # -----------------------------------------------------------------------
 # 4. NDOrderModel:  M ü + C u̇ + K u = F(u)

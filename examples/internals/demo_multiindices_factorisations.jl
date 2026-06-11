@@ -1,4 +1,4 @@
-include(joinpath(@__DIR__, "../src/Multiindices.jl"))
+include(joinpath(@__DIR__, "../../src/Multiindices.jl"))
 using .Multiindices
 
 # -----------------------------------------------------------------------------
