@@ -20,7 +20,7 @@ using Pkg: Pkg
 const _backbone_env = joinpath(@__DIR__, "backbone_env")
 Pkg.activate(_backbone_env)
 if !haskey(Pkg.project().dependencies, "MORFE")
-	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "..", "..", "..")))
 end
 Pkg.instantiate()
 
@@ -35,15 +35,19 @@ using Plots
 ENV["GKSwstype"] = "nul"
 using Printf
 
+include(joinpath(@__DIR__, "..", "plotting", "backbone_plots.jl"))
+
 # ------------------------------------------------------------------
 # 1.  Load ROM
 # ------------------------------------------------------------------
-const _results = joinpath(@__DIR__, "results")
-isfile(joinpath(_results, "R.jls")) ||
-	error("results/R.jls not found.  Run parametric_beam_demo.jl first.")
+const _results      = joinpath(@__DIR__, "..", "results")
+const _results_data = joinpath(_results, "data")
+const _results_figs = joinpath(_results, "figures")
+isfile(joinpath(_results_data, "R.jls")) ||
+	error("results/data/R.jls not found.  Run parametric_beam_demo.jl first.")
 
 println("Loading ROM …")
-R = deserialize(joinpath(_results, "R.jls"))
+R = deserialize(joinpath(_results_data, "R.jls"))
 
 # ------------------------------------------------------------------
 # 2.  R1_cplx : ℝ⁴→ℂ   (realified z₁ equation in (x, y, θ₁, θ₂))
@@ -118,27 +122,21 @@ let θ₂_fine = range(-20.00, 20.00, 300)
 	mask5 = ω₀_fine   .> 0
 	mask3 = ω₀_fine_3 .> 0
 
-	plt_ω0 = plot(θ₂_fine[mask5], ω₀_fine[mask5];
-		xlabel = "Arch parameter  θ₂",
-		ylabel = "Linear eigenfrequency  ω₀(0, θ₂)  (rad/ms)",
-		title  = "Eigenfrequency vs arch pre-deformation (θ₁ = 0)",
-		lw     = 2.5,
-		color  = :royalblue,
-		label  = "ω₀(0, θ₂)  (ROM order-5)",
-		legend = :top,
-		size   = (700, 480),
-		dpi    = 150,
-	)
-	plot!(plt_ω0, θ₂_fine[mask3], ω₀_fine_3[mask3];
-		lw = 2.0, ls = :dashdot, color = :darkorange,
-		label = "ω₀(0, θ₂)  (ROM order-3)")
-	hline!(plt_ω0, [ω₀_ref]; ls = :dash, color = :gray, lw = 1.2,
-		label = @sprintf("ω₀(0,0) = %.5f", ω₀_ref))
-	vline!(plt_ω0, [0.0]; ls = :dot, color = :black, lw = 0.8, label = nothing)
+	plt_ω0 = plot_eigenfrequency_vs_parameter(
+		θ₂_fine[mask5], ω₀_fine[mask5],
+		"ω₀(0, θ₂)  (ROM order-5)";
+		param_ref   = θ₂_fine[mask3],
+		ω_ref       = ω₀_fine_3[mask3],
+		label_ref   = "ω₀(0, θ₂)  (ROM order-3)",
+		ω₀_ref_val  = ω₀_ref,
+		hline_label = @sprintf("ω₀(0,0) = %.5f", ω₀_ref),
+		vline_at    = 0.0,
+		xlabel      = "Arch parameter  θ₂",
+		title       = "Eigenfrequency vs arch pre-deformation (θ₁ = 0)")
 
-	mkpath(_results)
-	savefig(plt_ω0, joinpath(_results, "omega0_vs_theta2.png"))
-	println("Saved → $(_results)/omega0_vs_theta2.png")
+	mkpath(_results_figs)
+	savefig(plt_ω0, joinpath(_results_figs, "omega0_vs_theta2.png"))
+	println("Saved → $(joinpath(_results_figs, "omega0_vs_theta2.png"))")
 end
 
 # ------------------------------------------------------------------
@@ -215,69 +213,35 @@ r_range   = range(1e-6, r_max, 400)
 # ------------------------------------------------------------------
 println("Plotting …")
 
-clrs = palette(:Blues_4, length(θ₂_values) + 1)[2:end]
+bk_lbls = [@sprintf("θ₂ = %.2f", θ₂) for θ₂ in θ₂_values]
+clrs_θ2 = palette(:Blues_4, length(θ₂_values) + 1)[2:end]
 
 # ------------------------------------------------------------------
 # 10.  Figure 1: absolute backbone Ω vs |z₁|
 # ------------------------------------------------------------------
-plt1 = plot(;
-	xlabel = "Backbone frequency  Ω  (rad/s)",
-	ylabel = "Modal amplitude  |z₁|",
-	title  = "θ₂ sweep (θ₁ = 0): backbone curves",
-	ylims  = (0, r_max * 1.05),
-	size   = (800, 600),
-	dpi    = 150,
-	legend = :outertopright,
-)
-
-for (k, (θ₂, Ωcurve, Ωcurve_3, br)) in
-		enumerate(zip(θ₂_values, Ω_curves, Ω_curves_3, branches))
-	lbl = @sprintf("θ₂ = %.2f", θ₂)
-	plot!(plt1, Ωcurve, collect(r_range); lw = 2.0, color = clrs[k], label = lbl)
-	plot!(plt1, Ωcurve_3, collect(r_range);
-		lw = 1.2, ls = :dash, color = clrs[k], label = nothing)
-	if !isnothing(br) && length(br.branch) > 1
-		r_bk = [s.r for s in br.branch]
-		Ω_bk = [s.Ω for s in br.branch]
-		mask = r_bk .<= r_max
-		scatter!(plt1, Ω_bk[mask], r_bk[mask];
-			color = clrs[k], ms = 3, markerstrokewidth = 0, label = nothing)
-	end
-end
+plt1 = plot_backbone_absolute(r_range, Ω_curves, branches, bk_lbls;
+	Ω_curves_ref = Ω_curves_3,
+	colors        = clrs_θ2,
+	title         = "θ₂ sweep (θ₁ = 0): backbone curves",
+	r_max         = r_max,
+	legend        = :outertopright)
 
 # ------------------------------------------------------------------
 # 11.  Figure 2: nonlinear shift (Ω − ω₀) vs |z₁|
 # ------------------------------------------------------------------
-plt2 = plot(;
-	xlabel = "Nonlinear frequency shift  Ω − ω₀(0,θ₂)  (rad/s)",
-	ylabel = "Modal amplitude  |z₁|",
-	title  = "θ₂ sweep (θ₁ = 0): backbone shift",
-	ylims  = (0, r_max * 1.05),
-	size   = (800, 600),
-	dpi    = 150,
-	legend = :outertopright,
-)
-
-for (k, (θ₂, Ωcurve, Ωcurve_3, br, ω₀, ω₀_3)) in
-		enumerate(zip(θ₂_values, Ω_curves, Ω_curves_3, branches, ω₀_vals, ω₀_vals_3))
-	lbl = @sprintf("θ₂ = %.2f", θ₂)
-	plot!(plt2, Ωcurve .- ω₀, collect(r_range); lw = 2.0, color = clrs[k], label = lbl)
-	plot!(plt2, Ωcurve_3 .- ω₀_3, collect(r_range);
-		lw = 1.2, ls = :dash, color = clrs[k], label = nothing)
-	if !isnothing(br) && length(br.branch) > 1
-		r_bk = [s.r for s in br.branch]
-		Ω_bk = [s.Ω for s in br.branch]
-		mask = r_bk .<= r_max
-		scatter!(plt2, Ω_bk[mask] .- ω₀, r_bk[mask];
-			color = clrs[k], ms = 3, markerstrokewidth = 0, label = nothing)
-	end
-end
+plt2 = plot_backbone_shift(r_range, Ω_curves, ω₀_vals, branches, bk_lbls;
+	Ω_curves_ref = Ω_curves_3,
+	ω₀_vals_ref  = ω₀_vals_3,
+	colors        = clrs_θ2,
+	title         = "θ₂ sweep (θ₁ = 0): backbone shift",
+	r_max         = r_max,
+	legend        = :outertopright)
 
 # ------------------------------------------------------------------
 # 12.  Save
 # ------------------------------------------------------------------
-mkpath(_results)
-savefig(plt1, joinpath(_results, "backbone_theta2_curves.png"))
-savefig(plt2, joinpath(_results, "backbone_theta2_shift.png"))
-println("Saved → $(_results)/backbone_theta2_curves.png")
-println("Saved → $(_results)/backbone_theta2_shift.png")
+mkpath(_results_figs)
+savefig(plt1, joinpath(_results_figs, "backbone_theta2_curves.png"))
+savefig(plt2, joinpath(_results_figs, "backbone_theta2_shift.png"))
+println("Saved → $(joinpath(_results_figs, "backbone_theta2_curves.png"))")
+println("Saved → $(joinpath(_results_figs, "backbone_theta2_shift.png"))")
