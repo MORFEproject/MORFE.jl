@@ -1,16 +1,11 @@
 # 05 — Kármán vortex street
 
-Incompressible Navier-Stokes flow past a cylinder. The steady base flow is computed
-first; then DPIM is applied to the linearised (non-symmetric) first-order FOM to
-parametrise the unstable manifold associated with the Hopf bifurcation that gives
-rise to the Kármán vortex street.
+## Model
 
-**Entry script:** `main.jl`
-
-**Mesh:** `cylinder_flow.msh` (GMSH; 2D cylinder-wake geometry)
-
-**Expected output:** base-flow solution, eigenvalues of the linearised flow,
-reduced dynamics R on the SSM, reduced_dynamics.txt summary.
+Incompressible Navier-Stokes flow past a cylinder (2D, Ferrite P2/P1 Taylor-Hood).
+The steady base flow is computed first; then DPIM parametrises the unstable SSM
+associated with the Hopf bifurcation that gives rise to the Kármán vortex street.
+Parameters are set in `config.jl` (default: Re₀ = 49.03, order 5).
 
 ## How to run
 
@@ -20,10 +15,34 @@ julia --project=examples/05_karman_vortex_street -e '
   include("examples/05_karman_vortex_street/main.jl")'
 ```
 
+## Expected outputs
+
+```text
+results/
+  Re49.03_ord5/
+    summary.log              — verbose tee'd run log
+    summary.txt              — structured key:value summary with environment info
+    data/
+      W.jls                  — parametrisation (serialised)
+      R.jls                  — reduced dynamics (serialised)
+      reduced_dynamics.txt   — realified Stuart-Landau coefficients (human-readable)
+      vtk_data.jls           — mesh + mode data bundle for ParaView export
+    figures/                 — post-processing figures (from postprocess scripts)
+```
+
+## Reference results
+
+Curated reference outputs live in `results/reference/Re49.03_ord5/` (tracked in git).
+
+## Approximate runtime
+
+~30 minutes on a modern workstation (order-5 parametrisation, sparse Ferrite assembly,
+~25k-DOF non-symmetric system). VTK export adds a few minutes.
+
 ## Files
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `main.jl` | Top-level driver |
 | `config.jl` | Problem parameters (Re, mesh, ROM size) |
 | `mesh.jl` | Mesh loading and DOF setup |
