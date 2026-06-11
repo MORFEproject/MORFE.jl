@@ -85,7 +85,7 @@ println(_out, _sep)
 
 println(_out, "\n[1/9] Generating Turek–Schäfer mesh ...")
 r_mesh = @timed generate_mesh(;
-	h_cyl  = MESH_H_CYL,
+	h_cyl = MESH_H_CYL,
 	h_wake = MESH_H_WAKE,
 	h_bulk = MESH_H_BULK,
 )
@@ -97,7 +97,7 @@ meshfile = r_mesh.value
 
 println(_out, "\n[2/9] Ferrite P2/P1 Taylor-Hood FEM setup ...")
 r_fem = @timed setup_fem(meshfile)
-fom   = r_fem.value
+fom = r_fem.value
 println(_out, "  Free DOFs (steady state): $(fom.n_free)")
 println(_out, "  Free DOFs (DPIM, inlet free): $(fom.n_free_dpim)")
 
@@ -125,8 +125,8 @@ println(_out, "  B₁ nnz = $(nnz(B₁)),  B₀ nnz = $(nnz(B₀))")
 println(_out, "\n[5/9] Assembling K_visc and base-flow forcing h₀ ...")
 r_kvisc = @timed assemble_K_visc(fom)
 K_visc = r_kvisc.value
-K_visc .*= _CYL_D                          # scale: ν = D/Re, so g₁(s,η′) = D·η′·K_raw·s
-h₀_vec = K_visc * s₀_full[fom.free_dpim]  # h₀(η′) = D·η′·K_raw·u₀  (base-flow forcing)
+K_visc .*= -_CYL_D                          # physical sign: ΔA_lin = -D·η·K, so g₁ = -D·η·K·s
+h₀_vec = K_visc * s₀_full[fom.free_dpim]   # h₀(η′) = -D·η′·K_raw·u₀  (base-flow forcing)
 println(_out, "  K_visc nnz = $(nnz(K_visc))")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -136,22 +136,22 @@ println(_out, "  K_visc nnz = $(nnz(K_visc))")
 println(_out, "\n[6/9] Shift-invert ARPACK eigenproblem ...")
 r_eig = @timed solve_hopf_eigenproblem(
 	-B₀, B₁;
-	nev      = EIG_NEV,
+	nev = EIG_NEV,
 	sigma_re = EIG_SIGMA_RE,
 	sigma_im = EIG_SIGMA_IM,
 )
-(master_eigenvalues, master_modes, left_eigenmodes) = r_eig.value
+(master_eigenvalues, master_modes, left_eigenmodes, all_eigenvalues, all_modes) = r_eig.value
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 7 — NDOrderModel + multiindex set
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[7/9] Building NDOrderModel and multiindex set ...")
-mset       = all_multiindices_up_to(NVAR, MAX_ORD; min_degree = 1)
+mset = all_multiindices_up_to(NVAR, MAX_ORD; min_degree = 1)
 convection = FluidConvection(fom; max_unique_cols = length(mset))
-g₁       = make_param_coupling(K_visc)
-h₀       = make_base_forcing(h₀_vec)
-ext_sys    = ExternalSystem((0.0 + 0.0im,))
+g₁ = make_param_coupling(K_visc)
+h₀ = make_base_forcing(h₀_vec)
+ext_sys = ExternalSystem((0.0 + 0.0im,))
 
 model = NDOrderModel((B₀, B₁), (convection, g₁, h₀), ext_sys)
 println(_out, "  $(length(mset)) monomials (NVAR=$NVAR, order ≤ $MAX_ORD)")
@@ -161,15 +161,26 @@ println(_out, "  $(length(mset)) monomials (NVAR=$NVAR, order ≤ $MAX_ORD)")
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[8/9] Solving cohomological equations (order $MAX_ORD) ...")
-all_lambdas   = ComplexF64[master_eigenvalues..., 0.0+0.0im]
+all_lambdas = ComplexF64[master_eigenvalues..., 0.0+0.0im]
+lambda_im = ComplexF64[complex(0.0, imag(λ)) for λ in all_lambdas]
 resonance_set = resonance_set_from_complex_normal_form_style(
-mset, all_lambdas, 0.05 * abs(master_eigenvalues[1]))
+	mset, lambda_im, 0.05 * abs(imag(master_eigenvalues[1])))
+
+println("\n§4  Resonance set  (NVAR=$NVAR, max_degree=$MAX_ORD)")
+for t in 1:3
+	cols = resonant_multiindices(resonance_set, t)
+	@printf("     Target %d:  %d monomials\n", t, length(cols))
+	isempty(cols) || println("       ", join(["$(mset.exponents[k])" for k in cols], "  "))
+end
+
+#print("\nProceed with cohomological solve? [y/N]: ")
+#readline() == "y" || (close_log(_log); exit(0))
 
 conj_map = [2, 1, 3]   # mode 1 (Im>0) ↔ mode 2 (Im<0); η′ self-conjugate
 r_dpim = @timed solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
-	master_modes, left_eigenmodes,
+	master_modes .* 1e-2, left_eigenmodes .* 1e-2,   # scale modes for better numerical stability (see discussion in #48)
 	resonance_set;
 	conjugate_permutation = conj_map,
 )
@@ -195,7 +206,7 @@ open(rdyn_path, "w") do io
 	println(io, "Nonzero reduced-dynamics monomials:")
 	for m in eachindex(Rr.poly.multiindex_set.exponents)
 		mi = Rr.poly.multiindex_set.exponents[m]
-		c  = Rr.poly.coefficients[:, m]
+		c = Rr.poly.coefficients[:, m]
 		any(abs.(real.(c)) .> 1e-14) || continue
 		@printf(io, "  %-20s : %s\n", string(mi), string(round.(real.(c); sigdigits = 8)))
 	end
@@ -204,7 +215,7 @@ end
 println(_out, "\nReduced dynamics (real form) — nonzero monomials:")
 for m in eachindex(Rr.poly.multiindex_set.exponents)
 	mi = Rr.poly.multiindex_set.exponents[m]
-	c  = Rr.poly.coefficients[:, m]
+	c = Rr.poly.coefficients[1, m]
 	any(abs.(real.(c)) .> 1e-12) || continue
 	@printf(_out, "  %-20s : %s\n", string(mi), string(round.(c; sigdigits = 6)))
 end
@@ -245,7 +256,24 @@ println(_out, _sep)
 serialize(joinpath(RESULTS_DIR, "W.jls"), W)
 serialize(joinpath(RESULTS_DIR, "R.jls"), R)
 
+# ── VTK data bundle (plain arrays, no Ferrite types) for visualise_paraview.jl ─
+let _nn = Ferrite.getnnodes(fom.grid)
+	vtk_data = (;
+		node_coords = Float64[fom.grid.nodes[i].x[c] for c in 1:2, i in 1:_nn],
+		cell_connectivity = [collect(Int32, c.nodes) for c in fom.grid.cells],
+		cell_dofs = [collect(Ferrite.celldofs(cell)) for cell in Ferrite.CellIterator(fom.dh)],
+		free_dpim = fom.free_dpim,
+		ndofs_total = Ferrite.ndofs(fom.dh),
+		n_vel_dofs_per_cell = fom.n_vel_dofs_per_cell,
+		s0_free_dpim = s₀_full[fom.free_dpim],
+		master_eigenvalues = master_eigenvalues,
+		all_eigenvalues = all_eigenvalues,
+		all_modes = Matrix{ComplexF64}(all_modes),
+	)
+	serialize(joinpath(RESULTS_DIR, "vtk_data.jls"), vtk_data)
+end
+
 println(_out, "\nResults saved to: $RESULTS_DIR")
-println(_out, "  reduced_dynamics.txt, W.jls, R.jls, summary.log")
+println(_out, "  reduced_dynamics.txt, W.jls, R.jls, vtk_data.jls, summary.log")
 
 close(_log)

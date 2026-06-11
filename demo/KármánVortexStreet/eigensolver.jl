@@ -17,7 +17,7 @@ band.  The Hopf mode is selected as the eigenvalue with the smallest |Re(λ)| am
 those with Im(λ) > 0 — this is independent of the exact shift used.
 
 Left eigenvectors are computed by per-eigenvalue adjoint shifts and then
-biorthogonally normalised so that ψᴴ B φ = 1.
+biorthogonally normalised so that ψᵀ B φ = 1.
 """
 
 using Arpack
@@ -107,10 +107,11 @@ function solve_hopf_eigenproblem(
             real(λ₁), imag(λ₁), imag(λ₁))
 
     # ── Left eigenvector for mode 1 (adjoint shift-invert) ────────────────────
-    # For real systems: ψ₂ = conj(ψ₁), so only one adjoint solve is needed.
+    # Shift at λ₁ so A^T − λ₁·B^T is singular there → ARPACK returns ψ₁_bilinear.
+    # Using conj(λ₁) = λ₂ would find ψ₂ instead, making J₁ᵀ·φ₁ = 0 (biorthogonality).
     Ac_adj = Ac'
     Bc_adj = Bc'
-    F_adj  = klu(Ac_adj - conj(λ₁) * Bc_adj)
+    F_adj  = klu(Ac_adj - λ₁ * Bc_adj)
     LM_adj = LinearMap{ComplexF64}(n, n; ismutating = false) do x
         F_adj \ (Bc_adj * x)
     end
@@ -119,8 +120,8 @@ function solve_hopf_eigenproblem(
     ψ₁ = xl[:, 1]
     ψ₂ = conj(ψ₁)
 
-    # ── Biorthogonal normalisation: ψ₁ᴴ B φ₁ = 1 ─────────────────────────────
-    α  = dot(ψ₁, Bc * φ₁)
+    # ── Biorthogonal normalisation: ψ₁ᵀ B φ₁ = 1 ─────────────────────────────
+    α  = transpose(ψ₁) * (Bc * φ₁)
     φ₁ = φ₁ ./ α
     φ₂ = conj(φ₁)   # re-derive after normalising
 
@@ -128,5 +129,17 @@ function solve_hopf_eigenproblem(
     master_modes       = hcat(φ₁, φ₂)
     left_eigenmodes    = hcat(ψ₁, ψ₂)
 
-    return master_eigenvalues, master_modes, left_eigenmodes
+    # ── All modes (positive-imaginary half, sorted by |Re(λ)|) ────────────────
+    # Filter out conjugate duplicates; sort most-weakly-damped first so that
+    # index 1 always matches the primary Hopf mode selected above.
+    all_idx        = sort(findall(λ -> imag(λ) > hopf_tol, vals); by = i -> abs(real(vals[i])))
+    all_eigenvalues = vals[all_idx]
+    all_modes       = vecs[:, all_idx]
+
+    println("  Returning $(length(all_idx)) modes (Im > $hopf_tol, sorted by |Re(λ)|):")
+    for (k, i) in enumerate(all_idx)
+        @printf("    mode %2d:  λ = %+.6f %+.6f·i\n", k, real(vals[i]), imag(vals[i]))
+    end
+
+    return master_eigenvalues, master_modes, left_eigenmodes, all_eigenvalues, all_modes
 end
