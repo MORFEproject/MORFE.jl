@@ -5,6 +5,8 @@ This script demonstrates the formulation and discretization of a structural mech
 problem using finite element methods, followed by conversion to a first-order system.
 """
 
+include(joinpath(@__DIR__, "..", "common", "results_io.jl"))
+
 import Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
@@ -282,8 +284,7 @@ end
 # 5. Solve cohomological equations
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
-@time W,
-R = solve_cohomological_problem(
+_t_solve = @elapsed W, R = solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
 	master_modes, left_eigenmodes,
@@ -307,7 +308,9 @@ Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
 # ------------------------------------------------------------------------------
 # 7. Write real dynamics to compare to Morfe 2.0
 # ------------------------------------------------------------------------------
-function write_rdyn(R::ReducedDynamics{ROM, NVAR, T}) where {ROM, NVAR, T}
+dirs = results_dirs(@__DIR__)
+
+function write_rdyn(R::ReducedDynamics{ROM, NVAR, T}, out_path::String) where {ROM, NVAR, T}
 	rdyn = ["" for i in 1:NVAR]
 	for i in 1:NVAR
 		rdyn[i] = "a" * string(i) * "' = "
@@ -323,22 +326,36 @@ function write_rdyn(R::ReducedDynamics{ROM, NVAR, T}) where {ROM, NVAR, T}
 				monomial *= "*a" * string(d) * "^" * string(multiindex[d])
 			end
 		end
-		for d in 1:Int(NVAR*0.5)
-			rcoeff = real(coeff[2*d-1, m])
-			icoeff = -1 * imag(coeff[2*d-1, m])
+		for d in 1:Int(NVAR * 0.5)
+			rcoeff = real(coeff[2 * d - 1, m])
+			icoeff = -1 * imag(coeff[2 * d - 1, m])
 			if abs(rcoeff) > 1e-20
-				rdyn[2*d-1] *= " + " * string(rcoeff) * monomial
+				rdyn[2 * d - 1] *= " + " * string(rcoeff) * monomial
 			end
 			if abs(icoeff) > 1e-20
-				rdyn[2*d] *= " + " * string(icoeff) * monomial
+				rdyn[2 * d] *= " + " * string(icoeff) * monomial
 			end
 		end
 	end
 
-	ofile = open("./equations.txt", "w")
+	ofile = open(out_path, "w")
 	for i in 1:NVAR
 		write(ofile, rdyn[i] * ";\n")
 	end
 	close(ofile)
 end
-write_rdyn(Rr)
+write_rdyn(Rr, joinpath(dirs.data, "equations.txt"))
+
+save_rom(dirs, W, R)
+write_summary(dirs, [
+	"example: 02_clamped_beam_gridap",
+	"model: clamped-clamped beam, St. Venant-Kirchhoff, Gridap backend",
+	"mesh: 40x3x1 Hex8 elements, quadratic Lagrange (order 2)",
+	"n_dofs: $FOM",
+	"master_modes: $ROM",
+	"master_eigenvalues: $(collect(master_eigenvalues))",
+	"parametrisation_order: $max_degree",
+	"n_monomials: $(length(mset))",
+	"cohomological_solve_time_s: $(_t_solve)",
+])
+println("\nResults written to $(dirs.base)")
