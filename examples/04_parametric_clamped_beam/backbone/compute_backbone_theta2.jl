@@ -13,7 +13,7 @@ Figures produced in results/:
   backbone_theta2_curves.png  — Ω vs |z₁| for each θ₂
   backbone_theta2_shift.png   — (Ω − ω₀) vs |z₁|
 
-Run after parametric_beam_demo.jl has produced results/R.jls.
+Run after main.jl has produced results/R.jls.
 """
 
 using Pkg: Pkg
@@ -44,7 +44,7 @@ const _results      = joinpath(@__DIR__, "..", "results")
 const _results_data = joinpath(_results, "data")
 const _results_figs = joinpath(_results, "figures")
 isfile(joinpath(_results_data, "R.jls")) ||
-	error("results/data/R.jls not found.  Run parametric_beam_demo.jl first.")
+	error("results/data/R.jls not found.  Run main.jl first.")
 
 println("Loading ROM …")
 R = deserialize(joinpath(_results_data, "R.jls"))
