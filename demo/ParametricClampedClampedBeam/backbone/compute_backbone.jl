@@ -22,7 +22,7 @@ using Pkg: Pkg
 const _backbone_env = joinpath(@__DIR__, "backbone_env")
 Pkg.activate(_backbone_env)
 if !haskey(Pkg.project().dependencies, "MORFE")
-	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "..", "..", "..")))
 end
 Pkg.instantiate()
 
@@ -37,15 +37,19 @@ using Plots
 ENV["GKSwstype"] = "nul"   # suppress GR pop-up window; plots are saved to file only
 using Printf
 
+include(joinpath(@__DIR__, "..", "plotting", "backbone_plots.jl"))
+
 # ------------------------------------------------------------------
 # 1.  Load ROM
 # ------------------------------------------------------------------
-const _results = joinpath(@__DIR__, "results")
-isfile(joinpath(_results, "R.jls")) ||
-	error("results/R.jls not found.  Run parametric_beam_demo.jl first.")
+const _results      = joinpath(@__DIR__, "..", "results")
+const _results_data = joinpath(_results, "data")
+const _results_figs = joinpath(_results, "figures")
+isfile(joinpath(_results_data, "R.jls")) ||
+	error("results/data/R.jls not found.  Run parametric_beam_demo.jl first.")
 
 println("Loading ROM …")
-R = deserialize(joinpath(_results, "R.jls"))
+R = deserialize(joinpath(_results_data, "R.jls"))
 
 # ------------------------------------------------------------------
 # 2.  R1_cplx : ℝ⁴→ℂ   (realified z₁ equation in (x, y, θ₁, θ₂))
@@ -181,61 +185,29 @@ r_range = range(1e-6, r_max, 400)
 # ------------------------------------------------------------------
 println("Plotting …")
 
-clrs = palette(:tab10)
+Ω_vecs  = [Ωcurve for (_, _, Ωcurve) in Ω_curves]
+bk_lbls = ["(θ₁,θ₂)=($(θ₁),$(θ₂))" for (θ₁, θ₂, _) in Ω_curves]
 
-plt1 = plot(;
-	xlabel = "Backbone frequency  Ω  (rad/s)",
-	ylabel = "Modal amplitude  |z₁|",
+plt1 = plot_backbone_absolute(r_range, Ω_vecs, branches, bk_lbls;
 	title = "Two-parameter backbone curves",
-	ylims = (0, r_max * 1.05),
-	size = (800, 600),
-	dpi = 150,
-)
-
-for (k, ((θ₁, θ₂, Ωcurve), br)) in enumerate(zip(Ω_curves, branches))
-	lbl = "(θ₁,θ₂)=($(θ₁),$(θ₂))"
-	plot!(plt1, Ωcurve, collect(r_range); lw = 2.0, color = clrs[k], label = lbl)
-	if !isnothing(br) && length(br.branch) > 1
-		r_bk = [s.r for s in br.branch]
-		Ω_bk = [s.Ω for s in br.branch]
-		mask = r_bk .<= r_max
-		scatter!(plt1, Ω_bk[mask], r_bk[mask];
-			color = clrs[k], ms = 3, markerstrokewidth = 0, label = nothing)
-	end
-end
+	r_max = r_max)
 
 # ------------------------------------------------------------------
 # 10.  Figure 2: nonlinear shift (Ω − ω₀) vs |z₁|
 # ------------------------------------------------------------------
-plt2 = plot(;
+plt2 = plot_backbone_shift(r_range, Ω_vecs, ω₀_vals, branches, bk_lbls;
 	xlabel = "Nonlinear frequency shift  Ω − ω₀(θ₁,θ₂)  (rad/s)",
-	ylabel = "Modal amplitude  |z₁|",
-	title = "Two-parameter backbone shift",
-	ylims = (0, r_max * 1.05),
-	size = (800, 600),
-	dpi = 150,
-)
-
-for (k, ((θ₁, θ₂, Ωcurve), br, ω₀)) in enumerate(zip(Ω_curves, branches, ω₀_vals))
-	lbl = "(θ₁,θ₂)=($(θ₁),$(θ₂))"
-	plot!(plt2, Ωcurve .- ω₀, collect(r_range); lw = 2.0, color = clrs[k], label = lbl)
-	if !isnothing(br) && length(br.branch) > 1
-		r_bk = [s.r for s in br.branch]
-		Ω_bk = [s.Ω for s in br.branch]
-		mask = r_bk .<= r_max
-		scatter!(plt2, Ω_bk[mask] .- ω₀, r_bk[mask];
-			color = clrs[k], ms = 3, markerstrokewidth = 0, label = nothing)
-	end
-end
+	title  = "Two-parameter backbone shift",
+	r_max  = r_max)
 
 # ------------------------------------------------------------------
 # 11.  Save figures 1 and 2
 # ------------------------------------------------------------------
-mkpath(_results)
-savefig(plt1, joinpath(_results, "backbone_curves.png"))
-savefig(plt2, joinpath(_results, "backbone_shift.png"))
-println("Saved → $(_results)/backbone_curves.png")
-println("Saved → $(_results)/backbone_shift.png")
+mkpath(_results_figs)
+savefig(plt1, joinpath(_results_figs, "backbone_curves.png"))
+savefig(plt2, joinpath(_results_figs, "backbone_shift.png"))
+println("Saved → $(joinpath(_results_figs, "backbone_curves.png"))")
+println("Saved → $(joinpath(_results_figs, "backbone_shift.png"))")
 
 # ------------------------------------------------------------------
 # 12.  ω₀(θ₁,0) vs (1+θ₁) — log-log with slope -2 reference
@@ -289,5 +261,5 @@ plot!(plt3, (1 .+ θ₁_fine)[mask_3], ω_fine_3[mask_3];
 plot!(plt3, (1 .+ θ₁_fine)[mask], ω_fine[mask];
 	lw = 2.5, color = :black, label = "ω₀(θ₁,0) MORFE order-5")
 
-savefig(plt3, joinpath(_results, "omega0_slope_minus2.png"))
-println("Saved → $(_results)/omega0_slope_minus2.png")
+savefig(plt3, joinpath(_results_figs, "omega0_slope_minus2.png"))
+println("Saved → $(joinpath(_results_figs, "omega0_slope_minus2.png"))")

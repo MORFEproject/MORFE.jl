@@ -11,7 +11,7 @@ Euler-Bernoulli (1+θ)^{-2} prediction.
 """
 
 using Pkg: Pkg
-Pkg.activate(@__DIR__)
+Pkg.activate(joinpath(@__DIR__, "validation_env"))
 Pkg.instantiate()
 
 using Ferrite
@@ -22,14 +22,14 @@ using Arpack
 using Tensors
 using Printf
 
-include(joinpath(@__DIR__, "theta_polynomials.jl"))
-include(joinpath(@__DIR__, "parametric_geometry.jl"))
-include(joinpath(@__DIR__, "parametric_assembly.jl"))
+include(joinpath(@__DIR__, "..", "fem", "theta_polynomials.jl"))
+include(joinpath(@__DIR__, "..", "fem", "parametric_geometry.jl"))
+include(joinpath(@__DIR__, "..", "fem", "parametric_assembly.jl"))
 
 # ------------------------------------------------------------------
 # 1.  Mesh and FE space  (same as parametric_beam_demo.jl)
 # ------------------------------------------------------------------
-const _msh = joinpath(@__DIR__, "..", "BenchmarkFerrite", "beam_h27.msh")
+const _msh = joinpath(@__DIR__, "..", "..", "BenchmarkFerrite", "beam_h27.msh")
 isfile(_msh) || error("Mesh not found.  Run generate_beam_mesh.jl in BenchmarkFerrite/ first.")
 
 println("Loading mesh …")

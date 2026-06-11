@@ -61,11 +61,11 @@ using StaticArrays
 # ------------------------------------------------------------------
 # Load supporting code (order matters)
 # ------------------------------------------------------------------
-include(joinpath(@__DIR__, "theta_polynomials.jl"))
-include(joinpath(@__DIR__, "parametric_geometry.jl"))
-include(joinpath(@__DIR__, "bivariate_polynomials.jl"))
-include(joinpath(@__DIR__, "bivariate_geometry.jl"))
-include(joinpath(@__DIR__, "parametric_assembly.jl"))
+include(joinpath(@__DIR__, "fem", "theta_polynomials.jl"))
+include(joinpath(@__DIR__, "fem", "parametric_geometry.jl"))
+include(joinpath(@__DIR__, "fem", "bivariate_polynomials.jl"))
+include(joinpath(@__DIR__, "fem", "bivariate_geometry.jl"))
+include(joinpath(@__DIR__, "fem", "parametric_assembly.jl"))
 
 # ==================================================================
 # 1.  Mesh and FE setup  (identical to benchmark_ferrite.jl)
@@ -380,11 +380,12 @@ println("\nDemo finished successfully.")
 # ==================================================================
 using Serialization
 
-const _results_dir = joinpath(@__DIR__, "results")
+const _results_dir = joinpath(@__DIR__, "results", "data")
 mkpath(_results_dir)
 
 serialize(joinpath(_results_dir, "W.jls"), W)
 serialize(joinpath(_results_dir, "R.jls"), R)
+serialize(joinpath(_results_dir, "arch_mode.jls"), arch_mode_free)
 
 open(joinpath(_results_dir, "summary.txt"), "w") do io
 	println(io, "MORFE.jl — Parametric Clamped-Clamped Beam ROM")
@@ -414,4 +415,4 @@ open(joinpath(_results_dir, "R_coefficients.csv"), "w") do io
 end
 
 println("ROM saved to $(_results_dir)/")
-println("  W.jls, R.jls, summary.txt, R_coefficients.csv")
+println("  W.jls, R.jls, arch_mode.jls, summary.txt, R_coefficients.csv")
