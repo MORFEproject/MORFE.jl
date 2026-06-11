@@ -12,6 +12,8 @@ Geometry: clamped-clamped beam, 1000 × 10 × 24, 40×3×1 Hex8 elements, quadra
 Matches the Gridap demo (FOM=4977) — use this to benchmark the RHS-C FEM batched path.
 """
 
+include(joinpath(@__DIR__, "..", "common", "results_io.jl"))
+
 using Pkg: Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
@@ -225,7 +227,7 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 # -----------------------------------------------------------------------
 
 print("\nCohomological solve: ")
-@time W, R = solve_cohomological_problem(
+_t_solve = @elapsed W, R = solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
 	master_modes, left_eigenmodes,
@@ -250,3 +252,22 @@ for m in 1:length(Rr.poly.multiindex_set.exponents)
 	c = Rr.poly.coefficients[:, m]
 	any(abs.(c) .> 1e-12) && println("  $mi : $(real.(c))")
 end
+
+# -----------------------------------------------------------------------
+# 10. Save results
+# -----------------------------------------------------------------------
+
+dirs = results_dirs(@__DIR__)
+save_rom(dirs, W, R)
+write_summary(dirs, [
+	"example: 01_clamped_beam_ferrite",
+	"model: clamped-clamped beam, St. Venant-Kirchhoff, Ferrite backend",
+	"mesh: 40x3x1 Hex8 elements, quadratic Lagrange (order 2)",
+	"n_dofs: $n_free",
+	"master_modes: $ROM",
+	"master_eigenvalues: $(collect(master_eigenvalues))",
+	"parametrisation_order: $max_degree",
+	"n_monomials: $(length(mset))",
+	"cohomological_solve_time_s: $(_t_solve)",
+])
+println("\nResults written to $(dirs.base)")

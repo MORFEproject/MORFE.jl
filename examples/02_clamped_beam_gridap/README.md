@@ -4,7 +4,7 @@ Same clamped-clamped beam as example 01, assembled with Gridap.jl as the FEM bac
 Use this example to compare results or to use Gridap as the reference implementation
 for building a new FEM backend.
 
-**Entry script:** `demo_mechanical_problem.jl`
+**Entry script:** `main.jl`
 
 **Mesh:** `clamped_clamped_beam.msh` (40×3×1 Hex8, quadratic order-2 Lagrange; also used by example 01)
 
@@ -15,5 +15,5 @@ for building a new FEM backend.
 ```bash
 julia --project=examples/02_clamped_beam_gridap -e '
   using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/02_clamped_beam_gridap/demo_mechanical_problem.jl")'
+  include("examples/02_clamped_beam_gridap/main.jl")'
 ```
