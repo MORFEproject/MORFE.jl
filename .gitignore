@@ -44,8 +44,10 @@ CLAUDE.md
 /website_copy
 /publications
 /legacy_morfe
-# Generated example/benchmark outputs
-results/
+# Generated example/benchmark outputs — ignore contents but allow results/reference/
+results/*
+!results/reference/
+!results/reference/**
 benchmark_results*/
 *.h5
 *.jls
