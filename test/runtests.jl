@@ -48,7 +48,17 @@ should_run(group) = GROUP == "all" || GROUP == group
     end
     if should_run("end_to_end")
         @testset "EndToEnd" begin
-            #   
+            #
+        end
+    end
+end
+
+if GROUP == "examples"
+    @testset "Examples smoke tests" begin
+        @testset "internals" begin
+            include(joinpath(@__DIR__, "..", "examples", "internals", "demo_polynomials.jl"))
+            include(joinpath(@__DIR__, "..", "examples", "internals", "demo_multiindices_factorisations.jl"))
+            @test true
         end
     end
 end
