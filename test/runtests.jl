@@ -60,5 +60,11 @@ if GROUP == "examples"
             include(joinpath(@__DIR__, "..", "examples", "internals", "demo_multiindices_factorisations.jl"))
             @test true
         end
+        # Examples 01–05 each manage their own Pkg environment (Pkg.activate + Pkg.instantiate
+        # in main.jl) and require FEM backends (Ferrite, Gridap) not present in the MORFE
+        # test environment. Run them standalone:
+        #   julia --project=examples/01_clamped_beam_ferrite examples/01_clamped_beam_ferrite/main.jl
+        #   julia --project=examples/01_clamped_beam_ferrite examples/01_clamped_beam_ferrite/validate.jl
+        # See examples/README.md for details.
     end
 end
