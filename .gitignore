@@ -44,7 +44,16 @@ CLAUDE.md
 /website_copy
 /publications
 /legacy_morfe
-IFX
-Teo_COLSON
-arXiv-2510.26542v1
-from_reference_paper
+# Generated example/benchmark outputs
+results/
+benchmark_results*/
+*.h5
+*.jls
+*.vtu
+*.pvd
+profile*.html
+__pycache__/
+*.pyc
+
+# Never track IFX content, even if the folder reappears anywhere in the repo
+IFX/
