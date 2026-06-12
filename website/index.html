@@ -529,8 +529,8 @@ section { padding: 110px 0; position: relative; }
     <span style="font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); flex-shrink:0;">pre-alpha</span>
     <p style="margin:0; font-size:14px; color:var(--ink-2);">
       The cohomological solver, eigenproblem pipeline, and FEM backend interface are fully functional today.
-      The high-level <code>parametrise</code> / <code>FEModel</code> / <code>continuation</code> API shown below is the design target —
-      currently being built toward; see <a href="api.html#current-api">the docs</a> for the working entry points.
+      The high-level <code>mechanical_model</code> / <code>parametrise</code> / <code>HarmonicForcing</code> API shown below is implemented
+      for SVK + Ferrite via the <code>MORFEStructuralSVK</code> extension; FRF <code>continuation</code> is roadmap. See <a href="api.html#current-api">the docs</a> for all entry points.
     </p>
   </div>
 </div>
@@ -657,27 +657,26 @@ section { padding: 110px 0; position: relative; }
         <div class="code-head">
           <div class="dots"><span></span><span></span><span></span></div>
           <span class="file">cantilever_beam.jl</span>
-          <span style="margin-left:auto; color:var(--ink-3); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;">target API 🚧</span>
+          <span style="margin-left:auto; color:var(--ink-3); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;">implemented for SVK + Ferrite 🚧 FRF continuation</span>
         </div>
-<pre class="code"><span class="kw">using</span> <span class="var">MORFE</span>, <span class="var">Ferrite</span>
-<span class="cm"># planned API — see docs for current entry points</span>
+<pre class="code"><span class="kw">using</span> <span class="var">MORFE</span>, <span class="var">Ferrite</span>, <span class="var">FerriteGmsh</span>, <span class="var">Arpack</span>, <span class="var">LinearMaps</span>
+<span class="var">SVK</span> <span class="op">=</span> <span class="fn">Base.get_extension</span>(<span class="var">MORFE</span>, :<span class="var">MORFEStructuralSVK</span>)
 
-<span class="cm"># 1. Assemble FE operators (M, C, K, quadratic G, cubic H)</span>
-<span class="var">model</span> <span class="op">=</span> <span class="fn">FEModel</span>(<span class="str">"beam.msh"</span>; <span class="var">order</span><span class="op">=</span><span class="num">2</span>)
-<span class="var">M</span>, <span class="var">C</span>, <span class="var">K</span>, <span class="var">G</span>, <span class="var">H</span> <span class="op">=</span> <span class="fn">assemble_nonlinear</span>(<span class="var">model</span>)
+<span class="cm"># 1. Mesh → assembled model (K, M, C + SVK nonlinearity)</span>
+<span class="var">beam</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="str">"beam.msh"</span>;
+    <span class="var">material</span> <span class="op">=</span> <span class="fn">SVK.SVKMaterial</span>(<span class="var">E</span><span class="op">=</span><span class="num">160e3</span>, <span class="var">ν</span><span class="op">=</span><span class="num">0.22</span>, <span class="var">ρ</span><span class="op">=</span><span class="num">2.32e-3</span>),
+    <span class="var">damping</span>  <span class="op">=</span> <span class="fn">SVK.RayleighDamping</span>(<span class="var">α</span><span class="op">=</span><span class="num">5.4e-3</span>, <span class="var">β</span><span class="op">=</span><span class="num">1.9e-2</span>),
+    <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">"Dirichlet"</span>)
 
-<span class="cm"># 2. Choose master modes &amp; expansion order</span>
-<span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>]              <span class="cm"># first bending pair</span>
-<span class="var">forcing</span> <span class="op">=</span> <span class="fn">Harmonic</span>(<span class="var">ω</span><span class="op">=</span><span class="num">0.98</span>, <span class="var">F</span><span class="op">=</span><span class="num">0.02</span>)
+<span class="cm"># 2. Harmonic forcing shaped like the first bending pair</span>
+<span class="var">forcing</span> <span class="op">=</span> <span class="fn">SVK.HarmonicForcing</span>(<span class="var">mode</span><span class="op">=</span><span class="num">1</span>, <span class="var">amplitude</span><span class="op">=</span><span class="num">0.02</span>)
 
 <span class="cm"># 3. Compute the invariant manifold (DPIM, order 7)</span>
-<span class="var">rom</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">M</span>, <span class="var">C</span>, <span class="var">K</span>, <span class="var">G</span>, <span class="var">H</span>;
-                  <span class="var">master</span><span class="op">=</span><span class="var">master</span>, <span class="var">order</span><span class="op">=</span><span class="num">7</span>,
-                  <span class="var">forcing</span><span class="op">=</span><span class="var">forcing</span>)
+<span class="var">rom</span> <span class="op">=</span> <span class="fn">SVK.parametrise</span>(<span class="var">beam</span>; <span class="var">master</span><span class="op">=</span>[<span class="num">1</span>], <span class="var">order</span><span class="op">=</span><span class="num">7</span>,
+                      <span class="var">forcing</span><span class="op">=</span><span class="var">forcing</span>)
+<span class="fn">SVK.print_equations</span>(<span class="var">rom</span>)
 
-<span class="cm"># 4. Continue the FRF — milliseconds.</span>
-<span class="var">frf</span> <span class="op">=</span> <span class="fn">continuation</span>(<span class="var">rom</span>; <span class="var">ω_range</span><span class="op">=</span>(<span class="num">0.85</span>, <span class="num">1.15</span>))
-<span class="fn">plot</span>(<span class="var">frf</span>)</pre>
+<span class="cm"># 4. FRF continuation — roadmap 🚧</span></pre>
       </div>
     </div>
   </div>
