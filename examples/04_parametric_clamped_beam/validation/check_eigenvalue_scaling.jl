@@ -29,8 +29,8 @@ include(joinpath(@__DIR__, "..", "fem", "parametric_assembly.jl"))
 # ------------------------------------------------------------------
 # 1.  Mesh and FE space  (same as main.jl)
 # ------------------------------------------------------------------
-const _msh = joinpath(@__DIR__, "..", "..", "BenchmarkFerrite", "beam_h27.msh")
-isfile(_msh) || error("Mesh not found.  Run generate_beam_mesh.jl in BenchmarkFerrite/ first.")
+const _msh = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27_10x2x2.msh")
+isfile(_msh) || error("Mesh not found.  Run generate_beam_meshes.jl in benchmark/ferrite/ first.")
 
 println("Loading mesh …")
 grid = togrid(_msh)

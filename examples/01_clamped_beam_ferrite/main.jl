@@ -244,13 +244,20 @@ conj_map = zeros(Int, NVAR)
 for i in 1:NVAR
 	conj_map[i] = isodd(i) ? i + 1 : i - 1
 end
-Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
 
-println("\nReduced dynamics coefficients:")
-for m in 1:length(Rr.poly.multiindex_set.exponents)
-	mi = Rr.poly.multiindex_set.exponents[m]
-	c = Rr.poly.coefficients[:, m]
-	any(abs.(c) .> 1e-12) && println("  $mi : $(real.(c))")
+# Realify the master equation ż₁ only: `realify` rewrites the monomials in the real
+# pair z₁ = x₁ + i·y₁, so the realified coefficients c are complex by design —
+# Re(c) is the ẋ₁-equation and Im(c) the ẏ₁-equation (the imaginary parts carry the
+# frequency content; do not discard them). Component 2 is redundant by conjugate
+# symmetry, ż₂ = conj(ż₁), so a scalar polynomial captures the full real dynamics.
+Rr = realify(extract_component(R.poly, 1), conj_map)
+
+println("\nReduced dynamics ż₁ = ẋ₁ + i·ẏ₁ in real variables (x₁, y₁):")
+println("  (x₁,y₁) exponents : ẋ₁-coeff, ẏ₁-coeff")
+for (m, mi) in enumerate(Rr.multiindex_set.exponents)
+	c = Rr.coefficients[m]
+	abs(c) > 1e-12 && println("  $(Tuple(mi)) : " *
+							  "$(round(real(c); sigdigits = 6)), $(round(imag(c); sigdigits = 6))")
 end
 
 # -----------------------------------------------------------------------

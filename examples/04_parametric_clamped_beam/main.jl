@@ -70,8 +70,9 @@ include(joinpath(@__DIR__, "fem", "parametric_assembly.jl"))
 # ==================================================================
 # 1.  Mesh and FE setup  (identical to benchmark_ferrite.jl)
 # ==================================================================
-const _msh = joinpath(@__DIR__, "..", "BenchmarkFerrite", "beam_h27.msh")
-isfile(_msh) || error("Mesh not found at $_msh.  Run generate_beam_mesh.jl in BenchmarkFerrite/ first.")
+# Lightest benchmark mesh (10×2×2 Q2 hexes) for fast turnaround.
+const _msh = joinpath(@__DIR__, "..", "..", "benchmark", "ferrite", "beam_h27_10x2x2.msh")
+isfile(_msh) || error("Mesh not found at $_msh.  Run generate_beam_meshes.jl in benchmark/ferrite/ first.")
 
 println("Loading mesh …")
 grid   = togrid(_msh)
@@ -124,14 +125,30 @@ free_to_local = Dict(d => i for (i, d) in enumerate(free))
 n_free        = length(free)
 
 # ==================================================================
-# 5.  Multiindex set on (z₁, z₂, θ₁, θ₂)
+# 5.  Multiindex set on (z₁, z₂, θ₁, θ₂)  —  ANISOTROPIC truncation
 # ==================================================================
+#
+# Group-degree (anisotropic) truncation:
+#   deg(z₁) + deg(z₂) ≤ max_degree_z      (normal coordinates of bending mode)
+#   deg(θ₁) + deg(θ₂) ≤ max_degree_θ      (external parameters)
+#
+# The set is downward closed (every divisor of a member is a member), and
+# closed under the conjugate permutation z₁ ↔ z₂, so the GrLex-causal
+# cohomological solve and the conjugate-symmetry fill remain valid.
 const ROM = 2
 const N_EXT = 2                       # two real external states θ₁, θ₂
 const NVAR = ROM + N_EXT              # = 4
-const max_degree = 5
-mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
+const max_degree_z = 9                # order of the (z₁, z₂) expansion
+const max_degree_θ = 4                # order of the (θ₁, θ₂) expansion
+mset = MultiindexSet([
+	SVector{NVAR, Int}(a, b, c, d)
+	for a in 0:max_degree_z for b in 0:max_degree_z
+	for c in 0:max_degree_θ for d in 0:max_degree_θ
+	if a + b <= max_degree_z && c + d <= max_degree_θ && a + b + c + d >= 1
+])
 _max_uniq = length(mset)
+println(@sprintf("Anisotropic multiindex set: deg_z ≤ %d, deg_θ ≤ %d  →  %d monomials",
+	max_degree_z, max_degree_θ, _max_uniq))
 
 # ==================================================================
 # §1  Eigenproblem on the reference (θ₁=θ₂=0) configuration
@@ -313,7 +330,7 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 # ==================================================================
 # §2  Cohomological solve on the augmented (z₁, z₂, θ₁, θ₂) system
 # ==================================================================
-println("\n§2 Cohomological solve  (NVAR = $NVAR, max_degree = $max_degree, N_θ = $N_θ) …")
+println("\n§2 Cohomological solve  (NVAR = $NVAR, deg_z ≤ $max_degree_z, deg_θ ≤ $max_degree_θ, N_θ = $N_θ) …")
 r2 = @timed solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
@@ -354,8 +371,8 @@ println()
 println(sep)
 println("MORFE.jl — Two-Parameter Parametric Ferrite Demo (axial stretch + arch)")
 println(@sprintf("  Mesh    : H27 quadratic Lagrange hex (40×2×2)   FOM = %d", FOM))
-println(@sprintf("  ROM     : %d modes + %d parameters  max_degree = %d  N_θ = %d",
-	ROM, N_EXT, max_degree, N_θ))
+println(@sprintf("  ROM     : %d modes + %d parameters  deg_z ≤ %d, deg_θ ≤ %d  N_θ = %d",
+	ROM, N_EXT, max_degree_z, max_degree_θ, N_θ))
 println("-" ^ 72)
 println(@sprintf("  %-32s %9s %11s %7s", "Phase", "Time (s)", "Memory (GB)", "GC (s)"))
 println("-" ^ 72)
@@ -369,8 +386,8 @@ println(@sprintf("  %-32s %9.3f %11.2f %7.3f",
 	r1.time + r2.time,
 	to_gb(r1.bytes) + to_gb(r2.bytes),
 	r1.gctime + r2.gctime))
-println(@sprintf("  Monomials (max_degree=%d, NVAR=%d) = %d",
-	max_degree, NVAR, length(mset.exponents)))
+println(@sprintf("  Monomials (deg_z ≤ %d, deg_θ ≤ %d, NVAR=%d) = %d",
+	max_degree_z, max_degree_θ, NVAR, length(mset.exponents)))
 println(sep)
 
 println("\nDemo finished successfully.")
@@ -393,12 +410,17 @@ open(joinpath(_results_dir, "summary.txt"), "w") do io
 	println(io, "ROM          = $ROM")
 	println(io, "N_EXT        = $N_EXT")
 	println(io, "N_theta      = $N_θ")
-	println(io, "max_degree   = $max_degree")
+	println(io, "max_degree_z = $max_degree_z   (anisotropic: deg(z₁)+deg(z₂) ≤ $max_degree_z)")
+	println(io, "max_degree_θ = $max_degree_θ   (anisotropic: deg(θ₁)+deg(θ₂) ≤ $max_degree_θ)")
 	println(io, "master_eigenvalues = $(collect(master_eigenvalues))")
 	println(io, "eigenproblem_time_s    = $(r1.time)")
 	println(io, "cohomological_time_s   = $(r2.time)")
 	println(io, "julia_version: $(VERSION)")
-	commit = try readchomp(`git rev-parse --short HEAD`) catch; "unknown" end
+	commit = try
+		readchomp(`git rev-parse --short HEAD`)
+	catch
+		; "unknown"
+	end
 	println(io, "morfe_commit: $commit")
 	println(io, "timestamp: $(time())")
 end

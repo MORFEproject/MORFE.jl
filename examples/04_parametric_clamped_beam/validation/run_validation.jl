@@ -47,7 +47,7 @@ include(joinpath(@__DIR__, "..", "plotting", "backbone_plots.jl"))
 # ------------------------------------------------------------------
 # Constants  (match main.jl)
 # ------------------------------------------------------------------
-const _msh = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27.msh")
+const _msh = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27_10x2x2.msh")
 const _data = joinpath(@__DIR__, "..", "results", "data")
 const _figs = joinpath(@__DIR__, "..", "results", "figures")
 const E_val = 160e3
