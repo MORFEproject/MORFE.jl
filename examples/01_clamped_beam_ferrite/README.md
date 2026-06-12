@@ -6,7 +6,22 @@ Clamped-clamped beam with St. Venant-Kirchhoff material and cubic geometric nonl
 assembled via Ferrite.jl. Mesh: 40×3×1 Hex27 elements, quadratic Lagrange, ~4977 free DOFs.
 Shared mesh with example 02.
 
-## How to run
+## How to run (high-level UI)
+
+`main.jl` uses the `MORFEStructuralSVK` extension — the whole pipeline in a few lines:
+
+```julia
+using MORFE, Ferrite, FerriteGmsh, Arpack, LinearMaps
+SVK = Base.get_extension(MORFE, :MORFEStructuralSVK)
+
+beam = SVK.mechanical_model("clamped_clamped_beam.msh";
+    material  = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
+    damping   = SVK.RayleighDamping(α = 5.37e-3, β = 1.86e-2),
+    dirichlet = "Dirichlet", fe_order = 2, quad_order = 3)
+
+rom = SVK.parametrise(beam; master = [1], order = 9)
+SVK.print_equations(rom)
+```
 
 ```bash
 julia --project=examples/01_clamped_beam_ferrite -e '
@@ -14,11 +29,33 @@ julia --project=examples/01_clamped_beam_ferrite -e '
   include("examples/01_clamped_beam_ferrite/main.jl")'
 ```
 
+## Harmonic forcing
+
+`HarmonicForcing(mode = 1, amplitude = 0.03)` adds a load `f(t) = amplitude · M·ϕ₁ · cos(Ωt)`
+shaped like mode 1 and oscillating at mode 1's natural frequency (Ω defaults to `|λ₁|`;
+pass `Ω = ...` to detune). This appends two external states with eigenvalues ±iΩ
+(`N_EXT = 2`), following the forced setup of example 03 with `shape_mode == frequency_mode`:
+
+```julia
+rom = SVK.parametrise(beam; master = [1], order = 9,
+    forcing = SVK.HarmonicForcing(mode = 1, amplitude = 0.03))
+```
+
+The forced mode must be a master mode (near-resonant reduction).
+
+## Under the hood
+
+`low_level.jl` builds the SAME ROM fully explicitly (FE setup, eigensolver,
+multiindex set, resonance set, cohomological solve) — use it to customise any
+stage. The two paths must produce identical reduced dynamics; this is enforced
+by the `structural_svk` test group (`GROUP=structural_svk julia --project test/runtests.jl`)
+and the gate scripts in `test/StructuralSVK/`.
+
 ## Expected outputs
 
 ```text
 results/
-  summary.txt              — model description, eigenfrequencies, timing, Julia version, git commit
+  summary.txt              — model description, eigenfrequencies, forcing, timing, Julia version, git commit
   data/
     W.jls                  — parametrisation (serialised)
     R.jls                  — complex reduced dynamics (serialised)
@@ -37,10 +74,14 @@ julia --project=examples/01_clamped_beam_ferrite validate.jl
 
 ## Measured runtime
 
-< 1 min (Julia 1.12.6, Apple M2, 16 GiB; first run including compilation)
+< 1 min via `low_level.jl` (Julia 1.12.6, Apple M2, 16 GiB; first run including
+compilation). `main.jl` runs the identical pipeline; not yet measured separately.
 
 ## Notes
 
 The Ferrite backend is loaded automatically via the `MORFEFerriteExt` package extension
 when `using Ferrite` is executed. The assembly functions `ferrite_assemble_KM!` and
 `ferrite_nonlinearity` are the public entry points defined in `ext/FerriteBackend/`.
+The high-level layer (`SVKMaterial`, `mechanical_model`, `parametrise`, `HarmonicForcing`)
+lives in `ext/StructuralSVK/` and loads when MORFE, Ferrite, FerriteGmsh, Arpack and
+LinearMaps are all in the session.
