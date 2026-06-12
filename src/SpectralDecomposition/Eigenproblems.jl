@@ -451,8 +451,8 @@ function sort_left_eigenmodes(eigenvalues, left_eigenvalues, left_eigenmodes)
 
 		if diffs[j] > tol
 			@warn "No good match for eigenvalue $i (distance=$(diffs[j]))"
-			println("Eigenvalues", eigenvalues)
-			println("Left eigenvalues ", left_eigenvalues)
+			# println("Eigenvalues", eigenvalues)
+			# println("Left eigenvalues ", left_eigenvalues)
 		end
 
 		perm[i] = j

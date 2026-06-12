@@ -32,15 +32,31 @@ The mechanical substrate is an Euler–Bernoulli beam with Kelvin–Voigt viscoe
 $w(x,t)$ the transverse deflection, $\rho A$ the mass per unit length, $EI$ the bending
 stiffness and $\eta I$ the viscoelastic modulus,
 
+The electrodes are deposited with a **linearly tapered coverage**, full width at the clamp
+and vanishing at the tip — a standard design choice for unimorph benders that distributes
+the actuation authority along the span and shapes the curvature field. The actuation couple
+per unit length is therefore
+
 $$
-\rho A\,\ddot{w} + \eta I\,\dot{w}'''' + EI\,w'''' \;=\; m_b\,Q^2(t)\,\partial_x \delta\text{-couples} ,
-\tag{1}
+m_b(x) = \bar m\,\Bigl(1 - \frac{x}{L}\Bigr),
+\tag{1a}
 $$
 
-i.e. the electrostatic actuation enters as a distributed bending couple of intensity
-$m_b Q^2$ per unit length, quadratic in the electrode charge $Q(t)$ — the signature of the
-Maxwell stress, which depends on the square of the electric field. (After finite-element
-discretisation the couple distribution becomes a constant load vector; see §2.4.)
+and the beam equation, with the actuation entering through the distributed couple
+$m_b(x)\,Q^2$ (weak form $\int_0^L m_b\,Q^2\,\delta w'\,\mathrm{d}x$), reads
+
+$$
+\rho A\,\ddot{w} + \eta I\,\dot{w}'''' + EI\,w'''' = -\,m_b'(x)\,Q^2(t)
+= \frac{\bar m}{L}\,Q^2(t),
+\tag{1b}
+$$
+
+with clamped conditions $w(0) = w'(0) = 0$ and natural conditions
+$EI w''(L) = m_b(L)\,Q^2 = 0$, $EI w'''(L) = 0$: the taper converts the actuation into a
+*uniform distributed transverse load* proportional to $Q^2$, exciting the entire span. The
+quadratic dependence on the electrode charge $Q(t)$ is the signature of the Maxwell stress,
+which depends on the square of the electric field. After finite-element discretisation the
+actuation becomes a constant, fully populated load vector $b$ times $Q^2$ (see §2.4).
 
 The electrical side is the charging circuit of a *strain-dependent capacitor* in series
 with the resistance $R$:
@@ -48,24 +64,36 @@ with the resistance $R$:
 $$
 R\,\dot{Q} + \frac{Q}{C(w)} = V(t),
 \qquad
-C(w) = \frac{C_0}{1-\alpha_c\,\langle w' \rangle},
+C(w) = \frac{C_0}{1-\alpha_c\,\langle w'' \rangle},
 \tag{2}
 $$
 
-where $C_0$ is the capacitance of the undeformed device and
-$\langle w' \rangle = \bigl(w(L)-w(0)\bigr)/L$ is the mean bending slope: as the beam
-bends, the electrode area and gap change and the capacitance follows the average membrane
-strain at first order. Writing $c_0 = 1/C_0$, the circuit equation is *exactly bilinear*,
+where $C_0$ is the capacitance of the undeformed device and $\langle w'' \rangle$ is the
+*coverage-weighted mean curvature*: bending strain modulates the local electrode gap, and
+each station contributes in proportion to its electrode area, i.e. to the same taper (1a),
 
 $$
-R\,\dot{Q} + c_0\,Q\,\bigl(1-\alpha_c \langle w'\rangle\bigr) = V(t).
+\langle w'' \rangle
+= \frac{\int_0^L \bigl(1-x/L\bigr)\, w''\,\mathrm{d}x}{\int_0^L \bigl(1-x/L\bigr)\,\mathrm{d}x}
+= \frac{2\,w(L)}{L^2},
+\tag{2a}
+$$
+
+the closed form following from integration by parts with the clamped boundary conditions
+$w(0)=w'(0)=0$ and the vanishing taper at the tip. The distributed capacitive feedback thus
+collapses *exactly* to a tip-displacement functional — a convenient property of the linear
+taper, not an additional modelling assumption. Writing $c_0 = 1/C_0$, the circuit equation
+is *exactly bilinear*,
+
+$$
+R\,\dot{Q} + c_0\,Q\,\bigl(1-\alpha_c \langle w''\rangle\bigr) = V(t).
 \tag{2'}
 $$
 
 Equations (1)–(2′) define a coupled system that is second order in the structure and first
 order in the charge, with two nonlinear couplings of clear physical origin: the
 *electrostatic forcing* $\propto Q^2$ in (1), and the *capacitive feedback*
-$\propto Q\,\langle w'\rangle$ in (2′).
+$\propto Q\,\langle w''\rangle$ in (2′).
 
 ### 2.3 Operating point and voltage drive
 
@@ -93,15 +121,22 @@ R\dot q + \hat c\,q = v(t) + c_0 Q_0\, g^{\!\top}u + c_0\, q\, g^{\!\top}u,
 \tag{3}
 $$
 
-with $\beta = 2Q_0 b$ the linearised coupling vector, $b$ the actuation load pattern, $g$
-the discrete mean-slope functional and $\hat c = c_0(1-\alpha_c\,g^{\!\top}u_0$-corrected$)$
-the effective electrical stiffness at the bias point.
+with $\beta = 2Q_0 b$ the linearised coupling vector, $b$ the (fully populated) consistent
+load vector assembled from the tapered couple distribution (1a), $g$
+the discrete form of the weighted-curvature functional (2a) — by that identity, a
+tip-displacement functional, with the sensitivity $\alpha_c$ absorbed in $g$ — and
+$\hat c = c_0\bigl(1 - g^{\!\top}x_0\bigr)$ the effective electrical stiffness at the bias
+point, $x_0$ being the static displacement vector.
 
 Rather than integrating the mixed-order system (3), we eliminate the charge and obtain a
 **single third-order equation in the structural field**. Applying the operator
-$R\,\mathrm{d}/\mathrm{d}t + \hat c$ to the mechanical equation and using the circuit
-equation to remove $R\dot q + \hat c q$ gives the linear closure exactly; the residual
-charge factors inside nonlinear terms are removed through the *charge-proxy identity*
+$R\,\mathrm{d}/\mathrm{d}t + \hat c$ to the mechanical equation produces the charge
+contribution $\beta\,(R\dot q + \hat c\, q)$, which the circuit equation replaces exactly by
+$\beta\,(v + c_0 Q_0\, g^{\!\top}u + c_0\, q\, g^{\!\top}u)$ — the linear closure. The
+differentiation also generates the nonlinear term $2 R\, b\, q\dot q$; its $\dot q$ is
+likewise eliminated with the circuit equation, leaving all remaining terms polynomial in
+$(q, u, v)$ with no charge rate. The residual charge factors — which now appear only inside
+terms of degree two and higher — are then removed through the *charge-proxy identity*
 
 $$
 \sigma(u,\dot u,\ddot u) := \ell_0^{\!\top}u + \ell_1^{\!\top}\dot u + \ell_2^{\!\top}\ddot u
@@ -143,7 +178,8 @@ to the familiar second-order structural problem; at $\omega_1 \tau = \mathcal{O}
 regime studied here — the charging dynamics shifts and damps the structural spectrum and
 introduces a branch of $n$ relaxation eigenvalues clustered near $-\hat c/R$, interleaved
 with the $n$ underdamped bending pairs of the cubic eigenvalue problem
-$(\lambda^3 B_3 + \lambda^2 B_2 + \lambda B_1 + B_0)\phi = 0$.
+$(\lambda^3 B_3 + \lambda^2 B_2 + \lambda B_1 + B_0)\phi = 0$, solved in practice by
+companion linearisation to a $3n \times 3n$ generalised eigenvalue problem.
 
 ### 2.5 Classification of the nonlinear terms
 
@@ -171,8 +207,9 @@ $v(t) = v_a\cos\Omega t$. Following the direct parametrisation of invariant mani
 (DPIM) for non-autonomous systems, the drive is represented as an autonomous *external
 system*: a pair of complex variables $r = (r_1, r_2)$ obeying
 $\dot r_{1,2} = \pm\,\mathrm{i}\Omega\, r_{1,2}$, $r(0) = (1,1)$, so that
-$v = \tfrac{v_a}{2}(r_1 + r_2)$. The full-order problem is thus an $n$-dimensional
-autonomous third-order system driven by a two-dimensional linear external system — a
+$v = \tfrac{v_a}{2}(r_1 + r_2)$. The full-order problem is thus a system of $n$ coupled
+third-order scalar equations — phase-space dimension $3n$ in first-order form — driven by a
+two-dimensional linear external system, for a total phase space of dimension $3n+2$: a
 high-dimensional autonomous part with minimal non-autonomous content, the configuration for
 which DPIM-style reduction is most effective. The reduced model is constructed on the
 four-dimensional spectral submanifold associated with the fundamental bending pair
@@ -183,10 +220,15 @@ the reduced dynamics yields the forced response, its backbone, and the phase lag
 by the RC dynamics — quantities that the second-order truncation $R \to 0$ misrepresents
 precisely when $\omega_1\tau = \mathcal{O}(1)$.
 
-A remark on the alternative formulations is in order. Inflating (3) to first order
-triples the state dimension and obscures the structure of the slow manifold; keeping the
-mixed-order descriptor form is possible but forfeits the compact interpretation of (5).
-The third-order form, by contrast, preserves the mechanical mesh dimension $n$, exposes the
-jerk explicitly — relevant because elastomer fatigue correlates with jerk — and is exact to
-cubic order in the fluctuation amplitude, as verified numerically against direct
-integration of the coupled system (3).
+A remark on the alternative formulations is in order. The coupled system (3) can of course
+be integrated directly as a first-order system of dimension $2n+1$, and we use it in this
+capacity as the ground truth for validation. The third-order formulation is not adopted to
+economise on dimension — its companion phase space, $3n$, is in fact larger — but for
+structure: it is a single equation of uniform temporal order in the structural unknowns
+alone, posed on the unchanged mechanical mesh of dimension $n$, with the electrical
+dynamics absorbed into the coefficient matrices $B_0,\dots,B_3$; it exposes the jerk
+explicitly, which is relevant in its own right since elastomer fatigue correlates with
+jerk; and it furnishes a genuine, physically motivated benchmark for parametrisation
+methods formulated directly for ODE systems of order $\nu > 2$, avoiding ad hoc first-order
+inflation. The closure is exact to cubic order in the fluctuation amplitude, as verified
+numerically against direct integration of (3).

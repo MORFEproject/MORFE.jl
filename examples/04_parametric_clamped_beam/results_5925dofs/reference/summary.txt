@@ -1,0 +1,9 @@
+MORFE.jl — Parametric Clamped-Clamped Beam ROM
+FOM          = 5925
+ROM          = 2
+N_EXT        = 2
+N_theta      = 4
+max_degree   = 5
+master_eigenvalues = ComplexF64[-0.0005369754008568333 + 0.5373926703531786im, -0.0005369754008568333 - 0.5373926703531786im]
+eigenproblem_time_s    = 2.992114166
+cohomological_time_s   = 7158.507282625
