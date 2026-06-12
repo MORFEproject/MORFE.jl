@@ -40,19 +40,32 @@ add https://github.com/MORFEproject/MORFE.jl.git
 
 ## Quick Start
 
+For St. Venant-Kirchhoff structural models with the Ferrite backend, the
+`MORFEStructuralSVK` extension gives the shortest path from mesh to ROM:
+
 ```julia
-using MORFE
+using MORFE, Ferrite, FerriteGmsh, Arpack, LinearMaps
+SVK = Base.get_extension(MORFE, :MORFEStructuralSVK)
 
-# Define a second-order full-order model: M ẍ + C ẋ + K x = f(x, ẋ)
-model = NDOrderModel((K, C, M), nonlinear_terms)
+beam = SVK.mechanical_model("beam.msh";
+    material  = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
+    damping   = SVK.RayleighDamping(α = 5.4e-3, β = 1.9e-2),
+    dirichlet = "Dirichlet")              # clamped facetset name
 
-# Extract first-order matrices and compute eigenpairs
-A, B = linear_first_order_matrices(model)
-result = generalised_eigenpairs(A, B; nev = 4, sigma = 0.0)
+rom = SVK.parametrise(beam; master = [1], order = 7)   # autonomous (backbone)
 
-# Build the resonance set and solve the parametrisation
-# See examples/ for complete worked examples
+# Near-resonant harmonic forcing, shaped like mode 1 at mode 1's frequency:
+rom = SVK.parametrise(beam; master = [1], order = 7,
+    forcing = SVK.HarmonicForcing(mode = 1, amplitude = 0.02))
+
+SVK.print_equations(rom)                  # realified reduced dynamics
+SVK.save_rom(rom, "results")
 ```
+
+The low-level API (explicit `NDOrderModel`, eigensolvers, resonance sets,
+`solve_cohomological_problem`) remains fully available — see
+[`examples/01_clamped_beam_ferrite/low_level.jl`](examples/01_clamped_beam_ferrite/low_level.jl)
+for the same computation written out in full.
 
 For detailed examples, see the [`examples/`](examples/) directory.
 
