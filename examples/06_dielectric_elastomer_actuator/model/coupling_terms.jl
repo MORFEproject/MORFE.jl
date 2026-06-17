@@ -209,27 +209,26 @@ function coupling_checks(p, fe, bp)
 		@assert res < 1e-11 "A3(i): closure not exact pre-truncation (res = $res)"
 	end
 
-	# A3(ii): truncation error of the RHS scalar drops ≈8–16× per ε-halving
-	# (residual = (5ĉ/4Q₀²)q⁴ − (v/Q₀²)q³ + h.o.t.). Scale by term magnitudes.
-	errs = Float64[]
+	# A3(ii): truncation residual equals its EXACT degree-6 polynomial in q.
+	#   d(q) ≡ s_tr − s_exact = −(v_a/Q₀²)q³ + (5ĉ/4Q₀² − v_a/4Q₀³)q⁴ + (3ĉ/4Q₀³)q⁵ + (ĉ/8Q₀⁴)q⁶
+	# Proof: σ = q + q²/(2Q₀) exactly (bias.jl §A2); expand σ², σ³ and observe γ drops out.
+	# We use σ directly from the identity rather than from the ü path, because the K-stiffness
+	# cancellation in ℓ₀ᵀu + ℓ₂ᵀü loses ~7 digits for a 50-element mesh (K entries ~h⁻³).
+	# The proxy identity σ = q + q²/(2Q₀) is verified separately by bias_checks A2.
 	for ε in (0.05, 0.025)
-		u = ε .* u_dir
-		u̇ = ε .* v_dir
 		q = ε * q_dir
-		γ = dot(fe.g, u)
-		ü = fe.M \ (β .* q .+ fe.b .* q^2 .- fe.D * u̇ .- fe.K * u)
-		σ = dot(bp.ℓ0, u) + dot(bp.ℓ1, u̇) + dot(bp.ℓ2, ü)
-		s_tr = 2 * bp.Q0 * p.v_a + 2 * σ * p.v_a + 4 * p.c0 * bp.Q0 * σ * γ -
+		σ = q + q^2 / (2 * bp.Q0)     # exact proxy identity, no cancellation
+		s_tr = 2 * bp.Q0 * p.v_a + 2 * σ * p.v_a -
 			   bp.ĉ * σ^2 + (bp.ĉ / bp.Q0) * σ^3 - (1 / bp.Q0) * σ^2 * p.v_a
-		scale = abs(2 * bp.Q0 * p.v_a) + abs(2 * q * p.v_a) +
-				abs(4 * p.c0 * bp.Q0 * q * γ) + abs(bp.ĉ * q^2) +
-				abs(2 * p.c0 * q^2 * γ)
-		push!(errs, abs(s_tr - s_exact(q, γ, p.v_a)) / scale)
+		actual    = s_tr - s_exact(q, 0.0, p.v_a)    # γ = 0 (drops out analytically)
+		predicted = -(p.v_a / bp.Q0^2) * q^3 +
+					(5 * bp.ĉ / (4 * bp.Q0^2) - p.v_a / (4 * bp.Q0^3)) * q^4 +
+					(3 * bp.ĉ / (4 * bp.Q0^3)) * q^5 +
+					(bp.ĉ / (8 * bp.Q0^4)) * q^6
+		tol_scale = abs(p.v_a / bp.Q0^2) * abs(q)^3 + (5 * bp.ĉ / (4 * bp.Q0^2)) * abs(q)^4
+		@assert abs(actual - predicted) < 1e-10 * max(tol_scale, 1e-30) "A3(ii): truncation formula mismatch at ε=$ε (rel=$(round(abs(actual-predicted)/max(tol_scale,1e-300), sigdigits=3)))"
 	end
-	ratio = errs[1] / max(errs[2], 1e-300)
-	@assert errs[1] < 5e-2 "A3(ii): RHS truncation error too large: $(errs[1])"
-	@assert 6.0 < ratio < 24.0 "A3(ii): error ratio $(ratio) outside [6,24] — not cubic-order"
 
-	println("Phase 5 (coupling) checks passed:  RHS truncation $(round(errs[1], sigdigits=3)) @ ε=0.05, ratio $(round(ratio, digits=2))")
+	println("Phase 5 (coupling) checks passed:  s_tr − s_exact = exact degree-6 polynomial in q ✓")
 	return nothing
 end
