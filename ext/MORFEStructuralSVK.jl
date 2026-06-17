@@ -20,8 +20,10 @@ using LinearAlgebra, SparseArrays, Serialization, Printf
 using StaticArrays
 
 _svk(file) = joinpath(@__DIR__, "StructuralSVK", file)
+_femu(file) = joinpath(@__DIR__, "FEMUtility", file)
 include(_svk("types.jl"))
 include(_svk("rayleigh_solver.jl"))
+include(_femu("comsol_ferrite.jl"))
 include(_svk("mechanical_model.jl"))
 include(_svk("parametrise.jl"))
 include(_svk("postprocess.jl"))

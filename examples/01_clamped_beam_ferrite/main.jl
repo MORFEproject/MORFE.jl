@@ -20,11 +20,14 @@ SVK = Base.get_extension(MORFE, :MORFEStructuralSVK)
 
 beam = SVK.mechanical_model(
 	joinpath(@__DIR__, "..", "02_clamped_beam_gridap", "clamped_clamped_beam.msh");
-	material  = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
-	damping   = SVK.RayleighDamping(α = 0.5370828278264171 / 100.0,
-		β = 1.0 / (0.5370828278264171 * 100.0)),
+	material = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
+	damping = SVK.RayleighDamping(
+		α = 0.5370828278264171 / 100.0,
+		β = 1.0 / (0.5370828278264171 * 100.0),
+	),
 	dirichlet = "Dirichlet",
-	fe_order  = 2, quad_order = 3)
+	fe_order = 2, quad_order = 3,
+)
 
 rom = SVK.parametrise(beam; master = [1], order = 9)
 
@@ -33,7 +36,6 @@ rom = SVK.parametrise(beam; master = [1], order = 9)
 # rom = SVK.parametrise(beam; master = [1], order = 9,
 #     forcing = SVK.HarmonicForcing(mode = 1, amplitude = 0.03))
 
-println(rom)
 SVK.print_equations(rom)
 SVK.save_rom(rom, joinpath(@__DIR__, "results"))
 println("\nResults written to $(joinpath(@__DIR__, "results"))")
