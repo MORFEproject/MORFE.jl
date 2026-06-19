@@ -3,6 +3,7 @@ using Test
 using Random
 using LinearAlgebra
 using SparseArrays
+using Symbolics
 
 const GROUP = get(ENV, "GROUP", "all")
 
@@ -51,13 +52,20 @@ should_run(group) = GROUP == "all" || GROUP == group
             #
         end
     end
+    if should_run("extensions")
+        @testset "MORFESymbolicsExt" begin
+            include("Extensions/test_morfe_symbolics.jl")
+        end
+    end
 end
 
 if GROUP == "examples"
     @testset "Examples smoke tests" begin
         @testset "internals" begin
-            include(joinpath(@__DIR__, "..", "examples", "internals", "demo_polynomials.jl"))
-            include(joinpath(@__DIR__, "..", "examples", "internals", "demo_multiindices_factorisations.jl"))
+            include(joinpath(
+                @__DIR__, "..", "examples", "internals", "demo_polynomials.jl"))
+            include(joinpath(@__DIR__, "..", "examples", "internals",
+                "demo_multiindices_factorisations.jl"))
             @test true
         end
         # Examples 01–05 each manage their own Pkg environment (Pkg.activate + Pkg.instantiate
