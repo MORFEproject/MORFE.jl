@@ -100,7 +100,7 @@ E = 160e3
 ρ = 2.32e-3
 λ_lame = (E * ν) / ((1 + ν) * (1 - 2ν))
 μ_lame = E / (2(1 + ν))
-α = 0.5369754008568333 / 500.0      # mass-proportional damping
+α = 0.0      # mass-proportional damping
 β = 0.0                             # stiffness-proportional damping
 
 # ==================================================================
@@ -140,11 +140,12 @@ const N_EXT = 2                       # two real external states θ₁, θ₂
 const NVAR = ROM + N_EXT              # = 4
 const max_degree_z = 9                # order of the (z₁, z₂) expansion
 const max_degree_θ = 4                # order of the (θ₁, θ₂) expansion
+const max_degree_total = 9
 mset = MultiindexSet([
 	SVector{NVAR, Int}(a, b, c, d)
 	for a in 0:max_degree_z for b in 0:max_degree_z
 	for c in 0:max_degree_θ for d in 0:max_degree_θ
-	if a + b <= max_degree_z && c + d <= max_degree_θ && a + b + c + d >= 1
+	if a + b <= max_degree_z && c + d <= max_degree_θ && 1 <= a + b + c + d <= max_degree_total
 ])
 _max_uniq = length(mset)
 println(@sprintf("Anisotropic multiindex set: deg_z ≤ %d, deg_θ ≤ %d  →  %d monomials",
@@ -354,13 +355,13 @@ end
 #
 # At θ₂ = 0, the uniform-stretch scaling ω(θ₁) ∝ (1+θ₁)⁻² gives
 # ∂ω/∂θ₁|_{θ=0} = −2 ω₀ for bending modes.
-# The (0,0,1,0) monomial coefficient in R should reflect this.
+# The (1,0,1,0) monomial coefficient in R should reflect this.
 println("\nAnalytical scaling (bending mode, uniform axial stretch θ₁ at θ₂=0):")
 for i in 1:ROM
 	ωi_0 = abs(master_eigenvalues[i])
 	@printf "  mode %d : ω(0,0) = %.6f      ∂ω/∂θ₁ ≈ −2ω₀ = %.6f\n" i ωi_0 (-2*ωi_0)
 end
-println("  Check the (0,0,1,0) monomial diagonal entry in R above.")
+println("  Check the (1,0,1,0) monomial diagonal entry in R above.")
 
 # ==================================================================
 # Summary
@@ -419,7 +420,8 @@ open(joinpath(_results_dir, "summary.txt"), "w") do io
 	commit = try
 		readchomp(`git rev-parse --short HEAD`)
 	catch
-		; "unknown"
+		;
+		"unknown"
 	end
 	println(io, "morfe_commit: $commit")
 	println(io, "timestamp: $(time())")

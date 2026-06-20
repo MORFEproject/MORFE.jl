@@ -28,9 +28,11 @@ i.e. the peak oscillation amplitude over one period, with the static
 The maximum is attained at the beam midpoint — verified and printed.
 
 Outputs:
-  results/figures/backbone_shift_physical.png            — all cases, param (solid) vs exact (dashed)
-  results/figures/backbone_physical_t1=*_t2=*.png        — per-case overlay
+  results/data/backbone_curves.csv                       — per-case (model, amplitude, shift) long-format data
   results/data/backbone_physical_metrics.csv             — numerical metrics
+
+Figures are produced by a separate Python script:
+  validation/plot_backbone.py
 
 Run after main.jl has produced results/data/W.jls and R.jls.
 """
@@ -40,7 +42,7 @@ const _val_env = joinpath(@__DIR__, "validation_env")
 Pkg.activate(_val_env)
 if !haskey(Pkg.project().dependencies, "MORFE")
 	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "..", "..", "..")))
-	Pkg.add(["Ferrite", "FerriteGmsh", "LinearMaps", "Tensors", "StaticArrays", "Plots"])
+	Pkg.add(["Ferrite", "FerriteGmsh", "LinearMaps", "Tensors", "StaticArrays"])
 	Pkg.add(Pkg.PackageSpec(name = "Arpack", version = "0.5.3"))
 end
 Pkg.instantiate()
@@ -54,8 +56,6 @@ using MORFE.Polynomials: DensePolynomial, evaluate, extract_component, each_term
 using MORFE.Realification: realify
 using Serialization
 using Printf
-using Plots
-ENV["GKSwstype"] = "nul"
 
 include(joinpath(@__DIR__, "exact_geometry_assembly.jl"))
 include(joinpath(@__DIR__, "exact_nonlinear_maps.jl"))
@@ -63,12 +63,12 @@ include(joinpath(@__DIR__, "exact_nonlinear_maps.jl"))
 # ------------------------------------------------------------------
 # Constants  (match main.jl)
 # ------------------------------------------------------------------
-const _msh  = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27_10x2x2.msh")
+const _msh = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27_10x2x2.msh")
 const _data = joinpath(@__DIR__, "..", "results", "data")
 const _figs = joinpath(@__DIR__, "..", "results", "figures")
-const E_val  = 160e3
-const ν_val  = 0.22
-const ρ_val  = 2.32e-3
+const E_val = 160e3
+const ν_val = 0.22
+const ρ_val = 2.32e-3
 const λ_lame = (E_val * ν_val) / ((1 + ν_val) * (1 - 2ν_val))
 const μ_lame = E_val / (2(1 + ν_val))
 const α_damp = 0.5369754008568333 / 500.0
@@ -76,7 +76,7 @@ const β_damp = 0.0
 const J₁_def = Tensor{2, 3, Float64}((i, j) -> (i == 1 && j == 1) ? 1.0 : 0.0)
 const ROM_VAL = 2
 const MAX_DEG = 9   # z-expansion order of the exact reference — matches the
-					# anisotropic parametric ROM (deg_z ≤ 9, deg_θ ≤ 5) in main.jl
+# anisotropic parametric ROM (deg_z ≤ 9, deg_θ ≤ 4) in main.jl
 const CONJ_PARAM = [2, 1, 3, 4]
 const CONJ_EXACT = [2, 1]
 
@@ -169,13 +169,33 @@ end
 displacement_poly(W) = DensePolynomial(
 	Matrix(W.poly.coefficients[:, 1, :]), W.poly.multiindex_set)
 
-R1_param    = extract_component(realify(R_param.poly, CONJ_PARAM), 1)
+"""
+Keep only monomials where the sum of the first two variable exponents equals 1.
+Variables 1 and 2 are z₁ and z̄₁ (or z₁★ and z̄₁★ for the exact ROM).
+This retains the fundamental harmonic only, discarding DC (z₁z̄₁, etc.) and
+second/higher harmonics (z₁², z̄₁², …) that arise from quadratic coupling at
+large arch parameter θ₂. Both the parametric and exact amplitudes are then
+proportional to r (∝ r) so the backbone shapes are directly comparable.
+The fundamental-harmonic polynomial vanishes at z₁=0, so u_static = 0.
+"""
+function fundamental_harmonic(p::DensePolynomial{T, NVAR, 2}) where {T, NVAR}
+	dict = Dict{SVector{NVAR, Int}, Vector{T}}()
+	for (α, c) in each_term(p)
+		α[1] + α[2] == 1 || continue
+		dict[α] = collect(c)
+	end
+	return similar_poly(dict)
+end
+
+R1_param = extract_component(realify(R_param.poly, CONJ_PARAM), 1)
 dR1dx_param = poly_deriv(R1_param, 1)
 ω₀_param(θ₁, θ₂) = imag(evaluate(dR1dx_param, [0.0, 0.0, θ₁, θ₂]))
 Ω_param(r, θ₁, θ₂) = imag(evaluate(R1_param, [max(r, 1e-12), 0.0, θ₁, θ₂])) /
 					 max(r, 1e-12)
 
-const Wdisp_param = displacement_poly(W_param)
+const Wdisp_param      = displacement_poly(W_param)
+const Wdisp_param_fund = fundamental_harmonic(Wdisp_param)
+const n_free_param     = size(Wdisp_param.coefficients, 1)
 
 # ------------------------------------------------------------------
 # Physical amplitude via W
@@ -189,7 +209,7 @@ Evaluating the complex W at (z, z̄) is equivalent to evaluating the realified
 W at (x, y) = (r cos φ, r sin φ)  —  realify uses z = x + i y.
 """
 function physical_amplitude(Wdisp::DensePolynomial{T, NVAR, 2}, r::Float64,
-		θ_extra, u_static::Vector{Float64}) where {T, NVAR}
+	θ_extra, u_static::Vector{Float64}) where {T, NVAR}
 	a = 0.0
 	i_max = 1
 	for φ in range(0.0, 2π; length = N_PHASE + 1)[1:(end-1)]
@@ -249,7 +269,7 @@ function exact_rom(θ₁_star, θ₂_star)
 	master_eigs★  = SVector{ROM_VAL, ComplexF64}(eigs★[1:ROM_VAL])
 	master_modes★ = Y★[:, 1, 1:ROM_VAL]
 	left_modes★   = X★[:, 1:ROM_VAL]
-	derivs★ = zeros(ComplexF64, n_free, 1, ROM_VAL)
+	derivs★       = zeros(ComplexF64, n_free, 1, ROM_VAL)
 	for r in 1:ROM_VAL
 		derivs★[:, 1, r] .= Y★[:, 2, r]
 	end
@@ -270,7 +290,6 @@ end
 # ------------------------------------------------------------------
 const r_range = range(1e-6, R_MAX, N_R)
 mkpath(_data)
-mkpath(_figs)
 
 curves = NamedTuple[]    # one entry per case
 for (θ₁_star, θ₂_star) in cases
@@ -278,22 +297,22 @@ for (θ₁_star, θ₂_star) in cases
 
 	# ── Exact side ────────────────────────────────────────────────────
 	W★, R★ = exact_rom(θ₁_star, θ₂_star)
-	R1★    = extract_component(realify(R★.poly, CONJ_EXACT), 1)
-	dR1dx★ = poly_deriv(R1★, 1)
-	ω₀_ex  = imag(evaluate(dR1dx★, [0.0, 0.0]))
-	Ω_ex   = [imag(evaluate(R1★, [max(r, 1e-12), 0.0])) / max(r, 1e-12)
-			  for r in r_range]
-	Wdisp★   = displacement_poly(W★)
-	n_free★  = size(Wdisp★.coefficients, 1)
-	a_ex, i_ex = amplitude_curve(Wdisp★, r_range, (), zeros(n_free★))
+	R1★      = extract_component(realify(R★.poly, CONJ_EXACT), 1)
+	dR1dx★   = poly_deriv(R1★, 1)
+	ω₀_ex   = imag(evaluate(dR1dx★, [0.0, 0.0]))
+	Ω_ex      = [imag(evaluate(R1★, [max(r, 1e-12), 0.0])) / max(r, 1e-12)
+	for r in r_range]
+	Wdisp★      = displacement_poly(W★)
+	n_free★     = size(Wdisp★.coefficients, 1)
+	Wdisp★_fund = fundamental_harmonic(Wdisp★)
+	# Fundamental harmonic vanishes at z=0, so u_static = 0 for both models.
+	a_ex, i_ex = amplitude_curve(Wdisp★_fund, r_range, (), zeros(n_free★))
 
 	# ── Parametric side ───────────────────────────────────────────────
 	ω₀_p = ω₀_param(θ₁_star, θ₂_star)
-	Ω_p  = [Ω_param(r, θ₁_star, θ₂_star) for r in r_range]
-	u_static = real.(evaluate(Wdisp_param,
-		ComplexF64[0.0, 0.0, θ₁_star, θ₂_star]))
-	a_p, i_p = amplitude_curve(Wdisp_param, r_range,
-		(θ₁_star, θ₂_star), u_static)
+	Ω_p = [Ω_param(r, θ₁_star, θ₂_star) for r in r_range]
+	a_p, i_p = amplitude_curve(Wdisp_param_fund, r_range,
+		(θ₁_star, θ₂_star), zeros(n_free_param))
 
 	# Report where the maximum displacement occurs (expect beam midpoint)
 	for (tag, i_dof) in (("exact", i_ex), ("param", i_p))
@@ -305,14 +324,14 @@ for (θ₁_star, θ₂_star) in cases
 	# Prefix truncation (not a mask): keeps the curve contiguous and the
 	# amplitude axis sorted even if the degree-5 polynomial misbehaves
 	# at large r.
-	prefix_below(a, cap) = 1:(something(findfirst(>(cap), a), length(a) + 1) - 1)
+	prefix_below(a, cap) = 1:(something(findfirst(>(cap), a), length(a)+1)-1)
 	m_ex = prefix_below(a_ex, A_MAX)
-	m_p  = prefix_below(a_p, A_MAX)
+	m_p = prefix_below(a_p, A_MAX)
 
 	# ── Metrics: compare shift at matched physical amplitude ──────────
 	a_common = range(0.0, min(maximum(a_ex[m_ex]), maximum(a_p[m_p])), 100)
-	Δ = [lerp(a_ex[m_ex], (Ω_ex.-ω₀_ex)[m_ex], a) -
-		 lerp(a_p[m_p], (Ω_p.-ω₀_p)[m_p], a) for a in a_common]
+	Δ = [lerp(a_ex[m_ex], (Ω_ex .- ω₀_ex)[m_ex], a) -
+		 lerp(a_p[m_p], (Ω_p .- ω₀_p)[m_p], a) for a in a_common]
 	Δ = filter(!isnan, Δ)
 	rms_shift = sqrt(mean(Δ .^ 2))
 	max_shift = maximum(abs.(Δ))
@@ -323,42 +342,8 @@ for (θ₁_star, θ₂_star) in cases
 	push!(curves, (; θ₁ = θ₁_star, θ₂ = θ₂_star,
 		ω₀_ex, ω₀_p, Δω₀_rel, rms_shift, max_shift,
 		shift_ex = (Ω_ex .- ω₀_ex)[m_ex], a_ex = a_ex[m_ex],
-		shift_p = (Ω_p .- ω₀_p)[m_p],     a_p = a_p[m_p]))
-
-	# ── Per-case overlay figure ───────────────────────────────────────
-	plt = plot(curves[end].shift_ex, curves[end].a_ex;
-		lw = 2.0, color = :black,
-		label = @sprintf("exact  (θ₁=%.2f, θ₂=%.2f)", θ₁_star, θ₂_star),
-		xlabel = "Nonlinear frequency shift  Ω − ω₀  (rad/ms)",
-		ylabel = "Max physical displacement  (via W)",
-		title = @sprintf("Backbone in physical amplitude  (θ₁=%.2f, θ₂=%.2f)",
-			θ₁_star, θ₂_star),
-		size = (800, 600), dpi = 150)
-	plot!(plt, curves[end].shift_p, curves[end].a_p;
-		lw = 2.0, ls = :dash, color = :red, label = "parametric ROM")
-	figname = @sprintf("backbone_physical_t1=%.3f_t2=%.3f.png", θ₁_star, θ₂_star)
-	savefig(plt, joinpath(_figs, figname))
-	println("  Saved → $(joinpath(_figs, figname))")
+		shift_p = (Ω_p .- ω₀_p)[m_p], a_p = a_p[m_p]))
 end
-
-# ------------------------------------------------------------------
-# Combined figure  (parametric solid, exact dashed, colour per case)
-# ------------------------------------------------------------------
-clrs = palette(:tab10)
-plt_all = plot(;
-	xlabel = "Nonlinear frequency shift  Ω − ω₀(θ₁,θ₂)  (rad/ms)",
-	ylabel = "Max physical displacement  (via W)",
-	title = "Backbone shift in physical amplitude — parametric (solid) vs exact (dashed)",
-	legend = :outerright, size = (1000, 640), dpi = 150)
-for (k, c) in enumerate(curves)
-	plot!(plt_all, c.shift_p, c.a_p;
-		lw = 2.0, color = clrs[k],
-		label = @sprintf("(θ₁,θ₂)=(%.1f,%.1f)", c.θ₁, c.θ₂))
-	plot!(plt_all, c.shift_ex, c.a_ex;
-		lw = 1.4, ls = :dash, color = clrs[k], label = nothing)
-end
-savefig(plt_all, joinpath(_figs, "backbone_shift_physical.png"))
-println("\nSaved → $(joinpath(_figs, "backbone_shift_physical.png"))")
 
 # ------------------------------------------------------------------
 # Metrics CSV
@@ -371,3 +356,19 @@ open(joinpath(_data, "backbone_physical_metrics.csv"), "w") do io
 	end
 end
 println("Saved → $(joinpath(_data, "backbone_physical_metrics.csv"))")
+
+# ------------------------------------------------------------------
+# Backbone curves CSV  (long format: one row per data point)
+# ------------------------------------------------------------------
+open(joinpath(_data, "backbone_curves.csv"), "w") do io
+	println(io, "theta1,theta2,model,amplitude,shift")
+	for c in curves
+		for (a, s) in zip(c.a_ex, c.shift_ex)
+			@printf io "%.6f,%.6f,exact,%.10f,%.10f\n" c.θ₁ c.θ₂ a s
+		end
+		for (a, s) in zip(c.a_p, c.shift_p)
+			@printf io "%.6f,%.6f,param,%.10f,%.10f\n" c.θ₁ c.θ₂ a s
+		end
+	end
+end
+println("Saved → $(joinpath(_data, "backbone_curves.csv"))")

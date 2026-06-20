@@ -54,12 +54,12 @@ include(joinpath(@__DIR__, "exact_geometry_assembly.jl"))
 # ------------------------------------------------------------------
 # Constants  (match main.jl)
 # ------------------------------------------------------------------
-const _msh  = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27_10x2x2.msh")
+const _msh = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite", "beam_h27_10x2x2.msh")
 const _data = joinpath(@__DIR__, "..", "results", "data")
 const _figs = joinpath(@__DIR__, "..", "results", "figures")
-const E_val  = 160e3
-const ν_val  = 0.22
-const ρ_val  = 2.32e-3
+const E_val = 160e3
+const ν_val = 0.22
+const ρ_val = 2.32e-3
 const λ_lame = (E_val * ν_val) / ((1 + ν_val) * (1 - 2ν_val))
 const μ_lame = E_val / (2(1 + ν_val))
 const α_damp = 0.5369754008568333 / 500.0
@@ -70,8 +70,8 @@ const CONJ_PARAM = [2, 1, 3, 4]
 # ------------------------------------------------------------------
 # Grid
 # ------------------------------------------------------------------
-const N_θ₁ = 26
-const N_θ₂ = 26
+const N_θ₁ = 100
+const N_θ₂ = 100
 const θ₁_grid = range(-0.167, 0.25, N_θ₁)
 const θ₂_grid = range(0.0, 6.0, N_θ₂)
 
@@ -113,7 +113,7 @@ function poly_deriv(p::DensePolynomial{T, NVAR, 1}, var_idx::Int) where {T, NVAR
 	return similar_poly(dict)
 end
 
-R1_param    = extract_component(realify(R_param.poly, CONJ_PARAM), 1)
+R1_param = extract_component(realify(R_param.poly, CONJ_PARAM), 1)
 dR1dx_param = poly_deriv(R1_param, 1)
 ω₀_param(θ₁, θ₂) = imag(evaluate(dR1dx_param, [0.0, 0.0, θ₁, θ₂]))
 
@@ -154,7 +154,7 @@ for cell in CellIterator(dh_ref)
 	end
 end
 
-coords  = [n.x for n in grid_ref.nodes]
+coords = [n.x for n in grid_ref.nodes]
 lo = Vec{3}((minimum(c[1] for c in coords), minimum(c[2] for c in coords),
 	minimum(c[3] for c in coords)))
 hi = Vec{3}((maximum(c[1] for c in coords), maximum(c[2] for c in coords),
@@ -164,9 +164,9 @@ mid_node = argmin([norm(c - centre) for c in coords])
 
 # Arch-mode displacement vector at the midpoint node (Dirichlet dofs → 0)
 arch_at(dof) = haskey(free_to_local_ref, dof) ? arch_mode_free[free_to_local_ref[dof]] : 0.0
-u_mid   = collect(arch_at.(node_dofs[mid_node]))
-v_comp  = argmax(abs.(u_mid))           # dominant (transverse/bending) component
-v_mid   = abs(u_mid[v_comp])
+u_mid = collect(arch_at.(node_dofs[mid_node]))
+v_comp = argmax(abs.(u_mid))           # dominant (transverse/bending) component
+v_mid = abs(u_mid[v_comp])
 @printf "Midpoint node %d at %s — arch-mode displacement %s\n" mid_node string(coords[mid_node]) string(round.(u_mid, digits = 4))
 @printf "Dominant transverse component: %d, |φ̂₁,⊥(x_mid)| = %.6f\n" v_comp v_mid
 w_mid_grid = collect(θ₂_grid) .* v_mid   # y-axis values
@@ -190,9 +190,9 @@ function ω_exact(θ₁, θ₂; nev = 6)
 	vals, vecs = eigs(ex.K, ex.M; nev = nev, which = :LM, sigma = 0.0, check = 1)
 	macs = [abs2(dot(φ_ref, @view vecs[:, j])) /
 			(abs2(norm(@view vecs[:, j]))) for j in 1:nev]
-	j★  = argmax(macs)
-	ω²  = real(vals[j★])
-	ω   = sqrt(abs(ω²))
+	j★ = argmax(macs)
+	ω² = real(vals[j★])
+	ω = sqrt(abs(ω²))
 	ω_d = sqrt(max(ω^2 - (α_damp / 2)^2, 0.0))   # damped frequency (β = 0)
 	return ω_d, macs[j★]
 end
@@ -201,8 +201,8 @@ end
 # Sweep the grid
 # ------------------------------------------------------------------
 rel_err = zeros(N_θ₂, N_θ₁)     # rows ↔ θ₂ (y), cols ↔ θ₁ (x)
-ω_ex_g  = zeros(N_θ₂, N_θ₁)
-ω_p_g   = zeros(N_θ₂, N_θ₁)
+ω_ex_g = zeros(N_θ₂, N_θ₁)
+ω_p_g = zeros(N_θ₂, N_θ₁)
 
 mkpath(_data)
 mkpath(_figs)
@@ -212,8 +212,8 @@ for (i, θ₂) in enumerate(θ₂_grid), (j, θ₁) in enumerate(θ₁_grid)
 	ω_ex, mac = ω_exact(θ₁, θ₂)
 	ω_p = ω₀_param(θ₁, θ₂)
 	rel_err[i, j] = abs(ω_ex - ω_p) / abs(ω_ex)
-	ω_ex_g[i, j]  = ω_ex
-	ω_p_g[i, j]   = ω_p
+	ω_ex_g[i, j] = ω_ex
+	ω_p_g[i, j] = ω_p
 	done = (i - 1) * N_θ₁ + j
 	@printf "[%3d/%3d] θ₁=%+.4f θ₂=%.3f  ω_ex=%.6f ω_p=%.6f  relerr=%.3e  MAC=%.3f  (%.0fs)\n" done (N_θ₁ * N_θ₂) θ₁ θ₂ ω_ex ω_p rel_err[i, j] mac (time() - t0)
 end
