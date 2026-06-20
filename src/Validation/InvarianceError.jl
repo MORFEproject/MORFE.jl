@@ -41,13 +41,13 @@ function _jvp_last_block!(
 	v::AbstractVector,
 	pw_buf::AbstractMatrix,       # (NVAR, max_exp+1), pre-allocated
 ) where {T, NVAR}
-	coeffs   = W_poly.coefficients   # (FOM, ORD, L)
-	exps     = W_poly.multiindex_set.exponents
+	coeffs = W_poly.coefficients   # (FOM, ORD, L)
+	exps = W_poly.multiindex_set.exponents
 	max_exps = W_poly.max_exponents  # SVector{NVAR,Int}
-	L        = length(exps)
-	FOM      = size(coeffs, 1)
-	ORD      = size(coeffs, 2)
-	Tv       = eltype(pw_buf)
+	L = length(exps)
+	FOM = size(coeffs, 1)
+	ORD = size(coeffs, 2)
+	Tv = eltype(pw_buf)
 
 	# Fill power table: pw_buf[j, e+1] = z[j]^e
 	@inbounds for j in 1:NVAR
@@ -98,12 +98,12 @@ function _invariance_error_at!(
 	z::AbstractVector,
 	r_external = nothing,
 ) where {ORD, ORDP1, N_NL, N_EXT}
-	T     = eltype(E)
+	T = eltype(E)
 	one_T = one(T)
 
 	# evaluate still allocates; in-place variants would require Polynomials changes
 	X_vals = evaluate(W.poly, z)    # (FOM, ORD)
-	rz     = evaluate(R.poly, z)    # NVAR vector
+	rz = evaluate(R.poly, z)    # NVAR vector
 
 	# x^{(ORD)} = J_{W[:,ORD,:]}(z) · R(z)
 	fill!(E, zero(T))
@@ -176,17 +176,17 @@ function _log_log_regression(radii, errors; min_points::Int = 5)
 	n_total = length(radii)
 	n_total < min_points && return (NaN, NaN)
 
-	perm  = sortperm(radii)
+	perm = sortperm(radii)
 	log_r = log.(radii[perm])
 	log_e = log.(errors[perm])
 
-	n    = Float64(n_total)
-	Σx  = sum(log_r)
-	Σy  = sum(log_e)
+	n = Float64(n_total)
+	Σx = sum(log_r)
+	Σy = sum(log_e)
 	Σxy = dot(log_r, log_e)
 	Σxx = dot(log_r, log_r)
 
-	d      = n * Σxx - Σx^2
+	d = n * Σxx - Σx^2
 	best_s = iszero(d) ? NaN : (n * Σxy - Σx * Σy) / d
 	best_b = isnan(best_s) ? NaN : (Σy - best_s * Σx) / n
 
@@ -214,10 +214,10 @@ end
 
 """
 	invariance_error_norms(model, W, R;
-						   n_samples  = 1000,
-						   amplitude  = 1.0,
+						   n_samples = 1000,
+						   amplitude = 1.0,
 						   r_external = nothing,
-						   rng        = Random.default_rng())
+						   rng = Random.default_rng())
 	→ NamedTuple{(:max, :mean, :rms, :pointwise)}
 
 Evaluate the invariance-equation residual ‖E(z)‖₂ over a Gaussian point cloud
@@ -236,18 +236,18 @@ function invariance_error_norms(
 	r_external = nothing,
 	rng::AbstractRNG = Random.default_rng(),
 ) where {ORD, ORDP1, N_NL, NVAR}
-	FOM     = model.n_fom
-	ROM     = Base.size(R)
-	Tc      = ComplexF64
-	σ      = Float64(amplitude) / sqrt(2.0)
+	FOM = model.n_fom
+	ROM = Base.size(R)
+	Tc = ComplexF64
+	σ = Float64(amplitude) / sqrt(2.0)
 	max_deg = maximum(t.deg for t in model.nonlinear_terms; init = 0)
 	max_exp = maximum(W.poly.max_exponents)
 
-	E       = zeros(Tc, FOM)
-	buf_nl  = zeros(Tc, FOM)
+	E = zeros(Tc, FOM)
+	buf_nl = zeros(Tc, FOM)
 	buf_fom = zeros(Tc, FOM)
-	pw_buf  = zeros(Tc, NVAR, max_exp + 1)
-	z       = zeros(Tc, NVAR)
+	pw_buf = zeros(Tc, NVAR, max_exp + 1)
+	z = zeros(Tc, NVAR)
 
 	pointwise = Vector{Float64}(undef, n_samples)
 
@@ -261,9 +261,9 @@ function invariance_error_norms(
 	end
 
 	return (
-		max       = maximum(pointwise),
-		mean      = sum(pointwise) / n_samples,
-		rms       = sqrt(sum(x^2 for x in pointwise) / n_samples),
+		max = maximum(pointwise),
+		mean = sum(pointwise) / n_samples,
+		rms = sqrt(sum(x^2 for x in pointwise) / n_samples),
 		pointwise = pointwise,
 	)
 end
@@ -274,9 +274,9 @@ end
 
 """
 	invariance_error_convergence(model, W, R;
-								 n_samples    = 1000,
+								 n_samples = 1000,
 								 r_magnitudes = [0.0],
-								 rng          = Random.default_rng())
+								 rng = Random.default_rng())
 	→ Vector of NamedTuples, one per entry in `r_magnitudes`
 
 For each forcing magnitude `|r|` in `r_magnitudes`, draw `n_samples` points with
@@ -316,19 +316,19 @@ function _convergence_one_level(
 	r_mag::Float64,
 	rng::AbstractRNG,
 ) where {ORD, ORDP1, N_NL, N_EXT, NVAR}
-	FOM       = model.n_fom
-	ROM       = Base.size(R)
-	Tc        = ComplexF64
+	FOM = model.n_fom
+	ROM = Base.size(R)
+	Tc = ComplexF64
 	max_order = sum(W.poly.multiindex_set.exponents[end])
-	max_deg   = maximum(t.deg for t in model.nonlinear_terms; init = 0)
-	max_exp   = maximum(W.poly.max_exponents)
+	max_deg = maximum(t.deg for t in model.nonlinear_terms; init = 0)
+	max_exp = maximum(W.poly.max_exponents)
 
 	# Pre-allocate all working buffers once
-	E       = zeros(Tc, FOM)
-	buf_nl  = zeros(Tc, FOM)
+	E = zeros(Tc, FOM)
+	buf_nl = zeros(Tc, FOM)
 	buf_fom = zeros(Tc, FOM)
-	δx     = zeros(Tc, FOM)
-	pw_buf  = zeros(Tc, NVAR, max_exp + 1)
+	δx = zeros(Tc, FOM)
+	pw_buf = zeros(Tc, NVAR, max_exp + 1)
 
 	# Store samples as a (NVAR × n_samples) matrix for contiguous memory layout
 	z_samples = Matrix{Tc}(undef, NVAR, n_samples)
@@ -358,14 +358,14 @@ function _convergence_one_level(
 	lu_Lbar = lu(L_bar)
 
 	# Phase 2: force residual and state error for each sample
-	radii        = Vector{Float64}(undef, n_samples)
+	radii = Vector{Float64}(undef, n_samples)
 	radii_master = Vector{Float64}(undef, n_samples)
 	force_errors = Vector{Float64}(undef, n_samples)
 	state_errors = Vector{Float64}(undef, n_samples)
 
 	for s in 1:n_samples
-		z_k             = view(z_samples, :, s)
-		radii[s]        = norm(z_k)
+		z_k = view(z_samples, :, s)
+		radii[s] = norm(z_k)
 		radii_master[s] = norm(view(z_k, 1:ROM))
 		_invariance_error_at!(E, buf_nl, buf_fom, pw_buf, model, max_deg, W, R, z_k)
 		force_errors[s] = norm(E)
@@ -376,13 +376,13 @@ function _convergence_one_level(
 	convergence_rate, _ = _log_log_regression(radii_master, force_errors)
 
 	return (
-		radii            = radii,
-		radii_master     = radii_master,
-		force_errors     = force_errors,
-		state_errors     = state_errors,
-		s_bar            = s_bar,
-		max_order        = max_order,
-		r_magnitude      = r_mag,
+		radii = radii,
+		radii_master = radii_master,
+		force_errors = force_errors,
+		state_errors = state_errors,
+		s_bar = s_bar,
+		max_order = max_order,
+		r_magnitude = r_mag,
 		convergence_rate = convergence_rate,
 	)
 end

@@ -19,9 +19,9 @@ Validation against the coupled (u, q) ground truth: validation/compare_rom_fom.j
 
 using Pkg: Pkg
 Pkg.activate(@__DIR__)
-if !haskey(Pkg.project().dependencies, "MORFE")
+if !isfile(joinpath(@__DIR__, "Manifest.toml")) || !haskey(Pkg.project().dependencies, "MORFE")
 	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-	Pkg.add(["StaticArrays", "Printf"])
+	Pkg.add(["StaticArrays", "Printf", "Plots"])
 end
 Pkg.instantiate()
 
