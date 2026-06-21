@@ -38,7 +38,7 @@ if !isfile(joinpath(@__DIR__, "..", "Manifest.toml"))
 end
 Pkg.instantiate()
 
-using MORFE, Ferrite, FerriteGmsh, Arpack, LinearMaps, Printf
+using MORFE, Ferrite, FerriteGmsh, Arpack, LinearMaps, Printf, LinearAlgebra
 
 SVK = Base.get_extension(MORFE, :MORFEStructuralSVK)
 SVK === nothing && error(
@@ -54,17 +54,19 @@ const _MESH = joinpath(@__DIR__, "..", "..", "..", "benchmark", "ferrite",
 	"beam_h27_10x2x2.msh")
 isfile(_MESH) || error("Mesh not found at $_MESH.  Run generate_beam_mesh.jl first.")
 
-const L = 1000.0      # beam span (mm)
-const ORDER = 9       # DPIM expansion order (same as main.jl's max_degree_z)
+include(joinpath(@__DIR__, "..", "config.jl"))   # h0_L_ratio, N_INCREMENTS
 
-# Arch height ratios to compute references for.
-# Include 0.0 (straight beam) and the value used in main.jl (0.10) plus
-# several bracketing values so validation spans θ ∈ [−1, +1].
-const H_RATIOS = [0.00, 0.05, 0.10, 0.15, 0.20]
+const L       = 1000.0   # beam span (mm)
+const ORDER   = 9        # DPIM expansion order (same as main.jl's max_degree_z)
+const N_EIG   = 6        # eigenmodes computed for mode-selection projection
+
+# Reference arch heights: symmetric from 0 to 2·h0_L_ratio in N_INCREMENTS steps.
+# θ = h_ratio / h0_L_ratio − 1  maps each point to [−1, +1].
+const H_RATIOS = collect(range(0.0, 2*h0_L_ratio; length = N_INCREMENTS + 1))
 
 material = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3)
 damping = SVK.RayleighDamping(
-	α = 0.5369754008568333 / 500.0,
+	α = 0.0,
 	β = 0.0,
 )
 
@@ -106,6 +108,39 @@ println("Loading flat beam mesh …")
 flat_grid = togrid(_MESH)
 println("  Cells : ", getncells(flat_grid), "   Nodes : ", getnnodes(flat_grid))
 
+# -----------------------------------------------------------------------
+# Pre-compute the first bending mode shape at the BASE configuration (θ=0).
+# Used as the reference for mass-weighted mode selection at all other arch heights.
+# -----------------------------------------------------------------------
+
+println("\nPre-computing base mode shape (h₀/L = $h0_L_ratio) …")
+φ_base = let
+	agrid_base = make_arch_grid(flat_grid, h0_L_ratio * L, L)
+	bm = SVK.mechanical_model(
+		agrid_base;
+		material  = material,
+		damping   = damping,
+		dirichlet = "Dirichlet",
+		fe_order  = 2,
+		quad_order = 3,
+	)
+	solver = StructureModalDampingEigensolver(1, 0.0, 0.0)
+	eig    = solve_eigenproblem(bm.K, bm.M, solver; sorter! = (args...) -> nothing)
+	_, Y, _ = get_eigenpairs(eig)
+	real(Y[:, 1, 1])   # displacement part of the first mode (real for undamped)
+end
+println("  φ_base extracted  (||φ_base|| = $(norm(φ_base)))")
+
+# Helper: select master mode index by maximising |φ_base^T M φₖ|
+function select_master(K, M, φ_base, n_eig)
+	solver  = StructureModalDampingEigensolver(n_eig, 0.0, 0.0)
+	eig     = solve_eigenproblem(K, M, solver; sorter! = (args...) -> nothing)
+	_, Y, _ = get_eigenpairs(eig)
+	projs   = [abs(dot(φ_base, M * real(Y[:, 1, k]))) for k in 1:n_eig]
+	idx     = argmax(projs)
+	return idx, projs
+end
+
 for h_ratio in H_RATIOS
 	h = h_ratio * L
 	tag = @sprintf("arch_h_%.3f", h_ratio)
@@ -122,24 +157,28 @@ for h_ratio in H_RATIOS
 	println("  Assembling mechanical model (SVK, order 2) …")
 	beam_model = SVK.mechanical_model(
 		agrid;
-		material = material,
-		damping = damping,
+		material  = material,
+		damping   = damping,
 		dirichlet = "Dirichlet",
-		fe_order = 2,
+		fe_order  = 2,
 		quad_order = 3,
 	)
 
-	println("  Running DPIM  (master = [1], order = $ORDER) …")
-	t_rom = @elapsed rom = SVK.parametrise(beam_model; master = [1], order = ORDER)
+	# Mode selection: maximise mass-weighted projection onto base first-bending mode
+	master_idx, projs = select_master(beam_model.K, beam_model.M, φ_base, N_EIG)
+	@printf "  Mode selection (N_EIG=%d): projections = [%s]\n" N_EIG join([@sprintf("%.4f", p) for p in projs], ", ")
+	@printf "    → master = %d  (φ_base^T M φ = %.4f)\n" master_idx projs[master_idx]
+
+	println("  Running DPIM  (master = [$master_idx], order = $ORDER) …")
+	t_rom = @elapsed rom = SVK.parametrise(beam_model; master = [master_idx], order = ORDER)
 
 	println(@sprintf "  Done in %.2f s." t_rom)
 
 	SVK.save_rom(rom, dir)
 	println("  Saved to $dir/")
 
-	# Print first eigenvalue for quick sanity
 	eigs = rom.eigenvalues
-	ω₀ = abs(eigs[1])
+	ω₀   = abs(eigs[1])
 	@printf "  ω₀ = %.6f rad/ms   (f₀ = %.4f kHz)\n" ω₀ (ω₀ / (2π) * 1e-3)
 end
 

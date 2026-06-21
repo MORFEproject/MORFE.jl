@@ -1,0 +1,12 @@
+model: SVK + Ferrite (MORFEStructuralSVK)
+n_dofs: 1425
+master_pairs: [1]
+master_eigenvalues: ComplexF64[0.0 + 0.5671782300013685im, -0.0 - 0.5671782300013685im]
+parametrisation_order: 9
+n_monomials: 54
+forcing: none
+eigenproblem_time_s: 0.248460708
+cohomological_solve_time_s: 1.963335
+julia_version: 1.12.6
+morfe_commit: d7a4c42
+timestamp: 1.782043918435544e9

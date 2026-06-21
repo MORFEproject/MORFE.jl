@@ -68,12 +68,13 @@ include(joinpath(@__DIR__, "fem", "arch_geometry.jl"))
 include(joinpath(@__DIR__, "fem", "arch_assembly.jl"))
 
 # =======================================================================
-# §0  User parameters
+# §0  Configuration  (edit config.jl — not here)
 # =======================================================================
 
-const h₀_L_ratio = 0.10           # arch rise / span  (change to explore different arches)
-const N_θ = 4                      # polynomial truncation order in θ
-const max_degree_z = 9             # DPIM expansion order in normal coordinates (z₁, z₂)
+include(joinpath(@__DIR__, "config.jl"))   # h0_L_ratio, N_INCREMENTS
+const h₀_L_ratio = h0_L_ratio             # unicode alias used throughout
+const N_θ = 7                      # polynomial truncation order in θ
+const max_degree_z = 11            # DPIM expansion order in normal coordinates (z₁, z₂)
 const max_degree_θ = N_θ           # truncation in the parameter θ (anisotropic)
 const max_degree_total = max_degree_z  # cap on total degree
 
@@ -226,11 +227,10 @@ cube_maps = multilinear_maps(pgn_cube)
 
 println("Building K/C/M corrections …")
 K_corrections = build_arch_K_corrections(K_arr, N_θ)
-C_corrections = build_arch_C_corrections(K_arr, M_arr, α, β, N_θ)
+# C_corrections = build_arch_C_corrections(K_arr, M_arr, α, β, N_θ)
 M_corrections = build_arch_M_corrections(M_arr, N_θ)
-println("  K: ", length(K_corrections),
-	"  C: ", length(C_corrections),
-	"  M: ", length(M_corrections))
+println("  K: ", length(K_corrections), "  M: ", length(M_corrections))
+#"  C: ", length(C_corrections))
 
 # =======================================================================
 # §8  Augmented system and multiindex set
@@ -242,11 +242,11 @@ ZERO = spzeros(eltype(K), n_free, n_free)
 
 model = NDOrderModel(
 	(K, C, M, ZERO),
-	(quad_maps...,
+	(
+		quad_maps...,
 		cube_maps...,
 		K_corrections...,
-		C_corrections...,
-		M_corrections...),
+	), # M_corrections..., # C_corrections...),
 	ext_sys,
 )
 
