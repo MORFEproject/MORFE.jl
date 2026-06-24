@@ -7,7 +7,7 @@ A external system is given in the form:
 where `r ∈ ℝ^{N_EXT}` (or ℂ^{N_EXT}),
 """
 
-function seperate_into_monomials(exprs::Vector{Num}, var::Vector{Num})
+function seperate_into_monomials(exprs::Vector{<:MyNum}, var::Vector{Num})
     N = length(exprs)
     # Extract monomials and calculate degree
     monomials = Vector{Any}(undef, N)
@@ -31,9 +31,9 @@ defines a mapping `F_by_multiindex` that maps from the multiindices to the group
 function group_monomials(
         monomials::Vector, deg_monomials::Vector{Vector{Int}}, N::Int)
     multiindices = sort(unique(vcat(deg_monomials...)))
-    F_by_multiindex = Dict{Int, Vector{Num}}()
+    F_by_multiindex = Dict{Int, Vector{MyNum}}()
     for mi in multiindices
-        Fmi = fill(Num(0), N)
+        Fmi = Vector{MyNum}(fill(Num(0), N))
         for i in 1:N
             for (m, md) in zip(monomials[i], deg_monomials[i])
                 if md == mi
@@ -52,16 +52,19 @@ end
 Returns the coefficient of a monomial by evaluating every variable in `var` with 1.
 Attention: There is no check wether `exprs` is a monomial or not!
 """
-function get_coefficients(exprs::Vector{Num}, var::Vector{Num})
-    e = substitute(exprs, Dict(v => 1 for v in var))
-    return Symbolics.value.(e)
+function get_coefficients(exprs::Vector{<:MyNum}, var::Vector{Num})
+    dict_to_1 = Dict(v => 1 for v in var)
+    e = [Symbolics.substitute(expr, dict_to_1) for expr in exprs]
+    return ComplexF64.(Symbolics.value.(e))
 end
 
 """
+    generate_polynomial(dict, var, N)
 
+Generates a MORFE.DensePolynomial from a dictionary calculated from group_monomials.
 """
 function generate_polynomial(
-        dict::Dict{NTuple{ORD, Int}, Vector{Num}}, var::Vector{Num}, N::Int) where {ORD}
+        dict::Dict{NTuple{ORD, Int}, Vector{MyNum}}, var::Vector{Num}, N::Int) where {ORD}
     @assert ORD == N
     n = length(keys(dict))
     # Multiindices 
@@ -74,7 +77,7 @@ function generate_polynomial(
     mset = MultiindexSet(multiindices) # get sorted lexicographically
     coefficients = Array{ComplexF64}(undef, N, n)
     index = 1
-    for mi in multiindices
+    for mi in mset.exponents
         coefficients[:, index] = get_coefficients(dict[Tuple(mi)], var)
         index += 1
     end
@@ -82,14 +85,14 @@ function generate_polynomial(
 end
 
 """
-    symbolics_to_Externalsystem(exprs, var)
+    externalsystem_from_symbolics(exprs, var)
     
-Generates an MORFE.EcternalSystem. Expects the ODE describing the external system in the form
+Generates an MORFE.ExternalSystem. Expects the ODE describing the external system in the form
 
     dr/dt var = exprs
 
 """
-function symbolics_to_Externalsystem(exprs::Vector{Num}, var::Vector{Num})
+function MORFE.externalsystem_from_symbolics(exprs::Vector{<:MyNum}, var::Vector{Num})
     N, monomials,
     _, multideg_monomials = extract_nonlinear_monomials(
         exprs, tuple(([x] for x in var)...))
