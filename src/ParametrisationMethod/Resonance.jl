@@ -13,8 +13,7 @@ Three eigenvalue groups are distinguished:
   They enter `s` through the multiindex coefficients but do **not** produce a target
   row.  Pass them so that `s` is computed over the full `NVAR = ROM + N_EXT` index.
 
-- **`outer_eigenvalues`** (optional): additional resonance targets (e.g. forcing
-  frequencies tested for near-resonance).  They define the rows of `outer_resonances`
+- **`outer_eigenvalues`** (optional): additional resonance targets (eigenvalues not included in `master_eigenvalues`, tested for near-resonance).  They define the rows of `outer_resonances`
   but do **not** enter `s`.
 
 ## Choosing a resonance style
@@ -453,7 +452,7 @@ proximity `|λⱼ - s| < tol`.
 
 - `master_eigenvalues`: ROM eigenvalues; enter `s` and are inner targets.
 - `external_eigenvalues`: enter `s` only (e.g. forcing frequencies in the multiindex, since external_eigenvalues cant be targets).
-- `outer_eigenvalues`: outer targets (e.g. forcing eigenvalues tested for near-resonance).
+- `outer_eigenvalues`: outer targets (eigenvalues not included in `master_eigenvalues`, tested for near-resonance).
   Pass `ComplexF64[]` when there are no outer targets.
 """
 function resonance_set_from_graph_style(

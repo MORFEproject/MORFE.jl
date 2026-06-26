@@ -19,6 +19,7 @@ include("FEMUtility.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
 include("Export/ParaviewExport.jl")
+include("ConvenienceMethods.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -40,6 +41,7 @@ using .FEMUtility
 using .BifurcationKitInterface
 using .InvarianceError
 using .ParaviewExport
+using .ConvenienceMethods
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
@@ -113,5 +115,8 @@ export write_paraview_mesh, write_paraview_modes, write_paraview_manifold,
 function model_from_symbolics end
 function externalsystem_from_symbolics end
 export model_from_symbolics, externalsystem_from_symbolics
+
+# ConvenienceMethods
+export parametrize
 
 end # module
