@@ -1,3 +1,29 @@
+function _is_zero(m)
+    isequal(m, Num(0))
+end
+function _is_zero(m::Complex{Num})
+    isequal(m, Complex{Num}(0))
+end
+
+"""
+    _to_MyNum
+
+Helpers that define the correct build of MyNum for numbers.
+"""
+_to_MyNum(c::Real) = Num(c)
+_to_MyNum(c::Complex) = Num(real(c)) + Num(imag(c)) * im
+_to_MyNum(m::Num) = m
+_to_MyNum(m::Complex{Num}) = m
+_to_MyNum(m) = Num(m)
+
+"""
+    _numeric_eltype
+
+Helper for the extraction of coefficients.
+"""
+_numeric_eltype(::Type{Num}) = Float64
+_numeric_eltype(::Type{Complex{Num}}) = ComplexF64
+
 """
     extract_linear_matrices
 
@@ -8,16 +34,30 @@ Returns tuple of matrices with B[i] is matric w.r.t. groups[i] so the ith deriva
     
 """
 function extract_linear_matrices(
-        exprs::Vector{Num}, groups::NTuple{ORDP1, Vector{Num}}, ext_var::Vector{Num} = Num[]) where {ORDP1}
+        exprs::Vector{NT}, groups::NTuple{ORDP1, Vector{Num}}, ext_var::Vector{Num} = Num[]) where {
+        NT, ORDP1}
     n = length(groups[1])
     all_syms = vcat(groups..., ext_var)
+    zero_sub = Dict(s => Num(0) for s in all_syms)
 
     B = ntuple(ORDP1) do k
-        J = Symbolics.jacobian(exprs, groups[k])          # n x n, may still contain symbols
-        J0 = Symbolics.substitute.(J, (Dict(s => 0 for s in all_syms),))
-        Float64.(Symbolics.value.(J0)) * (-1)
+        # compute Jacobian on real and imaginary parts separately
+        re_exprs = real.(complex.(exprs))
+        im_exprs = imag.(complex.(exprs))
+
+        J_re = Symbolics.jacobian(re_exprs, groups[k])
+        J_im = Symbolics.jacobian(im_exprs, groups[k])
+
+        # recombine into complex Jacobian
+        J = J_re .+ im .* J_im
+
+        # substitute all vars to zero to extract the constant (linear) coefficient
+        J0 = substitute.(J, (zero_sub,))
+
+        T = _numeric_eltype(NT)
+        T.(Symbolics.value.(J0)) * (-1)
     end
-    return B   # B[1]=B0, B[2]=B1, ..., B[ORDP1]=B_ORD
+    return B
 end
 
 """
@@ -27,9 +67,9 @@ returns the nonlinear part of the equation as the same size as `exprs`.
 Also checks that the nonlinear part is not allowed to depend on the highest derivative variables.
 """
 function nonlinear_remainder(
-        exprs::Vector{Num}, groups::NTuple{ORDP1, Vector{Num}}, B) where {ORDP1}
+        exprs::Vector{NT}, groups::NTuple{ORDP1, Vector{Num}}, B) where {NT, ORDP1}
     n = length(exprs)
-    nl = Vector{Num}(undef, n)
+    nl = Vector{NT}(undef, n)
     for i in 1:n
         lin = sum(B[k][i, j] * groups[k][j] for k in 1:ORDP1, j in 1:n)
         nl[i] = Symbolics.expand(exprs[i] + lin)
@@ -53,14 +93,28 @@ end
 
 Seperates nonlinear part in to the seperate mononmials. Works on a single not vector expression!
 """
-function seperate_into_monomials(expr)
+function seperate_into_monomials(expr::Num)
     e = Symbolics.value(expand(expr))
-
     if Symbolics.iscall(e) && Symbolics.operation(e) == (+)
         collect(Symbolics.arguments(e))
     else
         [e]
     end
+end
+function seperate_into_monomials(expr::Complex{Num})
+    # split into real and imaginary parts — both are plain Num
+    re_monomials = seperate_into_monomials(real(expr))
+    im_monomials = seperate_into_monomials(imag(expr))
+
+    # recombine: real monomials stay as Num, imaginary ones become Complex{Num}
+    result = Complex{Num}[]
+    for m in re_monomials
+        iszero(Symbolics.expand(Num(m))) || push!(result, Num(m))
+    end
+    for m in im_monomials
+        iszero(Symbolics.expand(Num(m))) || push!(result, im * Num(m))
+    end
+    return result
 end
 
 """
@@ -70,13 +124,11 @@ Computes the degree of a monomial. Works on a single not vector expression!
 """
 function degree_of_monomial(term)
     e = Symbolics.value(term)
-
     if Symbolics.iscall(e) && Symbolics.operation(e) == (*)
         factors = Symbolics.arguments(e)
     else
         factors = (e,)
     end
-
     deg = 0
     for f in factors
         if Symbolics.value(f) isa Number
@@ -88,8 +140,13 @@ function degree_of_monomial(term)
             deg += 1
         end
     end
-
     return deg
+end
+
+function degree_of_monomial(term::Complex{Num})
+    re_deg = iszero(real(term)) ? 0 : degree_of_monomial(real(term))
+    im_deg = iszero(imag(term)) ? 0 : degree_of_monomial(imag(term))
+    return max(re_deg, im_deg)
 end
 
 """
@@ -123,6 +180,16 @@ function multidegree_of_monomial(term, groups::NTuple{NG, Vector{Num}}) where {N
 
     return Tuple(multideg)
 end
+function multidegree_of_monomial(term::Complex{Num}, groups::NTuple{
+        NG, Vector{Num}}) where {NG}
+    # real and imaginary parts have the same variable structure, just different coefficients
+    # pick whichever part is non-zero to analyze
+    if !iszero(real(term))
+        return multidegree_of_monomial(real(term), groups)
+    else
+        return multidegree_of_monomial(imag(term), groups)
+    end
+end
 
 """
     _findgroup(sym, groups)
@@ -147,7 +214,7 @@ Seperates the nonlinear remander into monomials and saves them in the Vector `mo
 and generates additional a Vector `multideg_monomials` that contains the multiindex_degree calculated by `multidegree_monomials`. 
 """
 function extract_nonlinear_monomials(
-        exprs::Vector{Num}, groups::NTuple{ORDP1, Vector{Num}}, linear_terms) where {ORDP1}
+        exprs::Vector{<:MyNum}, groups::NTuple{ORDP1, Vector{Num}}, linear_terms) where {ORDP1}
 
     # Extract nonlinear linear_terms
     F = nonlinear_remainder(exprs, groups, linear_terms)
@@ -190,7 +257,7 @@ i.e. one entry per state-derivative group (excl. highest) plus one entry for
 the external group.
 """
 function extract_nonlinear_monomials(
-        exprs::Vector{Num},
+        exprs::Vector{<:MyNum},
         F_groups_ext::NTuple{NG_EXT, Vector{Num}},
         linear_terms,
         groups::NTuple{ORDP1, Vector{Num}}) where {NG_EXT, ORDP1}
@@ -217,7 +284,7 @@ function extract_nonlinear_monomials(
 end
 
 function extract_nonlinear_monomials(
-        exprs::Vector{Num}, groups::NTuple{ORDP1, Vector{Num}}) where {ORDP1}
+        exprs::Vector{NT}, groups::NTuple{ORDP1, Vector{Num}}) where {NT, ORDP1}
     N = length(exprs)
     # Extract monomials and calculate degree
     F_groups = groups[1:(end)]
@@ -244,19 +311,42 @@ defines a mapping `F_by_multiindex` that maps from the multiindices to the group
 function group_monomials(
         monomials::Vector, multideg_monomials::Vector{Vector{NTuple{ORD, Int}}}, N::Int) where {ORD}
     multiindices = sort(unique(vcat(multideg_monomials...)))
-    F_by_multiindex = Dict{NTuple{ORD, Int}, Vector{Num}}()
+    F_by_multiindex = Dict{NTuple{ORD, Int}, Vector{MyNum}}()
     for mi in multiindices
-        Fmi = fill(Num(0), N)
+        Fmi = Vector{MyNum}(fill(Num(0), N))
         for i in 1:N
             for (m, md) in zip(monomials[i], multideg_monomials[i])
                 if md == mi
-                    Fmi[i] += m
+                    Fmi[i] += _to_MyNum(m)
                 end
             end
         end
         F_by_multiindex[mi] = Fmi
     end
     return F_by_multiindex
+end
+
+"""
+    _get_taylor_expansion_around_0(expr, all_vars, d)
+
+Helper function to determine wether a expression `expr` is a monome. Used in `is_polynomial`.
+Uses the function Symbolics.taylor to calulate a Taylor expansion around zero.
+"""
+function _get_taylor_expansion_around_0(expr::Num, all_vars::Vector{Num}, d::Int)
+    @variables ε
+    scaling = Dict(v => ε * v for v in all_vars)
+    # substitute vars → ε * var to make ε the grading variable
+    expr_scaled = Symbolics.substitute(expr, scaling)
+    # Taylor expand in ε around 0 up to degree d
+    taylor_approx = Symbolics.taylor(expr_scaled, ε, 0:d)
+    # substitute ε → 1 to recover the polynomial approximation
+    taylor_at_1 = _to_MyNum(Symbolics.substitute(taylor_approx, Dict(ε => 1)))
+end
+
+function _get_taylor_expansion_around_0(expr::Complex{Num}, all_vars::Vector{Num}, d::Int)
+    taylor_real = _get_taylor_expansion_around_0(real(expr), all_vars, d)
+    taylor_imag = _get_taylor_expansion_around_0(imag(expr), all_vars, d)
+    return taylor_real .+ im .* taylor_imag
 end
 
 """
@@ -270,9 +360,7 @@ polynomial of degree ≤ d, the Taylor expansion is exact and the difference
 to the original is zero. If any transcendental or rational term is present,
 the Taylor expansion differs from the original.
 """
-function is_polynomial(exprs::Vector{Num}, all_vars::Vector{Num})
-    @variables ε
-
+function is_polynomial(exprs::Vector{NT}, all_vars::Vector{Num}) where {NT}
     # find maximum degree across all expressions
     d = 0
     for expr in exprs
@@ -281,21 +369,11 @@ function is_polynomial(exprs::Vector{Num}, all_vars::Vector{Num})
         end
     end
 
-    scaling = Dict(v => ε * v for v in all_vars)
-
     for expr in exprs
-        # substitute vars → ε * var to make ε the grading variable
-        expr_scaled = Symbolics.substitute(expr, scaling)
-
-        # Taylor expand in ε around 0 up to degree d
-        taylor_approx = Symbolics.taylor(expr_scaled, ε, 0:d)
-
-        # substitute ε → 1 to recover the polynomial approximation
-        taylor_at_1 = Symbolics.substitute(taylor_approx, Dict(ε => Num(1)))
-
-        # if polynomial, original and Taylor must agree exactly
+        taylor_at_1 = _get_taylor_expansion_around_0(expr, all_vars, d)
+        # polynomial, original and Taylor must agree exactly
         diff = Symbolics.expand(expr - taylor_at_1)
-        if !isequal(diff, Num(0))
+        if !_is_zero(diff)
             return false
         end
     end
@@ -308,12 +386,12 @@ end
 Returns a list of indices where `exprs[i]` has a nonzero constant term.
 Empty vector means all expressions vanish at the origin.
 """
-function check_constant_terms(exprs::Vector{Num}, all_vars::Vector{Num})
-    zero_sub = Dict(v => Num(0) for v in all_vars)
+function check_constant_terms(exprs::Vector{NT}, all_vars::Vector{Num}) where {NT}
+    zero_sub = Dict(v => 0 for v in all_vars)
     offending = Int[]
     for (i, expr) in enumerate(exprs)
         val = Symbolics.substitute(expr, zero_sub)
-        if !isequal(Symbolics.expand(val), Num(0))
+        if !iszero(Symbolics.expand(val))
             push!(offending, i)
         end
     end
@@ -337,14 +415,26 @@ function check_all_vars_used(exprs::Vector{Num}, all_vars::Vector{Num})
     return [v for v in all_vars if !any(isequal(v, w) for w in vars_in_exprs)]
 end
 
+function check_all_vars_used(exprs::Vector{Complex{Num}}, all_vars::Vector{Num})
+    vars_in_exprs = Set{Num}()
+    for expr in exprs
+        for part in [real(expr), imag(expr)]
+            for v in Symbolics.get_variables(Num(part))
+                push!(vars_in_exprs, Num(v))
+            end
+        end
+    end
+    return [v for v in all_vars if !any(isequal(v, w) for w in vars_in_exprs)]
+end
+
 """
     check_expr(exprs, all_vars)
 
 Make some checks wether `exprs` is correctly defined.
 """
-function check_expr(exprs::Vector{Num}, all_vars::Vector{Num})
+function check_expr(exprs::Vector{NT}, all_vars::Vector{Num}) where {NT}
     # checks wether exprs is polynomial
-    @assert is_polynomial(exprs, all_vars)==true "`eprs` must be of polynomial form!"
+    @assert is_polynomial(exprs, all_vars)==true "`exprs` must be of polynomial form!"
     # checks if there are constant terms
     offending = check_constant_terms(exprs, all_vars)
     @assert isempty(offending) "exprs has nonzero constant terms in rows $offending — the equilibrium must be at the origin"

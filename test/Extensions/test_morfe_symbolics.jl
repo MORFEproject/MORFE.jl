@@ -1,3 +1,5 @@
+using StaticArrays: SVector
+
 ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
 @testset "extraction" begin
     @testset "degree_of_monomial" begin
@@ -20,6 +22,17 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         @test ext.MORFESymbolicsExt.degree_of_monomial(x^2 * y) == 3
     end
 
+    @testset "complex — degree_of_monomial" begin
+        @variables x y
+
+        # complex coefficient, same degree as real
+        @test ext.MORFESymbolicsExt.degree_of_monomial(im * x) == 1
+        @test ext.MORFESymbolicsExt.degree_of_monomial((1 + 2im) * x) == 1
+        @test ext.MORFESymbolicsExt.degree_of_monomial(im * x^2) == 2
+        @test ext.MORFESymbolicsExt.degree_of_monomial((3 + 4im) * x * y) == 2
+        @test ext.MORFESymbolicsExt.degree_of_monomial(im * x^3) == 3
+    end
+
     @testset "multidegree_of_monomial" begin
         @variables z1 z2 dz1 dz2
         groups = ([z1, z2], [dz1, dz2])
@@ -37,6 +50,19 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
 
         # coefficients do not affect degree
         @test ext.MORFESymbolicsExt.multidegree_of_monomial(5 * z2^2, groups) == (2, 0)
+    end
+
+    @testset "complex — multidegree_of_monomial" begin
+        @variables z1 z2 dz1 dz2
+        groups = ([z1, z2], [dz1, dz2])
+
+        # complex coefficient does not affect multidegree
+        @test ext.MORFESymbolicsExt.multidegree_of_monomial(im * z1^2, groups) == (2, 0)
+        @test ext.MORFESymbolicsExt.multidegree_of_monomial((1 + 2im) * z1 * z2, groups) ==
+              (2, 0)
+        @test ext.MORFESymbolicsExt.multidegree_of_monomial(im * dz1, groups) == (0, 1)
+        @test ext.MORFESymbolicsExt.multidegree_of_monomial((3im) * z1 * dz1, groups) ==
+              (1, 1)
     end
 
     @testset "_findgroup — error on unknown symbol" begin
@@ -61,6 +87,26 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         # sum of three monomials
         result = ext.MORFESymbolicsExt.seperate_into_monomials(x^2 + x * y + 3 * y^2)
         @test length(result) == 3
+    end
+
+    @testset "complex — seperate_into_monomials" begin
+        @variables x y
+
+        # purely imaginary coefficient
+        result = ext.MORFESymbolicsExt.seperate_into_monomials(im * x)
+        @test length(result) == 1
+
+        # mixed real + imaginary coefficients on same variable
+        result = ext.MORFESymbolicsExt.seperate_into_monomials((1 + 2im) * x * y)
+        @test length(result) == 2   # one real monomial, one imaginary monomial
+
+        # sum: real term + complex term
+        result = ext.MORFESymbolicsExt.seperate_into_monomials(x^2 + im * x * y)
+        @test length(result) == 2
+
+        # purely real expression returns same as before
+        result = ext.MORFESymbolicsExt.seperate_into_monomials(x^2 + x * y)
+        @test length(result) == 2
     end
 
     @testset "extract_linear_matrices — 2-DOF linear system" begin
@@ -91,6 +137,22 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         @test B[2] ≈ reshape([1.0], 1, 1)
     end
 
+    @testset "complex — extract_linear_matrices" begin
+        @variables z1 z2 dz1 dz2
+
+        # complex linear system: B z where B has complex entries
+        groups = ([z1, z2], [dz1, dz2])
+        exprs = [
+            -dz1 + (1 + 2im) * z1,
+            -dz2 + (3 - im) * z2
+        ]
+
+        B = ext.MORFESymbolicsExt.extract_linear_matrices(exprs, groups)
+
+        @test B[1] ≈ [-(1 + 2im) 0; 0 -(3 - im)]
+        @test B[2] ≈ [1.0 0.0; 0.0 1.0]
+    end
+
     @testset "extract_nonlinear_monomials — quadratic remainder" begin
         @variables z1 z2 dz1 dz2
         groups = ([z1, z2], [dz1, dz2])
@@ -115,6 +177,22 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         @test multideg_monomials[1][1] == (2,)
         @test multideg_monomials[2][1] == (2,)
     end
+    @testset "complex — extract_nonlinear_monomials" begin
+        @variables z1 dz1
+
+        groups = ([z1], [dz1])
+        exprs = [-dz1 - z1 + im * z1^2]
+
+        linear_terms = ext.MORFESymbolicsExt.extract_linear_matrices(exprs, groups)
+        N, monomials,
+        deg_monomials,
+        multideg_monomials = ext.MORFESymbolicsExt.extract_nonlinear_monomials(exprs, groups, linear_terms)
+
+        @test N == 1
+        @test length(monomials[1]) == 1   # one nonlinear monomial: im*z1^2
+        @test deg_monomials[1][1] == 2
+        @test multideg_monomials[1][1] == (2,)
+    end
 
     @testset "group_monomials — collects by multiindex" begin
         @variables z1 z2 dz1 dz2
@@ -135,6 +213,25 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         # The grouped vector should be length N
         @test length(F_by_multiindex[(2,)]) == N
         @test isequal(F_by_multiindex[(2,)], [z1^2 + z1 * z2, z1^2])
+    end
+    @testset "complex — group_monomials" begin
+        @variables z1 z2 dz1 dz2
+        groups = ([z1, z2], [dz1, dz2])
+
+        exprs = [
+            -dz1 - z1 + im * z1^2,
+            -dz2 - z2 + (1 + im) * z1 * z2
+        ]
+
+        linear_terms = ext.MORFESymbolicsExt.extract_linear_matrices(exprs, groups)
+        N, monomials,
+        deg_monomials,
+        multideg_monomials = ext.MORFESymbolicsExt.extract_nonlinear_monomials(exprs, groups, linear_terms)
+
+        F_by_multiindex = ext.MORFESymbolicsExt.group_monomials(monomials, multideg_monomials, N)
+
+        @test haskey(F_by_multiindex, (2,))
+        @test length(F_by_multiindex[(2,)]) == N
     end
 end #@testset "extraction"
 
@@ -202,6 +299,34 @@ end #@testset "extraction"
             @test length(vec) == N
         end
     end
+    @testset "complex — polarize_monomial" begin
+        @variables z1 z2
+        groups = ([z1, z2],)
+        mi = (2,)
+
+        # complex coefficient is preserved in polarization
+        pol_im, slotvars = ext.MORFESymbolicsExt.polarize_monomial(im * z1^2, groups, mi)
+        pol_re, _ = ext.MORFESymbolicsExt.polarize_monomial(z1^2, groups, mi)
+
+        # substituting all slot vars to 1: im*z1_1*z1_2 → im,  z1_1*z1_2 → 1
+        sub = Dict(v => Num(1)
+        for g in slotvars
+        for sv in g for v in sv)
+
+        val_im = Symbolics.substitute(pol_im isa Complex{Num} ? real(pol_im) : pol_im, sub)
+        val_re = Symbolics.substitute(pol_re isa Complex{Num} ? real(pol_re) : pol_re, sub)
+
+        # real part of im*z1^2 polarized should be 0, imaginary should be 1
+        if pol_im isa Complex{Num}
+            re_val = ComplexF64(Symbolics.value(Symbolics.substitute(real(pol_im), sub)))
+            im_val = ComplexF64(Symbolics.value(Symbolics.substitute(imag(pol_im), sub)))
+            @test re_val ≈ 0.0
+            @test im_val ≈ 1.0
+        end
+
+        @test length(slotvars) == 1
+        @test length(slotvars[1]) == 2
+    end
 end #@testset "polarization"
 
 @testset "toMultilinearMaps" begin
@@ -217,7 +342,7 @@ end #@testset "polarization"
         @variables z1 dz1
         groups = ([z1], [dz1])
         exprs = [-dz1 - z1 + z1^2]
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         @test length(model.nonlinear_terms) == 1
         term = model.nonlinear_terms[1]
@@ -250,7 +375,7 @@ end #@testset "polarization"
         groups = ([z1, z2], [dz1, dz2])
         exprs = [-dz1 - z1,
             -dz2 - z2 + z1 * z2]
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         @test length(model.nonlinear_terms) == 1
         term = model.nonlinear_terms[1]
@@ -274,7 +399,7 @@ end #@testset "polarization"
         groups = ([z1, z2], [dz1, dz2])
         exprs = [-dz1 - z1 + z1^2 + z1 * z2,
             -dz2 - z2 + z1^2 + z1 * z2]
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         # One multiindex (2,) → one term
         @test length(model.nonlinear_terms) == 1
@@ -293,7 +418,7 @@ end #@testset "polarization"
         @variables z1 dz1 ddz1
         groups = ([z1], [dz1], [ddz1])
         exprs = [-ddz1 - dz1 - z1 + z1^2 + dz1^2]
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         @test length(model.nonlinear_terms) == 2
 
@@ -323,7 +448,7 @@ end #@testset "polarization"
         @variables z1 dz1
         groups = ([z1], [dz1])
         exprs = [-dz1 - z1 - z1^3]
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         @test length(model.nonlinear_terms) == 1
         term = model.nonlinear_terms[1]
@@ -342,7 +467,7 @@ end #@testset "polarization"
         @variables z1 dz1
         groups = ([z1], [dz1])
         exprs = [-dz1 - z1 + z1^2]
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
         term = model.nonlinear_terms[1]
 
         x = [3.0]
@@ -358,7 +483,7 @@ end #@testset "polarization"
         exprs = [-dz1 - z1 + 5 * r1]
         ext_exprs = [-r1]
 
-        model = symbolics_to_NDOrdermodel(exprs, groups, ext_var, ext_exprs)
+        model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
 
         @test length(model.nonlinear_terms) == 1
         term = model.nonlinear_terms[1]
@@ -383,7 +508,7 @@ end #@testset "polarization"
         exprs = [-dz1 - z1 + z1 * r1]
         ext_exprs = [-r1]
 
-        model = symbolics_to_NDOrdermodel(exprs, groups, ext_var, ext_exprs)
+        model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
 
         term = only(model.nonlinear_terms)
         @test sum(term.multiindex) == 1
@@ -401,7 +526,7 @@ end #@testset "polarization"
     end
 end #@testset "toMultilinearMaps"
 
-@testset "symbolics_to_NDOrdermodel (no external)" begin
+@testset "model_from_symbolics (no external)" begin
     # @testset "purely linear system returns zero nonlinear terms" begin
     #     @variables z1 z2 dz1 dz2
     #     groups = ([z1, z2], [dz1, dz2])
@@ -409,7 +534,7 @@ end #@testset "toMultilinearMaps"
     #     exprs = [-dz1 - z1,
     #         -dz2 - z2]
 
-    #     model = symbolics_to_NDOrdermodel(exprs, groups)
+    #     model = model_from_symbolics(exprs, groups)
 
     #     # Linear matrices: B[1] and B[2] should be identity
     #     @test model.linear_terms[1] ≈ [1.0 0.0; 0.0 1.0]
@@ -432,7 +557,7 @@ end #@testset "toMultilinearMaps"
         # -ẍ - x - x³ = 0  i.e.  ẍ + x + x³ = 0
         exprs = [-dx - x - x^3]
 
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         # Linear: B[1] = [1], B[2] = [1]
         @test model.linear_terms[1] ≈ reshape([1.0], 1, 1)
@@ -453,7 +578,7 @@ end #@testset "toMultilinearMaps"
             -1 * dz2 - 3.5 * z2 + z1^2 - 5 * z1 * z2 + 21 // 4 * z2^2
         ]
 
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         # B[2] should be identity (coefficient of dẑ)
         @test model.linear_terms[2] ≈ [1.0 0.0; 0.0 1.0]
@@ -474,7 +599,7 @@ end #@testset "toMultilinearMaps"
             -dz1 - z1 - 2 * z1^2 + z1 * z2,
             -dz2 - z2 + z1^2
         ]
-        model_flat = symbolics_to_NDOrdermodel(exprs_flat, groups_flat)
+        model_flat = model_from_symbolics(exprs_flat, groups_flat)
 
         # Array syntax
         @variables z[1:2] dz[1:2]
@@ -483,7 +608,7 @@ end #@testset "toMultilinearMaps"
             -dz[1] - z[1] - 2 * z[1]^2 + z[1] * z[2],
             -dz[2] - z[2] + z[1]^2
         ]
-        model_arr = symbolics_to_NDOrdermodel(exprs_arr, groups_arr)
+        model_arr = model_from_symbolics(exprs_arr, groups_arr)
 
         # Both should produce the same linear matrices
         @test model_flat.linear_terms[1] ≈ model_arr.linear_terms[1]
@@ -500,7 +625,7 @@ end #@testset "toMultilinearMaps"
         # -x''' - x'' - x' - x - x^2 = 0
         exprs = [-ddx - dx - x - x^2]
 
-        model = symbolics_to_NDOrdermodel(exprs, groups)
+        model = model_from_symbolics(exprs, groups)
 
         @test model.linear_terms[1] ≈ reshape([1.0], 1, 1)
         @test model.linear_terms[2] ≈ reshape([1.0], 1, 1)
@@ -512,7 +637,7 @@ end #@testset "toMultilinearMaps"
     @testset "assert: groups of unequal length throws" begin
         @variables z1 z2 z3 dz1 dz2
         # groups[2] has one fewer variable than groups[1]
-        @test_throws AssertionError symbolics_to_NDOrdermodel(
+        @test_throws AssertionError model_from_symbolics(
             [-dz1 - z1, -dz2 - z2],
             ([z1, z2, z3], [dz1, dz2])
         )
@@ -520,14 +645,66 @@ end #@testset "toMultilinearMaps"
 
     @testset "assert: only one group throws (ORDP1 must be > 1)" begin
         @variables z1 dz1
-        @test_throws AssertionError symbolics_to_NDOrdermodel(
+        @test_throws AssertionError model_from_symbolics(
             [-z1],
             ([z1],)
         )
     end
-end #@testset "symbolics_to_NDOrdermodel (no external)"
 
-@testset "symbolics_to_NDOrdermodel (with external)" begin
+    @testset "complex — model_from_symbolics (no external)" begin
+        @testset "scalar system with purely imaginary nonlinearity" begin
+            @variables z1 dz1
+            groups = ([z1], [dz1])
+
+            # -ż - z + im*z^2 = 0
+            exprs = [-dz1 - z1 + im * z1^2]
+
+            model = model_from_symbolics(exprs, groups)
+
+            # linear matrices: B[1] = [1] (real), B[2] = [1]
+            @test model.linear_terms[1] ≈ reshape([1.0], 1, 1)
+            @test model.linear_terms[2] ≈ reshape([1.0], 1, 1)
+
+            # one nonlinear term of degree 2
+            @test length(model.nonlinear_terms) == 1
+            @test model.nonlinear_terms[1].deg == 2
+        end
+
+        @testset "complex linear coefficient" begin
+            @variables z1 dz1
+            groups = ([z1], [dz1])
+
+            # -ż + (1+2im)*z + z^2 = 0
+            exprs = [-dz1 + (1 + 2im) * z1 + z1^2]
+
+            model = model_from_symbolics(exprs, groups)
+
+            # linear matrix should be complex
+            @test model.linear_terms[1] ≈ reshape([-(1 + 2im)], 1, 1)
+            @test model.linear_terms[2] ≈ reshape([1.0], 1, 1)
+            @test length(model.nonlinear_terms) == 1
+        end
+
+        @testset "2-DOF system with complex coefficients" begin
+            @variables z1 z2 dz1 dz2
+            groups = ([z1, z2], [dz1, dz2])
+
+            exprs = [
+                -dz1 - (1 + im) * z1 + 2im * z1^2,
+                -dz2 - (2 - im) * z2 + z1 * z2
+            ]
+
+            model = model_from_symbolics(exprs, groups)
+
+            @test model.linear_terms[2] ≈ [1.0 0.0; 0.0 1.0]
+            @test model.linear_terms[1][1, 1] ≈ (1 + im)
+            @test model.linear_terms[1][2, 2] ≈ (2 - im)
+            @test length(model.nonlinear_terms) == 1
+        end
+    end
+end #@testset "model_from_symbolics (no external)"
+
+@testset "model_from_symbolics (with external)" begin
     @testset "linear forcing — 2-DOF" begin
         @variables z1 z2 dz1 dz2 r1 r2
         groups = ([z1, z2], [dz1, dz2])
@@ -540,7 +717,7 @@ end #@testset "symbolics_to_NDOrdermodel (no external)"
         # External system: ṙ = -r  (harmonic oscillator at amplitude level)
         ext_exprs = [-r1, -r2]
 
-        model = symbolics_to_NDOrdermodel(exprs, groups, ext_var, ext_exprs)
+        model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
 
         # Linear state matrices unchanged
         @test model.linear_terms[1] ≈ [1.0 0.0; 0.0 1.0]
@@ -563,7 +740,7 @@ end #@testset "symbolics_to_NDOrdermodel (no external)"
         ]
         ext_exprs = [-r1, -r2]
 
-        model = symbolics_to_NDOrdermodel(exprs, groups, ext_var, ext_exprs)
+        model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
 
         @test model.linear_terms[2] ≈ [1.0 0.0; 0.0 1.0]
         @test model.linear_terms[1][1, 1] ≈ 2.5
@@ -590,46 +767,131 @@ end #@testset "symbolics_to_NDOrdermodel (no external)"
         ext_exprs = [-r[1], -r[2]]
 
         # Should not throw
-        model = symbolics_to_NDOrdermodel(exprs, groups, ext_var, ext_exprs)
+        model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
         @test !isnothing(model)
     end
 
     @testset "assert: empty ext_var throws" begin
         @variables z1 dz1
-        @test_throws AssertionError symbolics_to_NDOrdermodel(
+        @test_throws AssertionError model_from_symbolics(
             [-dz1 - z1],
             ([z1], [dz1]),
             Num[],
             Num[]
         )
     end
-end #@testset "symbolics_to_NDOrdermodel (with external)"
 
-@testset "symbolics_to_Externalsystem" begin
+    @testset "complex — model_from_symbolics (with external)" begin
+        @testset "complex external forcing im*Omega0*r" begin
+            @variables z1 dz1 r1
+            groups = ([z1], [dz1])
+            ext_var = [r1]
+            Omega0 = 2.5
+
+            exprs = [-dz1 - z1 + 5 * r1]
+            ext_exprs = [im * Omega0 * r1]   # the motivating use case
+
+            model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
+
+            @test length(model.nonlinear_terms) == 1
+            @test model.nonlinear_terms[1].multiplicity_external == 1
+            @test sum(model.nonlinear_terms[1].multiindex) == 0
+            @test !isnothing(model.external_system)
+        end
+
+        @testset "complex coefficient on mixed term" begin
+            @variables z1 dz1 r1
+            groups = ([z1], [dz1])
+            ext_var = [r1]
+
+            exprs = [-dz1 - z1 + (1 + im) * z1 * r1]
+            ext_exprs = [-r1]
+
+            model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
+
+            term = only(model.nonlinear_terms)
+            @test term.multiplicity_external == 1
+            @test sum(term.multiindex) == 1
+            @test term.deg == 2
+        end
+
+        @testset "fully complex external system" begin
+            @variables z1 dz1 r1 r2
+            groups = ([z1], [dz1])
+            ext_var = [r1, r2]
+            Omega0 = 1.5
+
+            exprs = [-dz1 - z1 + r1]
+            # ṙ = im*Omega0*r  written as 2x2 real system
+            ext_exprs = [im * Omega0 * r1, im * Omega0 * r2]
+
+            model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
+            @test !isnothing(model.external_system)
+        end
+    end
+end #@testset "model_from_symbolics (with external)"
+
+@testset "externalsystem_from_symbolics" begin
     @testset "scalar linear system" begin
         @variables r
         ext_exprs = [-2 * r]
 
-        ex_sys = ext.MORFESymbolicsExt.symbolics_to_Externalsystem(ext_exprs, [r])
-        @test !isnothing(ex_sys)
+        ex_sys = ext.MORFESymbolicsExt.externalsystem_from_symbolics(ext_exprs, [r])
+        @test ex_sys.first_order_dynamics.multiindex_set ==
+              MultiindexSet(SVector{1, Int64}[[1]])
+        @test ex_sys.first_order_dynamics.coefficients == ComplexF64[-2.0 + 0.0im;;]
     end
 
     @testset "2D linear system" begin
         @variables r1 r2
         ext_exprs = [-r1, -r2]
 
-        ex_sys = ext.MORFESymbolicsExt.symbolics_to_Externalsystem(ext_exprs, [r1, r2])
-        @test !isnothing(ex_sys)
+        ex_sys = ext.MORFESymbolicsExt.externalsystem_from_symbolics(ext_exprs, [r1, r2])
+        @test ex_sys.first_order_dynamics.multiindex_set ==
+              MultiindexSet(SVector{2, Int64}[[1, 0], [0, 1]])
+        @test ex_sys.first_order_dynamics.coefficients ==
+              ComplexF64[-1.0 + 0.0im 0.0 + 0.0im; 0.0 + 0.0im -1.0 + 0.0im]
     end
 
     @testset "nonlinear external system" begin
         @variables r1 r2
         ext_exprs = [-r1 + r1^2, -r2 + r1 * r2]
 
-        ex_sys = ext.MORFESymbolicsExt.symbolics_to_Externalsystem(ext_exprs, [r1, r2])
-        @test !isnothing(ex_sys)
+        ex_sys = ext.MORFESymbolicsExt.externalsystem_from_symbolics(ext_exprs, [r1, r2])
+        @test ex_sys.first_order_dynamics.multiindex_set ==
+              MultiindexSet(SVector{2, Int64}[[1, 0], [0, 1], [2, 0], [1, 1]])
+        @test ex_sys.first_order_dynamics.coefficients ==
+              ComplexF64[-1.0 + 0.0im 0.0 + 0.0im 1.0 + 0.0im 0.0 + 0.0im;
+                         0.0 + 0.0im -1.0 + 0.0im 0.0 + 0.0im 1.0 + 0.0im]
     end
-end  # testset "symbolics_to_Externalsystem"
+
+    @testset "complex — externalsystem_from_symbolics" begin
+        @testset "purely imaginary linear system" begin
+            @variables r1
+            Omega0 = 2.0
+            ext_exprs = [im * Omega0 * r1]
+
+            ex_sys = ext.MORFESymbolicsExt.externalsystem_from_symbolics(ext_exprs, [r1])
+            @test ex_sys.first_order_dynamics.multiindex_set ==
+                  MultiindexSet(SVector{1, Int64}[[1]])
+            @test ex_sys.first_order_dynamics.coefficients ==
+                  ComplexF64[0.0 + 2.0im;;]
+        end
+
+        @testset "complex coefficient nonlinear external" begin
+            @variables r1 r2
+            ext_exprs = [im * r1 + r1^2, (1 + im) * r2]
+
+            ex_sys = ext.MORFESymbolicsExt.externalsystem_from_symbolics(ext_exprs, [
+                r1, r2])
+            @test ex_sys.first_order_dynamics.multiindex_set ==
+                  MultiindexSet(SVector{2, Int64}[[1, 0], [0, 1], [2, 0]])
+            @test ex_sys.first_order_dynamics.coefficients ==
+                  ComplexF64[0.0 + 1.0im 0.0 + 0.0im 1.0 + 0.0im;
+                             0.0 + 0.0im 1.0 + 1.0im 0.0 + 0.0im]
+        end
+    end
+end  # testset "externalsystem_from_symbolics"
 
 @testset "input validation" begin
     @testset "ext.MORFESymbolicsExt.is_polynomial — positive cases" begin
@@ -753,36 +1015,36 @@ end  # testset "symbolics_to_Externalsystem"
             z1, dz1])
     end
 
-    @testset "symbolics_to_NDOrdermodel — rejects non-polynomial exprs" begin
+    @testset "model_from_symbolics — rejects non-polynomial exprs" begin
         @variables z1 dz1
         groups = ([z1], [dz1])
-        @test_throws AssertionError symbolics_to_NDOrdermodel(
+        @test_throws AssertionError model_from_symbolics(
             [-dz1 - sin(z1)], groups
         )
     end
 
-    @testset "symbolics_to_NDOrdermodel — rejects nonzero constant term" begin
+    @testset "model_from_symbolics — rejects nonzero constant term" begin
         @variables z1 dz1
         groups = ([z1], [dz1])
-        @test_throws AssertionError symbolics_to_NDOrdermodel(
+        @test_throws AssertionError model_from_symbolics(
             [-dz1 - z1 + 5], groups
         )
     end
 
-    @testset "symbolics_to_NDOrdermodel with ext — rejects non-polynomial" begin
+    @testset "model_from_symbolics with ext — rejects non-polynomial" begin
         @variables z1 dz1 r1
         groups = ([z1], [dz1])
         ext_var = [r1]
-        @test_throws AssertionError symbolics_to_NDOrdermodel(
+        @test_throws AssertionError model_from_symbolics(
             [-dz1 - z1 + sin(r1)], groups, ext_var, [-r1]
         )
     end
 
-    @testset "symbolics_to_NDOrdermodel with ext — rejects constant term" begin
+    @testset "model_from_symbolics with ext — rejects constant term" begin
         @variables z1 dz1 r1
         groups = ([z1], [dz1])
         ext_var = [r1]
-        @test_throws AssertionError symbolics_to_NDOrdermodel(
+        @test_throws AssertionError model_from_symbolics(
             [-dz1 - z1 + 3], groups, ext_var, [-r1]
         )
     end
@@ -816,5 +1078,3 @@ end  # testset "symbolics_to_Externalsystem"
         @test any(isequal(u, dz2) for u in unused)
     end
 end  # @testset "input validation"
-
-println("tests finished")

@@ -8,7 +8,7 @@ Defines a MultilinearMap for one monomial.
 
 """
 function _monomial_to_MultilinearMap(
-        polarized_monomial::Vector{Num},
+        polarized_monomial::Vector{MyNum},
         polarized_variables::NTuple{ORD, Vector{Vector{Num}}},
         multiindex::NTuple{ORD, Int};
         has_ext::Bool = false) where {ORD}
@@ -43,7 +43,7 @@ Defines and collects MultilinearMaps in a Tuple for every monomal in `F_by_multi
 
 """
 function all_monomials_to_MultilinearMaps(
-        F_by_multiindex_polarized::Dict{NTuple{ORD, Int}, Vector{Num}},
+        F_by_multiindex_polarized::Dict{NTuple{ORD, Int}, Vector{MyNum}},
         dict_pol_vars::Dict{NTuple{ORD, Int}, NTuple{ORD, Vector{Vector{Num}}}};
         has_ext::Bool = false) where {ORD}
     key_list = collect(keys(F_by_multiindex_polarized))
