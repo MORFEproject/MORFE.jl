@@ -110,7 +110,8 @@ export write_paraview_mesh, write_paraview_modes, write_paraview_manifold,
        write_paraview_deformation
 
 # MORFESymbolicsExt
-function symbolics_to_NDOrdermodel end
-export symbolics_to_NDOrdermodel
+function model_from_symbolics end
+function externalsystem_from_symbolics end
+export model_from_symbolics, externalsystem_from_symbolics
 
 end # module
