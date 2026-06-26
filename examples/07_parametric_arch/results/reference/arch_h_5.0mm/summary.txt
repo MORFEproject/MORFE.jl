@@ -1,0 +1,14 @@
+model: ArchGeometricNonlinearity on flat mesh (same as main.jl)
+h_ratio: 0.005
+h_mm: 5.0
+L_mm: 1000.0
+n_dofs_free: 1425
+ROM: 2
+master_eigenvalues: ComplexF64[-0.0 + 0.6187053874170463im, -0.0 - 0.6187053874170463im]
+parametrisation_order: 11
+n_monomials: 77
+assemble_time_s: 0.899496875
+cohomological_solve_time_s: 324.161372834
+julia_version: 1.12.6
+morfe_commit: fb9ae02
+timestamp: 1.782430054393332e9

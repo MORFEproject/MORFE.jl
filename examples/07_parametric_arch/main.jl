@@ -43,7 +43,7 @@ if !isfile(joinpath(@__DIR__, "Manifest.toml"))
 		"Ferrite", "FerriteGmsh",
 		"Arpack", "LinearMaps",
 		"Tensors", "StaticArrays",
-		"Serialization",
+		"Serialization", "NPZ",
 	])
 end
 Pkg.instantiate()
@@ -58,6 +58,7 @@ using Printf
 using Tensors
 using StaticArrays
 using Serialization
+using NPZ
 
 # -----------------------------------------------------------------------
 # Load supporting code (order matters)
@@ -73,10 +74,13 @@ include(joinpath(@__DIR__, "fem", "arch_assembly.jl"))
 
 include(joinpath(@__DIR__, "config.jl"))   # h0_L_ratio, N_INCREMENTS
 const h₀_L_ratio = h0_L_ratio             # unicode alias used throughout
-const N_θ = 7                      # polynomial truncation order in θ
 const max_degree_z = 11            # DPIM expansion order in normal coordinates (z₁, z₂)
-const max_degree_θ = N_θ           # truncation in the parameter θ (anisotropic)
+const max_degree_θ = 7             # DPIM expansion order in θ (anisotropic)
 const max_degree_total = max_degree_z  # cap on total degree
+# Exact polynomial degrees for this arch (derived analytically: J_arch^2=0, det J=1):
+const N_θ_K = 2   # K(θ) is exactly degree 2 in θ
+const N_θ_G = 3   # G(u₁,u₂;θ) is exactly degree 3 in θ
+const N_θ_H = 4   # H(u₁,u₂,u₃;θ) is exactly degree 4 in θ
 
 const ROM = 2                      # number of master modes (first bending pair)
 const N_EXT = 1                    # one external parameter: θ
@@ -141,19 +145,19 @@ let x_mid = Vec{3, Float64}((L / 2, 0.0, 0.0))
 end
 
 # =======================================================================
-# §4  Assemble K_k and M_k coefficient matrices (k = 0 … N_θ)
+# §4  Assemble K_k and M_k coefficient matrices (k = 0 … N_θ_K)
 # =======================================================================
 
-println("\nAllocating K/M coefficient matrices (N_θ = $N_θ) …")
-K_arr_full = [allocate_matrix(dh) for _ in 0:N_θ]
-M_arr_full = [allocate_matrix(dh) for _ in 0:N_θ]
+println("\nAllocating K/M coefficient matrices (N_θ_K = $N_θ_K) …")
+K_arr_full = [allocate_matrix(dh) for _ in 0:N_θ_K]
+M_arr_full = [allocate_matrix(dh) for _ in 0:N_θ_K]
 
 println("Assembling K_arr, M_arr via assemble_K_M_arch! …")
 @time assemble_K_M_arch!(K_arr_full, M_arr_full,
-	dh, cv, λ_lame, μ_lame, ρ, h₀, L, free_to_local, N_θ)
+	dh, cv, λ_lame, μ_lame, ρ, h₀, L, free_to_local, N_θ_K)
 
-K_arr = [K_arr_full[k+1][free, free] for k in 0:N_θ]
-M_arr = [M_arr_full[k+1][free, free] for k in 0:N_θ]
+K_arr = [K_arr_full[k+1][free, free] for k in 0:N_θ_K]
+M_arr = [M_arr_full[k+1][free, free] for k in 0:N_θ_K]
 
 K = K_arr[1]     # reference stiffness (base arch, θ = 0)
 M = M_arr[1]     # reference mass
@@ -218,19 +222,17 @@ end
 
 println("\nBuilding ArchGeometricNonlinearity{2} and {3} …")
 pgn_quad = ArchGeometricNonlinearity{2}(dh, cv, λ_lame, μ_lame, h₀, L,
-	free_to_local, n_free, N_θ)
+	free_to_local, n_free, N_θ_G)
 pgn_cube = ArchGeometricNonlinearity{3}(dh, cv, λ_lame, μ_lame, h₀, L,
-	free_to_local, n_free, N_θ)
+	free_to_local, n_free, N_θ_H)
 
 quad_maps = multilinear_maps(pgn_quad)
 cube_maps = multilinear_maps(pgn_cube)
 
-println("Building K/C/M corrections …")
-K_corrections = build_arch_K_corrections(K_arr, N_θ)
-# C_corrections = build_arch_C_corrections(K_arr, M_arr, α, β, N_θ)
-M_corrections = build_arch_M_corrections(M_arr, N_θ)
-println("  K: ", length(K_corrections), "  M: ", length(M_corrections))
-#"  C: ", length(C_corrections))
+println("Building K corrections …")
+K_corrections = build_arch_K_corrections(K_arr, N_θ_K)
+# C_corrections = build_arch_C_corrections(K_arr, M_arr, α, β, N_θ_K)
+println("  K: ", length(K_corrections))
 
 # =======================================================================
 # §8  Augmented system and multiindex set
@@ -298,7 +300,7 @@ sep = "=" ^ 72
 println()
 println(sep)
 println("MORFE.jl — Parametric Arch ROM  (h₀/L = $h₀_L_ratio)")
-println(@sprintf "  FOM = %d   ROM = %d   N_EXT = %d   N_θ = %d" FOM ROM N_EXT N_θ)
+println(@sprintf "  FOM = %d   ROM = %d   N_EXT = %d   N_θ_K/G/H = %d/%d/%d" FOM ROM N_EXT N_θ_K N_θ_G N_θ_H)
 println(@sprintf "  deg_z ≤ %d   deg_θ ≤ %d   monomials = %d" max_degree_z max_degree_θ length(mset))
 println("-" ^ 72)
 println(@sprintf "  %-32s %9s %11s %7s" "Phase" "Time (s)" "Memory (GB)" "GC (s)")
@@ -317,8 +319,13 @@ const _results_dir = joinpath(@__DIR__, "results", "data",
 	@sprintf("arch_h%.3f", h₀_L_ratio))
 mkpath(_results_dir)
 
-serialize(joinpath(_results_dir, "W.jls"), W)
-serialize(joinpath(_results_dir, "R.jls"), R)
+let exps = W.poly.multiindex_set.exponents
+	npzwrite(joinpath(_results_dir, "rom.npz"), Dict(
+		"W"         => W.poly.coefficients,                          # ComplexF64 (FOM, ORD, L)
+		"R"         => R.poly.coefficients,                          # ComplexF64 (NVAR, L)
+		"exponents" => Int32.(hcat([collect(e) for e in exps]...)),  # Int32 (NVAR, L)
+	))
+end
 
 open(joinpath(_results_dir, "summary.txt"), "w") do io
 	println(io, "MORFE.jl — Parametric Arch ROM")
@@ -328,9 +335,11 @@ open(joinpath(_results_dir, "summary.txt"), "w") do io
 	println(io, "FOM = $FOM")
 	println(io, "ROM = $ROM")
 	println(io, "N_EXT = $N_EXT")
-	println(io, "N_theta = $N_θ")
+	println(io, "N_theta_K = $N_θ_K")
+	println(io, "N_theta_G = $N_θ_G")
+	println(io, "N_theta_H = $N_θ_H")
 	println(io, "max_degree_z = $max_degree_z")
-	println(io, "max_degree_θ = $max_degree_θ")
+	println(io, "max_degree_theta = $max_degree_θ")
 	println(io, "master_eigenvalues = $(collect(master_eigenvalues))")
 	println(io, "eigenproblem_time_s = $(r1.time)")
 	println(io, "cohomological_time_s = $(r2.time)")
@@ -362,5 +371,5 @@ open(joinpath(_results_dir, "R_coefficients.csv"), "w") do io
 end
 
 println("\nROM saved to $(_results_dir)/")
-println("  W.jls, R.jls, summary.txt, R_coefficients.csv")
+println("  rom.npz, summary.txt, R_coefficients.csv")
 println("\nDemo finished successfully.")
