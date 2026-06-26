@@ -1,0 +1,13 @@
+MORFE.jl — Parametric Clamped-Clamped Beam ROM
+FOM          = 1425
+ROM          = 2
+N_EXT        = 2
+N_theta      = 4
+max_degree_z = 9   (anisotropic: deg(z₁)+deg(z₂) ≤ 9)
+max_degree_θ = 4   (anisotropic: deg(θ₁)+deg(θ₂) ≤ 4)
+master_eigenvalues = ComplexF64[-0.0005369754008568333 + 0.5489201483617312im, -0.0005369754008568333 - 0.5489201483617312im]
+eigenproblem_time_s    = 2.951877166
+cohomological_time_s   = 61404.624089625
+julia_version: 1.12.6
+morfe_commit: ec904ea
+timestamp: 1.781772204920721e9

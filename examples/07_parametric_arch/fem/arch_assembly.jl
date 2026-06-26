@@ -379,81 +379,41 @@ end
 # scalar prefactor for that slot.  MORFE's canonical tuple has all slots
 # pointing at the same external state (θ), so the product is just r₁[1]·…·r_k[1].
 
-function _make_ext_syms(kk::Int)
-	syms = Vector{Symbol}(undef, kk)
-	for i in 1:kk
-		syms[i] = Symbol(:r, i)
+const _ARCH_MAX_EXT = 16   # must be ≥ N_θ (= max_degree_θ in main.jl)
+
+for kk in 0:_ARCH_MAX_EXT
+	ext_args = [Symbol("r$i") for i in 1:kk]
+	if kk == 0
+		@eval _arch_linK(::Val{0}, Kk) = (res, u) -> (res .-= (Kk * u))
+		@eval _arch_linC(::Val{0}, Cc) = (res, v) -> (res .-= (Cc * v))
+		@eval _arch_linM(::Val{0}, Mk) = (res, a) -> (res .-= (Mk * a))
+		@eval _arch_quad(::Val{0}, pgn, k, buf) = (res, u₁, u₂) -> begin
+			evaluate_kth_quadratic!(buf, pgn, k, u₁, u₂)
+			res .-= buf
+		end
+		@eval _arch_cube(::Val{0}, pgn, k, buf) = (res, u₁, u₂, u₃) -> begin
+			evaluate_kth_cubic!(buf, pgn, k, u₁, u₂, u₃)
+			res .-= buf
+		end
+	else
+		factor = Expr(:call, :*, [:(($r)[1]) for r in ext_args]...)
+		@eval _arch_linK(::Val{$kk}, Kk) =
+			(res, u, $(ext_args...)) -> (res .-= ($factor) .* (Kk * u))
+		@eval _arch_linC(::Val{$kk}, Cc) =
+			(res, v, $(ext_args...)) -> (res .-= ($factor) .* (Cc * v))
+		@eval _arch_linM(::Val{$kk}, Mk) =
+			(res, a, $(ext_args...)) -> (res .-= ($factor) .* (Mk * a))
+		@eval _arch_quad(::Val{$kk}, pgn, k, buf) =
+			(res, u₁, u₂, $(ext_args...)) -> begin
+				evaluate_kth_quadratic!(buf, pgn, k, u₁, u₂)
+				res .-= ($factor) .* buf
+			end
+		@eval _arch_cube(::Val{$kk}, pgn, k, buf) =
+			(res, u₁, u₂, u₃, $(ext_args...)) -> begin
+				evaluate_kth_cubic!(buf, pgn, k, u₁, u₂, u₃)
+				res .-= ($factor) .* buf
+			end
 	end
-	return syms
-end
-
-function _make_factor_expr(ext_syms::Vector{Symbol})
-	n = length(ext_syms)
-	parts = Vector{Any}(undef, n)
-	for i in 1:n
-		parts[i] = Expr(:ref, ext_syms[i], 1)
-	end
-	return Expr(:call, :*, parts...)
-end
-
-function _make_args_expr(fixed::Vector{Symbol}, ext_syms::Vector{Symbol})
-	n = length(fixed) + length(ext_syms)
-	args = Vector{Any}(undef, n)
-	for i in eachindex(fixed)
-		args[i] = fixed[i]
-	end
-	for i in eachindex(ext_syms)
-		args[length(fixed) + i] = ext_syms[i]
-	end
-	return Expr(:tuple, args...)
-end
-
-@generated function _arch_linK(::Val{kk}, Kk) where kk
-	ext_syms = _make_ext_syms(kk)
-	args_ex  = _make_args_expr([:res, :u], ext_syms)
-	rhs = kk == 0 ? :(res .-= (Kk * u)) :
-	      :(res .-= $(_make_factor_expr(ext_syms)) .* (Kk * u))
-	return Expr(:->, args_ex, rhs)
-end
-
-@generated function _arch_linC(::Val{kk}, Cc) where kk
-	ext_syms = _make_ext_syms(kk)
-	args_ex  = _make_args_expr([:res, :v], ext_syms)
-	rhs = kk == 0 ? :(res .-= (Cc * v)) :
-	      :(res .-= $(_make_factor_expr(ext_syms)) .* (Cc * v))
-	return Expr(:->, args_ex, rhs)
-end
-
-@generated function _arch_linM(::Val{kk}, Mk) where kk
-	ext_syms = _make_ext_syms(kk)
-	args_ex  = _make_args_expr([:res, :a], ext_syms)
-	rhs = kk == 0 ? :(res .-= (Mk * a)) :
-	      :(res .-= $(_make_factor_expr(ext_syms)) .* (Mk * a))
-	return Expr(:->, args_ex, rhs)
-end
-
-@generated function _arch_quad(::Val{kk}, pgn, k, buf) where kk
-	ext_syms = _make_ext_syms(kk)
-	args_ex  = _make_args_expr([:res, :u₁, :u₂], ext_syms)
-	rhs = kk == 0 ? :(res .-= buf) :
-	      :(res .-= $(_make_factor_expr(ext_syms)) .* buf)
-	body = quote
-		evaluate_kth_quadratic!(buf, pgn, k, u₁, u₂)
-		$(rhs)
-	end
-	return Expr(:->, args_ex, body)
-end
-
-@generated function _arch_cube(::Val{kk}, pgn, k, buf) where kk
-	ext_syms = _make_ext_syms(kk)
-	args_ex  = _make_args_expr([:res, :u₁, :u₂, :u₃], ext_syms)
-	rhs = kk == 0 ? :(res .-= buf) :
-	      :(res .-= $(_make_factor_expr(ext_syms)) .* buf)
-	body = quote
-		evaluate_kth_cubic!(buf, pgn, k, u₁, u₂, u₃)
-		$(rhs)
-	end
-	return Expr(:->, args_ex, body)
 end
 
 # ===========================================================================
@@ -464,7 +424,7 @@ function multilinear_maps(pgn::ArchGeometricNonlinearity{2})
 	maps = MultilinearMap[]
 	for k in 0:pgn.N_θ
 		buf = zeros(ComplexF64, pgn.n_free)
-		cl = _arch_quad(Val(k), pgn, k, buf)
+		cl = Base.invokelatest(_arch_quad, Val(k), pgn, k, buf)
 		push!(maps, MultilinearMap(cl, (2, 0, 0), k))
 	end
 	return maps
@@ -474,7 +434,7 @@ function multilinear_maps(pgn::ArchGeometricNonlinearity{3})
 	maps = MultilinearMap[]
 	for k in 0:pgn.N_θ
 		buf = zeros(ComplexF64, pgn.n_free)
-		cl = _arch_cube(Val(k), pgn, k, buf)
+		cl = Base.invokelatest(_arch_cube, Val(k), pgn, k, buf)
 		push!(maps, MultilinearMap(cl, (3, 0, 0), k))
 	end
 	return maps
@@ -495,7 +455,7 @@ function build_arch_K_corrections(K_arr::Vector, N_θ::Int)
 	for k in 1:N_θ
 		Kk = K_arr[k+1]
 		nnz(Kk) > 0 || continue
-		push!(corr, MultilinearMap(_arch_linK(Val(k), Kk), (1, 0, 0), k))
+		push!(corr, MultilinearMap(Base.invokelatest(_arch_linK, Val(k), Kk), (1, 0, 0), k))
 	end
 	return corr
 end
@@ -516,7 +476,7 @@ function build_arch_C_corrections(K_arr::Vector, M_arr::Vector,
 		end
 		Ck === nothing && continue
 		nnz(Ck) > 0 || continue
-		push!(corr, MultilinearMap(_arch_linC(Val(k), Ck), (0, 1, 0), k))
+		push!(corr, MultilinearMap(Base.invokelatest(_arch_linC, Val(k), Ck), (0, 1, 0), k))
 	end
 	return corr
 end
@@ -533,7 +493,7 @@ function build_arch_M_corrections(M_arr::Vector, N_θ::Int)
 	for k in 1:N_θ
 		Mk = M_arr[k+1]
 		nnz(Mk) > 0 || continue
-		push!(corr, MultilinearMap(_arch_linM(Val(k), Mk), (0, 0, 1), k))
+		push!(corr, MultilinearMap(Base.invokelatest(_arch_linM, Val(k), Mk), (0, 0, 1), k))
 	end
 	return corr
 end

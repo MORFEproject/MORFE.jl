@@ -20,8 +20,8 @@ arch = SVK.mechanical_model(
 	joinpath(@__DIR__, "arch_2_force.mphtxt");
 	material = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
 	damping = SVK.RayleighDamping(
-		α = 0.5370828278264171 / 100.0,
-		β = 1.0 / (0.5370828278264171 * 100.0),
+		α = 0.0,
+		β = 0.0,
 	),
 	dirichlet = Set([1, 11]),   # COMSOL entity IDs for the two arch feet (raw IDs 0 and 10)
 	fe_order = 2, quad_order = 4,

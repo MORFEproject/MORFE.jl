@@ -26,6 +26,15 @@ const PERM_FERRITE_TO_VTK = [1, 2, 3, 4, 5, 6,   # corners — identical
                               9, 11, 12,           # vert   edge mids: VTK 13,14,15
                               16, 18, 17]          # face centres:     VTK 16,17,18
 
+# Ferrite Lagrange{RefHexahedron, 2} (27-node) vs VTK_QUADRATIC_HEXAHEDRON (20-node, type 25):
+# Ferrite: corners 1-8, bottom-edges 9-12, top-edges 13-16, vert-edges 17-20, face-centers/body 21-27
+# VTK:     corners 0-7, bottom-edges 8-11, top-edges 12-15, vert-edges 16-19
+# Face-center and body-center nodes (Ferrite 21-27) become orphaned points — invisible in Surface mode.
+const PERM_FERRITE_TO_VTK_HEX20 = [1, 2, 3, 4, 5, 6, 7, 8,   # corners
+                                    9, 10, 11, 12,              # bottom edges
+                                    13, 14, 15, 16,             # top edges  (VTK pos 13-16)
+                                    17, 18, 19, 20]             # vert edges (VTK pos 17-20)
+
 """
     _vtk_geometry(grid) -> (points, cells)
 
@@ -44,8 +53,11 @@ function _vtk_geometry(grid::Ferrite.Grid{3})
                      [cell.nodes[i] for i in PERM_FERRITE_TO_VTK])
         elseif nn == 6
             MeshCell(VTKCellTypes.VTK_WEDGE, collect(cell.nodes))
+        elseif nn == 27
+            MeshCell(VTKCellTypes.VTK_QUADRATIC_HEXAHEDRON,
+                     [cell.nodes[i] for i in PERM_FERRITE_TO_VTK_HEX20])
         else
-            error("_vtk_geometry: unsupported cell size $nn (expected 6 or 18).")
+            error("_vtk_geometry: unsupported cell size $nn (expected 6, 18, or 27).")
         end
     end
     return points, cells
@@ -126,9 +138,11 @@ function MORFE.ParaviewExport.write_paraview_mesh(
     grid::Ferrite.Grid{3};
     dh::Union{Ferrite.DofHandler, Nothing} = nothing,
     prescribed_dofs = nothing,
+    node_positions::Union{Matrix{Float64}, Nothing} = nothing,
 )
     mkpath(dirname(filename))
-    points, cells = _vtk_geometry(grid)
+    _pts, cells = _vtk_geometry(grid)
+    points = isnothing(node_positions) ? _pts : node_positions
     n_nodes = Ferrite.getnnodes(grid)
 
     if isnothing(dh)
@@ -145,9 +159,12 @@ function MORFE.ParaviewExport.write_paraview_mesh(
         free_to_local = Dict(d => i for (i, d) in enumerate(free))
 
         node_ids = Int32.(1:n_nodes)
-        xs = Float64[grid.nodes[n].x[1] for n in 1:n_nodes]
-        ys = Float64[grid.nodes[n].x[2] for n in 1:n_nodes]
-        zs = Float64[grid.nodes[n].x[3] for n in 1:n_nodes]
+        xs = isnothing(node_positions) ?
+             Float64[grid.nodes[n].x[1] for n in 1:n_nodes] : points[1, :]
+        ys = isnothing(node_positions) ?
+             Float64[grid.nodes[n].x[2] for n in 1:n_nodes] : points[2, :]
+        zs = isnothing(node_positions) ?
+             Float64[grid.nodes[n].x[3] for n in 1:n_nodes] : points[3, :]
         dof_x = Int32[get(free_to_local, dof_map[1, n], -1) for n in 1:n_nodes]
         dof_y = Int32[get(free_to_local, dof_map[2, n], -1) for n in 1:n_nodes]
         dof_z = Int32[get(free_to_local, dof_map[3, n], -1) for n in 1:n_nodes]
@@ -178,9 +195,12 @@ function MORFE.ParaviewExport.write_paraview_modes(
     free::AbstractVector{Int};
     n_modes::Int = 10,
     prefix::AbstractString = "mode",
+    node_positions::Union{Matrix{Float64}, Nothing} = nothing,
+    re_only::Bool = false,
 )
     mkpath(outdir)
-    points, cells = _vtk_geometry(grid)
+    _pts, cells = _vtk_geometry(grid)
+    points = isnothing(node_positions) ? _pts : node_positions
     n_dofs = Ferrite.ndofs(dh)
     n_eig  = size(Y, 3)
     n_out  = min(n_modes, n_eig)
@@ -206,7 +226,7 @@ function MORFE.ParaviewExport.write_paraview_modes(
         # pvd[time] = vtk must be inside the do-block (WriteVTK API requirement)
         vtk_grid(fname, points, cells) do vtk
             vtk_point_data(vtk, u_re, "Re_u")
-            vtk_point_data(vtk, u_im, "Im_u")
+            re_only || vtk_point_data(vtk, u_im, "Im_u")
             pvd[Float64(k)] = vtk
         end
 
@@ -231,17 +251,19 @@ function MORFE.ParaviewExport.write_paraview_deformation(
     free::AbstractVector{Int},
     r_amplitude::Real;
     theta::Real = 0.0,
+    extra_states::AbstractVector = ComplexF64[],
     label::AbstractString = "deformation",
+    node_positions::Union{Matrix{Float64}, Nothing} = nothing,
 )
     C    = MORFE.ParametrisationMethod.coefficients(W)   # (FOM, ORD, L)
     mset = MORFE.ParametrisationMethod.multiindex_set(W)
     W_disp = MORFE.Polynomials.DensePolynomial(@view(C[:, 1, :]), mset)
 
     z1 = r_amplitude * cis(float(theta))
-    sv = [z1, conj(z1)]
+    sv = ComplexF64[z1, conj(z1), extra_states...]
 
-    u_free     = MORFE.Polynomials.evaluate(W_disp, sv)   # FOM ComplexF64 (BLAS gemv)
-    A_lin      = MORFE.Polynomials.linear_matrix_of_polynomial(W_disp)  # FOM × 2
+    u_free     = MORFE.Polynomials.evaluate(W_disp, sv)
+    A_lin      = MORFE.Polynomials.linear_matrix_of_polynomial(W_disp)  # FOM × NVAR
     u_free_lin = A_lin * sv
     u_free_nl  = u_free .- u_free_lin
 
@@ -253,7 +275,8 @@ function MORFE.ParaviewExport.write_paraview_deformation(
     end
 
     mkpath(outdir)
-    points, cells = _vtk_geometry(grid)
+    _pts, cells = _vtk_geometry(grid)
+    points = isnothing(node_positions) ? _pts : node_positions
     fname = joinpath(outdir, label)
     vtk_grid(fname, points, cells) do vtk
         vtk_point_data(vtk, to_vtk(u_free),    "u_total")

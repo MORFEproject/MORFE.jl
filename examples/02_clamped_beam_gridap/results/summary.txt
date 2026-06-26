@@ -1,0 +1,12 @@
+example: 02_clamped_beam_gridap
+model: clamped-clamped beam, St. Venant-Kirchhoff, Gridap backend
+mesh: 40x3x1 Hex8 elements, quadratic Lagrange (order 2)
+n_dofs: 4977
+master_modes: 2
+master_eigenvalues: ComplexF64[-0.0053741215339424215 + 0.5373851812045483im, -0.0053741215339424215 - 0.5373851812045483im]
+parametrisation_order: 3
+n_monomials: 9
+cohomological_solve_time_s: 404.182766667
+julia_version: 1.12.6
+morfe_commit: 0348216
+timestamp: 1.781172391186329e9
