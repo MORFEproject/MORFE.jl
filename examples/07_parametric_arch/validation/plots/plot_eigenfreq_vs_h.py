@@ -58,8 +58,8 @@ plt.rcParams.update({"font.family": "sans-serif", "font.size": 12,
                      "legend.fontsize": 10, "lines.linewidth": 2})
 
 LS = {-1: "-"}
-for _i, _t in enumerate(sorted(z_orders_param, reverse=True)):
-    LS[int(_t)] = ("-", "--", ":", "-.")[_i] if _i < 3 else ":"
+for _i, _t in enumerate([11, 7, 5, 3]): #sorted(z_orders_param, reverse=True)):
+    LS[int(_t)] = ("-", "-", "--", ":", "-.")[_i] if _i < 3 else ":"
 
 def _z_lbl(tok, k_max):
     return "reference" if tok == -1 else (
@@ -67,13 +67,18 @@ def _z_lbl(tok, k_max):
     )
 
 # ── figure ────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(7, 5))
+fig, ax = plt.subplots(figsize=(4, 4), dpi=150) 
 axr = ax.twinx()
 
 ref_m = metrics[metrics.model == "reference"].sort_values("h_ratio")
 h_mm = ref_m["h_ratio"].values * 1000.0
 #ax.plot(h_mm, ref_m["omega0"].values / ω0_base,
 #        "x--", color="black", lw=2, ms=6, label=_z_lbl(-1, z_max))
+
+#ax.axvline(H0_L_RATIO * 1000.0, color="gray", lw=0.8, ls="--", alpha=0.5)
+ax.plot([0, H0_L_RATIO * 1000.0], [1.0, 1.0], color="gray", lw=0.8, ls="--", alpha=0.5)
+ax.plot([H0_L_RATIO * 1000.0, H0_L_RATIO * 1000.0], [0.0, 1.0], color="gray", lw=0.8, ls="--", alpha=0.5)
+#ax.axhline(1.0, color="gray", lw=0.8, ls="--", alpha=0.5)
 
 print(z_orders_param)
 
@@ -85,7 +90,7 @@ for tok in [11]: #sorted(z_orders_param, reverse=True):
         ax.plot(pm_d["h_ratio"].values * 1000.0, pm_d["omega0"].values / ω0_base,
                 ls=LS[tok], color="tab:red", lw=1.8, label=_z_lbl(tok, z_max))
 
-for tok in [11, 7, 3]: #sorted(z_orders_param, reverse=True):
+for tok in [7, 5, 3]: #sorted(z_orders_param, reverse=True):
 
     # Absolute relative error at discrete reference points
     pm_disc = (metrics[(metrics.model == "parametric") & (metrics.z_order == tok)]
@@ -97,6 +102,7 @@ for tok in [11, 7, 3]: #sorted(z_orders_param, reverse=True):
             err_hmm.append(prow.h_ratio * 1000.0)
             err_vals.append((prow.omega0 - rr["omega0"].iloc[0]) / rr["omega0"].iloc[0])
     if err_hmm:
+        print("plot error for z_order =", tok, "with LS =", LS[tok])
         # Subtract the value at θ=0 so the error is zero at the training point
         baseline = next((v for h, v in zip(err_hmm, err_vals)
                          if np.isclose(h, H0_L_RATIO * 1000.0)), 0.0)
@@ -106,22 +112,14 @@ for tok in [11, 7, 3]: #sorted(z_orders_param, reverse=True):
 
 axr.set_ylabel("(ω₀_param − ω₀_ref) / ω₀_ref  −  offset(θ=0)", color="gray")
 axr.tick_params(axis="y", labelcolor="gray")
-
-#ax.axvline(H0_L_RATIO * 1000.0, color="gray", lw=0.8, ls="--", alpha=0.5)
-ax.plot([0, H0_L_RATIO * 1000.0], [1.0, 1.0], color="gray", lw=0.8, ls="--", alpha=0.5)
-ax.plot([H0_L_RATIO * 1000.0, H0_L_RATIO * 1000.0], [0.0, 1.0], color="gray", lw=0.8, ls="--", alpha=0.5)
-#ax.axhline(1.0, color="gray", lw=0.8, ls="--", alpha=0.5)
+axr.plot([H0_L_RATIO * 1000.0, H0_L_RATIO * 2000.0], [0.0, 0.0], color="gray", lw=0.8, ls="--", alpha=0.5)
+axr.plot([H0_L_RATIO * 1000.0, H0_L_RATIO * 1000.0], [-10.0, 0.0], color="gray", lw=0.8, ls="--", alpha=0.5)
 
 ax.set_xticks([i for i in range(0, int(h_mm.max()) + 1)])
 
-ax.set_xlabel("Arch rise  h₀  (mm)")
-ax.set_ylabel("Linear eigenfrequency  ω₀ / ω₀_base")
-ax.set_title("Eigenfrequency vs arch rise (normalised)")
-ax.legend(loc="upper left")
 ax.set_xlim(0, h_mm.max())
 ax.set_ylim(0.85, 1.3)
-
-fig.tight_layout()
+axr.set_ylim(-0.00012, 1e-5)
 out = OUT_DIR / "eigenfreq_vs_h.png"
 fig.savefig(out, dpi=150)
 print(f"Saved → {out}")

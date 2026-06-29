@@ -6,18 +6,18 @@ Non-parametric DPIM baselines for the clamped-clamped arch beam.
 For each arch height ratio in `H_RATIOS`, this script:
   1. Loads the flat beam mesh.
   2. Assembles K₀, M₀ on the flat mesh using the analytical arch Jacobian
-     series at h = h_ratio · L via assemble_K_M_arch! (same code as main.jl).
+	 series at h = h_ratio · L via assemble_K_M_arch! (same code as main.jl).
   3. Runs a DPIM solve directly (NVAR=2, no θ) using ArchGeometricNonlinearity
-     for the nonlinear maps — again the same code as main.jl at k=0.
+	 for the nonlinear maps — again the same code as main.jl at k=0.
   4. Saves R_coefficients.csv and summary.txt under
-         results/reference/arch_h_<h_mm>mm/
+		 results/reference/arch_h_<h_mm>mm/
 
 These reference ROMs serve two purposes:
   a) Cross-validation: compare the parametric ROM (main.jl) at θ=0 against
-     the reference at the same h₀/L — they should match to FEM precision
-     because the computation is IDENTICAL (same mesh, same assembly, k=0 maps).
+	 the reference at the same h₀/L — they should match to FEM precision
+	 because the computation is IDENTICAL (same mesh, same assembly, k=0 maps).
   b) Documentation of how the SSM shape and reduced dynamics evolve across
-     arch heights, independently of the θ parametrisation.
+	 arch heights, independently of the θ parametrisation.
 
 The flat beam dimensions are 1000 × 10 × 24 mm (standard MORFE benchmark).
 
@@ -82,7 +82,7 @@ const N_θ_H_ref = 4   # H(u₁,u₂,u₃;θ) is exactly degree 4 in θ
 const ROM_REF = 2
 
 # Reference arch heights: same range as main.jl's parametric sweep
-const H_RATIOS = collect(range(0.0, 2 * h0_L_ratio; length = N_INCREMENTS + 1))
+const H_RATIOS = collect(range(0.5 * h0_L_ratio, 1.5 * h0_L_ratio; length = N_INCREMENTS))# + 1))
 
 const _REF_DIR = joinpath(@__DIR__, "..", "results", "reference")
 mkpath(_REF_DIR)
@@ -144,7 +144,7 @@ for h_ratio in H_RATIOS
 	C₀ = α_damp * M₀ + β_damp * K₀
 
 	# b) Eigenproblem — same as main.jl §5
-	solver_eig  = StructureModalDampingEigensolver(10, α_damp, β_damp)
+	solver_eig = StructureModalDampingEigensolver(10, α_damp, β_damp)
 	eigenproblem = solve_eigenproblem(K₀, M₀, solver_eig; sorter! = (args...) -> nothing)
 	eigenvalues, Y, X = get_eigenpairs(eigenproblem)
 
@@ -167,18 +167,18 @@ for h_ratio in H_RATIOS
 
 	# d) Nonlinear maps — k=0 coefficient only (same as pROM at θ=0)
 	pgn_quad      = ArchGeometricNonlinearity{2}(dh, cv, λ_lame, μ_lame, h, L,
-		free_to_local, n_free, N_θ_G_ref)
+	free_to_local, n_free, N_θ_G_ref)
 	pgn_cube      = ArchGeometricNonlinearity{3}(dh, cv, λ_lame, μ_lame, h, L,
-		free_to_local, n_free, N_θ_H_ref)
+	free_to_local, n_free, N_θ_H_ref)
 	quad_maps_ref = multilinear_maps(pgn_quad)
 	cube_maps_ref = multilinear_maps(pgn_cube)
 
 	# e) NDOrderModel: ORD=3, NVAR=2; k=0 maps only (no θ series)
 	ZERO  = spzeros(eltype(K₀), n_free, n_free)
 	model = NDOrderModel(
-		(K₀, C₀, M₀, ZERO),
-		(quad_maps_ref[1], cube_maps_ref[1]),
-	)
+	(K₀, C₀, M₀, ZERO),
+	(quad_maps_ref[1], cube_maps_ref[1])
+)
 
 	# f) Multiindex set: NVAR=2, same degree cap as main.jl
 	mset = all_multiindices_up_to(2, ORDER; min_degree = 1)

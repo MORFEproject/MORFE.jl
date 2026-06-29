@@ -1,12 +1,14 @@
-model: SVK + Ferrite (MORFEStructuralSVK)
-n_dofs: 1425
-master_pairs: [1]
-master_eigenvalues: ComplexF64[-0.0 + 0.6960960963261658im, -0.0 - 0.6960960963261658im]
+model: ArchGeometricNonlinearity on flat mesh (same as main.jl)
+h_ratio: 0.0075
+h_mm: 7.5
+L_mm: 1000.0
+n_dofs_free: 1425
+ROM: 2
+master_eigenvalues: ComplexF64[-0.0 + 0.6960952633118954im, -0.0 - 0.6960952633118954im]
 parametrisation_order: 11
 n_monomials: 77
-forcing: none
-eigenproblem_time_s: 0.025741375
-cohomological_solve_time_s: 4.465641084
+assemble_time_s: 0.875218333
+cohomological_solve_time_s: 322.220472541
 julia_version: 1.12.6
-morfe_commit: fb9ae02
-timestamp: 1.782422785396019e9
+morfe_commit: 4c7b84d
+timestamp: 1.782469521849101e9
