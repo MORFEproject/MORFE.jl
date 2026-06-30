@@ -5,12 +5,15 @@ Returns a NamedTuple with:
   grid, dh, ch_full, ch_hom, cv_vel, cv_pres,
   free, free_to_local, n_free, dof_range_u, dof_range_p, n_vel_dofs_per_cell
 
-Two ConstraintHandlers are built from the SAME prescribed-DOF set:
-  ch_full  — inhomogeneous Poiseuille inlet, used for the steady-state Newton solve
-  ch_hom   — homogeneous zero BCs everywhere, used for the linearised (perturbation) problem
+Two ConstraintHandlers with DIFFERENT prescribed-DOF sets:
+  ch_full  — inhomogeneous Poiseuille inlet + no-slip walls + cylinder;
+             used for the steady-state Newton solve
+  ch_hom   — homogeneous no-slip walls + cylinder only (inlet left free);
+             used for the linearised (perturbation / DPIM) problem
 
-The free-DOF vector ordering follows Ferrite's natural global DOF numbering.
-Both ConstraintHandlers prescribe exactly the same DOF indices, so 'free' is unique.
+Consequently 'free' ≠ 'free_dpim':
+  free      = setdiff(all, ch_full) — excludes inlet + walls + cylinder
+  free_dpim = setdiff(all, ch_hom)  — excludes only walls + cylinder (inlet included)
 """
 
 using Ferrite

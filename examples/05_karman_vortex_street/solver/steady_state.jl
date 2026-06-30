@@ -1,9 +1,10 @@
 """
     steady_state.jl — Newton iteration for the steady incompressible NSE.
 
-Solves the non-dimensional steady Navier-Stokes equations at Reynolds number Re₀:
+Solves the dimensional steady Navier-Stokes equations at Reynolds number Re₀
+in physical units (D = 0.1 m, U_mean = 1 m/s, ρ = 1, ν = D/Re₀):
 
-    (1/Re₀) ∫ ∇v:∇u dΩ + ∫ v·(u·∇u) dΩ - ∫ (∇·v) p dΩ = 0   ∀v (momentum)
+    (D/Re₀) ∫ ∇v:∇u dΩ + ∫ v·(u·∇u) dΩ - ∫ (∇·v) p dΩ = 0   ∀v (momentum)
     ∫ q (∇·u) dΩ = 0                                              ∀q (incompressibility)
 
 using Newton–Raphson iteration in the full DOF space (velocity + pressure).
@@ -65,9 +66,9 @@ function _assemble_element!(
 
             # Residual
             Re_e[ri] += (
-                inv_Re * (∇φᵢ ⊡ ∇u_q)    # viscous:     ∇φᵢ : ∇u
-                + φᵢ ⋅ (∇u_q ⋅ u_q)       # convective:  φᵢ · (u·∇u)
-                - divφᵢ * p_q              # pressure:   −div(φᵢ) p
+                2 * inv_Re * (symmetric(∇φᵢ) ⊡ symmetric(∇u_q))   # viscous:     2ν ε(φᵢ):ε(u)
+                + φᵢ ⋅ (∇u_q ⋅ u_q)                                # convective:  φᵢ · (u·∇u)
+                - divφᵢ * p_q                                        # pressure:   −div(φᵢ) p
             ) * dΩ
 
             # vel–vel Jacobian block
@@ -77,9 +78,9 @@ function _assemble_element!(
                 ∇φⱼ  = shape_gradient(cv_vel, q, j)
 
                 Ke[ri, rj] += (
-                    inv_Re * (∇φᵢ ⊡ ∇φⱼ)   # viscous tangent
-                    + φᵢ ⋅ (∇u_q ⋅ φⱼ)      # (φ^j·∇)u :  convective by trial fn
-                    + φᵢ ⋅ (∇φⱼ ⋅ u_q)      # (u·∇)φ^j :  advection  of trial fn
+                    2 * inv_Re * (symmetric(∇φᵢ) ⊡ symmetric(∇φⱼ))   # viscous tangent: 2ν ε(φᵢ):ε(φⱼ)
+                    + φᵢ ⋅ (∇u_q ⋅ φⱼ)                                # (φ^j·∇)u :  convective by trial fn
+                    + φᵢ ⋅ (∇φⱼ ⋅ u_q)                                # (u·∇)φ^j :  advection  of trial fn
                 ) * dΩ
             end
 
@@ -181,8 +182,8 @@ function solve_steady_state(fom; Re0::Float64, tol::Float64 = 1e-10, max_iter::I
     for iter in 1:max_iter
         assemble_steady_nse!(K_full, R_full, s_full, fom, Re0)
 
-        # Apply homogeneous BCs to the UPDATE (δs = 0 at prescribed DOFs)
-        apply_zero!(K_full, R_full, fom.ch_hom)
+        # Apply homogeneous BCs to the UPDATE (δs = 0 at all prescribed DOFs)
+        apply_zero!(K_full, R_full, fom.ch_full)
 
         # Restrict to free DOF subspace
         R_free = R_full[fom.free]
@@ -250,7 +251,7 @@ cylinder boundary.  Reference values (Turek–Schäfer benchmark, Re = 20):
 function compute_drag_lift(s_full, fom; Re0::Float64)
     D   = 2.0 * _CYL_R
     U   = U_MEAN
-    ref = 0.5 * U^2 * D   # reference force (per unit depth, ρ = 1)
+    ref = U^2 * D   # reference force (per unit depth, ρ = 1): Cd = 2·F/(ρ·U²·D)
 
     Fd = 0.0
     Fl = 0.0

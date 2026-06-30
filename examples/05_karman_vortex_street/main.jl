@@ -53,8 +53,8 @@ include(joinpath(@__DIR__, "solver", "eigensolver.jl"))
 # ─────────────────────────────────────────────────────────────────────────────
 
 const RESULTS_DIR = joinpath(@__DIR__, "results", @sprintf("Re%.2f_ord%d", Re₀, MAX_ORD))
-const DATA_DIR    = joinpath(RESULTS_DIR, "data")
-const FIGS_DIR    = joinpath(RESULTS_DIR, "figures")
+const DATA_DIR = joinpath(RESULTS_DIR, "data")
+const FIGS_DIR = joinpath(RESULTS_DIR, "figures")
 mkpath(DATA_DIR)
 mkpath(FIGS_DIR)
 
@@ -74,7 +74,7 @@ Base.flush(t::TeeIO) = (flush(t.a); flush(t.b))
 
 _out = TeeIO(stdout, _log)
 
-const _sep  = "=" ^ 60
+const _sep = "=" ^ 60
 const _dash = "-" ^ 60
 
 println(_out, _sep)
@@ -193,7 +193,7 @@ r_dpim = @timed solve_cohomological_problem(
 # 9 — Realify + write results
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[9/9] Realifying reduced dynamics ...")
+println(_out, "\n[9/10] Realifying reduced dynamics ...")
 Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
 
 rdyn_path = joinpath(DATA_DIR, "reduced_dynamics.txt")
@@ -259,6 +259,24 @@ println(_out, _sep)
 serialize(joinpath(DATA_DIR, "W.jls"), W)
 serialize(joinpath(DATA_DIR, "R.jls"), R)
 
+# ── Pressure lift polynomial L(z) ─────────────────────────────────────────────
+L0_lift, L_coeffs_lift = let
+	l = compute_pressure_lift_weights(fom)
+	l_free = l[fom.free_dpim]
+
+	C = MORFE.ParametrisationMethod.coefficients(W)   # (FOM, 1, L)
+	W1_coeffs = @view(C[:, 1, :])                             # (FOM, L)
+	mset_l = MORFE.ParametrisationMethod.multiindex_set(W)
+
+	L_coeffs_l = vec(W1_coeffs' * l_free)                     # (L,) ComplexF64
+	L0_l = dot(l_free, real.(s₀_full[fom.free_dpim]))   # scalar: base-flow lift
+
+	lift_rom = (; L0 = L0_l, L_coeffs = L_coeffs_l, mset = mset_l)
+	serialize(joinpath(DATA_DIR, "lift_polynomial.jls"), lift_rom)
+	@printf(_out, "  Lift polynomial: L0 = %.6f, %d coefficients\n", L0_l, length(L_coeffs_l))
+	(L0_l, L_coeffs_l)
+end
+
 # ── VTK data bundle (plain arrays, no Ferrite types) for visualise_paraview.jl ─
 let _nn = Ferrite.getnnodes(fom.grid)
 	vtk_data = (;
@@ -276,9 +294,68 @@ let _nn = Ferrite.getnnodes(fom.grid)
 	serialize(joinpath(DATA_DIR, "vtk_data.jls"), vtk_data)
 end
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 10 — Export R → CSV → MATLAB (COCO format)
+# ─────────────────────────────────────────────────────────────────────────────
+
+println(_out, "\n[10/10] Exporting R coefficients and generating MATLAB files ...")
+
+r_export = @timed let
+	csv_path = joinpath(DATA_DIR, "R_coefficients.csv")
+	exps = R.poly.multiindex_set.exponents
+	coeffs = R.poly.coefficients   # (NVAR, L) ComplexF64
+	NVAR_R = size(coeffs, 1)
+	n_rows = 0
+	open(csv_path, "w") do io
+		header = join(["exp_$i" for i in 1:length(exps[1])], ",") * "," *
+				 join(["R$(i)_re,R$(i)_im" for i in 1:NVAR_R], ",")
+		println(io, header)
+		for (m, ex) in enumerate(exps)
+			c = coeffs[:, m]
+			any(abs.(c) .> 1e-14) || continue
+			row = join(string.(Int.(ex)), ",") * "," *
+				  join(["$(real(c[i])),$(imag(c[i]))" for i in 1:NVAR_R], ",")
+			println(io, row)
+			n_rows += 1
+		end
+	end
+	println(_out, "  R_coefficients.csv  ($n_rows rows)")
+
+	# L_coefficients.csv — lift polynomial (constant row + polynomial terms)
+	lift_csv_path = joinpath(DATA_DIR, "L_coefficients.csv")
+	L_exps = mset.exponents
+	n_L_rows = 0
+	open(lift_csv_path, "w") do io
+		header = join(["exp_$i" for i in 1:length(L_exps[1])], ",") * ",L_re,L_im"
+		println(io, header)
+		println(io, "0,0,0,$(L0_lift),0.0")   # constant (base-flow lift)
+		for (m, ex) in enumerate(L_exps)
+			c = L_coeffs_lift[m]
+			abs(c) > 1e-14 || continue
+			println(io, join(string.(Int.(ex)), ",") * ",$(real(c)),$(imag(c))")
+			n_L_rows += 1
+		end
+	end
+	println(_out, "  L_coefficients.csv  ($n_L_rows polynomial rows, L0 = $(round(L0_lift; sigdigits=6)))")
+
+	py_script = joinpath(@__DIR__, "validation", "generate_matlab.py")
+	py3 = Sys.which("python3")
+	if py3 !== nothing && isfile(py_script)
+		run(Cmd([py3, py_script, csv_path,
+			"--output-dir", DATA_DIR,
+			"--re0", string(Re₀),
+			"--max-ord", string(MAX_ORD)]))
+		println(_out, "  vec_fields_karman.m + vec_fields_karman_DFDX.m  written to data/")
+	else
+		println(_out, "  Warning: python3 not found — run validation/generate_matlab.py manually")
+	end
+end
+
 println(_out, "\nResults saved to: $RESULTS_DIR")
 println(_out, "  summary.log, summary.txt")
 println(_out, "  data/: reduced_dynamics.txt, W.jls, R.jls, vtk_data.jls")
+println(_out, "         R_coefficients.csv, vec_fields_karman.m, vec_fields_karman_DFDX.m")
+println(_out, "         L_coefficients.csv, lift_karman.m")
 
 close(_log)
 
@@ -293,7 +370,11 @@ open(joinpath(RESULTS_DIR, "summary.txt"), "w") do io
 	println(io, "parametrisation_order: $MAX_ORD")
 	@printf(io, "cohomological_solve_time_s: %.3f\n", r_dpim.time)
 	println(io, "julia_version: $(VERSION)")
-	commit = try readchomp(`git rev-parse --short HEAD`) catch; "unknown" end
+	commit = try
+		readchomp(`git rev-parse --short HEAD`)
+	catch
+		; "unknown"
+	end
 	println(io, "morfe_commit: $commit")
 	println(io, "timestamp: $(time())")
 end

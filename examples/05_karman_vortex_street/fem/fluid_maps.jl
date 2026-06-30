@@ -289,7 +289,7 @@ function assemble_K_visc(fom)
                 for j in 1:n_vel
                     rj   = fom.dof_range_u[j]
                     ∇φⱼ = shape_gradient(fom.cv_vel, q, j)
-                    Ke[ri, rj] += (∇φᵢ ⊡ ∇φⱼ) * dΩ
+                    Ke[ri, rj] += 2 * (symmetric(∇φᵢ) ⊡ symmetric(∇φⱼ)) * dΩ
                 end
             end
         end
