@@ -89,9 +89,9 @@ function _assemble_linear_element!(
                 # A_lin vel–vel = −K/Re₀ − J_conv(u₀)
                 # J_conv_kl = ∫ φ^k · [(u₀·∇)φ^l + (φ^l·∇)u₀] dΩ
                 ALe[ri, rj] += (
-                    -inv_Re * (∇φᵢ ⊡ ∇φⱼ)      # −viscous
-                    - φᵢ ⋅ (∇φⱼ ⋅ u₀_q)         # −(u₀·∇)φ^j
-                    - φᵢ ⋅ (∇u₀_q ⋅ φⱼ)          # −(φ^j·∇)u₀
+                    -2 * inv_Re * (symmetric(∇φᵢ) ⊡ symmetric(∇φⱼ))   # −viscous: −2ν ε(φᵢ):ε(φⱼ)
+                    - φᵢ ⋅ (∇φⱼ ⋅ u₀_q)                                # −(u₀·∇)φ^j
+                    - φᵢ ⋅ (∇u₀_q ⋅ φⱼ)                                # −(φ^j·∇)u₀
                 ) * dΩ
             end
 
@@ -226,4 +226,47 @@ function check_linearisation(s0_full, fom, B0_free; Re0::Float64, ε::Float64 = 
 
     @info "  Max relative linearisation error: $(maximum(errs))"
     return maximum(errs)
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pressure lift weight vector
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+    compute_pressure_lift_weights(fom) -> Vector{Float64}
+
+Assemble `l ∈ ℝ^N` such that `F_L^pres = l ⋅ u_full = ∫_Γ_cyl (-p n_y) dΓ`.
+
+Sign convention matches `compute_drag_lift`: `n` is the outward normal from the
+fluid, so the pressure traction is `-p·n` and `l[i] = -∫ n_y ψ_i^p dΓ` for
+each pressure DOF `i` on the cylinder boundary (zero elsewhere).
+"""
+function compute_pressure_lift_weights(fom)
+    ndofs_total = Ferrite.ndofs(fom.dh)
+    l = zeros(Float64, ndofs_total)
+
+    qr_face   = FacetQuadratureRule{RefTriangle}(4)
+    ip_pres_f = Lagrange{RefTriangle, 1}()
+    ip_geo    = Lagrange{RefTriangle, 1}()
+    fv_pres   = FacetValues(qr_face, ip_pres_f, ip_geo)
+
+    cyl_set = getfacetset(fom.grid, "Cylinder")
+
+    for (cell_idx, local_facet_idx) in cyl_set
+        cell = CellCache(fom.dh)
+        reinit!(cell, cell_idx)
+        gdofs = celldofs(cell)
+        reinit!(fv_pres, cell, local_facet_idx)
+
+        for q in 1:getnquadpoints(fv_pres)
+            dΓ  = getdetJdV(fv_pres, q)
+            n_y = getnormal(fv_pres, q)[2]
+
+            for (i, li) in enumerate(fom.dof_range_p)
+                l[gdofs[li]] += (-n_y) * shape_value(fv_pres, q, i) * dΓ
+            end
+        end
+    end
+
+    return l
 end

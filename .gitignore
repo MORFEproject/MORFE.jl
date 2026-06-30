@@ -67,3 +67,6 @@ timing_*.txt
 # Never track IFX content, even if the folder reappears anywhere in the repo
 IFX/
 private/
+*.vtu
+*.vtu
+*.vtu

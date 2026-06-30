@@ -118,12 +118,16 @@ function solve_hopf_eigenproblem(
     _, xl, = eigs(LM_adj; nev = 1, which = :LM, maxiter = 3000,
                   ncv = min(60, n - 1))
     ψ₁ = xl[:, 1]
-    ψ₂ = conj(ψ₁)
 
-    # ── Biorthogonal normalisation: ψ₁ᵀ B φ₁ = 1 ─────────────────────────────
+    # ── Biorthogonal normalisation: ψ₁ᵀ B φ₁ = 1 (scale both by 1/√α) ─────────
+    # Dividing both by √α keeps the normalisation symmetric (‖ψ‖ ~ ‖φ‖) and
+    # avoids an ill-conditioned bordered system when ψ₁ is much larger than φ₁.
     α  = transpose(ψ₁) * (Bc * φ₁)
-    φ₁ = φ₁ ./ α
-    φ₂ = conj(φ₁)   # re-derive after normalising
+    sq_α = sqrt(α)
+    φ₁ = φ₁ ./ sq_α
+    ψ₁ = ψ₁ ./ sq_α
+    φ₂ = conj(φ₁)
+    ψ₂ = conj(ψ₁)
 
     master_eigenvalues = SVector{2, ComplexF64}(λ₁, λ₂)
     master_modes       = hcat(φ₁, φ₂)
