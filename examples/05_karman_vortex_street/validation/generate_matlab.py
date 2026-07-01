@@ -185,7 +185,7 @@ def generate(csv_path, output_dir, re0=None, max_ord=None, threshold=THRESHOLD):
     # ------------------------------------------------------------------
     # 4. vec_fields_karman.m
     # ------------------------------------------------------------------
-    max_ord_line = f"MAX_ORD = {max_ord};" if max_ord is not None else ""
+    max_ord_line = f"MAX_ORD = par(2,:);" if max_ord is not None else ""
 
     nl_body_lines = []
     for z_ord in z_orders:
@@ -368,7 +368,7 @@ def generate_lift(lift_csv_path, output_dir, re0=None, max_ord=None, threshold=T
     for (a, b, c, coeff) in nl_rows:
         groups.setdefault(a + b, []).append((a, b, c, coeff))
 
-    max_ord_line = f"MAX_ORD = {max_ord};" if max_ord is not None else ""
+    max_ord_line = f"MAX_ORD = par(2,:);" if max_ord is not None else ""
 
     eta_preamble = [
         "eta = par(1,:);",

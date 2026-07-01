@@ -164,10 +164,10 @@ println(_out, "  $(length(mset)) monomials (NVAR=$NVAR, order ≤ $MAX_ORD)")
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[8/9] Solving cohomological equations (order $MAX_ORD) ...")
-all_lambdas = ComplexF64[master_eigenvalues..., 0.0+0.0im]
-lambda_im = ComplexF64[complex(0.0, imag(λ)) for λ in all_lambdas]
+lambda_im = ComplexF64[complex(0.0, imag(λ)) for λ in master_eigenvalues]
 resonance_set = resonance_set_from_complex_normal_form_style(
-	mset, lambda_im, 0.05 * abs(imag(master_eigenvalues[1])))
+	mset, Vector{ComplexF64}(lambda_im), 0.05 * abs(imag(master_eigenvalues[1]));
+	external_eigenvalues=ComplexF64[0.0 + 0.0im])
 
 println("\n§4  Resonance set  (NVAR=$NVAR, max_degree=$MAX_ORD)")
 for t in 1:3
@@ -373,7 +373,8 @@ open(joinpath(RESULTS_DIR, "summary.txt"), "w") do io
 	commit = try
 		readchomp(`git rev-parse --short HEAD`)
 	catch
-		; "unknown"
+		;
+		"unknown"
 	end
 	println(io, "morfe_commit: $commit")
 	println(io, "timestamp: $(time())")

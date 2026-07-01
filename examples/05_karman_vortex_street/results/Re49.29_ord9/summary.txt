@@ -6,7 +6,7 @@ Re0: 49.2894
 master_modes: 2  (Hopf pair)
 master_eigenvalues: ComplexF64[-0.01169243369885109 + 17.02238855863341im, -0.01169243369885109 - 17.02238855863341im]
 parametrisation_order: 9
-cohomological_solve_time_s: 356.536
+cohomological_solve_time_s: 342.506
 julia_version: 1.12.6
-morfe_commit: 11722d4
-timestamp: 1.782777369779882e9
+morfe_commit: 0737c41
+timestamp: 1.782838274418198e9
