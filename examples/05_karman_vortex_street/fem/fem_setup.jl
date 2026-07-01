@@ -5,15 +5,17 @@ Returns a NamedTuple with:
   grid, dh, ch_full, ch_hom, cv_vel, cv_pres,
   free, free_to_local, n_free, dof_range_u, dof_range_p, n_vel_dofs_per_cell
 
-Two ConstraintHandlers with DIFFERENT prescribed-DOF sets:
+Two ConstraintHandlers over the SAME prescribed-DOF set (different inlet values):
   ch_full  — inhomogeneous Poiseuille inlet + no-slip walls + cylinder;
              used for the steady-state Newton solve
-  ch_hom   — homogeneous no-slip walls + cylinder only (inlet left free);
-             used for the linearised (perturbation / DPIM) problem
+  ch_hom   — homogeneous inlet + no-slip walls + cylinder;
+             used for the linearised (perturbation / DPIM) problem.
+             The inlet perturbation is frozen to zero (u = u₀ imposed → u' = 0),
+             matching the base-flow BC set and the reference DPIM2D_NS code.
 
-Consequently 'free' ≠ 'free_dpim':
+Consequently 'free' == 'free_dpim' as index sets:
   free      = setdiff(all, ch_full) — excludes inlet + walls + cylinder
-  free_dpim = setdiff(all, ch_hom)  — excludes only walls + cylinder (inlet included)
+  free_dpim = setdiff(all, ch_hom)  — excludes inlet + walls + cylinder
 """
 
 using Ferrite
@@ -85,9 +87,13 @@ function setup_fem(meshfile::String)
     update!(ch_full, 0.0)
 
     # ── Homogeneous BCs (for perturbation / DPIM eigenproblem) ───────────
-    # Walls and cylinder only — inlet is left free (natural/stress-free BC)
-    # so that perturbations are not artificially suppressed at x = 0.
+    # Inlet, walls and cylinder — all where the base flow has a Dirichlet BC.
+    # The inflow profile is imposed (u = u₀), so the perturbation must vanish
+    # there (u' = 0); leaving the inlet free would inject spurious inlet velocity
+    # into the modes and the convective quadratic. Matches the reference code.
     ch_hom = ConstraintHandler(dh)
+    add!(ch_hom, Dirichlet(:u, getfacetset(grid, "Inlet"),
+        (x, _) -> Vec{2}((0.0, 0.0))))
     add!(ch_hom, Dirichlet(:u, getfacetset(grid, "Walls"),
         (x, _) -> Vec{2}((0.0, 0.0))))
     add!(ch_hom, Dirichlet(:u, getfacetset(grid, "Cylinder"),
@@ -97,7 +103,8 @@ function setup_fem(meshfile::String)
 
     # ── Free DOFs ─────────────────────────────────────────────────────────
     # free      : for steady-state Newton solve (inlet prescribed to Poiseuille)
-    # free_dpim : for DPIM operators (inlet free → natural BC for perturbation)
+    # free_dpim : for DPIM operators (inlet frozen → u' = 0 for perturbation)
+    # Both exclude inlet + walls + cylinder, so they coincide as index sets.
     free      = sort(setdiff(1:ndofs(dh), ch_full.prescribed_dofs))
     free_to_local = Dict{Int, Int}(d => i for (i, d) in enumerate(free))
     n_free    = length(free)
@@ -107,7 +114,7 @@ function setup_fem(meshfile::String)
     n_free_dpim = length(free_dpim)
 
     @info "  Free DOFs (steady state) : $n_free"
-    @info "  Free DOFs (DPIM)         : $n_free_dpim  (inlet included)"
+    @info "  Free DOFs (DPIM)         : $n_free_dpim  (inlet frozen)"
 
     return (;
         grid, dh, ch_full, ch_hom, cv_vel, cv_pres, ip_vel, ip_pres, qr,

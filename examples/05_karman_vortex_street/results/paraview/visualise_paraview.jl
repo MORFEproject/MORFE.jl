@@ -55,7 +55,7 @@ using MORFE.Polynomials: DensePolynomial, evaluate
 # Load data
 # ─────────────────────────────────────────────────────────────────────────────
 
-const _results = joinpath(@__DIR__, "..", "Re49.03_ord5")
+const _results = joinpath(@__DIR__, "..", "Re49.03_ord7/data")
 
 isfile(joinpath(_results, "vtk_data.jls")) ||
 	error("vtk_data.jls not found — re-run main.jl first (vtk_data bundle was added in the updated main.jl).")
@@ -279,7 +279,7 @@ if haskey(d, :all_modes)
 		local φk      = NORMALIZE_MODES ? φk_raw ./ maximum(abs.(φk_raw)) : φk_raw
 		local mode_dir = joinpath(OUT_DIR, @sprintf("mode_%03d", k))
 		mkpath(mode_dir)
-		local pvd     = paraview_collection(joinpath(mode_dir, @sprintf("mode_%03d", k)))
+		local pvd = paraview_collection(joinpath(mode_dir, @sprintf("mode_%03d", k)))
 
 		for (f, θ) in enumerate(thetas)
 			# perturbation only (free-DOF space): 2·ρ·Re(φₖ·exp(iθ))
