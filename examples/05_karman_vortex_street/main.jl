@@ -12,6 +12,7 @@ Pipeline
 7.  Build NDOrderModel + multiindex set
 8.  Solve cohomological equations (DPIM)
 9.  Realify reduced dynamics → Stuart-Landau coefficients
+10. Export R + lift polynomial → CSV → MATLAB (COCO format)
 
 All parameters in config.jl.
 """
@@ -86,7 +87,7 @@ println(_out, _sep)
 # 1 — Mesh
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[1/9] Generating Turek–Schäfer mesh ...")
+println(_out, "\n[1/10] Generating Turek–Schäfer mesh ...")
 r_mesh = @timed generate_mesh(;
 	h_cyl = MESH_H_CYL,
 	h_wake = MESH_H_WAKE,
@@ -98,7 +99,7 @@ meshfile = r_mesh.value
 # 2 — FEM setup
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[2/9] Ferrite P2/P1 Taylor-Hood FEM setup ...")
+println(_out, "\n[2/10] Ferrite P2/P1 Taylor-Hood FEM setup ...")
 r_fem = @timed setup_fem(meshfile)
 fom = r_fem.value
 println(_out, "  Free DOFs (steady state): $(fom.n_free)")
@@ -108,7 +109,7 @@ println(_out, "  Free DOFs (DPIM, inlet free): $(fom.n_free_dpim)")
 # 3 — Steady-state Newton solve
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[3/9] Newton steady-state at Re₀ = $Re₀ ...")
+println(_out, "\n[3/10] Newton steady-state at Re₀ = $Re₀ ...")
 r_ss = @timed solve_steady_state(fom; Re0 = Re₀)
 (_, _, s₀_full) = r_ss.value
 
@@ -116,7 +117,7 @@ r_ss = @timed solve_steady_state(fom; Re0 = Re₀)
 # 4 — Linear operators B₀, B₁
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[4/9] Assembling linearised NSE operators ...")
+println(_out, "\n[4/10] Assembling linearised NSE operators ...")
 r_ops = @timed assemble_linear_operators(s₀_full, fom; Re0 = Re₀)
 (B₀, B₁) = r_ops.value
 println(_out, "  B₁ nnz = $(nnz(B₁)),  B₀ nnz = $(nnz(B₀))")
@@ -125,23 +126,27 @@ println(_out, "  B₁ nnz = $(nnz(B₁)),  B₀ nnz = $(nnz(B₀))")
 # 5 — K_visc (parametric coupling) + h₀ (base-flow forcing)
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[5/9] Assembling K_visc and base-flow forcing h₀ ...")
+println(_out, "\n[5/10] Assembling K_visc and base-flow forcing h₀ ...")
 r_kvisc = @timed assemble_K_visc(fom)
-K_visc = r_kvisc.value
-K_visc .*= -_CYL_D                          # physical sign: ΔA_lin = -D·η·K, so g₁ = -D·η·K·s
-h₀_vec = K_visc * s₀_full[fom.free_dpim]   # h₀(η′) = -D·η′·K_raw·u₀  (base-flow forcing)
+(K_visc, K_visc_rect) = r_kvisc.value
+K_visc .*= -_CYL_D                            # physical sign: ΔA_lin = -D·η·K, so g₁ = -D·η·K·s
+# h₀(η′) = -D·η′·K_raw·u₀ — u₀ is the FULL base flow: the prescribed inlet DOFs carry the
+# Poiseuille profile, so the rectangular free×ALL block is required here (free×free would
+# silently drop the K_raw[free, inlet]·u₀[inlet] contribution next to the inlet).
+h₀_vec = -_CYL_D .* (K_visc_rect * s₀_full)
 println(_out, "  K_visc nnz = $(nnz(K_visc))")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 6 — Hopf eigenpair
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[6/9] Shift-invert ARPACK eigenproblem ...")
+println(_out, "\n[6/10] Shift-invert ARPACK eigenproblem ...")
 r_eig = @timed solve_hopf_eigenproblem(
 	-B₀, B₁;
 	nev = EIG_NEV,
 	sigma_re = EIG_SIGMA_RE,
 	sigma_im = EIG_SIGMA_IM,
+	target_freq = EIG_TARGET_FREQ,
 )
 (master_eigenvalues, master_modes, left_eigenmodes, all_eigenvalues, all_modes) = r_eig.value
 
@@ -149,7 +154,7 @@ r_eig = @timed solve_hopf_eigenproblem(
 # 7 — NDOrderModel + multiindex set
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[7/9] Building NDOrderModel and multiindex set ...")
+println(_out, "\n[7/10] Building NDOrderModel and multiindex set ...")
 mset = all_multiindices_up_to(NVAR, MAX_ORD; min_degree = 1)
 convection = FluidConvection(fom; max_unique_cols = length(mset))
 g₁ = make_param_coupling(K_visc)
@@ -163,21 +168,18 @@ println(_out, "  $(length(mset)) monomials (NVAR=$NVAR, order ≤ $MAX_ORD)")
 # 8 — Resonance set + cohomological equations
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[8/9] Solving cohomological equations (order $MAX_ORD) ...")
+println(_out, "\n[8/10] Solving cohomological equations (order $MAX_ORD) ...")
 lambda_im = ComplexF64[complex(0.0, imag(λ)) for λ in master_eigenvalues]
 resonance_set = resonance_set_from_complex_normal_form_style(
 	mset, Vector{ComplexF64}(lambda_im), 0.05 * abs(imag(master_eigenvalues[1]));
 	external_eigenvalues=ComplexF64[0.0 + 0.0im])
 
-println("\n§4  Resonance set  (NVAR=$NVAR, max_degree=$MAX_ORD)")
-for t in 1:3
+println(_out, "\nResonance set  (NVAR=$NVAR, max_degree=$MAX_ORD)")
+for t in 1:NVAR
 	cols = resonant_multiindices(resonance_set, t)
-	@printf("     Target %d:  %d monomials\n", t, length(cols))
-	isempty(cols) || println("       ", join(["$(mset.exponents[k])" for k in cols], "  "))
+	@printf(_out, "     Target %d:  %d monomials\n", t, length(cols))
+	isempty(cols) || println(_out, "       ", join(["$(mset.exponents[k])" for k in cols], "  "))
 end
-
-#print("\nProceed with cohomological solve? [y/N]: ")
-#readline() == "y" || (close_log(_log); exit(0))
 
 conj_map = [2, 1, 3]   # mode 1 (Im>0) ↔ mode 2 (Im<0); η′ self-conjugate
 r_dpim = @timed solve_cohomological_problem(
@@ -268,7 +270,7 @@ L0_lift, L_coeffs_lift = let
 	W1_coeffs = @view(C[:, 1, :])                             # (FOM, L)
 	mset_l = MORFE.ParametrisationMethod.multiindex_set(W)
 
-	L_coeffs_l = vec(W1_coeffs' * l_free)                     # (L,) ComplexF64
+	L_coeffs_l = vec(transpose(W1_coeffs) * l_free)           # (L,) ComplexF64 — bilinear lᵀW (adjoint would conjugate)
 	L0_l = dot(l_free, real.(s₀_full[fom.free_dpim]))   # scalar: base-flow lift
 
 	lift_rom = (; L0 = L0_l, L_coeffs = L_coeffs_l, mset = mset_l)
@@ -328,7 +330,7 @@ r_export = @timed let
 	open(lift_csv_path, "w") do io
 		header = join(["exp_$i" for i in 1:length(L_exps[1])], ",") * ",L_re,L_im"
 		println(io, header)
-		println(io, "0,0,0,$(L0_lift),0.0")   # constant (base-flow lift)
+		println(io, join(zeros(Int, length(L_exps[1])), ",") * ",$(L0_lift),0.0")   # constant (base-flow lift)
 		for (m, ex) in enumerate(L_exps)
 			c = L_coeffs_lift[m]
 			abs(c) > 1e-14 || continue
