@@ -259,14 +259,18 @@ end
 # ─────────────────────────────────────────────────────────────────────────────
 
 """
-    assemble_K_visc(fom) -> SparseMatrixCSC
+    assemble_K_visc(fom) -> (K_visc_free, K_visc_rect)
 
 Assemble the raw viscosity stiffness matrix K_visc (full DOF space):
 
-    K_visc_kl = ∫ ∇φ^k : ∇φ^l dΩ    (velocity test and trial, P2)
+    K_visc_kl = ∫ 2 ε(φ^k) : ε(φ^l) dΩ    (velocity test and trial, P2)
 
-Pressure DOF rows and columns are zero.
-This matrix (restricted to free DOFs) is needed for the parametric coupling g₁.
+Pressure DOF rows and columns are zero.  Two restrictions are returned:
+
+  K_visc_free — square free×free block, for the parametric coupling g₁ acting on
+                the perturbation (which vanishes on prescribed DOFs);
+  K_visc_rect — rectangular free×ALL block, for the base-flow forcing h₀ = K·u₀,
+                where u₀ is nonzero on the prescribed inlet DOFs (Poiseuille).
 """
 function assemble_K_visc(fom)
     K_full = allocate_matrix(fom.dh)
@@ -298,6 +302,7 @@ function assemble_K_visc(fom)
     end
 
     K_visc_free = K_full[fom.free_dpim, fom.free_dpim]
+    K_visc_rect = K_full[fom.free_dpim, :]
     @info "K_visc assembled: $(nnz(K_visc_free)) nonzeros in free subspace"
-    return K_visc_free
+    return K_visc_free, K_visc_rect
 end
