@@ -1,25 +1,29 @@
 """
-	main.jl — Kármán vortex street DPIM run (STEP 1 of the pipeline).
+	main.jl — Kármán vortex street DPIM run (STEP 1 of 3).
 
-Pipeline
-────────
-1.  Generate Turek–Schäfer mesh (Gmsh)
-2.  Ferrite P2/P1 Taylor-Hood FEM setup
-3.  Newton steady-state solve at Re₀
-4.  Assemble linearised NSE operators B₀, B₁
-5.  Assemble K_visc (parametric coupling) and h₀ (base-flow forcing)
-6.  Shift-invert ARPACK eigenproblem → Hopf pair (λ₁, λ₂)
-7.  Build NDOrderModel + multiindex set (order MAX_ORD)
-8.  Solve cohomological equations (DPIM)
-9.  Report reduced dynamics ż₁ = R₁(z₁, z̄₁, η′)  (complex Stuart-Landau coefficients)
-10. Export R + lift polynomial + TKE Gram → results/Re{Re₀}_ord{MAX_ORD}/data/
+What this computes
+──────────────────
+The 2D incompressible flow past a cylinder loses stability at Re_c ≈ 49 through a Hopf
+bifurcation — the Kármán vortex street. This script reduces the ~58 000-DOF
+finite-element model to a SINGLE complex ODE (a Stuart–Landau equation)
 
-A SINGLE run at MAX_ORD suffices for the whole order-convergence study: the
-cohomological solve is graded (degree-N coefficients never depend on degrees > N), so
-the lower-order ROMs are exact truncations of this run. solve_rom.jl and
-compare_orders.py truncate to each order in TRUNC_ORDERS.
+	ż₁ = λ z₁ + c₁₀₁ z₁ η′ + c₂₁₀ z₁|z₁|² + …
 
-Next steps:  solve_rom.jl (ROM limit-cycle branches)  →  compare_orders.py.
+by the Direct Parametrisation of Invariant Manifolds (DPIM). The Reynolds number is
+carried along as an extra parametric coordinate η′ = 1/Re − 1/Re₀, so ONE run at the
+expansion point Re₀ describes the whole bifurcation neighbourhood.
+
+How to run
+──────────
+	julia --project=. main.jl          # ≈ 7 min (Apple Silicon): 35 s setup + order-9 solve
+
+Outputs land in results/Re{Re₀}_ord{MAX_ORD}/ (ROM, lift polynomial, TKE Gram, CSVs;
+see README.md). One run at MAX_ORD suffices for the whole order-convergence study —
+the cohomological solve is graded, so lower orders are exact truncations.
+
+Then:   julia --project=. solve_rom.jl     (limit-cycle branch per truncation order)
+		python3 compare_orders.py          (lift & avg-TKE vs Re, one curve per order)
+
 All parameters in config.jl.
 """
 
@@ -56,35 +60,16 @@ include(joinpath(@__DIR__, "fem", "linear_operators.jl"))
 include(joinpath(@__DIR__, "fem", "fluid_maps.jl"))
 include(joinpath(@__DIR__, "fem", "energy_gram.jl"))
 include(joinpath(@__DIR__, "solver", "eigensolver.jl"))
+include(joinpath(@__DIR__, "exports.jl"))
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Results directory (deterministic name — same config overwrites previous run)
-# ─────────────────────────────────────────────────────────────────────────────
-
+# Results directory (deterministic name — the same config overwrites the previous run)
 const RESULTS_DIR = joinpath(@__DIR__, "results", @sprintf("Re%.2f_ord%d", Re₀, MAX_ORD))
 const DATA_DIR = joinpath(RESULTS_DIR, "data")
-const FIGS_DIR = joinpath(RESULTS_DIR, "figures")
 mkpath(DATA_DIR)
-mkpath(FIGS_DIR)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Logging: tee all output to stdout and summary.log simultaneously
-# ─────────────────────────────────────────────────────────────────────────────
+mkpath(joinpath(RESULTS_DIR, "figures"))
 
 _log = open(joinpath(RESULTS_DIR, "summary.log"), "w")
-
-struct TeeIO <: IO
-	a::IO
-	b::IO
-end
-Base.unsafe_write(t::TeeIO, p::Ptr{UInt8}, n::UInt) =
-	(unsafe_write(t.a, p, n); unsafe_write(t.b, p, n); n)
-Base.flush(t::TeeIO) = (flush(t.a); flush(t.b))
-
-_out = TeeIO(stdout, _log)
-
-const _sep = "=" ^ 60
-const _dash = "-" ^ 60
+_out = TeeIO(stdout, _log)   # everything printed to _out also lands in summary.log
 
 println(_out, _sep)
 println(_out, "Kármán Vortex Street DPIM  (Re₀ = $Re₀,  order = $MAX_ORD)")
@@ -92,7 +77,7 @@ println(_out, "  results → $RESULTS_DIR")
 println(_out, _sep)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1 — Mesh
+# 1 — Mesh: Turek–Schäfer channel (2.2 × 0.41 m) with a Ø 0.1 m cylinder
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[1/10] Generating Turek–Schäfer mesh ...")
@@ -104,7 +89,10 @@ r_mesh = @timed generate_mesh(;
 meshfile = r_mesh.value
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2 — FEM setup
+# 2 — FEM setup: P2/P1 Taylor-Hood velocity/pressure spaces.
+#     Dirichlet BCs (Poiseuille inlet, no-slip walls/cylinder) are eliminated;
+#     the DPIM operates on the remaining `free_dpim` DOFs, where the perturbation
+#     around the base flow vanishes on every prescribed boundary.
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[2/10] Ferrite P2/P1 Taylor-Hood FEM setup ...")
@@ -114,7 +102,8 @@ println(_out, "  Free DOFs (steady state): $(fom.n_free)")
 println(_out, "  Free DOFs (DPIM): $(fom.n_free_dpim)")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3 — Steady-state Newton solve
+# 3 — Base flow: steady Navier-Stokes solution u₀ at Re₀ (Newton iteration).
+#     The manifold is expanded around this fixed point.
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[3/10] Newton steady-state at Re₀ = $Re₀ ...")
@@ -122,7 +111,10 @@ r_ss = @timed solve_steady_state(fom; Re0 = Re₀)
 (_, _, s₀_full) = r_ss.value
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4 — Linear operators B₀, B₁
+# 4 — Linearised operators. The perturbation s = [u′; p′] obeys the descriptor
+#     system  B₁ ṡ + B₀ s = F(s, η′):  B₁ is the velocity mass matrix (singular —
+#     pressure has no time derivative), B₀ = −A_lin collects viscosity, base-flow
+#     convection and the pressure/incompressibility coupling.
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[4/10] Assembling linearised NSE operators ...")
@@ -131,21 +123,26 @@ r_ops = @timed assemble_linear_operators(s₀_full, fom; Re0 = Re₀)
 println(_out, "  B₁ nnz = $(nnz(B₁)),  B₀ nnz = $(nnz(B₀))")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5 — K_visc (parametric coupling) + h₀ (base-flow forcing)
+# 5 — The η′ trick. With ν = D/Re, the parameter η′ = 1/Re − 1/Re₀ enters the
+#     equations LINEARLY through the viscous term:
+#       g₁(s, η′) = −D·η′·K_raw·u′        (operator change on the perturbation)
+#       h₀(η′)    = −D·η′·K_raw·u₀        (base-flow forcing; u₀ is the FULL base
+#     flow — its prescribed inlet DOFs carry the Poiseuille profile, so h₀ needs
+#     the rectangular free×ALL block of K_raw, not the free×free one.)
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[5/10] Assembling K_visc and base-flow forcing h₀ ...")
 r_kvisc = @timed assemble_K_visc(fom)
 (K_visc, K_visc_rect) = r_kvisc.value
-K_visc .*= -_CYL_D                            # physical sign: ΔA_lin = -D·η·K, so g₁ = -D·η·K·s
-# h₀(η′) = -D·η′·K_raw·u₀ — u₀ is the FULL base flow: the prescribed inlet DOFs carry the
-# Poiseuille profile, so the rectangular free×ALL block is required here (free×free would
-# silently drop the K_raw[free, inlet]·u₀[inlet] contribution next to the inlet).
+K_visc .*= -_CYL_D
 h₀_vec = -_CYL_D .* (K_visc_rect * s₀_full)
 println(_out, "  K_visc nnz = $(nnz(K_visc))")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6 — Hopf eigenpair
+# 6 — Master modes: the Hopf pair. Shift-invert ARPACK on A_lin y = λ B₁ y finds
+#     the least-damped complex-conjugate eigenpair λ₁,₂ = σ₀ ± iω₀ (σ₀ ≈ 0 near
+#     Re_c, ω₀ ≈ 16.86 rad/s — the shedding frequency). Its right/left
+#     eigenvectors seed the two master coordinates z₁, z̄₁ of the manifold.
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[6/10] Shift-invert ARPACK eigenproblem ...")
@@ -159,7 +156,10 @@ r_eig = @timed solve_hopf_eigenproblem(
 (master_eigenvalues, master_modes, left_eigenmodes, all_eigenvalues, all_modes) = r_eig.value
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7 — NDOrderModel + multiindex set
+# 7 — Full-order model for the DPIM: the quadratic convection f₂(s,s) = −(u·∇)u
+#     (FEM-assembled on the fly), the two η′ terms from stage 5, and the
+#     parameter itself as a trivial external system η̇′ = 0. The multiindex set
+#     enumerates every monomial z₁^a z̄₁^b η′^c up to total degree MAX_ORD.
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[7/10] Building NDOrderModel and multiindex set ...")
@@ -173,7 +173,14 @@ model = NDOrderModel((B₀, B₁), (convection, g₁, h₀), ext_sys)
 println(_out, "  $(length(mset)) monomials (NVAR=$NVAR, order ≤ $MAX_ORD)")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8 — Resonance set + cohomological equations
+# 8 — DPIM solve. The normal-form-style resonance set keeps only the resonant
+#     monomials z₁|z₁|^{2k} η′^j in the reduced dynamics; everything else is
+#     absorbed into the manifold map W. Solving the cohomological equations
+#     order-by-order yields
+#       W : (z₁, z̄₁, η′) ↦ full state      (the invariant-manifold embedding)
+#       R : ż = R(z)                        (the reduced dynamics on it)
+#     The solve is graded — degree-N coefficients never depend on degrees > N —
+#     which is why lower orders are exact truncations of this run.
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[8/10] Solving cohomological equations (order $MAX_ORD) ...")
@@ -200,197 +207,43 @@ r_dpim = @timed solve_cohomological_problem(
 (W, R) = r_dpim.value
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9 — Realify + write results
+# 9 — Report the reduced dynamics: the first row ż₁ = R₁(z₁, z̄₁, η′) is the
+#     Stuart-Landau equation (row 2 is its conjugate, row 3 is η̇′ = 0).
+#     Supercritical Hopf ⇔ Re(c₂₁₀) < 0 for the [2,1,0] monomial.
 # ─────────────────────────────────────────────────────────────────────────────
 
 println(_out, "\n[9/10] Reduced dynamics — first row ż₁ = R₁(z₁, z̄₁, η′) ...")
-
-rdyn_path = joinpath(DATA_DIR, "reduced_dynamics.txt")
-open(rdyn_path, "w") do io
-	println(io, "Kármán Vortex Street — Reduced Dynamics (complex form, equation 1)")
-	@printf(io, "Re₀ = %.4f,  DPIM order = %d,  NVAR = %d\n", Re₀, MAX_ORD, NVAR)
-	println(io, "")
-	println(io, "Hopf eigenvalues:")
-	for (i, λ) in enumerate(master_eigenvalues)
-		@printf(io, "  λ[%d] = %+.10f %+.10f i\n", i, real(λ), imag(λ))
-	end
-	println(io, "")
-	println(io, "ż₁ = R₁(z₁, z̄₁, η′) — nonzero monomials  [z₁-pow, z̄₁-pow, η′-pow]:")
-	for m in eachindex(R.poly.multiindex_set.exponents)
-		mi = R.poly.multiindex_set.exponents[m]
-		c = R.poly.coefficients[1, m]
-		abs(c) > 1e-14 || continue
-		@printf(io, "  %-14s : %+.10e %+.10e·i\n", string(mi), real(c), imag(c))
-	end
-	println(io, "")
-	println(io, "Equation 2 is the complex conjugate; equation 3 is the parameter, η̇′ = 0.")
-end
-
-println(_out, "\nReduced dynamics ż₁ = R₁ — nonzero monomials:")
-for m in eachindex(R.poly.multiindex_set.exponents)
-	mi = R.poly.multiindex_set.exponents[m]
-	c = R.poly.coefficients[1, m]
-	abs(c) > 1e-12 || continue
-	@printf(_out, "  %-14s : %s\n", string(mi), string(round(c; sigdigits = 6)))
-end
+export_reduced_dynamics(_out, DATA_DIR, R, master_eigenvalues;
+	re0 = Re₀, ord = MAX_ORD, nvar = NVAR)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Save ROM
+# 10 — Save the ROM and the two physical observables that compare_orders.py
+#      evaluates along the limit cycle:
+#        · lift polynomial  L(z) = L0 + Σ (lᵀW_α) z^α   (pressure lift on the cylinder)
+#        · TKE Gram matrix  G = W_velᵀ M_vel W_vel / |Ω| (period-averaged kinetic energy)
 # ─────────────────────────────────────────────────────────────────────────────
 
-serialize(joinpath(DATA_DIR, "W.jls"), W)
-serialize(joinpath(DATA_DIR, "R.jls"), R)
+println(_out, "\n[10/10] Saving ROM and exporting observables ...")
 
-# ── Pressure lift polynomial L(z) ─────────────────────────────────────────────
-L0_lift, L_coeffs_lift = let
-	l = compute_pressure_lift_weights(fom)
-	l_free = l[fom.free_dpim]
+export_rom(DATA_DIR, W, R)
 
-	C = MORFE.ParametrisationMethod.coefficients(W)   # (FOM, 1, L)
-	W1_coeffs = @view(C[:, 1, :])                             # (FOM, L)
-	mset_l = MORFE.ParametrisationMethod.multiindex_set(W)
+# Lift functional: l picks the pressure traction −p·n_y on the cylinder boundary.
+l_free = compute_pressure_lift_weights(fom)[fom.free_dpim]
+L0_lift = dot(l_free, real.(s₀_full[fom.free_dpim]))   # base-flow lift
+L_coeffs_lift = export_lift_polynomial(_out, DATA_DIR, W, l_free, L0_lift)
 
-	L_coeffs_l = vec(transpose(W1_coeffs) * l_free)           # (L,) ComplexF64 — bilinear lᵀW (adjoint would conjugate)
-	L0_l = dot(l_free, real.(s₀_full[fom.free_dpim]))   # scalar: base-flow lift
+# TKE Gram: the L×L matrix that lets Python evaluate ⟨TKE⟩ without FOM-sized data.
+(M_vel, vel_rows, area) = prepare_energy_gram(fom)
+write_energy_gram(DATA_DIR, W, M_vel, vel_rows, area)
+println(_out, "  tke_gram_re.csv, tke_gram_im.csv, tke_avector.csv  written to data/")
 
-	lift_rom = (; L0 = L0_l, L_coeffs = L_coeffs_l, mset = mset_l)
-	serialize(joinpath(DATA_DIR, "lift_polynomial.jls"), lift_rom)
-	@printf(_out, "  Lift polynomial: L0 = %.6f, %d coefficients\n", L0_l, length(L_coeffs_l))
-	(L0_l, L_coeffs_l)
-end
+export_vtk_bundle(DATA_DIR, fom, s₀_full, master_eigenvalues, all_eigenvalues, all_modes)
 
-# ── TKE energy Gram (for compare_orders.py / run_tke.py) ──────────────────────
-let
-	(M_vel, vel_rows, area) = prepare_energy_gram(fom)
-	write_energy_gram(DATA_DIR, W, M_vel, vel_rows, area)
-	println(_out, "  tke_gram_re.csv, tke_gram_im.csv, tke_avector.csv  written to data/")
-end
+csv_path = export_coefficient_csvs(_out, DATA_DIR, R, mset, L0_lift, L_coeffs_lift)
+EXPORT_MATLAB && export_matlab_model(_out, DATA_DIR, csv_path; re0 = Re₀, ord = MAX_ORD)
 
-# ── VTK data bundle (plain arrays, no Ferrite types) for visualise_paraview.jl ─
-let _nn = Ferrite.getnnodes(fom.grid)
-	vtk_data = (;
-		node_coords = Float64[fom.grid.nodes[i].x[c] for c in 1:2, i in 1:_nn],
-		cell_connectivity = [collect(Int32, c.nodes) for c in fom.grid.cells],
-		cell_dofs = [collect(Ferrite.celldofs(cell)) for cell in Ferrite.CellIterator(fom.dh)],
-		free_dpim = fom.free_dpim,
-		ndofs_total = Ferrite.ndofs(fom.dh),
-		n_vel_dofs_per_cell = fom.n_vel_dofs_per_cell,
-		s0_free_dpim = s₀_full[fom.free_dpim],
-		master_eigenvalues = master_eigenvalues,
-		all_eigenvalues = all_eigenvalues,
-		all_modes = Matrix{ComplexF64}(all_modes),
-	)
-	serialize(joinpath(DATA_DIR, "vtk_data.jls"), vtk_data)
-end
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 10 — Export R + L → CSV (→ MATLAB when EXPORT_MATLAB)
-# ─────────────────────────────────────────────────────────────────────────────
-
-println(_out, "\n[10/10] Exporting R and L coefficients ...")
-
-csv_path = joinpath(DATA_DIR, "R_coefficients.csv")
-let
-	exps = R.poly.multiindex_set.exponents
-	coeffs = R.poly.coefficients   # (NVAR, L) ComplexF64
-	NVAR_R = size(coeffs, 1)
-	n_rows = 0
-	open(csv_path, "w") do io
-		header = join(["exp_$i" for i in 1:length(exps[1])], ",") * "," *
-				 join(["R$(i)_re,R$(i)_im" for i in 1:NVAR_R], ",")
-		println(io, header)
-		for (m, ex) in enumerate(exps)
-			c = coeffs[:, m]
-			any(abs.(c) .> 1e-14) || continue
-			row = join(string.(Int.(ex)), ",") * "," *
-				  join(["$(real(c[i])),$(imag(c[i]))" for i in 1:NVAR_R], ",")
-			println(io, row)
-			n_rows += 1
-		end
-	end
-	println(_out, "  R_coefficients.csv  ($n_rows rows)")
-end
-
-let
-	lift_csv_path = joinpath(DATA_DIR, "L_coefficients.csv")
-	L_exps = mset.exponents
-	n_L_rows = 0
-	open(lift_csv_path, "w") do io
-		header = join(["exp_$i" for i in 1:length(L_exps[1])], ",") * ",L_re,L_im"
-		println(io, header)
-		println(io, join(zeros(Int, length(L_exps[1])), ",") * ",$(L0_lift),0.0")   # constant (base-flow lift)
-		for (m, ex) in enumerate(L_exps)
-			c = L_coeffs_lift[m]
-			abs(c) > 1e-14 || continue
-			println(io, join(string.(Int.(ex)), ",") * ",$(real(c)),$(imag(c))")
-			n_L_rows += 1
-		end
-	end
-	println(_out, "  L_coefficients.csv  ($n_L_rows polynomial rows, L0 = $(round(L0_lift; sigdigits=6)))")
-end
-
-if EXPORT_MATLAB
-	py_script = joinpath(@__DIR__, "validation", "generate_matlab.py")
-	py3 = Sys.which("python3")
-	if py3 !== nothing && isfile(py_script)
-		run(Cmd([py3, py_script, csv_path,
-			"--output-dir", DATA_DIR,
-			"--re0", string(Re₀),
-			"--max-ord", string(MAX_ORD)]))
-		println(_out, "  vec_fields_karman.m + vec_fields_karman_DFDX.m  written to data/")
-	else
-		println(_out, "  Warning: python3 not found — run validation/generate_matlab.py manually")
-	end
-end
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Summary
-# ─────────────────────────────────────────────────────────────────────────────
-
-to_gb(b) = round(b / 1024^3; digits = 2)
-
-println(_out)
-println(_out, _sep)
-println(_out, "Kármán Vortex Street DPIM — Summary")
-println(_out, "  Re₀ = $Re₀,  order = $MAX_ORD,  NVAR = $NVAR,  FOM = $(fom.n_free)")
-@printf(_out, "  Hopf eigenvalue:  λ₁ = %+.6f %+.6f·i\n",
-	real(master_eigenvalues[1]), imag(master_eigenvalues[1]))
-println(_out, _dash)
-@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
-	"[1] Mesh generation", r_mesh.time, to_gb(r_mesh.bytes))
-@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
-	"[2] FEM setup", r_fem.time, to_gb(r_fem.bytes))
-@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
-	"[3] Newton steady-state", r_ss.time, to_gb(r_ss.bytes))
-@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
-	"[4] Linear operators", r_ops.time, to_gb(r_ops.bytes))
-@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
-	"[5] K_visc + h₀", r_kvisc.time, to_gb(r_kvisc.bytes))
-@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
-	"[6] Eigenproblem", r_eig.time, to_gb(r_eig.bytes))
-@printf(_out, "  %-36s  %9.3f s  %8.2f GB\n",
-	"[8] Cohomological solve", r_dpim.time, to_gb(r_dpim.bytes))
-println(_out, _sep)
-println(_out, "Next:  julia --project=. solve_rom.jl   →   python3 compare_orders.py")
+write_summary(_out, RESULTS_DIR, fom, master_eigenvalues,
+	r_mesh, r_fem, r_ss, r_ops, r_kvisc, r_eig, r_dpim;
+	re0 = Re₀, ord = MAX_ORD, nvar = NVAR)
 
 close(_log)
-
-open(joinpath(RESULTS_DIR, "summary.txt"), "w") do io
-	println(io, "example: 05_karman_vortex_street")
-	@printf(io, "run_name: Re%.2f_ord%d\n", Re₀, MAX_ORD)
-	println(io, "model: 2D Navier-Stokes, Kármán vortex street, Ferrite P2/P1 Taylor-Hood")
-	println(io, "n_free: $(fom.n_free)")
-	println(io, "Re0: $Re₀")
-	println(io, "master_modes: 2  (Hopf pair)")
-	println(io, "master_eigenvalues: $(collect(master_eigenvalues))")
-	println(io, "parametrisation_order: $MAX_ORD")
-	@printf(io, "cohomological_solve_time_s: %.3f\n", r_dpim.time)
-	println(io, "julia_version: $(VERSION)")
-	commit = try
-		readchomp(`git rev-parse --short HEAD`)
-	catch
-		"unknown"
-	end
-	println(io, "morfe_commit: $commit")
-	println(io, "timestamp: $(time())")
-end

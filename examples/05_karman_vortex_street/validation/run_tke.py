@@ -12,14 +12,11 @@ It uses the tiny energy Gram matrix G = W^T M W exported per run by main.jl
 
 Examples
 --------
-    # default: orbit_max_amplitude.csv in the default data dir, eta from --re
-    python3 run_tke.py
+    # orbit CSV (columns t,x,y) + Reynolds number (eta' = 1/Re - 1/Re0)
+    python3 run_tke.py --data-dir results/Re49.03_ord9/data --orbit orbit.csv --re 52
 
-    # explicit orbit + Reynolds number (eta' = 1/Re - 1/Re0)
-    python3 run_tke.py --orbit path/to/orbit.csv --re 52
-
-    # give eta' directly and a specific data dir
-    python3 run_tke.py --data-dir results/Re49.03_ord3/data --eta -1.1e-3
+    # give eta' directly
+    python3 run_tke.py --data-dir results/Re49.03_ord9/data --orbit orbit.csv --eta -1.1e-3
 """
 
 from __future__ import annotations
