@@ -3,7 +3,7 @@
 
 # ── Physics ───────────────────────────────────────────────────────────────────
 const Re₀ = 49.03   # expansion Re; paper uses 20, Re_c≈49.03, 70, 80
-const MAX_ORD = 9
+const ORDERS = [3, 5, 7, 9]   # DPIM orders for the convergence sweep (paper compares 3,5,7,9)
 const ROM = 2        # number of Hopf master modes
 const N_EXT = 1        # external parameter dimensions (η′ = 1/Re − 1/Re₀)
 const NVAR = ROM + N_EXT   # = 3
@@ -20,3 +20,11 @@ const EIG_SIGMA_RE = 3.0   # real part of ARPACK shift; offset from the imaginar
 const EIG_SIGMA_IM = 8.0   # imag part ≈ Hopf freq (St≈0.2, D=0.1, U_mean=1)
 const EIG_TARGET_FREQ = nothing   # rad/s: pin the Hopf mode by Im(λ) ≈ this frequency;
 # nothing → smallest |Re(λ)| among Im(λ) > 0 (only reliable near Re_c ≈ 49)
+
+# ── ROM limit-cycle branch (solve_rom.jl) ─────────────────────────────────────
+const BRANCH_RE_MAX = 55.0     # stop continuation when Re exceeds this
+const BRANCH_DS0 = 1e-4        # initial PALC arclength step (scaled-ρ/η units)
+const BRANCH_MAX_STEPS = 2000  # hard cap on PALC steps
+
+# ── Optional MATLAB/COCO export (validation/generate_matlab.py) ───────────────
+const EXPORT_MATLAB = false

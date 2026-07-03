@@ -1,0 +1,64 @@
+
+============================================================
+Kármán Vortex Street DPIM  (Re₀ = 49.03,  order = 5)
+  results → /Users/tiago/Desktop/AM-TUM/Code/MORFE_jl/examples/05_karman_vortex_street/results/Re49.03_ord5
+============================================================
+  Free DOFs (steady state): 57860
+  Free DOFs (DPIM): 57860
+  λ[1] = +0.0040284400 +16.8591690210 i
+  λ[2] = +0.0040284400 -16.8591690210 i
+
+[7/10] Building NDOrderModel and multiindex set ...
+  55 monomials (NVAR=3, order ≤ 5)
+
+[8/10] Solving cohomological equations (order 5) ...
+
+Resonance set  (NVAR=3, max_degree=5)
+     Target 1:  9 monomials
+       [1, 0, 0]  [1, 0, 1]  [2, 1, 0]  [1, 0, 2]  [2, 1, 1]  [1, 0, 3]  [3, 2, 0]  [2, 1, 2]  [1, 0, 4]
+     Target 2:  9 monomials
+       [0, 1, 0]  [0, 1, 1]  [1, 2, 0]  [0, 1, 2]  [1, 2, 1]  [0, 1, 3]  [2, 3, 0]  [1, 2, 2]  [0, 1, 4]
+     Target 3:  0 monomials
+
+[9/10] Realifying reduced dynamics ...
+
+Reduced dynamics (real form) — nonzero monomials:
+  [1, 0, 0]            : 0.00402844 + 16.8592im
+  [0, 1, 0]            : -16.8592 + 0.00402844im
+  [1, 0, 1]            : -212.008 - 59.1077im
+  [0, 1, 1]            : 59.1077 - 212.008im
+  [3, 0, 0]            : -0.111011 + 0.0706508im
+  [2, 1, 0]            : -0.0706508 - 0.111011im
+  [1, 2, 0]            : -0.111011 + 0.0706508im
+  [1, 0, 2]            : 2981.09 + 95.235im
+  [0, 3, 0]            : -0.0706508 - 0.111011im
+  [0, 1, 2]            : -95.235 + 2981.09im
+  [3, 0, 1]            : -4.65178 + 8.75874im
+  [2, 1, 1]            : -8.75874 - 4.65178im
+  [1, 2, 1]            : -4.65178 + 8.75874im
+  [1, 0, 3]            : -51641.5 + 46757.9im
+  [0, 3, 1]            : -8.75874 - 4.65178im
+  [0, 1, 3]            : -46757.9 - 51641.5im
+  [5, 0, 0]            : 0.00592475 - 0.00139524im
+  [4, 1, 0]            : 0.00139524 + 0.00592475im
+  [3, 2, 0]            : 0.0118495 - 0.00279048im
+  [3, 0, 2]            : -730.904 + 823.841im
+  [2, 3, 0]            : 0.00279048 + 0.0118495im
+  [2, 1, 2]            : -823.841 - 730.904im
+  [1, 4, 0]            : 0.00592475 - 0.00139524im
+  [1, 2, 2]            : -730.904 + 823.841im
+  [1, 0, 4]            : 11014.5 - 2.06872e6im
+  [0, 5, 0]            : 0.00139524 + 0.00592475im
+  [0, 3, 2]            : -823.841 - 730.904im
+  [0, 1, 4]            : 2.06872e6 + 11014.5im
+  Lift polynomial: L0 = 0.000388, 55 coefficients
+  tke_gram_re.csv, tke_gram_im.csv, tke_avector.csv  written to data/
+
+[10/10] Exporting R and L coefficients ...
+  R_coefficients.csv  (18 rows)
+  L_coefficients.csv  (55 polynomial rows, L0 = 0.000388203)
+
+------------------------------------------------------------
+  order 5:  55 monomials,  cohomological solve 55.261 s  74.07 GB
+  results saved to: /Users/tiago/Desktop/AM-TUM/Code/MORFE_jl/examples/05_karman_vortex_street/results/Re49.03_ord5
+------------------------------------------------------------
