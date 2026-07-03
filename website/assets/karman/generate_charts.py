@@ -77,7 +77,33 @@ def build(col: str, ylabel: str, ylim, out: Path):
     <text id="probe-txt" x="8" y="15" font-size="11.5" fill="{INK}"></text>
   </g>
   <g font-size="12" fill="{INK2}">{''.join(legend)}</g>
-  <text x="{W-MR}" y="{H-8}" text-anchor="end" font-size="10" fill="{INK3}">scroll = zoom · drag = pan · dbl-click = reset</text>
+  <rect id="zoombox" visibility="hidden" fill="rgba(149,88,178,0.10)" stroke="{INK3}"
+        stroke-width="0.8" stroke-dasharray="4 3" pointer-events="none"/>
+  <g id="toolbar" font-family="inherit">
+    <g class="tool active" id="tool-zoom" transform="translate({W-MR-92} {MT-4})"><title>Zoom: drag a rectangle</title>
+      <rect class="btn" x="0" y="0" width="26" height="26" rx="4"/>
+      <g class="icn" transform="translate(4 4)">
+        <circle cx="7.5" cy="7.5" r="5" fill="none" stroke-width="1.6"/>
+        <line x1="11.2" y1="11.2" x2="16" y2="16" stroke-width="1.8"/>
+        <line x1="5.2" y1="7.5" x2="9.8" y2="7.5" stroke-width="1.3"/>
+        <line x1="7.5" y1="5.2" x2="7.5" y2="9.8" stroke-width="1.3"/>
+      </g>
+    </g>
+    <g class="tool" id="tool-pan" transform="translate({W-MR-60} {MT-4})"><title>Pan: drag to move</title>
+      <rect class="btn" x="0" y="0" width="26" height="26" rx="4"/>
+      <g class="icn" transform="translate(4 3.5)">
+        <path fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+          d="M7.2 10.5 V4.6 a1.25 1.25 0 0 1 2.5 0 V9.3 M9.7 9 V3.6 a1.25 1.25 0 0 1 2.5 0 V9.3 M12.2 9.3 V4.8 a1.25 1.25 0 0 1 2.5 0 V11.5 c0 3.4 -2 5.4 -4.9 5.4 c-2.3 0 -3.4 -0.9 -4.5 -2.6 L3.4 11.1 a1.3 1.3 0 0 1 2.2 -1.3 l1.6 2.2"/>
+      </g>
+    </g>
+    <g class="tool" id="tool-home" transform="translate({W-MR-28} {MT-4})"><title>Reset view</title>
+      <rect class="btn" x="0" y="0" width="26" height="26" rx="4"/>
+      <g class="icn" transform="translate(4 4)">
+        <path fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+          d="M2.2 8.2 L9 2.6 L15.8 8.2 M4.2 7.5 V15 H13.8 V7.5"/>
+      </g>
+    </g>
+  </g>
 </svg>'''
 
     html = f'''<!doctype html>
@@ -85,9 +111,16 @@ def build(col: str, ylabel: str, ylim, out: Path):
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   html,body {{ margin:0; background:{BG}; font-family:'JetBrains Mono',monospace; }}
-  svg {{ display:block; width:100%; height:auto; font-family:'JetBrains Mono',monospace; cursor:crosshair; }}
-  svg.panning {{ cursor:grabbing; }}
+  svg {{ display:block; width:100%; height:auto; font-family:'JetBrains Mono',monospace; }}
+  svg.mode-zoom {{ cursor:crosshair; }}
+  svg.mode-pan {{ cursor:grab; }} svg.mode-pan.panning {{ cursor:grabbing; }}
   .leg.off line {{ opacity:0.25; }} .leg.off text {{ opacity:0.35; }}
+  .tool {{ cursor:pointer; }}
+  .tool .btn {{ fill:rgba(255,255,255,0.04); stroke:{HAIR}; }}
+  .tool .icn {{ stroke:{INK3}; }}
+  .tool:hover .btn {{ fill:rgba(255,255,255,0.09); }}
+  .tool.active .btn {{ stroke:#9558b2; fill:rgba(149,88,178,0.12); }}
+  .tool.active .icn {{ stroke:#9558b2; }}
 </style></head>
 <body>
 {svg}
@@ -180,14 +213,48 @@ function updateProbe(p) {{
     'ord '+best.o+' · Re '+best.re.toFixed(2)+' · '+best.v.toPrecision(3);
 }}
 
-var pan = null;
+var mode = 'zoom', pan = null, zoomStart = null;
+var zoombox = document.getElementById('zoombox');
+svgEl.classList.add('mode-zoom');
+function setMode(m) {{
+  mode = m;
+  svgEl.classList.toggle('mode-zoom', m === 'zoom');
+  svgEl.classList.toggle('mode-pan', m === 'pan');
+  document.getElementById('tool-zoom').classList.toggle('active', m === 'zoom');
+  document.getElementById('tool-pan').classList.toggle('active', m === 'pan');
+}}
+document.getElementById('tool-zoom').addEventListener('click', function() {{ setMode('zoom'); }});
+document.getElementById('tool-pan').addEventListener('click', function() {{ setMode('pan'); }});
+document.getElementById('tool-home').addEventListener('click', function() {{
+  V.xlo = HOME.xlo; V.xhi = HOME.xhi; V.ylo = HOME.ylo; V.yhi = HOME.yhi; redraw();
+}});
+
 svgEl.addEventListener('mousedown', function(ev) {{
   var p = svgPoint(ev);
   if (!inPlot(p)) return;
-  pan = {{x:p.x, y:p.y, xlo:V.xlo, xhi:V.xhi, ylo:V.ylo, yhi:V.yhi}};
-  svgEl.classList.add('panning'); hideProbe(); ev.preventDefault();
+  hideProbe(); ev.preventDefault();
+  if (mode === 'pan') {{
+    pan = {{x:p.x, y:p.y, xlo:V.xlo, xhi:V.xhi, ylo:V.ylo, yhi:V.yhi}};
+    svgEl.classList.add('panning');
+  }} else {{
+    zoomStart = p;
+  }}
 }});
-window.addEventListener('mouseup', function() {{ pan = null; svgEl.classList.remove('panning'); }});
+window.addEventListener('mouseup', function() {{
+  if (zoomStart) {{
+    var x1 = parseFloat(zoombox.getAttribute('x')), w = parseFloat(zoombox.getAttribute('width'));
+    var y1 = parseFloat(zoombox.getAttribute('y')), h = parseFloat(zoombox.getAttribute('height'));
+    zoombox.setAttribute('visibility','hidden');
+    if (zoombox.getAttribute('data-live') === '1' && w > 8 && h > 8) {{
+      var nxlo = dx(x1), nxhi = dx(x1+w), nyhi = dy(y1), nylo = dy(y1+h);
+      V.xlo = nxlo; V.xhi = nxhi; V.ylo = nylo; V.yhi = nyhi;
+      redraw();
+    }}
+    zoombox.setAttribute('data-live','0');
+    zoomStart = null;
+  }}
+  pan = null; svgEl.classList.remove('panning');
+}});
 svgEl.addEventListener('mousemove', function(ev) {{
   var p = svgPoint(ev);
   if (pan) {{
@@ -196,10 +263,20 @@ svgEl.addEventListener('mousemove', function(ev) {{
     V.xlo = pan.xlo+mx; V.xhi = pan.xhi+mx; V.ylo = pan.ylo+my; V.yhi = pan.yhi+my;
     redraw(); return;
   }}
+  if (zoomStart) {{
+    var cx = Math.max(ML, Math.min(W-MR, p.x)), cy = Math.max(MT, Math.min(H-MB, p.y));
+    zoombox.setAttribute('x', Math.min(zoomStart.x, cx));
+    zoombox.setAttribute('y', Math.min(zoomStart.y, cy));
+    zoombox.setAttribute('width', Math.abs(cx - zoomStart.x));
+    zoombox.setAttribute('height', Math.abs(cy - zoomStart.y));
+    zoombox.setAttribute('visibility','visible');
+    zoombox.setAttribute('data-live','1');
+    return;
+  }}
   if (!inPlot(p)) {{ hideProbe(); return; }}
   updateProbe(p);
 }});
-svgEl.addEventListener('mouseleave', function() {{ hideProbe(); pan = null; svgEl.classList.remove('panning'); }});
+svgEl.addEventListener('mouseleave', function() {{ hideProbe(); }});
 
 svgEl.addEventListener('wheel', function(ev) {{
   var p = svgPoint(ev);
