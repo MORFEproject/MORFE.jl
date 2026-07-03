@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""compare_orders.py — cross-order comparison of lift and period-averaged TKE (STEP 3).
+"""compare_orders.py — truncation-order comparison of lift and period-averaged TKE (STEP 3).
 
-For every results/Re*_ord*/data/ containing rom_branch.csv, tke_gram_*.csv and
-L_coefficients.csv, evaluates along each branch point's circular orbit
+The DPIM run at MAX_ORD contains the lower-order ROMs exactly (graded solve), so the
+order comparison uses ONE run: for every rom_branch_ord<N>.csv written by solve_rom.jl,
+the observables are evaluated with the lift polynomial and TKE Gram truncated to
+monomials of total degree <= N, along each branch point's circular orbit
 z(t) = rho*exp(i*Omega*t):
   - avg_TKE      via tke_from_gram (validation/average_tke.py)
   - max_abs_lift via the lift polynomial L(z) (includes the constant base-flow row)
@@ -50,30 +52,44 @@ def lift_series(z: np.ndarray, eta: float, exps: np.ndarray, coeffs: np.ndarray)
     return L.real
 
 
-def process_run(run_dir: Path):
-    data = run_dir / "data"
-    m = re.search(r"ord(\d+)$", run_dir.name)
-    order = int(m.group(1))
-    gram = load_gram(data)
-    exps, coeffs = load_lift(data)
+def truncate_gram(gram: dict, order: int) -> dict:
+    sel = gram["Avector"].sum(axis=1) <= order
+    return {"G": gram["G"][np.ix_(sel, sel)], "Avector": gram["Avector"][sel]}
+
+
+def process_branch(branch_csv: Path, gram: dict, exps: np.ndarray, coeffs: np.ndarray):
+    order = int(re.search(r"rom_branch_ord(\d+)\.csv$", branch_csv.name).group(1))
+    gram_N = truncate_gram(gram, order)
+    keep = exps.sum(axis=1) <= order          # incl. the (0,0,0) constant row
+    exps_N, coeffs_N = exps[keep], coeffs[keep]
     rows = []
-    with open(data / "rom_branch.csv") as f:
+    with open(branch_csv) as f:
         for row in csv.DictReader(f):
             eta, Re = float(row["eta"]), float(row["Re"])
             rho, om, T = float(row["rho"]), float(row["omega"]), float(row["T"])
             th = 2 * np.pi * np.arange(NS) / NS          # uniform over one period
             z = rho * np.exp(1j * th)
-            tke, _ = tke_from_gram({"x1": z.real, "x2": z.imag, "eta": eta}, gram)
-            max_lift = float(np.max(np.abs(lift_series(z, eta, exps, coeffs))))
+            tke, _ = tke_from_gram({"x1": z.real, "x2": z.imag, "eta": eta}, gram_N)
+            max_lift = float(np.max(np.abs(lift_series(z, eta, exps_N, coeffs_N))))
             rows.append((order, eta, Re, rho, om, T, tke, max_lift))
     return rows
 
 
+def process_run(run_dir: Path):
+    data = run_dir / "data"
+    branches = sorted(data.glob("rom_branch_ord*.csv"))
+    if not branches:
+        return []
+    gram = load_gram(data)
+    exps, coeffs = load_lift(data)
+    return [r for b in branches for r in process_branch(b, gram, exps, coeffs)]
+
+
 def main():
     run_dirs = sorted(p for p in (HERE / "results").glob("Re*_ord*")
-                      if (p / "data" / "rom_branch.csv").exists())
+                      if any((p / "data").glob("rom_branch_ord*.csv")))
     if not run_dirs:
-        sys.exit("no rom_branch.csv found — run main.jl then solve_rom.jl first")
+        sys.exit("no rom_branch_ord*.csv found — run main.jl then solve_rom.jl first")
     all_rows = [r for d in run_dirs for r in process_run(d)]
 
     out = HERE / "results" / "comparison"

@@ -1,14 +1,18 @@
 """
-	solve_rom.jl — trace the ROM limit-cycle branch for each DPIM run (STEP 2).
+	solve_rom.jl — trace the ROM limit-cycle branches for a DPIM run (STEP 2).
 
 For the NF-style ROM the limit cycle is exactly z₁ = ρ e^{iΩt}, so the branch is the
 curve F(ρ, η′) = Re(R₁(ρ, ρ, η′)) = 0, traced by the PALC toolkit in solver/rom_palc.jl.
 
+The cohomological solve is graded, so the order-N reduced dynamics is the EXACT
+truncation of the MAX_ORD run (verified bit-exact). One branch is therefore traced per
+truncation order in TRUNC_ORDERS, each with R truncated to degree ≤ N.
+
 Usage:
 	julia --project=. solve_rom.jl                  # all results/Re*_ord*/ with data/R.jls
-	julia --project=. solve_rom.jl results/Re49.03_ord3 [more dirs...]
+	julia --project=. solve_rom.jl results/Re49.03_ord9 [more dirs...]
 
-Writes per run dir:  data/rom_branch.csv  with columns  eta,Re,rho,omega,T
+Writes per run dir:  data/rom_branch_ord<N>.csv  with columns  eta,Re,rho,omega,T
 (ρ is in the 1e-2-scaled master coordinates used by W/R — downstream observables go
 through W-derived polynomials in the same coordinates, so no rescaling is ever needed).
 """
@@ -66,21 +70,41 @@ function trace_branch(R; re_max = BRANCH_RE_MAX, ds0 = BRANCH_DS0,
 	return rows
 end
 
+"""
+	truncate_dynamics(R, N) -> ReducedDynamics
+
+Zero all coefficients of monomials with total degree > N. Because the cohomological
+solve is graded, this IS the order-N reduced dynamics (bit-exact).
+"""
+function truncate_dynamics(R, N::Int)
+	Rt = deepcopy(R)
+	exps = Rt.poly.multiindex_set.exponents
+	for (m, e) in enumerate(exps)
+		sum(e) > N && (Rt.poly.coefficients[:, m] .= 0)
+	end
+	return Rt
+end
+
 function process_dir(run_dir::AbstractString)
 	r_path = joinpath(run_dir, "data", "R.jls")
 	isfile(r_path) || (println("  skip (no data/R.jls): $run_dir"); return)
 	println("── $run_dir")
 	R = deserialize(r_path)
-	rows = trace_branch(R)
-	out_csv = joinpath(run_dir, "data", "rom_branch.csv")
-	open(out_csv, "w") do io
-		println(io, "eta,Re,rho,omega,T")
-		for (η, re, ρ, Ω, T) in rows
-			@printf(io, "%.12e,%.8f,%.12e,%.10f,%.10f\n", η, re, ρ, Ω, T)
+	max_deg = maximum(sum, R.poly.multiindex_set.exponents)
+	for N in TRUNC_ORDERS
+		N > max_deg && (println("  skip order $N (> run order $max_deg)"); continue)
+		println("  ── truncation order $N")
+		rows = trace_branch(truncate_dynamics(R, N))
+		out_csv = joinpath(run_dir, "data", "rom_branch_ord$(N).csv")
+		open(out_csv, "w") do io
+			println(io, "eta,Re,rho,omega,T")
+			for (η, re, ρ, Ω, T) in rows
+				@printf(io, "%.12e,%.8f,%.12e,%.10f,%.10f\n", η, re, ρ, Ω, T)
+			end
 		end
+		@printf("  %d branch points → %s  (Re %.3f → %.3f)\n",
+			length(rows), out_csv, rows[1][2], rows[end][2])
 	end
-	@printf("  %d branch points → %s  (Re %.3f → %.3f)\n",
-		length(rows), out_csv, rows[1][2], rows[end][2])
 end
 
 run_dirs = if isempty(ARGS)
