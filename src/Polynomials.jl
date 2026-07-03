@@ -51,7 +51,8 @@ export DensePolynomial,
 	coefficient, has_term, find_term, find_in_multiindex_set,
 	evaluate, extract_component, each_term, similar_poly,
 	linear_matrix_of_polynomial,
-	mmap_polynomial
+	mmap_polynomial,
+	restrict_polynomial_to_degree
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Struct
@@ -596,5 +597,26 @@ end
 function ==(p1::DensePolynomial, p2::DensePolynomial)
 	p1.multiindex_set == p2.multiindex_set && p1.coefficients == p2.coefficients
 end
+
+
+"""
+	restrict_polynomial_to_degree(poly::DensePolynomial, max_degree::Int) -> DensePolynomial
+
+Returns a polynom that contains all the monomials of `poly` that are of degree lower or equal than `max_degree`. 
+"""
+function restrict_polynomial_to_degree(
+	poly::DensePolynomial,
+	max_degree::Int
+)
+	mset = poly.multiindex_set
+	offsets = mset.degree_offsets
+	idx = (max_degree + 2 < length(offsets)) ? offsets[max_degree + 2] : offsets[end]
+	new_exponents = mset.exponents[1:idx]
+	new_mset = MultiindexSet(new_exponents, Val(true))
+	N = ndims(poly.coefficients)
+	new_coeffs = poly.coefficients[ntuple(_ -> Colon(), N-1)..., 1:idx]
+	return DensePolynomial(new_coeffs, new_mset)
+end
+
 
 end # module Polynomials

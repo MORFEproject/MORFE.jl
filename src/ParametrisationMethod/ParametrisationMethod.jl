@@ -19,10 +19,11 @@ module ParametrisationMethod
 using LinearAlgebra: mul!
 using StaticArrays: SVector
 using ..Multiindices: MultiindexSet
-using ..Polynomials: DensePolynomial
+using ..Polynomials: DensePolynomial, restrict_polynomial_to_degree
 
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
-	compute_higher_derivative_coefficients!
+	compute_higher_derivative_coefficients!,
+	restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree
 
 """
 	Parametrisation{ORD, NVAR, T}
@@ -208,6 +209,26 @@ function compute_higher_derivative_coefficients!(
 	end
 
 	return nothing
+end
+
+"""
+	function restrict_Parametrisation_to_degree(W::Parametrisation, max_degree::Int) -> Parametrisation
+
+Returns a new Parametrisation that contains all the monomials of `poly` that are of degree lower or equal than `max_degree`. 
+"""
+function restrict_Parametrisation_to_degree(W::Parametrisation, max_degree::Int)
+	new_poly = restrict_polynomial_to_degree(W.poly, max_degree)
+	return Parametrisation(new_poly, W.external_system_size)
+end
+
+"""
+	function restrict_ReducedDynamics_to_degree(R::ReducedDynamics, max_degree::Int) -> ReducedDynamics
+
+Returns a new ReducedDynamics that contains all the monomials of `poly` that are of degree lower or equal than `max_degree`. 
+"""
+function restrict_ReducedDynamics_to_degree(R::ReducedDynamics, max_degree::Int)
+	new_poly = restrict_polynomial_to_degree(R.poly, max_degree)
+	return ReducedDynamics(new_poly, R.external_system_size)
 end
 
 end # module

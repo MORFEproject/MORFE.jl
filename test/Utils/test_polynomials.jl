@@ -253,4 +253,97 @@ end
             @test p_k.coefficients == p.coefficients[k, :]
         end
     end
+
+    @testset "restrict_polynomial_to_degree" begin
+        @testset "scalar polynomial (N=1)" begin
+            dict = Dict{Vector{Int}, Float64}(
+                [0, 0] => 1.0,   # Grad 0
+                [1, 0] => 2.0,   # Grad 1
+                [0, 1] => 3.0,   # Grad 1
+                [2, 0] => 4.0,   # Grad 2
+                [1, 1] => 5.0,   # Grad 2
+                [0, 2] => 6.0   # Grad 2
+            )
+            poly = DensePolynomial(dict)
+
+            restricted = restrict_polynomial_to_degree(poly, 1)
+
+            @test nmonomials(restricted) == 3
+            @test all(sum(exp) <= 1 for exp in multiindex_set(restricted).exponents)
+            @test coefficient(restricted, [0, 0]) == 1.0
+            @test coefficient(restricted, [1, 0]) == 2.0
+            @test coefficient(restricted, [0, 1]) == 3.0
+            @test !has_term(restricted, [2, 0])
+
+            x = [0.5, -0.3]
+            @test evaluate(restricted, x) ≈ 1.0 + 0.5*2.0 + (-0.3)*3.0
+        end
+
+        @testset "vector-valued polynomial (N=2)" begin
+            dict = Dict{Vector{Int}, SVector{2, Float64}}(
+                [0, 0] => SVector(1.0, 10.0),
+                [1, 0] => SVector(2.0, 20.0),
+                [0, 1] => SVector(3.0, 30.0),
+                [2, 0] => SVector(4.0, 40.0)
+            )
+            poly = DensePolynomial(dict)
+
+            restricted = restrict_polynomial_to_degree(poly, 1)
+
+            @test nmonomials(restricted) == 3
+            @test coeff_shape(restricted) == (2,)
+            @test coefficient(restricted, [0, 0]) == SVector(1.0, 10.0)
+            @test coefficient(restricted, [1, 0]) == SVector(2.0, 20.0)
+            @test !has_term(restricted, [2, 0])
+        end
+
+        @testset "tensor-valued polynomial (N=3)" begin
+            mset = MultiindexSet([[0, 0], [1, 0], [0, 1], [2, 0], [1, 1], [0, 2]])
+            L = length(mset)
+            coeffs = zeros(Float64, 2, 2, L)
+            for i in 1:L
+                coeffs[:, :, i] .= i   # Monom i -> Matrix mit Eintrag i überall
+            end
+            poly = DensePolynomial(coeffs, mset)
+
+            restricted = restrict_polynomial_to_degree(poly, 1)
+
+            @test nmonomials(restricted) == 3
+            @test coeff_shape(restricted) == (2, 2)
+            @test size(coefficients(restricted)) == (2, 2, 3)
+            @test coefficients(restricted)[:, :, 1] == fill(1.0, 2, 2)
+            @test coefficients(restricted)[:, :, 2] == fill(2.0, 2, 2)
+            @test coefficients(restricted)[:, :, 3] == fill(3.0, 2, 2)
+        end
+
+        @testset "edge cases" begin
+            dict = Dict{Vector{Int}, Float64}(
+                [0, 0] => 1.0,
+                [1, 0] => 2.0,
+                [0, 1] => 3.0,
+                [2, 0] => 4.0
+            )
+            poly = DensePolynomial(dict)
+
+            r0 = restrict_polynomial_to_degree(poly, 0)
+            @test nmonomials(r0) == 1
+            @test coefficient(r0, [0, 0]) == 1.0
+
+            rmax = restrict_polynomial_to_degree(poly, 10)
+            @test nmonomials(rmax) == nmonomials(poly)
+            @test coefficients(rmax) == coefficients(poly)
+
+            @test length(multiindex_set(r0)) ==
+                  size(coefficients(r0), ndims(coefficients(r0)))
+        end
+
+        @testset "returned polynomial is independent copy" begin
+            dict = Dict{Vector{Int}, Float64}([0, 0] => 1.0, [1, 0] => 2.0)
+            poly = DensePolynomial(dict)
+            restricted = restrict_polynomial_to_degree(poly, 1)
+
+            coefficients(poly)[1] = 999.0
+            @test coefficient(restricted, [0, 0]) == 1.0
+        end
+    end
 end
