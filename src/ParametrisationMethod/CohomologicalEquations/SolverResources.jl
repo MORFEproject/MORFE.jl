@@ -47,12 +47,15 @@ end
 	CohomologicalBuffers{T}
 
 Pre-allocated scratch buffers for the cohomological system assembly and solve.
+Use `system_matrix` for dense and `system_matrix_rows`+ `system_matrix_columns` for sparse dispatch.
 """
 struct CohomologicalBuffers{T}
-	system_matrix::Matrix{T}   # (FOM+ROM)×(FOM+ROM); dense bordered system or Schur workspace
-	rhs::Vector{T}             # length FOM+ROM; holds rhs then solution after ldiv!
-	external_rhs::Vector{T}    # length FOM; scratch for evaluate_external_rhs!
-	ml_result::Vector{T}       # length FOM; output of compute_multilinear_terms!
+	system_matrix::Matrix{T}            # (FOM+ROM)×(FOM+ROM); dense bordered system or Schur workspace, for dense _solve_monomial
+	system_matrix_rows::Matrix{T}       # (FOM+ROM)×(ROM); dense bordered system or Schur workspace, for sparse _solve_monomial
+	system_matrix_columns::Matrix{T}    # (ROM)×(FOM+ROM); dense bordered system or Schur workspace, for sparse _solve_monomial
+	rhs::Vector{T}                      # length FOM+ROM; holds rhs then solution after ldiv!
+	external_rhs::Vector{T}             # length FOM; scratch for evaluate_external_rhs!
+	ml_result::Vector{T}                # length FOM; output of compute_multilinear_terms!
 end
 
 """
@@ -60,9 +63,21 @@ end
 
 Allocate all buffers for a system of full-order dimension `FOM` and `ROM` master modes.
 """
-function CohomologicalBuffers{T}(FOM::Int, ROM::Int) where {T}
+function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int) where {T, MT}
 	return CohomologicalBuffers{T}(
 		Matrix{T}(undef, FOM + ROM, FOM + ROM),
+		Matrix{T}(undef, 0, 0),
+		Matrix{T}(undef, 0, 0),
+		Vector{T}(undef, FOM + ROM),
+		zeros(T, FOM),
+		zeros(T, FOM),
+	)
+end
+function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int) where {T, MT <: SparseMatrixCSC}
+	return CohomologicalBuffers{T}(
+		Matrix{T}(undef, 0, 0),
+		Matrix{T}(undef, FOM + ROM, ROM),
+		Matrix{T}(undef, ROM, FOM + ROM),
 		Vector{T}(undef, FOM + ROM),
 		zeros(T, FOM),
 		zeros(T, FOM),
