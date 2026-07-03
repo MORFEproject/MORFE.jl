@@ -139,7 +139,7 @@ function _solve_monomial!(
 
 	# ── 3b. Resonant: bordered system via sparse solve + Schur complement ──────
 	# Assemble C_r columns (FOM × nR) into system_matrix rows 1:FOM.
-	C_r = view(ctx.buffers.system_matrix, 1:FOM, 1:nR)
+	C_r = view(ctx.buffers.system_matrix_rows, 1:FOM, 1:nR)
 	col = 1
 	for r in eachindex(resonance)
 		resonance[r] || continue
@@ -156,7 +156,7 @@ function _solve_monomial!(
 	C_prime = view(X, :, 2:(nR+1))
 
 	# Orthogonality rows: nR × (FOM+nR) — reuse system_matrix rows FOM+1:FOM+nR.
-	M_orth = view(ctx.buffers.system_matrix, (FOM+1):(FOM+nR), 1:(FOM+nR))
+	M_orth = view(ctx.buffers.system_matrix_columns, 1:nR, 1:(FOM+nR))
 	g = view(ctx.buffers.rhs, (FOM+1):(FOM+nR))
 	assemble_orthogonality_matrix_and_rhs!(
 		M_orth, g, s,
