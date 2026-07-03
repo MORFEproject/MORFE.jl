@@ -126,15 +126,16 @@ document.addEventListener('DOMContentLoaded', function () {
       extra manifold coordinate.
     </p>
 
-    <!-- Hero figure: real data (base flow + Hopf mode) -->
+    <!-- Hero figure: real data (base flow + oscillating Hopf mode, WebGL) -->
     <div class="fig">
-      <div class="fig-pane"><img src="assets/karman/karman_flow.svg"
-        alt="Vorticity of the base flow plus the Hopf eigenmode: the Kármán vortex street forming behind the cylinder" /></div>
+      <iframe src="assets/karman/karman_flow.html" style="aspect-ratio: 1720/320;"
+        title="Animated vorticity of the base flow plus the oscillating Hopf eigenmode: the Kármán vortex street travelling behind the cylinder"></iframe>
       <div class="fig-cap"><span class="lab">FIG · 01</span>
-        Vorticity of <em>base flow + Hopf mode</em> — the flow state the instability grows into,
-        reconstructed from the shipped VTK output (contours are vector paths, red/blue =
-        counter-rotating). The steady wake destabilises at Re_c ≈ 49.0; the mode oscillates at
-        ω₀ ≈ 16.86 rad/s.</div>
+        Vorticity of <em>base flow + oscillating Hopf mode</em>,
+        $\omega(x,t) = \bar\omega(x) + \varepsilon\,\mathrm{Re}\!\left[\hat\omega(x)\,e^{i\omega_0 t}\right]$,
+        animated on the actual FE mesh from the shipped VTK output (red/blue = counter-rotating;
+        click to pause). The steady wake destabilises at Re_c ≈ 49.0 and the pattern travels
+        downstream at the shedding frequency $\omega_0 \approx 16.86$ rad/s.</div>
     </div>
 
     <div class="adm tip">
