@@ -2,67 +2,82 @@
 
 ## Model
 
-Incompressible Navier-Stokes flow past a cylinder (2D, Ferrite P2/P1 Taylor-Hood).
-The steady base flow is computed first; then DPIM parametrises the unstable SSM
-associated with the Hopf bifurcation that gives rise to the Kármán vortex street.
-Parameters are set in `config.jl` (default: Re₀ = 49.03, order 5).
+Incompressible Navier-Stokes flow past a cylinder (2D, Ferrite P2/P1 Taylor-Hood,
+Turek–Schäfer channel geometry). The steady base flow is computed first; then DPIM
+parametrises the unstable spectral submanifold associated with the Hopf bifurcation
+(Re_c ≈ 49) that gives rise to the Kármán vortex street, with the Reynolds-number
+offset `η′ = 1/Re − 1/Re₀` as an extra parametric coordinate. Parameters are set in
+`config.jl` (default: Re₀ = 49.03, orders 3/5/7/9).
 
-## How to run
+## Three-step workflow
 
 ```bash
-julia --project=examples/05_karman_vortex_street -e '
-  using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/05_karman_vortex_street/main.jl")'
+cd examples/05_karman_vortex_street
+
+# 1. DPIM at every order in config.ORDERS
+#    (mesh, steady state, operators and eigensolve are shared across orders)
+julia --project=. main.jl
+
+# 2. ROM limit-cycle branch vs Re, one rom_branch.csv per run
+julia --project=. solve_rom.jl
+
+# 3. Cross-order comparison: max|lift| and period-averaged TKE vs Re
+python3 compare_orders.py     # needs numpy + matplotlib
 ```
 
-## Expected outputs
+Measured runtime for the full sweep (Apple Silicon, ~58k free DOFs): ≈ 12 min —
+shared stages ≈ 35 s, then cohomological solves of 24 s / 55 s / 156 s / 344 s for
+orders 3 / 5 / 7 / 9. Steps 2 and 3 take seconds.
+
+## Outputs
 
 ```text
 results/
-  Re49.03_ord5/
-    summary.log              — verbose tee'd run log
-    summary.txt              — structured key:value summary with environment info
+  Re49.03_ord3/                — one directory per DPIM order
+    summary.log                — tee'd run log (incl. shared-stage recap)
+    summary.txt                — structured key:value summary
     data/
-      W.jls                  — parametrisation (serialised)
-      R.jls                  — reduced dynamics (serialised)
-      reduced_dynamics.txt   — realified Stuart-Landau coefficients (human-readable)
-      vtk_data.jls           — mesh + mode data bundle for ParaView export
-    figures/                 — post-processing figures (from postprocess scripts)
+      W.jls, R.jls             — parametrisation + reduced dynamics (serialised)
+      reduced_dynamics.txt     — realified Stuart-Landau coefficients
+      R_coefficients.csv       — complex reduced dynamics, one monomial per row
+      L_coefficients.csv       — pressure-lift polynomial L(z) (+ base-flow constant)
+      lift_polynomial.jls      — same, serialised
+      tke_gram_{re,im}.csv     — kinetic-energy Gram matrix G = WᵀM_velW/|Ω|
+      tke_avector.csv          — monomial exponents for G
+      rom_branch.csv           — (from solve_rom.jl)  eta, Re, rho, omega, T
+      vtk_data.jls             — mesh + mode bundle for ParaView export
+  comparison/                  — (from compare_orders.py)
+    comparison.csv             — order, eta, Re, rho, omega, T, avg_TKE, max_abs_lift
+    lift_vs_Re.png, tke_vs_Re.png
 ```
-
-## Reference results
-
-Curated reference outputs live in `results/reference/Re49.03_ord5/` (tracked in git).
-
-## Historical results
-
-A full archived run is restored untracked from the archive repo into:
-
-```text
-results/Re49.03_ord5/
-  W.jls, R.jls, vtk_data.jls    — parametrisation and VTK bundle
-  reduced_dynamics.txt           — Stuart-Landau coefficients
-  summary.log                    — run log
-  paraview/                      — VTU files for mode and vortex visualisation
-```
-
-These are not version-controlled here; the durable copy is `MORFE_results_archive`.
-
-## Measured runtime
-
-not yet measured (user approval required before running; ~57 954 free DOFs, order-5 parametrisation)
 
 ## Files
 
 | File | Purpose |
 | ---- | ------- |
-| `main.jl` | Top-level driver |
-| `config.jl` | Problem parameters (Re, mesh, ROM size) |
-| `cylinder_flow.msh` | Input mesh (Turek-Schäfer cylinder geometry) |
-| `fem/mesh.jl` | Mesh loading and DOF setup |
-| `fem/fem_setup.jl` | FEM spaces and boundary conditions |
-| `fem/linear_operators.jl` | Linearised Navier-Stokes operators |
-| `fem/fluid_maps.jl` | Nonlinear multilinear maps |
+| `main.jl` | Step 1 — DPIM order sweep driver |
+| `solve_rom.jl` | Step 2 — ROM limit-cycle branch (PALC) per run |
+| `compare_orders.py` | Step 3 — cross-order lift / avg-TKE comparison |
+| `config.jl` | All parameters (Re₀, ORDERS, mesh, eigensolver, branch) |
+| `fem/mesh.jl` | Gmsh channel-with-cylinder mesh generation |
+| `fem/fem_setup.jl` | FEM spaces, boundary conditions, DOF sets |
+| `fem/linear_operators.jl` | Linearised NSE operators B₀, B₁ + lift weights |
+| `fem/fluid_maps.jl` | Convection / parametric multilinear maps + K_visc |
+| `fem/energy_gram.jl` | Kinetic-energy Gram matrix for the TKE observable |
 | `solver/steady_state.jl` | Newton solve for the base flow |
-| `solver/eigensolver.jl` | Custom eigensolver for the non-symmetric problem |
-| `backbone/backbone_env/` | Julia environment for post-processing scripts |
+| `solver/eigensolver.jl` | Shift-invert ARPACK Hopf eigensolver |
+| `solver/rom_palc.jl` | Pseudo-arclength continuation toolkit for the ROM branch |
+| `validation/average_tke.py` | TKE evaluation library (used by compare_orders.py) |
+| `validation/run_tke.py` | Single-orbit TKE runner (cross-check) |
+| `validation/validate_tke.jl` | Independent FOM-space TKE check |
+| `validation/generate_matlab.py` | Optional matcont/COCO export (`EXPORT_MATLAB = true`) |
+
+## Validation
+
+- `julia --project=. validation/validate_tke.jl results/Re49.03_ord3` recomputes the
+  period-averaged TKE by direct integration in the full DOF space (independent of the
+  Gram-matrix path).
+- `python3 validation/run_tke.py --data-dir results/Re49.03_ord3/data --orbit <csv> --eta <η′>`
+  evaluates a single orbit's TKE.
+- Setting `EXPORT_MATLAB = true` in `config.jl` additionally emits
+  `vec_fields_karman.m` / `lift_karman.m` per run for matcont/COCO cross-checks.
