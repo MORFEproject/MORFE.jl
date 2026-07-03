@@ -3,7 +3,10 @@
 
 # ── Physics ───────────────────────────────────────────────────────────────────
 const Re₀ = 49.03   # expansion Re; paper uses 20, Re_c≈49.03, 70, 80
-const ORDERS = [3, 5, 7, 9]   # DPIM orders for the convergence sweep (paper compares 3,5,7,9)
+const MAX_ORD = 9   # DPIM expansion order (single run — lower orders are truncations)
+# The cohomological solve is graded: coefficients of degree ≤ N never depend on higher
+# degrees, so the order-9 W/R contain the order-N ROMs EXACTLY (verified bit-exact).
+const TRUNC_ORDERS = [3, 5, 7, 9]   # truncation orders for the convergence comparison
 const ROM = 2        # number of Hopf master modes
 const N_EXT = 1        # external parameter dimensions (η′ = 1/Re − 1/Re₀)
 const NVAR = ROM + N_EXT   # = 3
