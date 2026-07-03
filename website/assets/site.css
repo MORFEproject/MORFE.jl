@@ -210,7 +210,7 @@ hr { border: 0; border-top: 1px solid var(--hair); margin: 0; }
 }
 .code .kw { color: #c890e6; }
 .code .fn { color: #7aa2ff; }
-.code .num { color: #e08c5a; }
+.code .num { color: var(--jl-purple); }
 .code .str { color: #98c379; }
 .code .cm { color: #5a5a6a; font-style: italic; }
 .code .var { color: #e8e8ee; }

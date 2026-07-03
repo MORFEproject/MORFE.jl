@@ -27,7 +27,8 @@
 .copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--ink); border-color: var(--ink-3); }
 .copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.4); background: rgba(56,152,38,0.08); }
 .fig img { display:block; width:100%; height:auto; }
-.fig .fig-pane { background:#fbfbfd; padding:6px 6px 2px; }
+.fig .fig-pane { background:#07070b; padding:6px 6px 2px; }
+.fig iframe { display:block; width:100%; aspect-ratio: 860/470; border:0; background:#07070b; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -364,13 +365,13 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
         </div>
 
         <div class="fig">
-          <div class="fig-pane"><img src="assets/karman/lift_vs_Re.png" alt="Maximum lift along the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy" /></div>
-          <div class="fig-cap"><span class="lab">FIG · 02</span> Maximum lift along the limit cycle vs Re, per truncation order. The orders coincide near Re_c and fan out with distance — the convergence signature of the expansion.</div>
+          <iframe src="assets/karman/lift_vs_Re.html" title="Maximum lift along the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 02</span> Maximum lift along the limit cycle vs Re, per truncation order — hover for values, click the legend to toggle orders. The orders coincide near Re_c and fan out with distance — the convergence signature of the expansion.</div>
         </div>
 
         <div class="fig">
-          <div class="fig-pane"><img src="assets/karman/tke_vs_Re.png" alt="Period-averaged fluctuation kinetic energy vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy" /></div>
-          <div class="fig-cap"><span class="lab">FIG · 03</span> Period-averaged fluctuation kinetic energy vs Re. The energy grows from zero at Re_c ≈ 48.98; where the orders agree the ROM is trustworthy.</div>
+          <iframe src="assets/karman/tke_vs_Re.html" title="Period-averaged fluctuation kinetic energy vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 03</span> Period-averaged fluctuation kinetic energy vs Re (interactive). The energy grows from zero at Re_c ≈ 48.98; where the orders agree the ROM is trustworthy.</div>
         </div>
 
         <div class="adm warn">
