@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kármán vortex street — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="assets/site.css" />
+<link rel="stylesheet" href="assets/docs.css" />
+<style>
+.pre-wrap { position: relative; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 3px 9px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(255,255,255,0.06); color: var(--ink-3);
+  border: 1px solid var(--hair); border-radius: 4px;
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.6;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--ink); border-color: var(--ink-3); }
+.copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.4); background: rgba(56,152,38,0.08); }
+.fig img { display:block; width:100%; height:auto; }
+.fig .fig-pane { background:#fbfbfd; padding:6px 6px 2px; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.docs-main pre').forEach(function (pre) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pre-wrap';
+    wrap.style.position = 'relative';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(pre.innerText).then(function () {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    wrap.appendChild(btn);
+  });
+});
+</script>
+</head>
+<body class="docs-page">
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav" data-active="tutorials.html"></nav>
+<script src="assets/nav.js"></script>
+
+<div class="docs-shell">
+
+  <aside class="docs-side">
+    <div class="ver"><span>Tutorials</span></div>
+    <h4>Getting started</h4>
+    <ul>
+      <li><a href="api.html#install">Installation</a></li>
+      <li><a href="api.html#current-api">Current API</a></li>
+      <li><a href="api.html#concepts">Concepts &amp; vocabulary</a></li>
+    </ul>
+
+    <h4>Demos</h4>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
+    </ul>
+
+    <h4>Tutorials</h4>
+    <ul>
+      <li><a href="tutorial-karman.html" class="active">Kármán vortex street</a></li>
+      <li><a href="tutorial-micromirror.html">MEMS micromirror</a></li>
+      <li><a href="tutorial-roadmap.html">Cantilever beam 🚧</a></li>
+      <li><a href="tutorial-roadmap.html">Shallow arch 🚧</a></li>
+      <li><a href="tutorial-roadmap.html">Cylindrical shell 🚧</a></li>
+    </ul>
+
+    <h4>Manual</h4>
+    <ul>
+      <li><a href="api.html#fe-input">FE input format</a></li>
+      <li><a href="api.html#master">Master subspace</a></li>
+      <li><a href="api.html#order">Choosing order</a></li>
+      <li><a href="api.html#forcing">Forcing &amp; resonances</a></li>
+      <li><a href="api.html#continuation">Continuation</a></li>
+    </ul>
+
+  </aside>
+
+  <main class="docs-main">
+
+    <div class="crumbs">
+      <a href="api.html">MORFE.jl</a>
+      <span class="sep">/</span>
+      <a href="tutorials.html">Tutorials</a>
+      <span class="sep">/</span>
+      <span>Kármán vortex street</span>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> FLUIDS</span>
+      <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
+      <span class="tag" style="color:var(--ink-3);">~10 MIN COMPUTE</span>
+    </div>
+
+    <h1 id="overview">Kármán vortex street — setting up MORFE from scratch</h1>
+    <p class="lede">
+      This tutorial teaches the complete MORFE workflow on a problem that is <em>not</em> a
+      structure: the 57 860-DOF incompressible flow past a cylinder. You will see everything
+      MORFE needs from you — a fixed point, linear operators, nonlinearities packaged as
+      multilinear maps, master modes — and everything it gives back: the manifold map $W$ and
+      the reduced dynamics $R$, here a single complex equation with the Reynolds number as an
+      extra manifold coordinate.
+    </p>
+
+    <!-- Hero figure: real data (base flow + Hopf mode) -->
+    <div class="fig">
+      <div class="fig-pane"><img src="assets/karman/karman_flow.svg"
+        alt="Vorticity of the base flow plus the Hopf eigenmode: the Kármán vortex street forming behind the cylinder" /></div>
+      <div class="fig-cap"><span class="lab">FIG · 01</span>
+        Vorticity of <em>base flow + Hopf mode</em> — the flow state the instability grows into,
+        reconstructed from the shipped VTK output (contours are vector paths, red/blue =
+        counter-rotating). The steady wake destabilises at Re_c ≈ 49.0; the mode oscillates at
+        ω₀ ≈ 16.86 rad/s.</div>
+    </div>
+
+    <div class="adm tip">
+      <div class="adm-head">Runs today — current API</div>
+      <div class="adm-body">
+        <p>All code on this page is the real, shipped implementation in
+        <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener"><code>examples/05_karman_vortex_street</code></a>.
+        Three commands reproduce every number and figure.</p>
+      </div>
+    </div>
+
+    <h2 id="goal">What you will learn</h2>
+    <ul>
+      <li>What a MORFE model is: the descriptor form $\mathbf B_1\dot x + \mathbf B_0 x = F(x, r)$, and how to provide $\mathbf B_0,\mathbf B_1$ from <em>your own</em> FEM code.</li>
+      <li>How to center the analysis on a steady state — here a Newton–Raphson solve for the base flow — and why DPIM requires it.</li>
+      <li>How to package nonlinearities: a FEM-assembled quadratic term via the <code>FEMMultilinearMap</code> interface, matrix- and vector-based terms via <code>MultilinearMap</code> closures, and a bifurcation parameter via <code>ExternalSystem</code>.</li>
+      <li>How to pick master modes, build the resonance set, run <code>solve_cohomological_problem</code>, and actually <em>use</em> the outputs $(W, R)$.</li>
+    </ul>
+
+    <div class="adm note">
+      <div class="adm-head">Prerequisites</div>
+      <div class="adm-body">
+        <p>Julia ≥ 1.10 (the example instantiates its own environment, Gmsh included) and, for the post-processing step only, Python 3 with <code>numpy</code> + <code>matplotlib</code>.</p>
+        <pre class="code" style="margin-top:10px;">git clone https://github.com/MORFEproject/MORFE.jl.git
+cd MORFE.jl/examples/05_karman_vortex_street
+julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 min</span></pre>
+      </div>
+    </div>
+
+    <h2 id="model">What MORFE needs: the model in descriptor form</h2>
+    <p>
+      MORFE reduces systems written as
+    </p>
+    <div class="math-block" style="font-size:15px;">
+      $$\mathbf B_1\,\dot x \;+\; \mathbf B_0\, x \;=\; F(x, r),$$
+    </div>
+    <p>
+      where $x$ is the (large) state, the $\mathbf B_k$ are your linear matrices, $F$ is a sum
+      of <em>multilinear</em> terms, and $r$ is an optional external state with its own linear
+      dynamics. You bring these four ingredients; MORFE never sees your mesh, your elements, or
+      your discretisation — only matrices, callbacks, and eigenvectors. For the cylinder flow,
+      $x = [u'; p']$ is the perturbation around the steady flow, and:
+    </p>
+    <ul>
+      <li>$\mathbf B_1$ = velocity mass matrix (singular — pressure has no time derivative: a descriptor system, which MORFE handles natively);</li>
+      <li>$\mathbf B_0$ = linearised Navier–Stokes operator at the base flow (viscosity + base-flow convection + pressure/incompressibility coupling);</li>
+      <li>$F$ = the quadratic convection $-(u'\!\cdot\!\nabla)u'$ plus two parameter couplings (next sections);</li>
+      <li>$r = \eta' \equiv 1/\mathrm{Re} - 1/\mathrm{Re}_0$, with trivial dynamics $\dot\eta' = 0$. Since $\nu = D/\mathrm{Re}$, the Reynolds number enters the equations <em>exactly linearly</em> in $\eta'$ — declaring it a manifold coordinate makes the ROM parametric in Re at no extra cost.</li>
+    </ul>
+
+    <hr style="margin: 56px 0;"/>
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="num">01</div>
+      <div class="body">
+        <h3 id="step-steady">Center the analysis on the steady flow (Newton–Raphson)</h3>
+        <p>
+          DPIM expands an invariant manifold around a <strong>fixed point</strong>. For a fluid
+          that fixed point is the steady base flow $u_0$, which must be computed first — here by
+          a Newton–Raphson iteration on the stationary Navier–Stokes residual (quadratic
+          convergence, ‖R‖ → 10⁻¹⁰ in six iterations). The linear operators are then the
+          Jacobian <em>at that point</em>:
+        </p>
+<pre class="code"><span class="cm"># stage 3 — Newton–Raphson for the base flow u₀ at Re₀ (the expansion point)</span>
+(<span class="var">_</span>, <span class="var">_</span>, <span class="var">s₀_full</span>) <span class="op">=</span> <span class="fn">solve_steady_state</span>(<span class="var">fom</span>; <span class="var">Re0</span> <span class="op">=</span> <span class="var">Re₀</span>)
+
+<span class="cm"># stage 4 — linearise around u₀:  B₁ ṡ + B₀ s = F(s, η′)</span>
+(<span class="var">B₀</span>, <span class="var">B₁</span>) <span class="op">=</span> <span class="fn">assemble_linear_operators</span>(<span class="var">s₀_full</span>, <span class="var">fom</span>; <span class="var">Re0</span> <span class="op">=</span> <span class="var">Re₀</span>)</pre>
+        <p>
+          Both functions are plain Ferrite assembly code from the example (<code>solver/steady_state.jl</code>,
+          <code>fem/linear_operators.jl</code>) — this part is yours, in whatever FEM library you
+          use. MORFE takes over only once $\mathbf B_0, \mathbf B_1$ exist as sparse matrices.
+        </p>
+        <div class="adm note">
+          <div class="adm-head">Why the fixed point matters</div>
+          <div class="adm-body"><p>Every coefficient MORFE computes is an expansion around $u_0$. If the Newton solve is not converged, the "linear" part of the dynamics silently contains residual forcing and every higher-order coefficient inherits the error. Check ‖R(u₀)‖ before proceeding.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="num">02</div>
+      <div class="body">
+        <h3 id="step-nonlinear">Package the nonlinearities as multilinear maps</h3>
+        <p>
+          $F(x,r)$ is declared term by term. Each term states its <em>signature</em> — how many
+          state factors (<code>multiindex</code>) and how many external factors
+          (<code>multiplicity_external</code>) it carries — plus a callback that evaluates it.
+          Three flavours appear in this example, and together they cover most models:
+        </p>
+        <p><strong>(a) FEM-assembled term.</strong> The convection $f_2(s,s) = -(u'\!\cdot\!\nabla)u'$
+        is never built as a tensor — that would be dense and enormous. Instead the example
+        subtypes <code>FEMMultilinearMap</code> and implements element-level callbacks; MORFE
+        calls them with the manifold columns it needs, batched over the mesh:</p>
+<pre class="code"><span class="kw">struct</span> <span class="var">FluidConvection</span>{<span class="var">DH</span>, <span class="var">CV</span>} <span class="op">&lt;:</span> <span class="var">MORFE</span>.<span class="var">FEMMultilinearMap</span>{<span class="num">1</span>}
+    <span class="cm"># … FEM handles and buffers …</span>
+    <span class="var">multiindex</span><span class="op">::</span><span class="var">NTuple</span>{<span class="num">1</span>, <span class="var">Int</span>}      <span class="cm"># (2,)  — quadratic in the state</span>
+    <span class="var">multiplicity_external</span><span class="op">::</span><span class="var">Int</span>     <span class="cm"># 0    — no η′ factor</span>
+<span class="kw">end</span>
+
+<span class="cm"># the physics lives in ONE quadrature-point callback:</span>
+<span class="kw">function</span> <span class="var">MORFE</span>.<span class="fn">accumulate_qp!</span>(<span class="var">Fe</span>, (<span class="var">qp1</span>, <span class="var">qp2</span>), <span class="var">mult</span>, <span class="var">_</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span><span class="op">::</span><span class="var">FluidConvection</span>)
+    <span class="var">conv</span> <span class="op">=</span> <span class="op">-</span><span class="num">0.5</span> <span class="op">*</span> (<span class="var">qp2</span>.<span class="var">grad</span> ⋅ <span class="var">qp1</span>.<span class="var">val</span> <span class="op">+</span> <span class="var">qp1</span>.<span class="var">grad</span> ⋅ <span class="var">qp2</span>.<span class="var">val</span>)   <span class="cm"># −½[(u₁·∇)u₂+(u₂·∇)u₁]</span>
+    <span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="var">t</span>.<span class="var">n_vel_dofs_per_cell</span>
+        <span class="var">Fe</span>[<span class="var">t</span>.<span class="var">dof_range_u</span>[<span class="var">i</span>]] <span class="op">+=</span> <span class="var">mult</span> <span class="op">*</span> <span class="var">dΩ</span> <span class="op">*</span> (<span class="fn">shape_value</span>(<span class="var">t</span>.<span class="var">cv_vel</span>, <span class="var">q</span>, <span class="var">i</span>) ⋅ <span class="var">conv</span>)
+    <span class="kw">end</span>
+<span class="kw">end</span></pre>
+        <p><strong>(b) Matrix-based term.</strong> The parameter coupling
+        $\eta'\, g_1(s) = -D\,\eta'\, \mathbf K_{\mathrm{visc}}\, u'$ is a pre-assembled sparse
+        matrix wrapped in a closure — one state factor, one external factor:</p>
+<pre class="code"><span class="var">g₁!</span>(<span class="var">acc</span>, <span class="var">s</span>, <span class="var">r</span>) <span class="op">=</span> <span class="fn">mul!</span>(<span class="var">acc</span>, <span class="var">K_visc</span>, <span class="var">s</span>, <span class="var">r</span>[<span class="num">1</span>], <span class="fn">one</span>(<span class="fn">eltype</span>(<span class="var">acc</span>)))
+<span class="var">g₁</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="var">g₁!</span>, (<span class="num">1</span>,), <span class="num">1</span>)          <span class="cm"># multiindex (1,), one η′ factor</span></pre>
+        <p><strong>(c) Constant forcing term.</strong> The base-flow coupling
+        $\eta'\, h_0 = -D\,\eta'\, \mathbf K_{\mathrm{visc}}\, u_0$ is a fixed vector — zero
+        state factors, one external factor. It is what makes the $\eta'$-direction of the
+        manifold point along the family of steady states at neighbouring Re:</p>
+<pre class="code"><span class="var">h₀!</span>(<span class="var">acc</span>, <span class="var">r</span>) <span class="op">=</span> <span class="fn">axpy!</span>(<span class="fn">eltype</span>(<span class="var">acc</span>)(<span class="var">r</span>[<span class="num">1</span>]), <span class="var">h₀_vec</span>, <span class="var">acc</span>)
+<span class="var">h₀</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="var">h₀!</span>, (<span class="num">0</span>,), <span class="num">1</span>)</pre>
+        <p>Finally the parameter itself is an <code>ExternalSystem</code> with one eigenvalue 0
+        ($\dot\eta' = 0$), and everything is assembled into the model:</p>
+<pre class="code"><span class="var">ext_sys</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="num">0.0</span> <span class="op">+</span> <span class="num">0.0im</span>,))
+<span class="var">model</span> <span class="op">=</span> <span class="fn">NDOrderModel</span>((<span class="var">B₀</span>, <span class="var">B₁</span>), (<span class="var">convection</span>, <span class="var">g₁</span>, <span class="var">h₀</span>), <span class="var">ext_sys</span>)</pre>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+      <div class="num">03</div>
+      <div class="body">
+        <h3 id="step-master">Choose the master modes</h3>
+        <p>
+          The master modes span the tangent space of the manifold. Here they are the Hopf pair —
+          the least-damped complex-conjugate eigenpair of the generalised problem
+          $-\mathbf B_0\, y = \lambda\, \mathbf B_1\, y$, found by shift-invert ARPACK.
+          MORFE also needs the <em>left</em> eigenvectors, which enter the solvability
+          conditions of the reduced dynamics:
+        </p>
+<pre class="code">(<span class="var">λs</span>, <span class="var">Φ</span>, <span class="var">Ψ</span>, <span class="var">…</span>) <span class="op">=</span> <span class="fn">solve_hopf_eigenproblem</span>(<span class="op">-</span><span class="var">B₀</span>, <span class="var">B₁</span>; <span class="var">nev</span> <span class="op">=</span> <span class="num">40</span>, <span class="var">…</span>)
+<span class="cm">#   Selected Hopf mode:  λ₁ = +0.004028 +16.859169·i   (and λ₂ = conj(λ₁))</span></pre>
+        <p>
+          At Re₀ = 49.03 the pair sits just right of the imaginary axis — the base flow is
+          barely unstable, shedding at $\omega_0 = 16.86$ rad/s (St ≈ 0.27). Together with
+          $\eta'$, the reduced coordinates are $(z_1, \bar z_1, \eta')$: a 2-real-dimensional
+          oscillator plus one parameter direction.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step">
+      <div class="num">04</div>
+      <div class="body">
+        <h3 id="step-resonance">Multi-indices and the resonance set</h3>
+        <p>
+          The parametrisation is a polynomial in the reduced coordinates. You choose which
+          monomials exist (everything up to a total degree) and which of them stay in the
+          reduced dynamics (the <em>style</em> of the parametrisation). The normal-form style
+          keeps only near-resonant monomials — for a Hopf pair those are
+          $z_1 |z_1|^{2k} \eta'^{\,j}$:
+        </p>
+<pre class="code"><span class="var">mset</span> <span class="op">=</span> <span class="fn">all_multiindices_up_to</span>(<span class="num">3</span>, <span class="num">9</span>; <span class="var">min_degree</span> <span class="op">=</span> <span class="num">1</span>)   <span class="cm"># z₁^a z̄₁^b η′^c, a+b+c ≤ 9 → 219 monomials</span>
+
+<span class="var">resonance_set</span> <span class="op">=</span> <span class="fn">resonance_set_from_complex_normal_form_style</span>(
+    <span class="var">mset</span>, [<span class="var">im</span><span class="op">*</span><span class="var">ω₀</span>, <span class="op">-</span><span class="var">im</span><span class="op">*</span><span class="var">ω₀</span>], <span class="num">0.05</span><span class="var">ω₀</span>;
+    <span class="var">external_eigenvalues</span> <span class="op">=</span> [<span class="num">0.0</span> <span class="op">+</span> <span class="num">0.0im</span>])</pre>
+        <p>
+          Because the FOM matrices are real and the two master modes are conjugates, MORFE can
+          skip half of the work: the <code>conjugate_permutation</code> below declares that mode
+          2 is the conjugate of mode 1 and that $\eta'$ is self-conjugate (real).
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step">
+      <div class="num">05</div>
+      <div class="body">
+        <h3 id="step-solve">Solve the cohomological equations</h3>
+<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">solve_cohomological_problem</span>(
+    <span class="var">model</span>, <span class="var">mset</span>, <span class="var">master_eigenvalues</span>,
+    <span class="var">master_modes</span> <span class="op">.*</span> <span class="num">1e-2</span>, <span class="var">left_eigenmodes</span> <span class="op">.*</span> <span class="num">1e-2</span>,   <span class="cm"># coordinate rescale for conditioning</span>
+    <span class="var">resonance_set</span>;
+    <span class="var">conjugate_permutation</span> <span class="op">=</span> [<span class="num">2</span>, <span class="num">1</span>, <span class="num">3</span>])</pre>
+        <p>
+          This is the core of MORFE: it walks the 219 monomials in graded order and solves one
+          bordered linear system of size FOM+resonances per monomial (≈ 6 min here). The outputs
+          are the two halves of the invariance equation:
+        </p>
+        <ul>
+          <li><code>W</code> — the <strong>manifold map</strong>: coefficients $W_\alpha \in \mathbb C^{57860}$ such that the full state is $x = \sum_\alpha W_\alpha\, z^\alpha$. Access them via <code>MORFE.ParametrisationMethod.coefficients(W)</code>.</li>
+          <li><code>R</code> — the <strong>reduced dynamics</strong> $\dot z = R(z)$ on the manifold. With the normal-form style, only the resonant monomials are nonzero; the first row is the whole story (row 2 is its conjugate, row 3 is $\dot\eta' = 0$). From the actual run:</li>
+        </ul>
+<pre class="code"><span class="cm">ż₁ = R₁(z₁, z̄₁, η′) — nonzero monomials  [z₁-pow, z̄₁-pow, η′-pow]:</span>
+  [1, 0, 0]      : +4.0284400035e-03 +1.6859169021e+01·i     <span class="cm"># λ₁</span>
+  [1, 0, 1]      : -2.1200793228e+02 -5.9107701234e+01·i     <span class="cm"># sensitivity to Re</span>
+  [2, 1, 0]      : -1.1101108534e-01 +7.0650764135e-02·i     <span class="cm"># cubic saturation</span>
+  [1, 0, 2]      : +2.9810858630e+03 +9.5235017009e+01·i
+  ...</pre>
+        <p>Two coefficients already answer the physical questions: setting the growth rate to
+        zero, $\mathrm{Re}(\lambda) + \mathrm{Re}(c_{101})\,\eta' = 0$ locates the bifurcation at
+        Re_c ≈ 48.98; and $\mathrm{Re}(c_{210}) &lt; 0$ means the cubic term saturates the
+        instability — the bifurcation is supercritical, a stable limit cycle grows smoothly
+        from Re_c.</p>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step">
+      <div class="num">06</div>
+      <div class="body">
+        <h3 id="step-use">Use the ROM: branch, observables, order convergence</h3>
+        <p>
+          With normal-form style the ROM limit cycle is exactly a circle $z_1 = \rho e^{i\Omega t}$,
+          so the whole bifurcation diagram is the 2×2 continuation problem
+          $\mathrm{Re}[R_1(\rho,\rho,\eta')] = 0$ — solved in seconds
+          (<code>solve_rom.jl</code>). Physical observables are projections of $W$: the lift is
+          the polynomial $L_\alpha = l^{\!\top} W_\alpha$ and the kinetic energy needs only the
+          tiny Gram matrix $\mathbf G = W_{\mathrm{vel}}^{\!\top} \mathbf M_{\mathrm{vel}} W_{\mathrm{vel}}/|\Omega|$
+          — no FOM-sized data leaves Julia:
+        </p>
+<pre class="code">julia --project=. solve_rom.jl      <span class="cm"># limit-cycle branch per truncation order</span>
+python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs Re, one curve per order</span></pre>
+        <div class="adm tip">
+          <div class="adm-head">One run = every order (exactly)</div>
+          <div class="adm-body"><p>The cohomological solve is <em>graded</em>: degree-$N$ coefficients never depend on degrees $&gt; N$. Zeroing all monomials above degree $N$ in the order-9 $(W,R)$ therefore gives the order-$N$ ROM <strong>bit-exactly</strong> (verified against separate runs). The order-convergence study below costs nothing beyond the single order-9 run.</p></div>
+        </div>
+
+        <div class="fig">
+          <div class="fig-pane"><img src="assets/karman/lift_vs_Re.png" alt="Maximum lift along the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy" /></div>
+          <div class="fig-cap"><span class="lab">FIG · 02</span> Maximum lift along the limit cycle vs Re, per truncation order. The orders coincide near Re_c and fan out with distance — the convergence signature of the expansion.</div>
+        </div>
+
+        <div class="fig">
+          <div class="fig-pane"><img src="assets/karman/tke_vs_Re.png" alt="Period-averaged fluctuation kinetic energy vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy" /></div>
+          <div class="fig-cap"><span class="lab">FIG · 03</span> Period-averaged fluctuation kinetic energy vs Re. The energy grows from zero at Re_c ≈ 48.98; where the orders agree the ROM is trustworthy.</div>
+        </div>
+
+        <div class="adm warn">
+          <div class="adm-head">Reading the fan</div>
+          <div class="adm-body"><p>Where the truncation orders diverge you have left the expansion's validity ball — the order-5 branch even folds back around Re ≈ 54.6, a truncation artifact, not physics. This is exactly why the order study matters before trusting any single curve.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <hr style="margin: 56px 0;"/>
+
+    <h2 id="recap">Recap: the MORFE recipe</h2>
+    <ol>
+      <li><strong>Fixed point</strong> — converge a steady state (Newton–Raphson) and linearise around it: $(\mathbf B_0, \mathbf B_1)$.</li>
+      <li><strong>Nonlinearities</strong> — declare each term of $F(x,r)$ as a <code>MultilinearMap</code> (matrix/vector) or <code>FEMMultilinearMap</code> (element-level assembly), with its state/external signature.</li>
+      <li><strong>Parameters</strong> — anything that enters (multi)linearly can ride along as an <code>ExternalSystem</code> coordinate; the ROM becomes parametric.</li>
+      <li><strong>Masters</strong> — pick the eigenpairs that span the physics (here the Hopf pair) and hand MORFE both right and left eigenvectors.</li>
+      <li><strong>Style</strong> — the resonance set decides what survives in $\dot z = R(z)$; normal-form style keeps the minimal resonant core.</li>
+      <li><strong>Solve &amp; use</strong> — <code>solve_cohomological_problem</code> returns $(W, R)$; continuation runs on $R$, physical quantities come from projections of $W$.</li>
+    </ol>
+
+    <h2 id="next">Where to next?</h2>
+    <ul>
+      <li><a class="inline" href="tutorial-micromirror.html">MEMS micromirror</a> — the structural counterpart with a 1:2 internal resonance (target-API preview).</li>
+      <li><a class="inline" href="api.html#current-api">Current API reference</a> — <code>NDOrderModel</code>, multilinear maps, resonance sets, <code>solve_cohomological_problem</code>.</li>
+      <li><a class="inline" href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
+    </ul>
+
+    <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:240px;">
+        <div class="kicker">Reproduce</div>
+        <h3 style="margin-top:14px; font-size:20px;">Three commands, every figure</h3>
+        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">The full pipeline ships in <code>examples/05_karman_vortex_street</code> — <code>main.jl</code>, <code>solve_rom.jl</code>, <code>compare_orders.py</code>.</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder <span class="arrow">→</span></a>
+        <a class="btn" href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+
+    <div style="margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--ink-3);">
+      <a href="tutorials.html">← Tutorials</a>
+      <a href="tutorial-micromirror.html">MEMS micromirror →</a>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc">
+    <h5>On this page</h5>
+    <ul id="toc-list">
+      <li><a href="#overview" class="active">Overview</a></li>
+      <li><a href="#goal">What you will learn</a></li>
+      <li><a href="#model">The model MORFE expects</a></li>
+      <li><a href="#step-steady">01 · Steady flow (Newton)</a></li>
+      <li><a href="#step-nonlinear">02 · Multilinear maps</a></li>
+      <li><a href="#step-master">03 · Master modes</a></li>
+      <li><a href="#step-resonance">04 · Resonance set</a></li>
+      <li><a href="#step-solve">05 · Solve</a></li>
+      <li><a href="#step-use">06 · Use the ROM</a></li>
+      <li><a href="#recap">Recap</a></li>
+      <li><a href="#next">Where to next?</a></li>
+    </ul>
+    <h5 style="margin-top:32px;">Links</h5>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder ↗</a></li>
+    </ul>
+  </aside>
+
+</div>
+</div>
+
+<script src="assets/manifold-bg.js"></script>
+<script>
+(function () {
+  const links = document.querySelectorAll('#toc-list a');
+  const targets = [...links].map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  function onScroll() {
+    let active = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const r = targets[i].getBoundingClientRect();
+      if (r.top < 140) active = i;
+    }
+    links.forEach(l => l.classList.remove('active'));
+    if (links[active]) links[active].classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+</body>
+</html>
