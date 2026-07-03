@@ -107,9 +107,10 @@ def main():
         fig, ax = plt.subplots(figsize=(6, 4))
         for o in sorted(set(arr[:, 0].astype(int))):
             sel = arr[arr[:, 0] == o]
-            ax.plot(sel[:, 2], sel[:, col], marker=".", ms=3, label=f"order {o}")
+            ax.plot(sel[:, 2], sel[:, col], ms=3, label=f"order {o}")
         if col == 6:
-            ax.set_yscale("log")   # post-fold tails otherwise dwarf the physical branch
+            #ax.set_yscale("log")   # post-fold tails otherwise dwarf the physical branch
+            ax.set_ylim([-0.001, 0.02])
         ax.set_xlabel("Re")
         ax.set_ylabel(ylabel)
         ax.legend()
