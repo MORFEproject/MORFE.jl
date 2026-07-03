@@ -11,7 +11,7 @@ Pipeline
 6.  Shift-invert ARPACK eigenproblem → Hopf pair (λ₁, λ₂)
 7.  Build NDOrderModel + multiindex set (order MAX_ORD)
 8.  Solve cohomological equations (DPIM)
-9.  Realify reduced dynamics → Stuart-Landau coefficients
+9.  Report reduced dynamics ż₁ = R₁(z₁, z̄₁, η′)  (complex Stuart-Landau coefficients)
 10. Export R + lift polynomial + TKE Gram → results/Re{Re₀}_ord{MAX_ORD}/data/
 
 A SINGLE run at MAX_ORD suffices for the whole order-convergence study: the
@@ -203,12 +203,11 @@ r_dpim = @timed solve_cohomological_problem(
 # 9 — Realify + write results
 # ─────────────────────────────────────────────────────────────────────────────
 
-println(_out, "\n[9/10] Realifying reduced dynamics ...")
-Rr = ReducedDynamics(realify(R.poly, conj_map), R.external_system_size)
+println(_out, "\n[9/10] Reduced dynamics — first row ż₁ = R₁(z₁, z̄₁, η′) ...")
 
 rdyn_path = joinpath(DATA_DIR, "reduced_dynamics.txt")
 open(rdyn_path, "w") do io
-	println(io, "Kármán Vortex Street — Reduced Dynamics (real form)")
+	println(io, "Kármán Vortex Street — Reduced Dynamics (complex form, equation 1)")
 	@printf(io, "Re₀ = %.4f,  DPIM order = %d,  NVAR = %d\n", Re₀, MAX_ORD, NVAR)
 	println(io, "")
 	println(io, "Hopf eigenvalues:")
@@ -216,21 +215,23 @@ open(rdyn_path, "w") do io
 		@printf(io, "  λ[%d] = %+.10f %+.10f i\n", i, real(λ), imag(λ))
 	end
 	println(io, "")
-	println(io, "Nonzero reduced-dynamics monomials:")
-	for m in eachindex(Rr.poly.multiindex_set.exponents)
-		mi = Rr.poly.multiindex_set.exponents[m]
-		c = Rr.poly.coefficients[:, m]
-		any(abs.(real.(c)) .> 1e-14) || continue
-		@printf(io, "  %-20s : %s\n", string(mi), string(round.(real.(c); sigdigits = 8)))
+	println(io, "ż₁ = R₁(z₁, z̄₁, η′) — nonzero monomials  [z₁-pow, z̄₁-pow, η′-pow]:")
+	for m in eachindex(R.poly.multiindex_set.exponents)
+		mi = R.poly.multiindex_set.exponents[m]
+		c = R.poly.coefficients[1, m]
+		abs(c) > 1e-14 || continue
+		@printf(io, "  %-14s : %+.10e %+.10e·i\n", string(mi), real(c), imag(c))
 	end
+	println(io, "")
+	println(io, "Equation 2 is the complex conjugate; equation 3 is the parameter, η̇′ = 0.")
 end
 
-println(_out, "\nReduced dynamics (real form) — nonzero monomials:")
-for m in eachindex(Rr.poly.multiindex_set.exponents)
-	mi = Rr.poly.multiindex_set.exponents[m]
-	c = Rr.poly.coefficients[1, m]
-	any(abs.(real.(c)) .> 1e-12) || continue
-	@printf(_out, "  %-20s : %s\n", string(mi), string(round.(c; sigdigits = 6)))
+println(_out, "\nReduced dynamics ż₁ = R₁ — nonzero monomials:")
+for m in eachindex(R.poly.multiindex_set.exponents)
+	mi = R.poly.multiindex_set.exponents[m]
+	c = R.poly.coefficients[1, m]
+	abs(c) > 1e-12 || continue
+	@printf(_out, "  %-14s : %s\n", string(mi), string(round(c; sigdigits = 6)))
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
