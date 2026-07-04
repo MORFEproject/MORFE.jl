@@ -168,7 +168,8 @@ function assemble_linear_operators(s0_full, fom; Re0::Float64)
         assemble!(asm_AL, dofs, ALe)
     end
 
-    # ── Restrict to DPIM free-DOF subspace (inlet free → natural BC) ────
+    # ── Restrict to DPIM free-DOF subspace (same prescribed set as the base
+    #    flow — inlet perturbation frozen to zero, so free_dpim == free) ────
     B1_free   = M_full[fom.free_dpim, fom.free_dpim]
     A_lin_free = AL_full[fom.free_dpim, fom.free_dpim]
     B0_free    = -A_lin_free                   # B₀ = −A_lin

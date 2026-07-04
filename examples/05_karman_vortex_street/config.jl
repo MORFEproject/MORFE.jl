@@ -20,7 +20,9 @@ const MESH_H_BULK = 0.04    # element size in the bulk channel
 const EIG_NEV = 40      # number of eigenvalues to compute and display
 const EIG_SIGMA_RE = 3.0   # real part of ARPACK shift; offset from the imaginary
 # axis avoids near-singularity when Re(λ_Hopf) ≈ 0
-const EIG_SIGMA_IM = 8.0   # imag part ≈ Hopf freq (St≈0.2, D=0.1, U_mean=1)
+const EIG_SIGMA_IM = 8.0   # imag part ≈ ω₀/2 (Hopf freq ω₀ ≈ 16.86 rad/s); any
+# O(ω₀) value works — the shift only conditions the factorisation, Hopf-mode
+# selection is shift-independent
 const EIG_TARGET_FREQ = nothing   # rad/s: pin the Hopf mode by Im(λ) ≈ this frequency;
 # nothing → smallest |Re(λ)| among Im(λ) > 0 (only reliable near Re_c ≈ 49)
 
