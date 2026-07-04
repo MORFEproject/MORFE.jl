@@ -258,7 +258,7 @@ function solve_cohomological_problem(
 	end
 
 	ml_cache = build_multilinear_terms_cache(model, W, sym.skip_bits)
-	buffers = CohomologicalBuffers{T}(FOM, ROM)
+	buffers = CohomologicalBuffers(T, MT, FOM, ROM)
 
 	# ── 3. Φ_ext-independent operators ───────────────────────────────────────
 	orthogonality_J_coeffs = precompute_orthogonality_operator_coefficients(
