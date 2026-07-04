@@ -59,6 +59,8 @@ profile*.html
 __pycache__/
 *.pyc
 W.jls
+R.jls
+*.vtu
 
 # Timing measurement scratch files
 timing_*.txt
@@ -66,6 +68,3 @@ timing_*.txt
 # Never track IFX content, even if the folder reappears anywhere in the repo
 IFX/
 private/
-*.vtu
-*.vtu
-*.vtu

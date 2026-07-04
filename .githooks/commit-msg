@@ -1,0 +1,11 @@
+#!/bin/sh
+# Guarantee: never let a Claude/Anthropic authorship or attribution line into a
+# commit message. Complements the global `includeCoAuthoredBy: false` setting and
+# enforces it regardless of which tool creates the commit. Local, untracked.
+f="$1"
+tmp="$(mktemp)"
+grep -viE '^(Co-Authored-By|Co-authored-by):[[:space:]]*Claude|noreply@anthropic\.com|Generated with .*Claude Code' "$f" > "$tmp" || true
+# remove any trailing blank lines left after stripping
+awk 'NF{last=NR} {line[NR]=$0} END{for(i=1;i<=last;i++) print line[i]}' "$tmp" > "$f"
+rm -f "$tmp"
+exit 0

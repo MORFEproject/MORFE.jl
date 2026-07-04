@@ -127,14 +127,9 @@ document.addEventListener('DOMContentLoaded', function () {
       <span class="tag" style="color:var(--ink-3);">~10 MIN COMPUTE</span>
     </div>
 
-    <h1 id="overview">Kármán vortex street — setting up MORFE from scratch</h1>
+    <h1 id="overview">Kármán vortex street</h1>
     <p class="lede">
-      This tutorial teaches the complete MORFE workflow on a problem that is <em>not</em> a
-      structure: the 57 860-DOF incompressible flow past a cylinder. You will see everything
-      MORFE needs from you — a fixed point, linear operators, nonlinearities packaged as
-      multilinear maps, master modes — and everything it gives back: the manifold map $W$ and
-      the reduced dynamics $R$, here a single complex equation with the Reynolds number as an
-      extra manifold coordinate.
+      This tutorial teaches the complete MORFE workflow on the 57 860-DOF incompressible flow past a cylinder.
     </p>
 
     <!-- Hero figure: real data (base flow + oscillating Hopf mode, WebGL) -->
@@ -143,9 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
         title="Animated vorticity of the base flow plus the oscillating Hopf eigenmode: the Kármán vortex street travelling behind the cylinder"></iframe>
       <div class="fig-cap"><span class="lab">FIG · 01</span>
         Vorticity of <em>base flow + oscillating Hopf mode</em>,
-        $\omega(x,t) = \bar\omega(x) + \varepsilon\,\mathrm{Re}\!\left[\hat\omega(x)\,e^{i\omega_0 t}\right]$,
-        animated on the actual FE mesh from the shipped VTK output (red/blue = counter-rotating;
-        click to pause). The steady wake destabilises at Re_c ≈ 49.0 and the pattern travels
+        animated on the actual FE mesh from the VTK output. The steady wake destabilises at Re_c ≈ 49 and the pattern travels
         downstream at the shedding frequency $\omega_0 \approx 16.86$ rad/s.</div>
     </div>
 
@@ -158,12 +151,13 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
-    <h2 id="goal">What you will learn</h2>
+    <h2 id="goal">What this tutorial demonstrates</h2>
     <ul>
-      <li>What a MORFE model is: the descriptor form $\mathbf B_1\dot x + \mathbf B_0 x = F(x, r)$, and how to provide $\mathbf B_0,\mathbf B_1$ from <em>your own</em> FEM code.</li>
-      <li>How to center the analysis on a steady state — here a Newton–Raphson solve for the base flow — and why DPIM requires it.</li>
-      <li>How to package nonlinearities: a FEM-assembled quadratic term via the <code>FEMMultilinearMap</code> interface, matrix- and vector-based terms via <code>MultilinearMap</code> closures, and a bifurcation parameter via <code>ExternalSystem</code>.</li>
-      <li>How to pick master modes, build the resonance set, run <code>solve_cohomological_problem</code>, and actually <em>use</em> the outputs $(W, R)$.</li>
+      <li>Defining up the full-order model for MORFE from <em>your own</em> FEM code.</li>
+      <li>Centering the analysis on a steady state — here Newton–Raphson solves the base flow.</li>
+      <li>Defining nonlinearities: a FEM-assembled quadratic term via the <code>FEMMultilinearMap</code> interface, matrix- and vector-based terms via <code>MultilinearMap</code> closures, and a bifurcation parameter via <code>ExternalSystem</code>.</li>
+      <li>Selecting master modes and building the resonance set.</li>
+      <li>Running <code>solve_cohomological_problem</code> and <em>using</em> the outputs $(W, R)$.</li>
     </ul>
 
     <div class="adm note">
@@ -176,22 +170,20 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
       </div>
     </div>
 
-    <h2 id="model">The full-order model MORFE receives</h2>
+    <h2 id="model">Defining the full-order model</h2>
     <p>
-      MORFE reduces polynomial ODEs of any order $N$ written in the native form
-      $\;\sum_{k=0}^{N}\mathbf B_k\,\mathbf x^{(k)} = \mathbf F(\mathbf x,\dots,\mathbf x^{(N-1)},\mathbf r)$,
-      with the equilibrium placed at the origin. The cylinder flow is a first-order ($N=1$)
-      case: linearising the incompressible Navier–Stokes equations about the steady base flow
+      The cylinder flow is a first-order ($N=1$)
+      ODE: linearising the incompressible Navier–Stokes equations about the steady base flow
       and subtracting it leaves the perturbation $\mathbf x = [u';p']$ at the origin, obeying a
-      differential–algebraic system — pressure carries no time derivative, so the mass matrix
+      differential–algebraic system — pressure carries no time derivative, so the mass matrix $\mathbf{B_1}$
       is singular.
     </p>
     <div class="math-block" style="font-size:15px;">
       $$\mathbf B_1\,\dot{\mathbf x} + \mathbf B_0\,\mathbf x
         = \mathbf F(\mathbf x,\mathbf r)
         = \underbrace{\mathbf T_1(\mathbf x,\mathbf x)}_{\text{convection}}
-        + \underbrace{\mathbf T_2(\mathbf x,\mathbf r)}_{\text{viscous coupling}}
-        + \underbrace{\mathbf T_3(\mathbf r)}_{\text{base-flow forcing}}$$
+        \,\, + \! \underbrace{\mathbf T_2(\mathbf x,\mathbf r)}_{\text{viscous coupling}}
+         + \!\! \underbrace{\mathbf T_3(\mathbf r)}_{\text{base-flow forcing}}$$
     </div>
     <p>
       The right-hand side is a sum of <strong>multilinear maps</strong> $\mathbf T_j$, each
@@ -258,8 +250,9 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
           the count $\widehat m_j$). MORFE needs nothing more than a callback that evaluates the map on
           the supplied arguments, and it exploits symmetry in repeated arguments automatically.
         </p>
-        <p><strong>(a) $\mathbf T_1$ — quadratic convection</strong> ($-(u'\!\cdot\!\nabla)u'$;
-        <code>multiindex=(2,)</code>, <code>multiplicity_external=0</code>). It is evaluated by
+        <p><strong>(a) $\mathbf T_1$ — quadratic convection</strong> </p>
+        <p>($-(u'\!\cdot\!\nabla)u'$; <code>multiindex=(2,)</code>, <code>multiplicity_external=0</code>) </p>
+        <p>It is evaluated by
         element-level callbacks rather than stored as a dense, high-dimensional tensor: the example
         subtypes <code>FEMMultilinearMap</code>, and MORFE calls it with the manifold columns it
         needs, batched over the mesh:</p>
@@ -276,15 +269,18 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
         <span class="var">Fe</span>[<span class="var">t</span>.<span class="var">dof_range_u</span>[<span class="var">i</span>]] <span class="op">+=</span> <span class="var">mult</span> <span class="op">*</span> <span class="var">dΩ</span> <span class="op">*</span> (<span class="fn">shape_value</span>(<span class="var">t</span>.<span class="var">cv_vel</span>, <span class="var">q</span>, <span class="var">i</span>) ⋅ <span class="var">conv</span>)
     <span class="kw">end</span>
 <span class="kw">end</span></pre>
-        <p><strong>(b) $\mathbf T_2$ — viscous parameter coupling</strong>
+        <p><strong>(b) $\mathbf T_2$ — viscous parameter coupling</strong></p>
+        <p>
         ($-D\,\eta'\, \mathbf K_{\mathrm{visc}}\, u'$; <code>multiindex=(1,)</code>,
-        <code>multiplicity_external=1</code>). A pre-assembled sparse matrix wrapped in a closure —
+        <code>multiplicity_external=1</code>)</p> 
+        <p>A pre-assembled sparse matrix wrapped in a closure —
         one state argument, one external argument:</p>
 <pre class="code"><span class="var">g₁!</span>(<span class="var">acc</span>, <span class="var">s</span>, <span class="var">r</span>) <span class="op">=</span> <span class="fn">mul!</span>(<span class="var">acc</span>, <span class="var">K_visc</span>, <span class="var">s</span>, <span class="var">r</span>[<span class="num">1</span>], <span class="fn">one</span>(<span class="fn">eltype</span>(<span class="var">acc</span>)))
 <span class="var">g₁</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="var">g₁!</span>, (<span class="num">1</span>,), <span class="num">1</span>)          <span class="cm"># multiindex (1,), one η′ factor</span></pre>
-        <p><strong>(c) $\mathbf T_3$ — base-flow forcing</strong>
-        ($-D\,\eta'\, \mathbf K_{\mathrm{visc}}\, u_0$; <code>multiindex=(0,)</code>,
-        <code>multiplicity_external=1</code>). A fixed vector — no state argument, one external
+        <p><strong>(c) $\mathbf T_3$ — base-flow forcing</strong></p>
+        <p>($-D\,\eta'\, \mathbf K_{\mathrm{visc}}\, u_0$; <code>multiindex=(0,)</code>,
+        <code>multiplicity_external=1</code>)</p> 
+        <p>A fixed vector — no state argument, one external
         argument. It aligns the $\eta'$-direction of the manifold with the family of steady states
         at neighbouring Re:</p>
 <pre class="code"><span class="var">h₀!</span>(<span class="var">acc</span>, <span class="var">r</span>) <span class="op">=</span> <span class="fn">axpy!</span>(<span class="fn">eltype</span>(<span class="var">acc</span>)(<span class="var">r</span>[<span class="num">1</span>]), <span class="var">h₀_vec</span>, <span class="var">acc</span>)
@@ -425,7 +421,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
 
     <hr style="margin: 56px 0;"/>
 
-    <h2 id="recap">Recap: the MORFE recipe</h2>
+    <h2 id="recap">Recap</h2>
     <ol>
       <li><strong>Fixed point</strong> — converge a steady state (Newton–Raphson) and linearise around it: $(\mathbf B_0, \mathbf B_1)$.</li>
       <li><strong>Nonlinearities</strong> — declare each term of $F(x,r)$ as a <code>MultilinearMap</code> (matrix/vector) or <code>FEMMultilinearMap</code> (element-level assembly), with its state/external signature.</li>
@@ -466,7 +462,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
     <ul id="toc-list">
       <li><a href="#overview" class="active">Overview</a></li>
       <li><a href="#goal">What you will learn</a></li>
-      <li><a href="#model">The model MORFE expects</a></li>
+      <li><a href="#model">The full order model</a></li>
       <li><a href="#step-steady">01 · Steady flow (Newton)</a></li>
       <li><a href="#step-nonlinear">02 · Multilinear maps</a></li>
       <li><a href="#step-master">03 · Master modes</a></li>
