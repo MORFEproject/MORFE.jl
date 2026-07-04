@@ -24,6 +24,8 @@ CSV = REPO / "examples/05_karman_vortex_street/results/comparison/comparison.csv
 BG, INK, INK2, INK3, HAIR = "#07070b", "#e8e8ee", "#a0a0ab", "#6e6e7e", "#26262f"
 ORDER_COLORS = {3: "#4063d8", 5: "#389826", 7: "#cb3c33", 9: "#9558b2"}
 
+RE_C = 48.984  # Hopf bifurcation (η′_c → Re_c, from solve_rom.jl)
+
 W, H = 860, 470
 ML, MR, MT, MB = 64, 20, 18, 46  # margins
 
@@ -44,6 +46,7 @@ def build(col: str, ylabel: str, ylim, out: Path):
         data_js.append(f"{o}:{{c:'{ORDER_COLORS[o]}',p:[{arr}]}}")
 
     y_lo, y_hi = (0.0, 1.06 * y_max) if ylim is None else ylim
+    x_lo = min(x_lo, RE_C - 0.6)   # room to show the solid (stable) steady branch left of Re_c
 
     legend = []
     for i, o in enumerate((3, 5, 7, 9)):
@@ -69,7 +72,10 @@ def build(col: str, ylabel: str, ylim, out: Path):
   <text x="{(ML+W-MR)/2}" y="{H-8}" text-anchor="middle" font-size="12" fill="{INK2}">Re</text>
   <text x="16" y="{(MT+H-MB)/2}" text-anchor="middle" font-size="12" fill="{INK2}"
         transform="rotate(-90 16 {(MT+H-MB)/2})">{ylabel}</text>
-  <g clip-path="url(#clip)">{curves}
+  <g clip-path="url(#clip)">
+    <line id="steady-solid" stroke="{INK2}" stroke-width="1.6"/>
+    <line id="steady-dashed" stroke="{INK2}" stroke-width="1.6" stroke-dasharray="6 4"/>
+    {curves}
     <g id="probe" visibility="hidden" pointer-events="none">
       <line id="probe-line" y1="{MT}" y2="{H-MB}" stroke="{INK3}" stroke-width="0.7" stroke-dasharray="3 3"/>
       <circle id="probe-dot" r="3.5" fill="{INK}"/>
@@ -80,6 +86,10 @@ def build(col: str, ylabel: str, ylim, out: Path):
     <text id="probe-txt" x="8" y="15" font-size="11.5" fill="{INK}"></text>
   </g>
   <g font-size="12" fill="{INK2}">{''.join(legend)}</g>
+  <g id="hopf" visibility="hidden" pointer-events="none">
+    <circle id="hopf-dot" r="4" fill="{INK}" stroke="{BG}" stroke-width="1.2"/>
+    <text id="hopf-label" font-size="11.5" fill="{INK2}"></text>
+  </g>
   <rect id="zoombox" visibility="hidden" fill="rgba(149,88,178,0.10)" stroke="{INK3}"
         stroke-width="0.8" stroke-dasharray="4 3" pointer-events="none"/>
   <g id="toolbar" font-family="inherit">
@@ -135,6 +145,7 @@ var ML={ML}, MR={MR}, MT={MT}, MB={MB}, W={W}, H={H};
 var SVGNS = 'http://www.w3.org/2000/svg';
 var svgEl = document.getElementById('chart');
 var on = {{3:true,5:true,7:true,9:true}};
+var RE_C = {RE_C};   // Hopf bifurcation; steady branch is y=0 (no fluctuation)
 
 function px(x) {{ return ML + (x-V.xlo)/(V.xhi-V.xlo)*(W-ML-MR); }}
 function py(y) {{ return H-MB - (y-V.ylo)/(V.yhi-V.ylo)*(H-MT-MB); }}
@@ -176,6 +187,24 @@ function redraw() {{
     document.getElementById('curve-'+o).setAttribute('points',
       DATA[o].p.map(function(q) {{ return px(q[0]).toFixed(1)+','+py(q[1]).toFixed(1); }}).join(' '));
   }});
+  // steady (base-flow) branch at y=0: solid before the Hopf point, dashed after.
+  var yb = py(0), xc = px(RE_C), xcl = Math.max(ML, Math.min(W-MR, xc));
+  var ss = document.getElementById('steady-solid');
+  ss.setAttribute('x1', ML); ss.setAttribute('x2', xcl); ss.setAttribute('y1', yb); ss.setAttribute('y2', yb);
+  var sd = document.getElementById('steady-dashed');
+  sd.setAttribute('x1', xcl); sd.setAttribute('x2', W-MR); sd.setAttribute('y1', yb); sd.setAttribute('y2', yb);
+  var hp = document.getElementById('hopf');
+  if (xc >= ML && xc <= W-MR && yb >= MT-2 && yb <= H-MB+6) {{
+    hp.setAttribute('visibility','visible');
+    document.getElementById('hopf-dot').setAttribute('cx', xc);
+    document.getElementById('hopf-dot').setAttribute('cy', yb);
+    var lbl = document.getElementById('hopf-label');
+    lbl.setAttribute('x', Math.min(xc+9, W-MR-150));
+    lbl.setAttribute('y', Math.max(yb-9, MT+12));
+    lbl.textContent = 'Hopf · Re_c ≈ 48.98';
+  }} else {{
+    hp.setAttribute('visibility','hidden');
+  }}
 }}
 redraw();
 
