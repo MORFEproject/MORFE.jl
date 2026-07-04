@@ -315,5 +315,5 @@ svgEl.addEventListener('mouseleave', function() {{ hideProbe(); }});
     print(f"wrote {out}  ({out.stat().st_size//1024} KB)")
 
 
-build("max_abs_lift", "max |lift|", None, HERE / "lift_vs_Re.html")
+build("max_abs_lift", "max |lift|", (-0.001, 0.015), HERE / "lift_vs_Re.html")
 build("avg_TKE", "period-averaged TKE", (-0.001, 0.02), HERE / "tke_vs_Re.html")
