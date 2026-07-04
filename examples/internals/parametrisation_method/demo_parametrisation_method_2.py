@@ -98,7 +98,7 @@ def compute_residue(order: int):
 
 # ---------- read reduced manifold data ----------
 import h5py
-with h5py.File(Path(__file__).parent / "output.h5", "r") as file:
+with h5py.File(Path(__file__).parent / "results/archived/output.h5", "r") as file:
     mset = file["multiindex_exponents"][:]          # (num_monomials, n_red)
     W = file["W_coefficients"][:].reshape(len(mset), 4).T  # (4, num_monomials)
     R = file["R_coefficients"][:].T                        # (n_red, num_monomials)

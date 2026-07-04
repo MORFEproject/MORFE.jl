@@ -168,7 +168,8 @@ function assemble_linear_operators(s0_full, fom; Re0::Float64)
         assemble!(asm_AL, dofs, ALe)
     end
 
-    # ── Restrict to DPIM free-DOF subspace (inlet free → natural BC) ────
+    # ── Restrict to DPIM free-DOF subspace (same prescribed set as the base
+    #    flow — inlet perturbation frozen to zero, so free_dpim == free) ────
     B1_free   = M_full[fom.free_dpim, fom.free_dpim]
     A_lin_free = AL_full[fom.free_dpim, fom.free_dpim]
     B0_free    = -A_lin_free                   # B₀ = −A_lin
@@ -240,6 +241,11 @@ Assemble `l ∈ ℝ^N` such that `F_L^pres = l ⋅ u_full = ∫_Γ_cyl (-p n_y) 
 Sign convention matches `compute_drag_lift`: `n` is the outward normal from the
 fluid, so the pressure traction is `-p·n` and `l[i] = -∫ n_y ψ_i^p dΓ` for
 each pressure DOF `i` on the cylinder boundary (zero elsewhere).
+
+Note: this captures the PRESSURE contribution only.  The viscous shear traction
+`(2ν ε(u))·n` that `compute_drag_lift` integrates is deliberately omitted from
+the lift polynomial L(z); at Re ≈ 50 it contributes a few percent of the total
+lift, so L(z) slightly underestimates the physical lift amplitude.
 """
 function compute_pressure_lift_weights(fom)
     ndofs_total = Ferrite.ndofs(fom.dh)

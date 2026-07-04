@@ -37,11 +37,17 @@ shift-invert ARPACK, print a formatted table of all results, then return the
 Hopf complex-conjugate pair.
 
 Arguments:
-  A_lin    — linearised NSE operator  (n_free × n_free sparse)
-  B_mass   — singular mass matrix     (n_free × n_free sparse)
-  nev      — total number of eigenvalues to compute
-  sigma_re — real part of ARPACK shift  (negative recommended)
-  sigma_im — imaginary part of shift    (estimated Hopf frequency)
+  A_lin       — linearised NSE operator  (n_free × n_free sparse)
+  B_mass      — singular mass matrix     (n_free × n_free sparse)
+  nev         — total number of eigenvalues to compute
+  sigma_re    — real part of ARPACK shift
+  sigma_im    — imaginary part of shift    (estimated Hopf frequency)
+  target_freq — optional (rad/s): select the Hopf mode whose Im(λ) is closest to
+                this frequency instead of the smallest-|Re(λ)| heuristic.  The
+                default heuristic is only reliable near Re_c, where the shedding
+                mode IS the least-damped one; away from Re_c (e.g. the paper's
+                Re₀ = 20/70/80 cases) another oscillatory mode may sit closer to
+                the imaginary axis and be picked silently — pin the frequency then.
 
 Returns:
   master_eigenvalues — SVector{2,ComplexF64}: Hopf pair [λ₁, λ₂], Im(λ₁) > 0
@@ -54,6 +60,7 @@ function solve_hopf_eigenproblem(
     nev::Int,
     sigma_re::Float64,
     sigma_im::Float64,
+    target_freq::Union{Nothing, Float64} = nothing,
 )
     n = size(A_lin, 1)
     sigma = complex(sigma_re, sigma_im)
@@ -95,7 +102,11 @@ function solve_hopf_eigenproblem(
     cand = findall(λ -> imag(λ) > hopf_tol, vals)
     isempty(cand) && error("No eigenvalue with Im(λ) > 0 found; increase nev.")
 
-    i_best = cand[argmin(abs(real(vals[i])) for i in cand)]
+    i_best = if target_freq === nothing
+        cand[argmin(abs(real(vals[i])) for i in cand)]
+    else
+        cand[argmin(abs(imag(vals[i]) - target_freq) for i in cand)]
+    end
     λ₁     = vals[i_best]
     φ₁     = vecs[:, i_best]
 

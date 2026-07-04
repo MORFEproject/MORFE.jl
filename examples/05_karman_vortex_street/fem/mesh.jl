@@ -22,7 +22,8 @@ Refinement strategy:
   h = h_wake (≈ 0.015) in the wake corridor [cx, L] × [cy±3r]
   h = h_bulk (≈ 0.04)  elsewhere
 
-Target: free DOF count ≈ 17 973 (paper value) after P2/P1 Ferrite setup.
+With the default h settings in config.jl the P2/P1 Ferrite setup yields
+n_free ≈ 57 860 — finer than the paper's 17 973-DOF mesh.
 """
 
 using Gmsh

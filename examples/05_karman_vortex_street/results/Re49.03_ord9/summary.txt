@@ -1,0 +1,12 @@
+example: 05_karman_vortex_street
+run_name: Re49.03_ord9
+model: 2D Navier-Stokes, Kármán vortex street, Ferrite P2/P1 Taylor-Hood
+n_free: 57860
+Re0: 49.03
+master_modes: 2  (Hopf pair)
+master_eigenvalues: ComplexF64[0.004028440003468248 + 16.859169021043915im, 0.004028440003468248 - 16.859169021043915im]
+parametrisation_order: 9
+cohomological_solve_time_s: 351.238
+julia_version: 1.12.6
+morfe_commit: c10b75e
+timestamp: 1.783096521443244e9
