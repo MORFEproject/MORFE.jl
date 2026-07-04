@@ -8,14 +8,17 @@ Three nonlinear terms are implemented:
    Implements FEMMultilinearMap{1} with multiindex=(2,), multiplicity_external=0.
 
 2. make_param_coupling — parametric viscous coupling g₁(s, η′):
-       g₁(s, η′) = η′ · K_visc · u′
-   A simple MultilinearMap{1} backed by a pre-assembled K_visc sparse matrix.
+       g₁(s, η′) = −D·η′ · K_raw · u′
+   A simple MultilinearMap{1} backed by a pre-assembled sparse matrix; main.jl
+   passes K_visc = −D·K_raw (raw stiffness scaled by −_CYL_D in place).
    multiindex=(1,), multiplicity_external=1.
 
 3. make_base_forcing — base-flow parametric forcing h₀(η′):
-       h₀(η′) = η′ · K_visc · u₀
+       h₀(η′) = −D·η′ · K_raw[free, ALL] · s₀
    A constant-in-state MultilinearMap{1} that provides the forcing direction when
    Re departs from Re₀.  multiindex=(0,), multiplicity_external=1.
+   The rectangular free×ALL block is essential: the full base flow s₀ carries the
+   Poiseuille profile on the prescribed inlet DOFs.
    This term drives the external direction Φ_ext in the cohomological solve: without
    it the (0,0,1) monomial has zero RHS and Φ_ext is computed incorrectly, making all
    η′-dependent reduced-dynamics coefficients wrong.
@@ -54,9 +57,9 @@ end
 
 FEM-backed quadratic convective term for 2D incompressible flow.
 
-Assembles:
-    f₂(s₁, s₂) = −∫ φ · [(u₁·∇)u₂ + (u₂·∇)u₁] dΩ
-               = −∫ φ · [∇u₂ · u₁ + ∇u₁ · u₂] dΩ
+Assembles the half-symmetrised bilinear form (so that f₂(s, s) = −∫ φ·(u·∇)u dΩ):
+    f₂(s₁, s₂) = −½ ∫ φ · [(u₁·∇)u₂ + (u₂·∇)u₁] dΩ
+               = −½ ∫ φ · [∇u₂ · u₁ + ∇u₁ · u₂] dΩ
 
 where ∇u[i,j] = ∂_j u_i so that (∇u · v)[i] = Σ_j ∂_j u_i · v_j = (v·∇u)_i.
 
@@ -152,7 +155,7 @@ end
 
 Accumulate convective integrand at one quadrature point:
 
-    Fe[k] += mult · φᵢ · [−∇u₂·u₁ − ∇u₁·u₂] · dΩ   for velocity DOF k
+    Fe[k] += mult · φᵢ · (−½)[∇u₂·u₁ + ∇u₁·u₂] · dΩ   for velocity DOF k
 
 ∇u ⋅ v computes (v·∇u) via Tensor{2,2} × Vec{2} → Vec{2} contraction:
     (∇u ⋅ v)[i] = Σ_j ∂_j u_i · v_j = (v·∇u)_i
@@ -206,12 +209,13 @@ end
 
 Create a `MultilinearMap{1}` for the parametric viscous coupling
 
-    g₁(s, η′) = η′ · K_visc · u′
+    g₁(s, η′) = η′ · K_visc · u′        (main.jl passes K_visc = −D·K_raw)
 
 with multiindex=(1,) and multiplicity_external=1 (one state input, one η′ input).
 
-K_visc_free is the raw (without 1/Re factor) viscosity stiffness restricted to free
-DOFs.  Its pressure rows and columns are zero, so the multiplication correctly
+K_visc_free is the viscosity stiffness restricted to free DOFs, pre-scaled by
+−_CYL_D in main.jl so that the term equals −D·η′·K_raw·u′ = −(ν−ν₀)·K_raw·u′.
+Its pressure rows and columns are zero, so the multiplication correctly
 targets only velocity DOFs in both input and output.
 
 MORFE passes the external argument as a unit SVector{1,Int}([1]) — the actual η′
@@ -234,13 +238,15 @@ end
 
 Create a `MultilinearMap{1}` for the base-flow parametric forcing
 
-    h₀(η′) = η′ · K_visc · u₀
+    h₀(η′) = −D·η′ · K_raw[free, ALL] · s₀
 
 with multiindex=(0,) and multiplicity_external=1 (no state input, one η′ input).
 
-h₀_vec_free = K_visc · u₀_free is a fixed vector (pre-scaled by D) encoding the
-viscous forcing direction when Re departs from Re₀.  It determines the external
-direction Φ_ext via the cohomological equation for monomial (0,0,1).
+h₀_vec_free = −D · K_raw[free, ALL] · s₀_full is a fixed vector encoding the
+viscous forcing direction when Re departs from Re₀: the rectangular block acts on
+the FULL base-flow vector, whose prescribed inlet DOFs carry the Poiseuille
+profile.  It determines the external direction Φ_ext via the cohomological
+equation for monomial (0,0,1).
 
 MORFE passes the external argument as a unit SVector{1,Int}([1]), so
 f!(accum, r_ext) adds r_ext[1] · h₀_vec to accum (η′ scaling is handled
