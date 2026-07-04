@@ -2,9 +2,12 @@
 """Generate the interactive Kármán tutorial charts (lift_vs_Re.html, tke_vs_Re.html).
 
 Reads examples/05_karman_vortex_street/results/comparison/comparison.csv and emits
-self-contained HTML assets: SVG in the website colour scheme, drawn by vanilla JS with
-hover readout, click-to-toggle orders, wheel zoom, drag pan, double-click reset.
-Embedded in tutorial-karman.html via <iframe>. Rerun after regenerating the data:
+self-contained HTML assets: SVG in the website colour scheme, drawn by vanilla JS.
+Hovering always shows the nearest-point readout, but the view NEVER changes unless a
+toolbar tool is armed first: click the magnifier then drag a rectangle to zoom, click
+the hand then drag to pan, click home to reset. No wheel zoom (so scrolling the page
+never moves the plot). Embedded in tutorial-karman.html via <iframe>. Rerun after
+regenerating the data:
 
     python3 website/assets/karman/generate_charts.py
 """
@@ -80,7 +83,7 @@ def build(col: str, ylabel: str, ylim, out: Path):
   <rect id="zoombox" visibility="hidden" fill="rgba(149,88,178,0.10)" stroke="{INK3}"
         stroke-width="0.8" stroke-dasharray="4 3" pointer-events="none"/>
   <g id="toolbar" font-family="inherit">
-    <g class="tool active" id="tool-zoom" transform="translate({W-MR-92} {MT-4})"><title>Zoom: drag a rectangle</title>
+    <g class="tool" id="tool-zoom" transform="translate({W-MR-92} {MT-4})"><title>Zoom: drag a rectangle</title>
       <rect class="btn" x="0" y="0" width="26" height="26" rx="4"/>
       <g class="icn" transform="translate(4 4)">
         <circle cx="7.5" cy="7.5" r="5" fill="none" stroke-width="1.6"/>
@@ -213,15 +216,14 @@ function updateProbe(p) {{
     'ord '+best.o+' · Re '+best.re.toFixed(2)+' · '+best.v.toPrecision(3);
 }}
 
-var mode = 'zoom', pan = null, zoomStart = null;
+var mode = null, pan = null, zoomStart = null;
 var zoombox = document.getElementById('zoombox');
-svgEl.classList.add('mode-zoom');
 function setMode(m) {{
-  mode = m;
-  svgEl.classList.toggle('mode-zoom', m === 'zoom');
-  svgEl.classList.toggle('mode-pan', m === 'pan');
-  document.getElementById('tool-zoom').classList.toggle('active', m === 'zoom');
-  document.getElementById('tool-pan').classList.toggle('active', m === 'pan');
+  mode = (mode === m) ? null : m;   // click again to disarm — no tool means no view changes
+  svgEl.classList.toggle('mode-zoom', mode === 'zoom');
+  svgEl.classList.toggle('mode-pan', mode === 'pan');
+  document.getElementById('tool-zoom').classList.toggle('active', mode === 'zoom');
+  document.getElementById('tool-pan').classList.toggle('active', mode === 'pan');
 }}
 document.getElementById('tool-zoom').addEventListener('click', function() {{ setMode('zoom'); }});
 document.getElementById('tool-pan').addEventListener('click', function() {{ setMode('pan'); }});
@@ -230,6 +232,7 @@ document.getElementById('tool-home').addEventListener('click', function() {{
 }});
 
 svgEl.addEventListener('mousedown', function(ev) {{
+  if (mode === null) return;        // view changes only with an armed tool
   var p = svgPoint(ev);
   if (!inPlot(p)) return;
   hideProbe(); ev.preventDefault();
@@ -277,22 +280,6 @@ svgEl.addEventListener('mousemove', function(ev) {{
   updateProbe(p);
 }});
 svgEl.addEventListener('mouseleave', function() {{ hideProbe(); }});
-
-svgEl.addEventListener('wheel', function(ev) {{
-  var p = svgPoint(ev);
-  if (!inPlot(p)) return;
-  ev.preventDefault();
-  var f = Math.exp(ev.deltaY * 0.0016);
-  var cx = dx(p.x), cy = dy(p.y);
-  V.xlo = cx - (cx-V.xlo)*f; V.xhi = cx + (V.xhi-cx)*f;
-  V.ylo = cy - (cy-V.ylo)*f; V.yhi = cy + (V.yhi-cy)*f;
-  redraw(); updateProbe(p);
-}}, {{passive:false}});
-
-svgEl.addEventListener('dblclick', function() {{
-  V.xlo = HOME.xlo; V.xhi = HOME.xhi; V.ylo = HOME.ylo; V.yhi = HOME.yhi;
-  redraw();
-}});
 </script>
 </body></html>'''
     out.write_text(html)
@@ -300,4 +287,4 @@ svgEl.addEventListener('dblclick', function() {{
 
 
 build("max_abs_lift", "max |lift|", None, HERE / "lift_vs_Re.html")
-build("avg_TKE", "period-averaged TKE", (0.0, 0.1), HERE / "tke_vs_Re.html")
+build("avg_TKE", "period-averaged TKE", (-0.001, 0.02), HERE / "tke_vs_Re.html")
