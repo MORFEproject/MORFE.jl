@@ -24,7 +24,7 @@ import meshio
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[2]
+REPO = HERE.parents[3]
 PV = REPO / "examples/05_karman_vortex_street/results/paraview"
 
 BG = "#07070b"

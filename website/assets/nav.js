@@ -5,16 +5,18 @@
   var LINKS = [
     { href: 'features.html',     label: 'Features' },
     { href: 'publications.html', label: 'Publications' },
-    { href: 'tutorials.html',    label: 'Tutorials' },
+    { href: 'tutorials/',        label: 'Tutorials' },
     { href: 'api.html',          label: 'API' },
   ];
 
+  // data-base prefixes every internal link (for pages in sub-folders, e.g. "../")
+  var base = nav.getAttribute('data-base') || '';
   // data-active on the <nav> element overrides auto-detection (for sub-pages)
   var active = nav.getAttribute('data-active') ||
                (location.pathname.split('/').pop() || 'index.html');
 
   var linksHtml = LINKS.map(function (l) {
-    return '<a href="' + l.href + '"' + (l.href === active ? ' class="active"' : '') + '>' + l.label + '</a>';
+    return '<a href="' + base + l.href + '"' + (l.href === active ? ' class="active"' : '') + '>' + l.label + '</a>';
   }).join('\n      ');
 
   var GITHUB_SVG = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
@@ -29,7 +31,7 @@
 
   nav.innerHTML =
     '<div class="nav-inner">\n' +
-    '    <a href="index.html" class="nav-logo"><span class="dot"></span><span>MORFE<span style="color:var(--ink-3)">.jl</span></span></a>\n' +
+    '    <a href="' + base + 'index.html" class="nav-logo"><span class="dot"></span><span>MORFE<span style="color:var(--ink-3)">.jl</span></span></a>\n' +
     '    <div class="nav-links">\n' +
     '      ' + linksHtml + '\n' +
     '    </div>\n' +

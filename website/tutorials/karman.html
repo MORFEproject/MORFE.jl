@@ -11,8 +11,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
-<link rel="stylesheet" href="assets/site.css" />
-<link rel="stylesheet" href="assets/docs.css" />
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
 <style>
 .pre-wrap { position: relative; }
 .copy-btn {
@@ -70,8 +70,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <div class="site">
 
-<nav id="site-nav" class="nav" data-active="tutorials.html"></nav>
-<script src="assets/nav.js"></script>
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav>
+<script src="../assets/nav.js"></script>
 
 <div class="docs-shell">
 
@@ -79,9 +79,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="ver"><span>Tutorials</span></div>
     <h4>Getting started</h4>
     <ul>
-      <li><a href="api.html#install">Installation</a></li>
-      <li><a href="api.html#current-api">Current API</a></li>
-      <li><a href="api.html#concepts">Concepts &amp; vocabulary</a></li>
+      <li><a href="../api.html#install">Installation</a></li>
+      <li><a href="../api.html#current-api">Current API</a></li>
+      <li><a href="../api.html#concepts">Concepts &amp; vocabulary</a></li>
     </ul>
 
     <h4>Demos</h4>
@@ -93,20 +93,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Tutorials</h4>
     <ul>
-      <li><a href="tutorial-karman.html" class="active">Kármán vortex street</a></li>
-      <li><a href="tutorial-micromirror.html">MEMS micromirror</a></li>
-      <li><a href="tutorial-roadmap.html">Cantilever beam 🚧</a></li>
-      <li><a href="tutorial-roadmap.html">Shallow arch 🚧</a></li>
-      <li><a href="tutorial-roadmap.html">Cylindrical shell 🚧</a></li>
+      <li><a href="karman.html" class="active">Kármán vortex street</a></li>
+      <li><a href="micromirror.html">MEMS micromirror</a></li>
+      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
+      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
+      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
     </ul>
 
     <h4>Manual</h4>
     <ul>
-      <li><a href="api.html#fe-input">FE input format</a></li>
-      <li><a href="api.html#master">Master subspace</a></li>
-      <li><a href="api.html#order">Choosing order</a></li>
-      <li><a href="api.html#forcing">Forcing &amp; resonances</a></li>
-      <li><a href="api.html#continuation">Continuation</a></li>
+      <li><a href="../api.html#fe-input">FE input format</a></li>
+      <li><a href="../api.html#master">Master subspace</a></li>
+      <li><a href="../api.html#order">Choosing order</a></li>
+      <li><a href="../api.html#forcing">Forcing &amp; resonances</a></li>
+      <li><a href="../api.html#continuation">Continuation</a></li>
     </ul>
 
   </aside>
@@ -114,9 +114,9 @@ document.addEventListener('DOMContentLoaded', function () {
   <main class="docs-main">
 
     <div class="crumbs">
-      <a href="api.html">MORFE.jl</a>
+      <a href="../api.html">MORFE.jl</a>
       <span class="sep">/</span>
-      <a href="tutorials.html">Tutorials</a>
+      <a href="index.html">Tutorials</a>
       <span class="sep">/</span>
       <span>Kármán vortex street</span>
     </div>
@@ -433,8 +433,8 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
 
     <h2 id="next">Where to next?</h2>
     <ul>
-      <li><a class="inline" href="tutorial-micromirror.html">MEMS micromirror</a> — the structural counterpart with a 1:2 internal resonance (target-API preview).</li>
-      <li><a class="inline" href="api.html#current-api">Current API reference</a> — <code>NDOrderModel</code>, multilinear maps, resonance sets, <code>solve_cohomological_problem</code>.</li>
+      <li><a class="inline" href="micromirror.html">MEMS micromirror</a> — the structural counterpart with a 1:2 internal resonance (target-API preview).</li>
+      <li><a class="inline" href="../api.html#current-api">Current API reference</a> — <code>NDOrderModel</code>, multilinear maps, resonance sets, <code>solve_cohomological_problem</code>.</li>
       <li><a class="inline" href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
     </ul>
 
@@ -451,8 +451,8 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
     </div>
 
     <div style="margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--ink-3);">
-      <a href="tutorials.html">← Tutorials</a>
-      <a href="tutorial-micromirror.html">MEMS micromirror →</a>
+      <a href="index.html">← Tutorials</a>
+      <a href="micromirror.html">MEMS micromirror →</a>
     </div>
 
   </main>
@@ -481,7 +481,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
 </div>
 </div>
 
-<script src="assets/manifold-bg.js"></script>
+<script src="../assets/manifold-bg.js"></script>
 <script>
 (function () {
   const links = document.querySelectorAll('#toc-list a');

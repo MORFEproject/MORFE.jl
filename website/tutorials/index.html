@@ -11,8 +11,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
-<link rel="stylesheet" href="assets/site.css" />
-<link rel="stylesheet" href="assets/docs.css" />
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
 <style>
 .pre-wrap { position: relative; }
 .copy-btn {
@@ -81,19 +81,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <div class="site">
 
-<nav id="site-nav" class="nav"></nav>
-<script src="assets/nav.js"></script>
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav>
+<script src="../assets/nav.js"></script>
 
 <div class="docs-shell">
 
   <!-- Sidebar -->
   <aside class="docs-side">
-    <div class="ver"><span><a href="tutorials.html">Tutorials</a></span></div>
+    <div class="ver"><span><a href="index.html">Tutorials</a></span></div>
     <h4>Getting started</h4>
     <ul>
-      <li><a href="nopage.html">Installation</a></li>
-      <li><a href="api.html">Current API</a></li>
-      <li><a href="nopage.html">Concepts &amp; vocabulary</a></li>
+      <li><a href="../nopage.html">Installation</a></li>
+      <li><a href="../api.html">Current API</a></li>
+      <li><a href="../nopage.html">Concepts &amp; vocabulary</a></li>
     </ul>
 
     <h4>Demos</h4>
@@ -105,21 +105,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Tutorials</h4>
     <ul>
-      <li><a href="tutorial-karman.html">Kármán vortex street</a></li>
-      <li><a href="tutorial-micromirror.html">MEMS micromirror</a></li>
-      <li><a href="tutorial-roadmap.html">Cantilever beam 🚧</a></li>
-      <li><a href="tutorial-roadmap.html">Shallow arch 🚧</a></li>
-      <li><a href="tutorial-roadmap.html">Cylindrical shell 🚧</a></li>
+      <li><a href="karman.html">Kármán vortex street</a></li>
+      <li><a href="micromirror.html">MEMS micromirror</a></li>
+      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
+      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
+      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
     </ul>
 
     <h4>Manual</h4>
     <ul>
-      <li><a href="nopage.html">FE input format</a></li>
-      <li><a href="nopage.html">Master subspace</a></li>
-      <li><a href="nopage.html">Choosing order</a></li>
-      <li><a href="nopage.html">Forcing &amp; resonances</a></li>
-      <li><a href="nopage.html">Continuation</a></li>
-      <li><a href="nopage.html">Post-processing</a></li>
+      <li><a href="../nopage.html">FE input format</a></li>
+      <li><a href="../nopage.html">Master subspace</a></li>
+      <li><a href="../nopage.html">Choosing order</a></li>
+      <li><a href="../nopage.html">Forcing &amp; resonances</a></li>
+      <li><a href="../nopage.html">Continuation</a></li>
+      <li><a href="../nopage.html">Post-processing</a></li>
     </ul>
 
   </aside>
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function () {
       </defs>
     </svg>
     <div class="crumbs">
-      <a href="api.html">MORFE.jl</a>
+      <a href="../api.html">MORFE.jl</a>
       <span class="sep">/</span>
       <span>Tutorials</span>
     </div>
@@ -188,7 +188,7 @@ W, R  = solve_cohomological_problem(
     <h3 id="demos" style="margin-top:0; font-size:16px; color:var(--ink-2); font-weight:500; letter-spacing:0.02em;">Available now — current API</h3>
 
     <div class="tut-grid">
-      <a class="tut-card" href="tutorial-karman.html">
+      <a class="tut-card" href="karman.html">
         <div class="thumb">
           <span class="corner">Navier–Stokes</span>
           <img src="assets/karman/karman_thumb.svg" alt="Vorticity of the base flow plus the Hopf mode past the cylinder — the Kármán vortex street" loading="lazy" />
@@ -292,7 +292,7 @@ W, R  = solve_cohomological_problem(
 
     <h3 id="all" style="margin-top:40px; font-size:16px; color:var(--ink-2); font-weight:500; letter-spacing:0.02em;">🚧 Roadmap tutorials — target API</h3>
     <div class="tut-grid">
-      <a class="tut-card" href="tutorial-micromirror.html">
+      <a class="tut-card" href="micromirror.html">
         <div class="thumb">
           <span class="corner">MEMS</span><span class="flag">🚧 Roadmap</span>
           <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
@@ -456,7 +456,7 @@ W, R  = solve_cohomological_problem(
 
     <div class="adm note" style="margin-top:36px;">
       <div class="adm-head">Reproducibility</div>
-      <div class="adm-body"><p>Every tutorial pins a Julia version and Project.toml. Mesh files (Gmsh format) are downloaded automatically by the script. See <a href="nopage.html">Installation</a> for how to add MORFE.jl from GitHub.</p></div>
+      <div class="adm-body"><p>Every tutorial pins a Julia version and Project.toml. Mesh files (Gmsh format) are downloaded automatically by the script. See <a href="../nopage.html">Installation</a> for how to add MORFE.jl from GitHub.</p></div>
     </div>
 
   </main>
@@ -478,6 +478,6 @@ W, R  = solve_cohomological_problem(
 </div>
 
 </div>
-<script src="assets/manifold-bg.js"></script>
+<script src="../assets/manifold-bg.js"></script>
 </body>
 </html>

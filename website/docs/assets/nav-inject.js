@@ -18,7 +18,7 @@
         '<div class="nav-links">' +
           '<a href="' + siteRoot + 'features.html">Features</a>' +
           '<a href="' + siteRoot + 'gallery.html">Gallery</a>' +
-          '<a href="' + siteRoot + 'tutorials.html">Tutorials</a>' +
+          '<a href="' + siteRoot + 'tutorials/">Tutorials</a>' +
           '<a href="' + siteRoot + 'publications.html">Publications</a>' +
           '<a href="' + siteRoot + 'team.html">Team</a>' +
           '<a href="' + siteRoot + 'api.html" class="active">API</a>' +

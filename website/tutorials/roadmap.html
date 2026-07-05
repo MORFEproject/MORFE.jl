@@ -11,8 +11,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
-<link rel="stylesheet" href="assets/site.css" />
-<link rel="stylesheet" href="assets/docs.css" />
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
 </head>
 <body class="docs-page">
 
@@ -20,8 +20,8 @@
 
 <div class="site">
 
-<nav id="site-nav" class="nav" data-active="tutorials.html"></nav>
-<script src="assets/nav.js"></script>
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav>
+<script src="../assets/nav.js"></script>
 
 <div class="docs-shell">
 
@@ -31,7 +31,7 @@
     <h4>Getting started</h4>
     <ul>
       <li><a href="nopage.html#install">Installation</a></li>
-      <li><a href="api.html">Current API</a></li>
+      <li><a href="../api.html">Current API</a></li>
       <li><a href="nopage.html#concepts">Concepts &amp; vocabulary</a></li>
     </ul>
 
@@ -44,11 +44,11 @@
 
     <h4>Tutorials</h4>
     <ul>
-      <li><a href="tutorial-karman.html">Kármán vortex street</a></li>
-      <li><a href="tutorial-micromirror.html">MEMS micromirror</a></li>
-      <li><a href="tutorial-roadmap.html">Cantilever beam 🚧</a></li>
-      <li><a href="tutorial-roadmap.html">Shallow arch 🚧</a></li>
-      <li><a href="tutorial-roadmap.html">Cylindrical shell 🚧</a></li>
+      <li><a href="karman.html">Kármán vortex street</a></li>
+      <li><a href="micromirror.html">MEMS micromirror</a></li>
+      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
+      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
+      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
     </ul>
 
     <h4>Manual</h4>
@@ -64,9 +64,9 @@
   <main class="docs-main">
 
     <div class="crumbs">
-      <a href="api.html">MORFE.jl</a>
+      <a href="../api.html">MORFE.jl</a>
       <span class="sep">/</span>
-      <a href="tutorials.html">Tutorials</a>
+      <a href="index.html">Tutorials</a>
       <span class="sep">/</span>
       <span>Roadmap</span>
     </div>
@@ -247,7 +247,7 @@
 
     <div class="adm warn" style="border-left:4px solid #f59e0b; background:rgba(245,158,11,0.06); border-radius:0 4px 4px 0; padding:0.6rem 1rem; margin:0 0 1.8rem;">
       <div class="adm-head" style="font-weight:600; font-size:0.88rem; color:var(--ink); margin-bottom:0.3rem;">Target API — not yet runnable</div>
-      <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">This tutorial depends on the planned high-level API (<code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>) which is still under development. For a working entry point today, see the <a href="api.html">current API docs</a> and the <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">demo scripts</a>.</div>
+      <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">This tutorial depends on the planned high-level API (<code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>) which is still under development. For a working entry point today, see the <a href="../api.html">current API docs</a> and the <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">demo scripts</a>.</div>
     </div>
 
     <h2 id="today">What works today</h2>
@@ -261,13 +261,13 @@
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">View demos <span class="arrow">→</span></a>
-        <a class="btn" href="api.html">Current API</a>
+        <a class="btn" href="../api.html">Current API</a>
       </div>
     </div>
 
     <div style="margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--ink-3);">
-      <a href="tutorials.html">← Tutorials</a>
-      <a href="tutorial-micromirror.html">MEMS micromirror →</a>
+      <a href="index.html">← Tutorials</a>
+      <a href="micromirror.html">MEMS micromirror →</a>
     </div>
 
   </main>
@@ -275,6 +275,6 @@
 </div>
 
 </div>
-<script src="assets/manifold-bg.js"></script>
+<script src="../assets/manifold-bg.js"></script>
 </body>
 </html>
