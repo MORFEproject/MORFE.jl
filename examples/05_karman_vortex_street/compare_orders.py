@@ -60,7 +60,7 @@ def truncate_gram(gram: dict, order: int) -> dict:
 def process_branch(branch_csv: Path, gram: dict, exps: np.ndarray, coeffs: np.ndarray):
     order = int(re.search(r"rom_branch_ord(\d+)\.csv$", branch_csv.name).group(1))
     gram_N = truncate_gram(gram, order)
-    keep = exps.sum(axis=1) <= order          # incl. the (0,0,0) constant row
+    keep = (exps.sum(axis=1) <= order) & ~((exps[:, 0] == 0) & (exps[:, 1] == 0))  # drop base-flow (z=0) rows: base flow has zero lift
     exps_N, coeffs_N = exps[keep], coeffs[keep]
     rows = []
     with open(branch_csv) as f:
@@ -104,13 +104,15 @@ def main():
     arr = np.array(all_rows)
     for col, fname, ylabel in ((7, "lift_vs_Re.png", "max |lift|"),
                                (6, "tke_vs_Re.png", "period-averaged TKE")):
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(4, 4), dpi=150)
         for o in sorted(set(arr[:, 0].astype(int))):
             sel = arr[arr[:, 0] == o]
             ax.plot(sel[:, 2], sel[:, col], ms=3, label=f"order {o}")
+            ax.set_ylim([-0.001, 0.016])
         if col == 6:
             #ax.set_yscale("log")   # post-fold tails otherwise dwarf the physical branch
             ax.set_ylim([-0.001, 0.02])
+        ax.set_xlim([48.0, 57.0])
         ax.set_xlabel("Re")
         ax.set_ylabel(ylabel)
         ax.legend()

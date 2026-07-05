@@ -25,6 +25,7 @@ BG, INK, INK2, INK3, HAIR = "#07070b", "#e8e8ee", "#a0a0ab", "#6e6e7e", "#26262f
 ORDER_COLORS = {3: "#4063d8", 5: "#389826", 7: "#cb3c33", 9: "#9558b2"}
 
 RE_C = 48.984  # Hopf bifurcation (η′_c → Re_c, from solve_rom.jl)
+X_VIEW_MAX = 56.0  # default x-axis upper bound; data runs past this (pan/zoom reveals it)
 
 W, H = 860, 470
 ML, MR, MT, MB = 64, 20, 18, 46  # margins
@@ -47,6 +48,7 @@ def build(col: str, ylabel: str, ylim, out: Path):
 
     y_lo, y_hi = (0.0, 1.06 * y_max) if ylim is None else ylim
     x_lo = min(x_lo, RE_C - 0.6)   # room to show the solid (stable) steady branch left of Re_c
+    x_hi = min(x_hi, X_VIEW_MAX)   # data extends further; only the default view stops at 56
 
     legend = []
     for i, o in enumerate((3, 5, 7, 9)):

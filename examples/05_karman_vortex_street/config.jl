@@ -27,7 +27,7 @@ const EIG_TARGET_FREQ = nothing   # rad/s: pin the Hopf mode by Im(λ) ≈ this 
 # nothing → smallest |Re(λ)| among Im(λ) > 0 (only reliable near Re_c ≈ 49)
 
 # ── ROM limit-cycle branch (solve_rom.jl) ─────────────────────────────────────
-const BRANCH_RE_MAX = 55.0     # stop continuation when Re exceeds this
+const BRANCH_RE_MAX = 70.0     # stop continuation when Re exceeds this
 const BRANCH_DS0 = 1e-4        # initial PALC arclength step (scaled-ρ/η units)
 const BRANCH_MAX_STEPS = 2000  # hard cap on PALC steps
 
