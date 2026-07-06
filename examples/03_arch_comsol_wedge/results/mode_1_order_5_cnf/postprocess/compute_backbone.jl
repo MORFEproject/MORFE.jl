@@ -27,8 +27,9 @@ Run after arch_2_force.jl (autonomous config) has produced results/R.jls and res
 using Pkg: Pkg
 const _backbone_env = joinpath(@__DIR__, "../..")
 Pkg.activate(_backbone_env)
-if !haskey(Pkg.project().dependencies, "MORFE")
-	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../../../../../..")))
+if !isfile(joinpath(_backbone_env, "Manifest.toml")) ||
+   !haskey(Pkg.project().dependencies, "MORFE")
+	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../../../../..")))
 	Pkg.add(["BifurcationKit", "Plots", "StaticArrays"])
 end
 Pkg.instantiate()
@@ -339,9 +340,9 @@ end
 # 10.  Save figures
 # ------------------------------------------------------------------
 mkpath(_results)
-savefig(plt1, joinpath(_results, "backbone_curves.png"))
-savefig(plt2, joinpath(_results, "backbone_shift.png"))
-savefig(plt3, joinpath(_results, "backbone_physical.png"))
-println("Saved → $(_results)/backbone_curves.png")
-println("Saved → $(_results)/backbone_shift.png")
-println("Saved → $(_results)/backbone_physical.png")
+savefig(plt1, joinpath(_results, "figures/backbone_curves.png"))
+savefig(plt2, joinpath(_results, "figures/backbone_shift.png"))
+savefig(plt3, joinpath(_results, "figures/backbone_physical.png"))
+println("Saved → $(_results)/figures/backbone_curves.png")
+println("Saved → $(_results)/figures/backbone_shift.png")
+println("Saved → $(_results)/figures/backbone_physical.png")
