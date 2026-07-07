@@ -37,8 +37,10 @@ function polarize_monomial(term, F_groups::NTuple{NG, Vector{<:MyNum}},
         mi = multidegree_of_monomial(term, F_groups)
     end
 
+    _safe_symbol(v) = Symbol(replace(string(Symbolics.tosymbol(v)), r"[^A-Za-z0-9_]" => "_"))
+
     slotvars = ntuple(NG) do g
-        [Num[Symbolics.variable(Symbol(Symbolics.tosymbol(F_groups[g][i]), "_", s))
+        [Num[Symbolics.variable(Symbol(_safe_symbol(F_groups[g][i]), "_", s))
              for i in 1:length(F_groups[g])]
          for s in 1:mi[g]]
     end

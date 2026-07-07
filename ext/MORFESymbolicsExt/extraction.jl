@@ -1,8 +1,31 @@
 function _is_zero(m)
-    isequal(m, Num(0))
+    if typeof(iszero(m)) == Bool
+        return iszero(m)
+    else
+        return isequal(m, Num(0)) || isequal(m, Num(0.0))
+    end
 end
 function _is_zero(m::Complex{Num})
-    isequal(m, Complex{Num}(0))
+    # isequal(m, Complex{Num}(0)) || isequal(m, Complex{Num}(0.0))
+    return _is_zero(real(m)) && _is_zero(imag(m))
+end
+
+function _is_zero(m::Vector{Num})
+    for m_i in m
+        if !_is_zero(m_i)
+            return false
+        end
+    end
+    return true
+end
+
+function _is_zero(m::Vector{Complex{Num}})
+    for m_i in m
+        if !_is_zero(m_i)
+            return false
+        end
+    end
+    return true
 end
 
 """
@@ -55,7 +78,7 @@ function extract_linear_matrices(
         J0 = substitute.(J, (zero_sub,))
 
         T = _numeric_eltype(NT)
-        T.(Symbolics.value.(J0)) * (-1)
+        T.(Symbolics.value.(J0))
     end
     return B
 end
@@ -63,7 +86,8 @@ end
 """
     nonlinear_remainder
 
-returns the nonlinear part of the equation as the same size as `exprs`.
+returns the nonlinear part of the equation as the same size as `exprs` with a minus so that it holds:
+    expr: linear_terms = - nonlinear_remainder
 Also checks that the nonlinear part is not allowed to depend on the highest derivative variables.
 """
 function nonlinear_remainder(
@@ -72,7 +96,7 @@ function nonlinear_remainder(
     nl = Vector{NT}(undef, n)
     for i in 1:n
         lin = sum(B[k][i, j] * groups[k][j] for k in 1:ORDP1, j in 1:n)
-        nl[i] = Symbolics.expand(exprs[i] + lin)
+        nl[i] = Symbolics.expand(lin-exprs[i])
     end
 
     # F = nl, given exprs = B_ORD x^(ORD) + ... + B0 x - F
@@ -84,7 +108,6 @@ function nonlinear_remainder(
 
         @assert isequal(Symbolics.derivative(F[i], s), 0) "F[$i] depends on highest derivative $s — not representable in NDOrderModel"
     end
-
     return F
 end
 
@@ -218,6 +241,12 @@ function extract_nonlinear_monomials(
 
     # Extract nonlinear linear_terms
     F = nonlinear_remainder(exprs, groups, linear_terms)
+
+    # Check wether nonlinear remainder is zero
+    if _is_zero(F)
+        return nothing, nothing, nothing, nothing
+    end
+
     N = length(F)
     @assert length(exprs)==N "length of exprs and F must match. Error in nonlinear_remainder"
 
@@ -243,6 +272,7 @@ function extract_nonlinear_monomials(
     end
     return N, monomials, deg_monomials, multideg_monomials
 end
+
 """
     extract_nonlinear_monomials(exprs, F_groups_ext, linear_terms, groups)
 
@@ -264,6 +294,12 @@ function extract_nonlinear_monomials(
 
     # subtract linear part using the full groups (same logic as the base method)
     F = nonlinear_remainder(exprs, groups, linear_terms)
+
+    # Check wether nonlinear remainder is zero
+    if _is_zero(F)
+        return nothing, nothing, nothing, nothing
+    end
+
     N = length(F)
     @assert length(exprs) == N
 
@@ -302,6 +338,7 @@ function extract_nonlinear_monomials(
     end
     return N, monomials, deg_monomials, multideg_monomials
 end
+
 """
     group_monomials(monomials, multideg_monomials)
 

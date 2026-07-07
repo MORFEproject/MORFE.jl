@@ -1,6 +1,7 @@
 using StaticArrays: SVector
 
 ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
+
 @testset "extraction" begin
     @testset "degree_of_monomial" begin
         @variables x y
@@ -123,15 +124,15 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         B = ext.MORFESymbolicsExt.extract_linear_matrices(exprs, groups)
 
         # B[1] should recover A; B[2] should be identity (coefficient of dz)
-        @test B[1] ≈ -A
-        @test B[2] ≈ [1.0 0.0; 0.0 1.0]
+        @test B[1] ≈ A
+        @test B[2] ≈ [-1.0 0.0; 0.0 -1.0]
     end
 
     @testset "extract_linear_matrices — sign convention" begin
         # exprs = -dz - z  →  B[1] = I, B[2] = I  (after the *-1 inside the function)
         @variables z1 dz1
         groups = ([z1,], [dz1,])
-        exprs = [-dz1 - z1]
+        exprs = [dz1 + z1]
         B = ext.MORFESymbolicsExt.extract_linear_matrices(exprs, groups)
         @test B[1] ≈ reshape([1.0], 1, 1)
         @test B[2] ≈ reshape([1.0], 1, 1)
@@ -143,13 +144,13 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         # complex linear system: B z where B has complex entries
         groups = ([z1, z2], [dz1, dz2])
         exprs = [
-            -dz1 + (1 + 2im) * z1,
-            -dz2 + (3 - im) * z2
+            dz1 + (1 + 2im) * z1,
+            dz2 + (3 - im) * z2
         ]
 
         B = ext.MORFESymbolicsExt.extract_linear_matrices(exprs, groups)
 
-        @test B[1] ≈ [-(1 + 2im) 0; 0 -(3 - im)]
+        @test B[1] ≈ [(1 + 2im) 0; 0 (3 - im)]
         @test B[2] ≈ [1.0 0.0; 0.0 1.0]
     end
 
@@ -169,8 +170,8 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         @test N == 2
         # Each row should have exactly one nonlinear monomial
         @test length(monomials[1]) == 1
-        @test isequal(Num(monomials[1][1]), z1^2)
-        @test isequal(Num(monomials[2][1]), z1 * z2)
+        @test isequal(Num(monomials[1][1]), -z1^2)
+        @test isequal(Num(monomials[2][1]), -z1 * z2)
         @test length(monomials[2]) == 1
         @test deg_monomials[1][1] == 2
         @test deg_monomials[2][1] == 2
@@ -212,7 +213,7 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         @test haskey(F_by_multiindex, (2,))
         # The grouped vector should be length N
         @test length(F_by_multiindex[(2,)]) == N
-        @test isequal(F_by_multiindex[(2,)], [z1^2 + z1 * z2, z1^2])
+        @test isequal(F_by_multiindex[(2,)], [-z1^2 - z1 * z2, -z1^2])
     end
     @testset "complex — group_monomials" begin
         @variables z1 z2 dz1 dz2
@@ -355,7 +356,7 @@ end #@testset "polarization"
         # evaluate at x = [3.0]: should give 3^2 = 9
         x = [3.0]
         res = eval_term(term, (x,))
-        @test res ≈ [9.0]
+        @test res ≈ [-9.0]
 
         # scaling: f(α·x) = α^2 · f(x)
         α = 2.5
@@ -366,8 +367,8 @@ end #@testset "polarization"
         # f(x+y, x+y) = f(x,x) + f(x,y) + f(y,x) + f(y,y)
         # but evaluate_term! passes xs[1] to both slots, so
         # instead verify: result at [1.0] = 1, at [2.0] = 4
-        @test eval_term(term, ([1.0],)) ≈ [1.0]
-        @test eval_term(term, ([2.0],)) ≈ [4.0]
+        @test eval_term(term, ([1.0],)) ≈ [-1.0]
+        @test eval_term(term, ([2.0],)) ≈ [-4.0]
     end
 
     @testset "cross term z1*z2" begin
@@ -387,13 +388,14 @@ end #@testset "polarization"
         x = [a, b]
         res = eval_term(term, (x,))
         @test res[1] ≈ 0.0
-        @test res[2] ≈ a * b
+        @test res[2] ≈ - a * b
 
         # scaling
         α = 1.5
         res2 = eval_term(term, (α .* x,))
         @test res2 ≈ α^2 .* res
     end
+
     @testset "grouped quadratic terms — single MultilinearMap" begin
         @variables z1 z2 dz1 dz2
         groups = ([z1, z2], [dz1, dz2])
@@ -409,7 +411,7 @@ end #@testset "polarization"
         x = [a, b]
         res = eval_term(term, (x,))
 
-        expected = a^2 + a * b
+        expected = - a^2 - a * b
         @test res[1] ≈ expected
         @test res[2] ≈ expected
     end
@@ -434,16 +436,17 @@ end #@testset "polarization"
 
         # term for z1^2: xs = (x, dx), uses only x → result = a^2
         res_z = eval_term(model.nonlinear_terms[term_z], (x, dx))
-        @test res_z ≈ [a^2]
+        @test res_z ≈ [-a^2]
 
         # term for dz1^2: uses only dx → result = b^2
         res_dz = eval_term(model.nonlinear_terms[term_dz], (x, dx))
-        @test res_dz ≈ [b^2]
+        @test res_dz ≈ [-b^2]
 
         # total nonlinear contribution sums correctly
         total = res_z + res_dz
-        @test total ≈ [a^2 + b^2]
+        @test total ≈ [-a^2 - b^2]
     end
+
     @testset "cubic term z1^3" begin
         @variables z1 dz1
         groups = ([z1], [dz1])
@@ -457,12 +460,13 @@ end #@testset "polarization"
 
         a = 2.0
         res = eval_term(term, ([a],))
-        @test res ≈ [-a^3]
+        @test res ≈ [a^3]
 
         # scaling: f(α·x) = α^3 · f(x)
         α = 1.5
-        @test eval_term(term, ([α * a],)) ≈ [-α^3 * a^3]
+        @test eval_term(term, ([α * a],)) ≈ [α^3 * a^3]
     end
+
     @testset "evaluate_term! accumulates into res" begin
         @variables z1 dz1
         groups = ([z1], [dz1])
@@ -473,7 +477,7 @@ end #@testset "polarization"
         x = [3.0]
         res = [10.0]   # non-zero initial value
         MORFE.MultilinearMaps.evaluate_term!(res, term, (x,), nothing)
-        @test res ≈ [10.0 + 9.0]   # 10 + 3^2
+        @test res ≈ [10.0 - 9.0]   # 10 - 3^2
     end
 
     @testset "external forcing — linear in r" begin
@@ -493,12 +497,12 @@ end #@testset "polarization"
         x = [0.0]
         r = [2.0]
         res = eval_term(term, (x,), r)
-        @test res ≈ [10.0]   # 5 * r[1] = 5 * 2
+        @test res ≈ [-10.0]   # -5 * r[1] = -5 * 2
 
         # scales linearly with r
         r2 = [3.0]
         res2 = eval_term(term, (x,), r2)
-        @test res2 ≈ [15.0]
+        @test res2 ≈ [-15.0]
     end
 
     @testset "mixed term z1*r1" begin
@@ -517,12 +521,83 @@ end #@testset "polarization"
 
         a, b = 3.0, 4.0
         res = eval_term(term, ([a],), [b])
-        @test res ≈ [a * b]
+        @test res ≈ [-a * b]
 
         # bilinear: scales as α*β when x→α·x, r→β·r
         α, β = 2.0, 3.0
         res2 = eval_term(term, ([α * a],), [β * b])
-        @test res2 ≈ [α * β * a * b]
+        @test res2 ≈ [- α * β * a * b]
+    end
+
+    @testset "complex — toMultilinearMaps" begin
+        # helper mirroring `eval_term`, but complex-valued
+        function eval_term_complex(term, xs, r = nothing)
+            N = length(xs[1])
+            res = zeros(ComplexF64, N)
+            MORFE.MultilinearMaps.evaluate_term!(res, term, xs, r)
+            return res
+        end
+
+        @testset "real-coefficient monomial, complex argument" begin
+            @variables z1 dz1
+            groups = ([z1], [dz1])
+            exprs = [-dz1 - z1 - z1^2]
+            model = model_from_symbolics(exprs, groups)
+            term = model.nonlinear_terms[1]
+
+            z = 1.0 + 2.0im
+            res = eval_term_complex(term, ([z],))
+            @test res ≈ [z^2]                     # (1+2i)^2 = -3+4i
+
+            # scaling with a complex factor
+            α = 0.5 - 1.0im
+            res2 = eval_term_complex(term, ([α * z],))
+            @test res2 ≈ [α^2 * z^2]
+        end
+
+        @testset "complex-coefficient monomial, real argument" begin
+            @variables z1 dz1
+            groups = ([z1], [dz1])
+            exprs = [-dz1 - z1 - im * z1^2]
+            model = model_from_symbolics(exprs, groups)
+            term = model.nonlinear_terms[1]
+
+            a = 3.0
+            res = eval_term_complex(term, ([complex(a)],))
+            @test res ≈ [im * a^2]
+        end
+
+        @testset "complex-coefficient monomial, complex argument" begin
+            @variables z1 z2 dz1 dz2
+            groups = ([z1, z2], [dz1, dz2])
+            exprs = [-dz1 - z1,
+                -dz2 - z2 - (1 + 2im) * z1 * z2]
+            model = model_from_symbolics(exprs, groups)
+            term = only(model.nonlinear_terms)
+
+            z1v, z2v = 1.0 - 1.0im, 2.0 + 0.5im
+            res = eval_term_complex(term, ([z1v, z2v],))
+            @test res[1] ≈ 0.0
+            @test res[2] ≈ (1 + 2im) * z1v * z2v
+
+            # bilinear scaling with complex α, β on the two "slots"
+            # (evaluate_term! passes xs[1] to all slots, so scale the single input)
+            β = 0.3 + 0.7im
+            res2 = eval_term_complex(term, ([β * z1v, β * z2v],))
+            @test res2[2] ≈ β^2 * (1 + 2im) * z1v * z2v
+        end
+
+        @testset "cubic, complex argument (higher degree sanity check)" begin
+            @variables z1 dz1
+            groups = ([z1], [dz1])
+            exprs = [-dz1 - z1 + z1^3]
+            model = model_from_symbolics(exprs, groups)
+            term = model.nonlinear_terms[1]
+
+            z = 0.5 + 1.5im
+            res = eval_term_complex(term, ([z],))
+            @test res ≈ [-z^3]
+        end
     end
 end #@testset "toMultilinearMaps"
 
@@ -555,7 +630,7 @@ end #@testset "toMultilinearMaps"
         groups = ([x], [dx])
 
         # -ẍ - x - x³ = 0  i.e.  ẍ + x + x³ = 0
-        exprs = [-dx - x - x^3]
+        exprs = [dx + x - x^3]
 
         model = model_from_symbolics(exprs, groups)
 
@@ -581,11 +656,11 @@ end #@testset "toMultilinearMaps"
         model = model_from_symbolics(exprs, groups)
 
         # B[2] should be identity (coefficient of dẑ)
-        @test model.linear_terms[2] ≈ [1.0 0.0; 0.0 1.0]
+        @test model.linear_terms[2] ≈ [-1.0 0.0; 0.0 -1.0]
 
         # B[1] encodes the linear stiffness: -dz1 - (1+1.5) z1  → B[1][1,1] = 2.5
-        @test model.linear_terms[1][1, 1] ≈ 2.5
-        @test model.linear_terms[1][2, 2] ≈ 3.5
+        @test model.linear_terms[1][1, 1] ≈ -2.5
+        @test model.linear_terms[1][2, 2] ≈ -3.5
 
         # Three distinct quadratic multiindices: (2,0), (1,1), (0,2)
         @test length(model.nonlinear_terms) == 1
@@ -623,7 +698,7 @@ end #@testset "toMultilinearMaps"
         groups = ([x], [dx], [ddx])
 
         # -x''' - x'' - x' - x - x^2 = 0
-        exprs = [-ddx - dx - x - x^2]
+        exprs = [ddx + dx + x - x^2]
 
         model = model_from_symbolics(exprs, groups)
 
@@ -662,8 +737,8 @@ end #@testset "toMultilinearMaps"
             model = model_from_symbolics(exprs, groups)
 
             # linear matrices: B[1] = [1] (real), B[2] = [1]
-            @test model.linear_terms[1] ≈ reshape([1.0], 1, 1)
-            @test model.linear_terms[2] ≈ reshape([1.0], 1, 1)
+            @test model.linear_terms[1] ≈ reshape([-1.0], 1, 1)
+            @test model.linear_terms[2] ≈ reshape([-1.0], 1, 1)
 
             # one nonlinear term of degree 2
             @test length(model.nonlinear_terms) == 1
@@ -680,8 +755,8 @@ end #@testset "toMultilinearMaps"
             model = model_from_symbolics(exprs, groups)
 
             # linear matrix should be complex
-            @test model.linear_terms[1] ≈ reshape([-(1 + 2im)], 1, 1)
-            @test model.linear_terms[2] ≈ reshape([1.0], 1, 1)
+            @test model.linear_terms[1] ≈ reshape([(1 + 2im)], 1, 1)
+            @test model.linear_terms[2] ≈ reshape([-1.0], 1, 1)
             @test length(model.nonlinear_terms) == 1
         end
 
@@ -690,8 +765,8 @@ end #@testset "toMultilinearMaps"
             groups = ([z1, z2], [dz1, dz2])
 
             exprs = [
-                -dz1 - (1 + im) * z1 + 2im * z1^2,
-                -dz2 - (2 - im) * z2 + z1 * z2
+                dz1 + (1 + im) * z1 + 2im * z1^2,
+                dz2 + (2 - im) * z2 + z1 * z2
             ]
 
             model = model_from_symbolics(exprs, groups)
@@ -711,8 +786,8 @@ end #@testset "model_from_symbolics (no external)"
         ext_var = [r1, r2]
 
         # Purely linear in z and r (no nonlinear cross terms)
-        exprs = [-dz1 - z1 + 5 * r1,
-            -dz2 - z2 + 2 * r2]
+        exprs = [dz1 + z1 + 5 * r1,
+            dz2 + z2 + 2 * r2]
 
         # External system: ṙ = -r  (harmonic oscillator at amplitude level)
         ext_exprs = [-r1, -r2]
@@ -735,8 +810,8 @@ end #@testset "model_from_symbolics (no external)"
         ext_var = [r1, r2]
 
         exprs = [
-            -dz1 - z1 - 1.5 * z1 - 2 * z1^2 + 3 * z1 * z2 * r1 + 5 * r1,
-            -1 * dz2 - 3.5 * z2 + z1^2 - 5 * z1 * z2 + 21 // 4 * z2^2 + 2 * r2
+            dz1 + z1 + 1.5 * z1 - 2 * z1^2 + 3 * z1 * z2 * r1 + 5 * r1,
+            1 * dz2 + 3.5 * z2 + z1^2 - 5 * z1 * z2 + 21 // 4 * z2^2 + 2 * r2
         ]
         ext_exprs = [-r1, -r2]
 
@@ -825,7 +900,9 @@ end #@testset "model_from_symbolics (no external)"
             # ṙ = im*Omega0*r  written as 2x2 real system
             ext_exprs = [im * Omega0 * r1, im * Omega0 * r2]
 
-            model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
+            model = @test_warn "The following variables appear in `groups` but not in `exprs`: r2" begin
+                model_from_symbolics(exprs, groups, ext_var, ext_exprs)
+            end
             @test !isnothing(model.external_system)
         end
     end

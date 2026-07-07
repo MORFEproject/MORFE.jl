@@ -1,8 +1,10 @@
 module ConvenienceMethods
+using ..CohomologicalEquations
 using ..Resonance
 using ..FullOrderModel
 using ..Eigenproblems
 using ..Multiindices
+using StaticArrays: SVector
 
 export parametrize
 """
@@ -58,8 +60,10 @@ function parametrize(
 
     # Views into the eigenproblem arrays — no allocation for the matrices
     # eigenproblem.eigenmodes is FOM × ORD × n_eigs; physical slice is [:, 1, :]
-    master_modes = @view eigenproblem.eigenmodes[:, 1, master_mask]   # FOM × ROM
-    left_eigenmodes = @view eigenproblem.left_eigenmodes[:, master_mask] # FOM × ROM
+    # master_modes = @view eigenproblem.eigenmodes[:, 1, master_mask]   # FOM × ROM
+    master_modes = eigenproblem.eigenmodes[:, 1, master_mask]   # FOM × ROM
+    # left_eigenmodes = @view eigenproblem.left_eigenmodes[:, master_mask] # FOM × ROM
+    left_eigenmodes = eigenproblem.left_eigenmodes[:, master_mask] # FOM × ROM
 
     # SVector is required by the type signature
     master_eigs_vec = eigenproblem.eigenvalues[master_mask]
@@ -106,16 +110,16 @@ function _build_resonance_set(
         model::NDOrderModel,
         style::Symbol,
         mset::MultiindexSet,
-        ep::Eigenproblem,
-        tol::Float64;
-        conjugacy_map = nothing
+        eigenproblem::Eigenproblem,
+        tol::Float64,
+        conjugacy_map::Union{Nothing, Vector{Int}}
 )
     master_mask = eigenproblem.master_modes
     outer_mask = .!eigenproblem.master_modes
     master_eigenvalues = eigenproblem.eigenvalues[master_mask]
     outer_eigenvalues = eigenproblem.eigenvalues[outer_mask]
     external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
-                           model.external_system.eigenvalues
+                           Vector(model.external_system.eigenvalues)
 
     if style === :graph
         return resonance_set_from_graph_style(

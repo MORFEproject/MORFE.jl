@@ -45,6 +45,13 @@ function MORFE.model_from_symbolics(
     deg_monomials,
     multideg_monomials = extract_nonlinear_monomials(
         exprs, groups, linear_terms)
+
+    # if nonlinear_remainder == zero
+    if N===nothing && monomials===nothing && deg_monomials===nothing &&
+       multideg_monomials===nothing
+        return NDOrderModel(linear_terms)
+    end
+
     F_by_multiindex = group_monomials(
         monomials, multideg_monomials, N)
 
@@ -63,7 +70,7 @@ function MORFE.model_from_symbolics(
 end
 
 """
-    model_from_Symbolics
+    model_from_symbolics
  
 Generates NDOrderModel where the nonlinear forcing terms may also depend on external
 variables `ext_var` (the state of an ExternalSystem).
@@ -102,6 +109,12 @@ function MORFE.model_from_symbolics(
     N_check, monomials,
     deg_monomials,
     multideg_monomials = extract_nonlinear_monomials(exprs, F_groups_ext, linear_terms, groups)
+
+    # if nonlinear_remainder == zero
+    if N_check===nothing && monomials===nothing && deg_monomials===nothing &&
+       multideg_monomials===nothing
+        return NDOrderModel(linear_terms)
+    end
 
     F_by_multiindex = group_monomials(monomials, multideg_monomials, N)
 

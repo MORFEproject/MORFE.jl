@@ -13,20 +13,26 @@ function _monomial_to_MultilinearMap(
         multiindex::NTuple{ORD, Int};
         has_ext::Bool = false) where {ORD}
     vars = reduce(vcat, polarized_variables)
-    _f, _ = build_function(polarized_monomial, vars..., expression = Val(false))
     nvars = length(vars)
-    function f!(res, vars...)
-        @assert length(vars) == nvars
-        res .+= _f(vars...)
+
+    re_mon = real.(complex.(polarized_monomial))
+    im_mon = imag.(complex.(polarized_monomial))
+
+    _f_re, _ = build_function(re_mon, vars...; expression = Val(false))
+    _f_im, _ = build_function(im_mon, vars...; expression = Val(false))
+
+    function f!(res, args...)
+        @assert length(args) == nvars
+        res .+= _f_re(args...) .+ im .* _f_im(args...)
         return nothing
     end
+
     deg = sum(multiindex)
     if has_ext == false
-        return MultilinearMap{ORD, typeof(f!)}(
-            f!, multiindex, 0, deg, false)  # Attention: Uses constructor without checking number of arguments of f!.
+        return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg, false)
     else
         return MultilinearMap{ORD-1, typeof(f!)}(
-            f!, multiindex[1:(end - 1)], multiindex[end], deg, false)  # Attention: Uses constructor without checking number of arguments of f!.
+            f!, multiindex[1:(end - 1)], multiindex[end], deg, false)
     end
 end
 
