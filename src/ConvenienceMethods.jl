@@ -58,19 +58,11 @@ function parametrise(
 	@assert ROM > 0 "No modes chosen as master modes in Eigenproblem"
 	NVAR = ROM + N_EXT
 
-<<<<<<< Updated upstream
-    # Views into the eigenproblem arrays — no allocation for the matrices
-    # eigenproblem.eigenmodes is FOM × ORD × n_eigs; physical slice is [:, 1, :]
-    # master_modes = @view eigenproblem.eigenmodes[:, 1, master_mask]   # FOM × ROM
-    master_modes = eigenproblem.eigenmodes[:, 1, master_mask]   # FOM × ROM
-    # left_eigenmodes = @view eigenproblem.left_eigenmodes[:, master_mask] # FOM × ROM
-    left_eigenmodes = eigenproblem.left_eigenmodes[:, master_mask] # FOM × ROM
-=======
-	# Views into the eigenproblem arrays — no allocation for the matrices
+	# Copies, not views: a Bool-mask view is not strided, so downstream
+	# BLAS/sparse products would fall back to slow generic matmul.
 	# eigenproblem.eigenmodes is FOM × ORD × n_eigs; physical slice is [:, 1, :]
-	master_modes = @view eigenproblem.eigenmodes[:, 1, master_mask]   # FOM × ROM
-	left_eigenmodes = @view eigenproblem.left_eigenmodes[:, master_mask] # FOM × ROM
->>>>>>> Stashed changes
+	master_modes = eigenproblem.eigenmodes[:, 1, master_mask]   # FOM × ROM
+	left_eigenmodes = eigenproblem.left_eigenmodes[:, master_mask] # FOM × ROM
 
 	# SVector is required by the type signature
 	master_eigs_vec = eigenproblem.eigenvalues[master_mask]
@@ -128,35 +120,19 @@ Accepted styles:
 - `:real_normal_form`
 """
 function _build_resonance_set(
-<<<<<<< Updated upstream
-        model::NDOrderModel,
-        style::Symbol,
-        mset::MultiindexSet,
-        eigenproblem::Eigenproblem,
-        tol::Float64,
-        conjugacy_map::Union{Nothing, Vector{Int}}
-)
-    master_mask = eigenproblem.master_modes
-    outer_mask = .!eigenproblem.master_modes
-    master_eigenvalues = eigenproblem.eigenvalues[master_mask]
-    outer_eigenvalues = eigenproblem.eigenvalues[outer_mask]
-    external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
-                           Vector(model.external_system.eigenvalues)
-=======
 	model::NDOrderModel,
 	style::Symbol,
 	mset::MultiindexSet,
-	ep::Eigenproblem,
-	tol::Float64;
-	conjugacy_map = nothing,
+	eigenproblem::Eigenproblem,
+	tol::Float64,
+	conjugacy_map::Union{Nothing, Vector{Int}}
 )
 	master_mask = eigenproblem.master_modes
 	outer_mask = .!eigenproblem.master_modes
 	master_eigenvalues = eigenproblem.eigenvalues[master_mask]
 	outer_eigenvalues = eigenproblem.eigenvalues[outer_mask]
 	external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
-						   model.external_system.eigenvalues
->>>>>>> Stashed changes
+						   Vector(model.external_system.eigenvalues)
 
 	if style === :graph
 		return resonance_set_from_graph_style(
