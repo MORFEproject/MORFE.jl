@@ -187,11 +187,15 @@ for h_ratio in H_RATIOS
 		mset, Vector{ComplexF64}(master_eigenvalues), 0.05)
 
 	# g) Cohomological solve
+	left_modes_derivatives = left_eigenmode_orders_from_slice(
+		model.linear_terms, left_eigenmodes,
+		collect(master_eigenvalues))[:, 1:(end-1), :]
 	@printf "  Solving cohomological equations (%d monomials) …" length(mset)
 	t_solve = @elapsed W_ref, R_ref = solve_cohomological_problem(
 		model, mset, master_eigenvalues,
 		master_modes, left_eigenmodes, resonance_set;
 		master_modes_derivatives = master_modes_derivatives,
+		left_modes_derivatives = left_modes_derivatives,
 		conjugate_permutation    = [2, 1])
 	@printf " %.2f s\n" t_solve
 

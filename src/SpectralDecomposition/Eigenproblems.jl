@@ -31,7 +31,7 @@ Struct with the attributs:
 
 ### Compute eigenproblem [`solve_eigenproblem`](@ref)
 Function that takes a [`NDOrderModel`](@ref) and a [`AbstractEigensolver`](@ref) and calculates the eigenvalues and left and right eigenvectors.
-Additionally it takes a function to sort the eigenvectors and a function to normalize.
+Additionally it takes a function to sort the eigenvectors and a function to normalise.
 It generates and returns an EigenProblem and is the main interaction of this module.
 
 ### Master mode selection 
@@ -51,9 +51,10 @@ using LinearAlgebra
 
 export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
 	StructureModalDampingEigensolver
-export solve, solve_left, sort_by_magnitude!, normalize_biorthogonal!
+export solve, solve_left, sort_by_magnitude!, normalise_biorthogonal!
 export Eigenproblem, solve_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
 	select_master_modes_by_sorting, select_master_modes_by_target_frequency
+export left_eigenmode_orders_from_slice
 
 """
 	AbstractEigensolver
@@ -62,6 +63,21 @@ Abstract supertype for all eigensolvers accepted by `solve_eigenproblem`.
 
 Concrete subtypes must implement `solve` and `solve_left` for `NDOrderModel`.
 Two built-in subtypes are provided: `DefaultEigensolver` and `ArpackEigensolver`.
+
+## Interface contract — full order-blocks
+
+Both `solve` and `solve_left` must return eigenvectors as `FOM × ORD × n`
+arrays containing ALL companion order-blocks, not just the physical slice:
+
+- right: `(λB − A) ψ = 0`, blocks `ψ = [ψ_1; …; ψ_ORD]` with `ψ_{k+1} = λ ψ_k`;
+- left (sesquilinear): `φᴴ (λB − A) = 0`, reported eigenvalue `λ`
+  (the pencil eigenvalue of the adjoint problem is `conj(λ)`).
+
+The eigensolver is the single owner of eigenvalue knowledge: it uses `λ` to
+*define* the eigenvector blocks, and downstream code (orthogonality and
+invariance operators) reads the blocks without ever folding eigenvalues.
+Solvers that naturally produce only the physical left slice can reconstruct
+the blocks with [`left_eigenmode_orders_from_slice`](@ref).
 """
 abstract type AbstractEigensolver end
 
@@ -133,7 +149,7 @@ mutable struct ArpackEigensolver <: AbstractEigensolver
 	eigenvalues::Union{Nothing, Vector{ComplexF64}}
 
 	function ArpackEigensolver()
-		@warn "Initialized ArpackEigensolver with no nev. Not recommended! Use DefaultEigensolver instead."
+		@warn "Initialised ArpackEigensolver with no nev. Not recommended! Use DefaultEigensolver instead."
 		new(nothing)
 	end
 	function ArpackEigensolver(nev::Int64)
@@ -274,12 +290,98 @@ function solve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
 end
 
 """
+	left_eigenmode_orders_from_slice(linear_terms, left_slice, eigenvalues)
+	-> Array{ComplexF64, 3}
+
+Reconstruct the full left eigenvector order-blocks from the physical-space
+slice, for callers that compute only the latter. For the sesquilinear left
+eigenvector `φ = [φ_1; …; φ_ORD]` of reported eigenvalue `λ` (physical slice
+`ℓ = φ_ORD`, satisfying `L(λ)ᴴ ℓ = 0` with `L(s) = Σ_k B_k s^k`), the companion
+block equations give
+
+```
+φ_{ORD-1} = conj(λ) · (B_ORDᴴ ℓ) + B_{ORD-1}ᴴ ℓ
+φ_j       = conj(λ) · φ_{j+1}   + B_jᴴ ℓ          j = ORD-2, …, 1
+```
+
+The eigenvalue is used only to *define* the eigenvector from its slice — the
+per-monomial cohomological solve reads the blocks and never touches it. Prefer
+eigensolvers that return the full blocks directly (`solve_left` does); use this
+only when a slice is all you have.
+
+The slice may carry an arbitrary per-mode scale: the blocks scale with it, and
+the orthogonality equations are invariant under per-mode row scaling.
+"""
+function left_eigenmode_orders_from_slice(
+	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+	left_slice::AbstractMatrix,      # FOM × n
+	eigenvalues::AbstractVector,     # length n — reported (right) eigenvalues
+) where {ORDP1}
+	ORD = ORDP1 - 1
+	FOM = size(left_slice, 1)
+	n = size(left_slice, 2)
+	@assert length(eigenvalues) == n "eigenvalues must match the number of slice columns"
+	blocks = Array{ComplexF64}(undef, FOM, ORD, n)
+	for k in 1:n
+		ℓ = view(left_slice, :, k)
+		ν = conj(eigenvalues[k])
+		blocks[:, ORD, k] .= ℓ
+		if ORD > 1
+			@views blocks[:, ORD-1, k] .= ν .* (linear_terms[ORDP1]' * ℓ) .+
+										  linear_terms[ORD]' * ℓ
+			for j in (ORD-2):-1:1
+				@views blocks[:, j, k] .= ν .* blocks[:, j+1, k] .+ linear_terms[j+1]' * ℓ
+			end
+		end
+	end
+	return blocks
+end
+
+"""
+	_structural_left_eigenmode_orders(λ, Y, mass, damping) -> Array{ComplexF64, 3}
+
+Analytic companion left-eigenvector order-blocks for a proportionally damped
+second-order structure `M ẍ + C ẋ + K x = 0` with real symmetric `M, K` and
+`C = αM + βK`. For the sesquilinear left eigenvector `φ` (solving
+`φᴴ (λB − A) = 0` on the companion pencil) with real position mode
+`ϕ = Y[:, 1, k]`:
+
+```
+φ_2 = ϕ                    (physical slice)
+φ_1 = (conj(λ) M + C) ϕ
+```
+
+These are exactly the blocks `solve_left` would return — algebraically equal to
+`-(1/conj(λ)) Kᵀϕ` via the quadratic eigenrelation, but built from the
+moderate-norm `M`, `C` instead of `K` (which amplifies eigensolver noise by
+`(ω_max/ω₁)²`). No adjoint eigensolve is needed because the proportional
+damping makes the blocks analytic in `ϕ`.
+"""
+function _structural_left_eigenmode_orders(
+	λ::AbstractVector,
+	Y::AbstractArray{<:Complex, 3},
+	mass::AbstractMatrix,
+	damping::AbstractMatrix,
+)
+	FOM = size(Y, 1)
+	n_eigs = size(Y, 3)
+	@assert size(Y, 2) == 2 "structural left blocks require a second-order model (ORD = 2)"
+	left = Array{ComplexF64}(undef, FOM, 2, n_eigs)
+	for k in 1:n_eigs
+		ϕ = view(Y, :, 1, k)
+		left[:, 2, k] .= ϕ
+		left[:, 1, k] .= conj(λ[k]) .* (mass * ϕ) .+ damping * ϕ
+	end
+	return left
+end
+
+"""
 	solve_eigenproblem(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)
 
-Specialised path for `StructureModalDampingEigensolver`: mass-normalization is
-built into `solve`, and the physical-space left eigenmodes equal the position
-block of the right eigenmodes (`X[:, ORD, k] = Y[:, 1, k]`).  No adjoint solve
-or biorthogonal normalization is needed.
+Specialised path for `StructureModalDampingEigensolver`: mass-normalisation is
+built into `solve`, and the left eigenvector order-blocks are analytic in the
+position mode (see [`_structural_left_eigenmode_orders`](@ref)).  No adjoint
+solve or biorthogonal normalisation is needed.
 
 The optional `sorter!` kwarg has the same semantics as in the general
 `solve_eigenproblem`: pass `(args...) -> nothing` to preserve the solver's
@@ -291,13 +393,17 @@ function solve_eigenproblem(
 	sorter!::Function = sort_by_magnitude!)
 	λ, Y = solve(model, solver)
 	sorter!(λ, Y)
-	return Eigenproblem(solver, λ, Y, Matrix{ComplexF64}(Y[:, 1, :]))
+	left = _structural_left_eigenmode_orders(λ, Y,
+		model.linear_terms[3], model.linear_terms[2])
+	return Eigenproblem(solver, λ, Y, left)
 end
 
 """
 	solve_eigenproblem(stiffness, mass, solver::StructureModalDampingEigensolver; sorter!)
 
 Convenience overload: pass `K` and `M` directly without constructing an `NDOrderModel`.
+The Rayleigh damping matrix `C = αM + βK` is rebuilt from the solver parameters
+for the left eigenvector order-blocks.
 """
 function solve_eigenproblem(
 	stiffness::AbstractMatrix,
@@ -306,7 +412,9 @@ function solve_eigenproblem(
 	sorter!::Function = sort_by_magnitude!)
 	λ, Y = solve(mass, stiffness, solver)
 	sorter!(λ, Y)
-	return Eigenproblem(solver, λ, Y, Matrix{ComplexF64}(Y[:, 1, :]))
+	damping = solver.α * mass + solver.β * stiffness
+	left = _structural_left_eigenmode_orders(λ, Y, mass, damping)
+	return Eigenproblem(solver, λ, Y, left)
 end
 
 """
@@ -315,19 +423,26 @@ mutable struct Eigenproblem{T}
 	eigenvalues::Array{Complex{T}}
 	eigenmodes::Array{Complex{T}}
 	left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}
+	left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}
 	master_modes::Union{Nothing, Vector{Bool}}
 	external_modes::Union{Nothing, Vector{Bool}}
 
 Stores sorted and biorthogonally normalised left/right eigenpairs of the
 generalised eigenproblem `A x = λ B x`, together with a master-mode selector.
 Right eigenmodes are stored as a 3D array `FOM × ORD × n_eigs`.
-Left eigenmodes store only the physical-space (highest-order) slice `FOM × n_eigs`.
+Left eigenmodes are stored both as the full order-block array
+`FOM × ORD × n_eigs` (`left_eigenmodes_orders`) and as the physical-space
+(highest-order) slice `FOM × n_eigs` (`left_eigenmodes`). The full blocks feed
+the orthogonality row operators directly — no eigenvalue folding is needed to
+reconstruct them.
 
 # Fields
 - `solver`: the `AbstractEigensolver` used to compute eigenpairs
 - `eigenvalues`: sorted eigenvalues `λ`
 - `eigenmodes`: right eigenvectors, sorted to match `eigenvalues`
 - `left_eigenmodes`: physical-space left eigenvectors (FOM × n_eigs); `nothing` until set
+- `left_eigenmodes_orders`: full left eigenvector order-blocks (FOM × ORD × n_eigs);
+  `nothing` when the solver supplied only the physical slice
 - `master_modes`: `Vector{Bool}` flagging master modes; `nothing` until set by a `select_master_modes_*` call
 """
 mutable struct Eigenproblem{T}
@@ -335,10 +450,12 @@ mutable struct Eigenproblem{T}
 	eigenvalues::Array{Complex{T}}
 	eigenmodes::Array{Complex{T}}              # FOM × ORD × n_eigs
 	left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}  # FOM × n_eigs — physical-space (highest-order) slice
+	left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}  # FOM × ORD × n_eigs — full order-blocks
 	master_modes::Union{Nothing, Vector{Bool}}
 	external_modes::Union{Nothing, Vector{Bool}}
-	# Constructor from full 3-D left eigenvectors: extracts the highest-order
-	# (physical-space) slice [:, ORD, :] that MasterModeOrthogonality requires.
+	# Constructor from full 3-D left eigenvectors: retains the full order-block
+	# array (fed to MasterModeOrthogonality) and the highest-order
+	# (physical-space) slice [:, ORD, :].
 	function Eigenproblem(
 		solver::AbstractEigensolver,
 		eigenvalues::Array{Complex{T}},
@@ -353,16 +470,17 @@ mutable struct Eigenproblem{T}
 		@assert size(left_eigenmodes, 1) == FOM "left_eigenmodes dim 1 must equal FOM = $FOM"
 		@assert size(left_eigenmodes, 2) == ORD "left_eigenmodes dim 2 must equal ORD = $ORD"
 		@assert size(left_eigenmodes, 3) == n_eigs "left_eigenmodes dim 3 must equal n_eigs = $n_eigs"
+		left_orders = Array{Complex{T}, 3}(left_eigenmodes)
 		left_phys = Matrix{Complex{T}}(left_eigenmodes[:, ORD, :])
-		new{T}(solver, eigenvalues, eigenmodes, left_phys, nothing, nothing)
+		new{T}(solver, eigenvalues, eigenmodes, left_phys, left_orders, nothing, nothing)
 	end
 
 	# Constructor accepting pre-extracted 2-D physical-space left eigenmodes
-	# (FOM × n_eigs).  Use when the relevant slice is already known — e.g.
-	# StructureModalDampingEigensolver (3-D eigenmodes, 2-D left) or
+	# (FOM × n_eigs).  Use when only the physical slice is known — e.g.
 	# Mechanical_Problem_Solver (2-D eigenmodes in first-order flat format,
 	# 2-D left eigenmodes). For the 3-D case the n_eigs axis is dim 3; for
-	# the 2-D (flat first-order) case it is dim 2.
+	# the 2-D (flat first-order) case it is dim 2. `left_eigenmodes_orders`
+	# is left as `nothing`; ORD > 1 orthogonality solves require the full blocks.
 	function Eigenproblem(
 		solver::AbstractEigensolver,
 		eigenvalues::Array{Complex{T}},
@@ -371,7 +489,7 @@ mutable struct Eigenproblem{T}
 		n_eigs = ndims(eigenmodes) == 3 ? size(eigenmodes, 3) : size(eigenmodes, 2)
 		@assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal n_eigs = $n_eigs"
 		@assert size(left_eigenmodes, 2) == n_eigs "left_eigenmodes must have n_eigs = $n_eigs columns"
-		new{T}(solver, eigenvalues, eigenmodes, left_eigenmodes, nothing, nothing)
+		new{T}(solver, eigenvalues, eigenmodes, left_eigenmodes, nothing, nothing, nothing)
 	end
 end
 
@@ -379,17 +497,17 @@ end
 	solve_eigenproblem(
 		model::NDOrderModel;
 		solver::AbstractEigensolver = DefaultEigensolver(),
-		sorter::Function = sort_by_magnitude,
-		normalizer::Function = normalize_biorthogonal)
+		sorter!::Function = sort_by_magnitude!,
+		normaliser!::Function = normalise_biorthogonal!)
 
 Computes left and right eigenpairs of the problem described in `model` by using the defined `solver`.
-Additionally `sorter` sorts the eigenpairs and `normalizer` is used to normalize the eigenmodes.
+Additionally `sorter!` sorts the eigenpairs and `normaliser!` is used to normalise the eigenmodes.
 """
 function solve_eigenproblem(
 	model::NDOrderModel;
 	solver::AbstractEigensolver = DefaultEigensolver(),
 	sorter!::Function = sort_by_magnitude!,
-	normalizer!::Function = normalize_biorthogonal!)
+	normaliser!::Function = normalise_biorthogonal!)
 
 	#calculate right eigenmodes
 	(eigenvalues, eigenmodes) = solve(model, solver)
@@ -402,8 +520,8 @@ function solve_eigenproblem(
 	left_eigenvalues, left_eigenmodes = sort_left_eigenmodes(
 		eigenvalues, left_eigenvalues, left_eigenmodes)
 
-	# normalize eigenpairs
-	normalizer!(model, eigenmodes, left_eigenmodes)
+	# normalise eigenpairs
+	normaliser!(model, eigenmodes, left_eigenmodes)
 
 	# Construct Eigenproblem
 	return Eigenproblem(solver, eigenvalues, eigenmodes, left_eigenmodes)
@@ -463,15 +581,19 @@ function sort_left_eigenmodes(eigenvalues, left_eigenvalues, left_eigenmodes)
 end
 
 """
-	normalize_biorthogonal!(
+	normalise_biorthogonal!(
 		model::NDOrderModel,
 		eigenmodes::Matrix{T},
 		left_eigenmodes::Matrix{T})
 
-Normalize eigenmodes to fulfill the equation
+Normalise eigenmodes to fulfill the equation
 	x_i^H * B * y_j = δ_{ij}
+
+Both sides are scaled symmetrically: with `s = sqrt(x_i^H B y_i)`, the right
+eigenmode is divided by `s` and the left eigenmode by `conj(s)`, so the
+sesquilinear pairing becomes exactly 1.
 """
-function normalize_biorthogonal!(
+function normalise_biorthogonal!(
 	model::NDOrderModel,
 	eigenmodes::Array{T},
 	left_eigenmodes::Array{T}) where {T}
@@ -483,11 +605,13 @@ function normalize_biorthogonal!(
 	for i in 1:n_eigs
 		ψ = n == 3 ? vec(@view eigenmodes[:, :, i]) : @view eigenmodes[:, i]
 		φ = n == 3 ? vec(@view left_eigenmodes[:, :, i]) : @view left_eigenmodes[:, i]
-		tmp = φ' * B * ψ
+		s = sqrt(φ' * B * ψ)
 		if n == 3
-			@views eigenmodes[:, :, i] ./= tmp
+			@views eigenmodes[:, :, i] ./= s
+			@views left_eigenmodes[:, :, i] ./= conj(s)
 		else
-			@views eigenmodes[:, i] ./= tmp
+			@views eigenmodes[:, i] ./= s
+			@views left_eigenmodes[:, i] ./= conj(s)
 		end
 	end
 end

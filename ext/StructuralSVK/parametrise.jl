@@ -41,7 +41,7 @@ function parametrise(m::AssembledMechanicalModel;
 	select_master_modes_by_sorting(eigenproblem, ROM)
 	master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 	master_modes = Y[:, 1, 1:ROM]
-	left_eigenmodes = solver isa StructureModalDampingEigensolver ? X[:, 1:ROM] : Y[:, 2, 1:ROM]
+	left_eigenmodes = X[:, 1:ROM]
 
 	ORD_model = length(eig_model.linear_terms) - 1   # = 2
 	FOM = m.info.n_dofs
@@ -49,6 +49,9 @@ function parametrise(m::AssembledMechanicalModel;
 	for r in 1:ROM, k in 1:(ORD_model-1)
 		master_modes_derivatives[:, k, r] .= Y[:, k+1, r]
 	end
+	# Lower-order left eigenvector blocks (must be scale-consistent with the
+	# physical slice above — both come from the same Eigenproblem storage).
+	left_modes_derivatives = eigenproblem.left_eigenmodes_orders[:, 1:(ORD_model-1), 1:ROM]
 
 	# ── Model with forcing (shape mode == frequency mode) ───────────────────
 	Ω = nothing
@@ -79,6 +82,7 @@ function parametrise(m::AssembledMechanicalModel;
 	R = solve_cohomological_problem(
 		model, mset, master_eigenvalues, master_modes, left_eigenmodes, resonance_set;
 		master_modes_derivatives = master_modes_derivatives,
+		left_modes_derivatives = left_modes_derivatives,
 		conjugate_permutation = conjugate_permutation)
 
 	return InvariantManifoldROM(W, R, collect(eigenvalues), master, order, forcing,

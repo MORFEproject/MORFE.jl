@@ -111,7 +111,11 @@ tke_gram_re.csv / tke_gram_im.csv / tke_avector.csv into `data_dir`.
 """
 function write_energy_gram(data_dir::AbstractString, W, M_vel, vel_rows, area)
 	C = MORFE.ParametrisationMethod.coefficients(W)   # (FOM, 1, L)
-	W1_vel = @view(C[vel_rows, 1, :])                 # n_vel × L
+	# Materialise the velocity block: a fancy-indexed view is not strided, so
+	# both products below would fall back to generic element-wise matmul
+	# (minutes); a dense Matrix routes them through the sparse kernel and BLAS
+	# zgemm (seconds) at ~n_vel × L × 16 B of extra memory.
+	W1_vel = C[vel_rows, 1, :]                        # n_vel × L dense
 	G = (transpose(W1_vel) * (M_vel * W1_vel)) ./ area
 	exps = MORFE.ParametrisationMethod.multiindex_set(W).exponents
 	Avec = permutedims(reduce(hcat, [collect(Int, e) for e in exps]))   # L × 3

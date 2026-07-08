@@ -6,6 +6,7 @@ using MORFE.Multiindices: all_multiindices_up_to
 using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.Resonance: resonance_set_from_complex_normal_form_style
 using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.Eigenproblems: left_eigenmode_orders_from_slice
 
 # ── Minimal 2-DOF Duffing model ──────────────────────────────────────────────
 const _FOM = 2
@@ -42,6 +43,12 @@ for r in 1:_ROM
         _master_modes_derivatives[:, k, r] .= _eig.vectors[(_FOM + 1):(2 * _FOM), orig]
     end
 end
+
+# Lower-order left eigenvector blocks, generated from the physical slice
+# (real symmetric system → the position mode is a valid sesquilinear slice).
+_left_modes_derivatives = left_eigenmode_orders_from_slice(
+    _model.linear_terms, _left_eigenmodes,
+    collect(_master_eigenvalues))[:, 1:(_ORD_model-1), :]
 
 # ── Multiindex and resonance sets ─────────────────────────────────────────────
 const _max_degree = 5
@@ -84,6 +91,7 @@ _pairs, _self_conj = _build_pairs(_mset, _conj_perm)
 # ── Solve once per strategy ───────────────────────────────────────────────────
 _common_kwargs = (
     master_modes_derivatives = _master_modes_derivatives,
+    left_modes_derivatives = _left_modes_derivatives,
 )
 
 W_nosym, R_nosym = solve_cohomological_problem(

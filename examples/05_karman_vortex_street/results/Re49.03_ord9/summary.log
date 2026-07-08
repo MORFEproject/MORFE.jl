@@ -71,12 +71,12 @@ Kármán Vortex Street DPIM — Summary
   Re₀ = 49.03,  order = 9,  NVAR = 3,  FOM = 57860
   Hopf eigenvalue:  λ₁ = +0.004028 +16.859169·i
 ------------------------------------------------------------
-  [1] Mesh generation                       0.644 s      0.07 GB
-  [2] FEM setup                             4.186 s      0.94 GB
-  [3] Newton steady-state                   8.003 s      2.07 GB
-  [4] Linear operators                      0.480 s      0.22 GB
-  [5] K_visc + h₀                           0.418 s      0.12 GB
-  [6] Eigenproblem                         17.087 s      2.82 GB
-  [8] Cohomological solve                 351.238 s    333.52 GB
+  [1] Mesh generation                       0.821 s      0.07 GB
+  [2] FEM setup                             4.505 s      0.94 GB
+  [3] Newton steady-state                   8.145 s      2.10 GB
+  [4] Linear operators                      0.484 s      0.21 GB
+  [5] K_visc + h₀                           0.425 s      0.12 GB
+  [6] Eigenproblem                         17.219 s      2.75 GB
+  [8] Cohomological solve                 310.782 s    283.54 GB
 ============================================================
 Next:  julia --project=. solve_rom.jl   →   python3 compare_orders.py

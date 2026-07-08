@@ -21,87 +21,65 @@ from the orthogonality equations.
 
 ---
 
-# Per-multiindex orthogonality equation
+# Mathematical origin: sesquilinear B-orthogonality
 
-For each multi-index **γ** and superharmonic `s_k = Σᵢ γᵢ λᵢ`, the orthogonality
-condition with respect to master mode `r` has the block structure
+For each multi-index **γ** with superharmonic `s = Σᵢ γᵢ λᵢ`, the condition for
+master mode `r` is the sesquilinear B-orthogonality of the companion left
+eigenvector `φ_r = [φ_{r,1}; …; φ_{r,ORD}]` (solving `φ_rᴴ (λ_r B − A) = 0`)
+against the first-order state `𝒲` of the monomial:
 
 ```
-[ L_r(s)  C_r(s) ] * [ W; f_res ] = RHS_r
+φ_rᴴ B 𝒲 = 0,     𝒲 = [W_1; …; W_ORD],   W_1 = W,   W_{j+1} = s W_j + Y_j f + ξ_j
 ```
 
-where:
-- `L_r(s)` (`1 × FOM`) acts on the parametrisation `W`,
-- `C_r(s)` (`1 × |R|`) acts on the unknown reduced dynamics of the resonant modes
-  `f_res`,
-- `RHS_r` is a scalar containing all known contributions (lower-order terms and
-  external forcing).
+Here `Y_j` are the right eigenmode order-blocks, `f` the reduced-dynamics
+coefficient at **γ** (master part unknown, external part known forcing) and
+`ξ_j` the known lower-order couplings. Solving the recurrence and collecting
+terms reduces the condition to a single row equation
 
-The external forcing modes are **not** unknowns; their contributions are
-incorporated into `RHS_r` via the operator `E_r(s)`.
+```
+L_r(s) W + C_r(s) f_res = − E_r(s) f_ext − Σ_{k=1}^{ORD-1} G_{r,k}(s) ξ_k
+```
+
+with
+
+```
+L_r(s)   = Σ_{j=1}^{ORD} J_r[j] · s^{j-1}          (1 × FOM row on W)
+G_{r,k}(s) = Σ_{j=k+1}^{ORD} J_r[j] · s^{j-1-k}     (Horner tails of L_r)
+C_r(s)   = Σ_{k=1}^{ORD-1} G_{r,k}(s) · Y_k^m       (coupling to unknown f_res)
+E_r(s)   = Σ_{k=1}^{ORD-1} G_{r,k}(s) · Y_k^e       (known forcing → RHS)
+```
+
+Only the `|R|` resonant master columns of `C_r` are assembled; non-resonant
+master modes have identically-zero reduced dynamics at **γ**.
 
 ---
 
-# Joint operator `D_r` and its blocks `C_r` and `E_r`
+# Coefficients from eigenvector order-blocks (no eigenvalue folding)
 
-Define the joint operator acting on the full reduced state as
-
-```
-D_r(s) = [ C_r(s)  E_r(s) ],      size: 1 × NVAR
-```
-
-where `C_r` acts on the master modes and `E_r` acts on the external forcing.
-`D_r` is built via Horner's method:
+The row coefficients are read directly off the (conjugated) left eigenvector
+order-blocks — no eigenvalue appears:
 
 ```
-D_r(s) = Σ_{j=1}^{ORD-1} Q_r[j] · s^{j-1}
+J_r[j]   = conj(φ_{r,j})              j = 1, …, ORD-1
+J_r[ORD] = conj(B_ORDᴴ φ_{r,ORD})
 ```
 
-with `Q_r[j]` (`1 × NVAR`) pre-computed by a downward recurrence.
+The conjugation is the sesquilinear `ᴴ` of the condition; it is baked into the
+stored coefficients so that every assembled contraction (`row · W`, `row · ξ`,
+`row · Y`) is **bilinear**.
 
-Because the external forcing is known, the term `E_r(s) · (external dynamics)`
-is moved to the right-hand side. Consequently, the linear system for the
-unknowns `[W; f_res]` involves only `L_r` and `C_r`.
-
----
-
-# Construction of `L_r` and `Q_r` via Horner
-
-```
-L_r(s) = Σ_{j=1}^{ORD} J_r[j] · s^{j-1}
-```
-
-with `J_r[j]` (`1 × FOM`) computed by the downward recurrence
-
-```
-J_r[ORD]   = Xℓ_r · B[ORD+1]
-J_r[j]     = λ_r · J_r[j+1] + Xℓ_r · B[j+1],   j = ORD-1, …, 1
-```
-
-where `Xℓ_r` is the left eigenmode of master mode `r`, `λ_r` its eigenvalue, and
-`B[k]` the `k`-th coefficient matrix of the linear part of the full-order model.
-
-For the joint operator:
-
-```
-Q_r[ORD-1] = J_r[ORD] · Y
-Q_r[j]     = J_r[j+1] · Y + Q_r[j+1] · Λ,   j = ORD-2, …, 1
-```
-
-where:
-- `Y = generalised_right_eigenmodes` (`FOM × NVAR`) collects the generalised
-  eigenvectors of all master and external forcing modes,
-- `Λ = reduced_dynamics_linear` (`NVAR × NVAR`) is the Jordan matrix of the
-  linear part of the reduced dynamics.
-
-The split `Q_r = [ Ĉ_r  Ê_r ]` yields `C_r(s)` from the first `ROM` entries
-and `E_r(s)` from the remaining `N_EXT` entries of each `Q_r[j]`.
+`C_r`/`E_r` contract the same tails `G_{r,k}` against the right eigenmode
+order-blocks: master blocks come from the eigensolver, external blocks from the
+recurrence `Y_{k+1}^e = Y_k^e Λ_e + Y_k^m Λ_me` (the master↔external coupling of
+the reduced linear dynamics — the one confined place an eigenvalue-derived
+matrix remains).
 
 ---
 
 # Precomputation and assembly
 
-`Q_r` coefficients are pre-computed for all `NVAR = ROM + N_EXT` entries. At
+`J_r`, `C_r` and `E_r` coefficients are pre-computed once per order. At
 assembly time, only a subset is used:
 
 - **LHS matrix** `[L_r  C_r]`: only the `|R|` columns of `C_r(s)` corresponding

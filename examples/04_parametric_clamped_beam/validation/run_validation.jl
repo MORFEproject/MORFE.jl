@@ -189,6 +189,8 @@ for (θ₁_star, θ₂_star) in test_points
 		derivs★[:, 1, r] .= Y★[:, 2, r]
 	end
 
+	left_derivs★ = ep★.left_eigenmodes_orders[:, 1:1, 1:ROM_VAL]
+
 	res_set★ = resonance_set_from_complex_normal_form_style(
 		mset_ex, Vector{ComplexF64}(master_eigs★), 0.05)
 	print("  Cohomological solve: ")
@@ -196,6 +198,7 @@ for (θ₁_star, θ₂_star) in test_points
 		model★, mset_ex,
 		master_eigs★, master_modes★, left_modes★, res_set★;
 		master_modes_derivatives = derivs★,
+		left_modes_derivatives = left_derivs★,
 		conjugate_permutation    = CONJ_EXACT)
 
 	R1★ = extract_component(realify(R★.poly, CONJ_EXACT), 1)

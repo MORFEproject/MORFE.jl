@@ -74,17 +74,19 @@ const _order = 3
     select_master_modes_by_sorting(eigenproblem, ROM)
     master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
     master_modes = Y[:, 1, 1:ROM]
-    left_eigenmodes = Y[:, 2, 1:ROM]
+    left_eigenmodes = X[:, 1:ROM]
     master_modes_derivatives = zeros(ComplexF64, n_free, 1, ROM)
     for r in 1:ROM
         master_modes_derivatives[:, 1, r] .= Y[:, 2, r]
     end
+    left_modes_derivatives = eigenproblem.left_eigenmodes_orders[:, 1:1, 1:ROM]
     resonance_set = resonance_set_from_complex_normal_form_style(
         mset, Vector{ComplexF64}(master_eigenvalues), 0.05)
     W_ref,
     R_ref = solve_cohomological_problem(model, mset, master_eigenvalues,
         master_modes, left_eigenmodes, resonance_set;
         master_modes_derivatives = master_modes_derivatives,
+        left_modes_derivatives = left_modes_derivatives,
         conjugate_permutation = [2, 1])
 
     @test beam.info.n_dofs == n_free

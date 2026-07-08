@@ -50,7 +50,7 @@ end
     #             model_dense;
     #             solver = DefaultEigensolver(),
     #             sorter! = (args...) -> nothing,
-    #             normalizer! = (args...) -> nothing)
+    #             normaliser! = (args...) -> nothing)
 
     #         λs = ep.eigenvalues
     #         Ys = ep.eigenmodes
@@ -79,7 +79,7 @@ end
     #             model;
     #             solver = ArpackEigensolver(nev),
     #             sorter! = (args...) -> nothing,
-    #             normalizer! = (args...) -> nothing)
+    #             normaliser! = (args...) -> nothing)
 
     #         λs = ep.eigenvalues
     #         Ys = ep.eigenmodes
@@ -109,7 +109,7 @@ end
     #             model;
     #             solver = MorfeEigensolver(nev, 0.0 + 0.0 * im),
     #             sorter! = (args...) -> nothing,
-    #             normalizer! = (args...) -> nothing)
+    #             normaliser! = (args...) -> nothing)
 
     #         λs = ep.eigenvalues
     #         Ys = ep.eigenmodes
@@ -145,7 +145,7 @@ end
     #             model;
     #             solver = StructureModalDampingEigensolver(nev, α, β),
     #             sorter! = (args...) -> nothing,
-    #             normalizer! = (args...) -> nothing)
+    #             normaliser! = (args...) -> nothing)
 
     #         λs = ep.eigenvalues
     #         Ys = ep.eigenmodes
@@ -227,7 +227,7 @@ end
             @test all(Ψ[:, :, 3] .== 30)
         end
 
-        @testset "normalize_biorthogonal!" begin
+        @testset "normalise_biorthogonal!" begin
             FOM = 4
 
             K = Matrix(random_spd_matrix(FOM))
@@ -238,7 +238,7 @@ end
 
             _, B = linear_first_order_matrices(model)
 
-            # Test normalize_biorthogonal! directly on raw 3-D arrays so the
+            # Test normalise_biorthogonal! directly on raw 3-D arrays so the
             # check is independent of what Eigenproblem chooses to store.
             # Must replicate the sort + match steps from solve_eigenproblem so
             # that left and right eigenvectors correspond index-by-index.
@@ -248,7 +248,7 @@ end
             λ_left, X    = MORFE.Eigenproblems.solve_left(model, solver)
             _, X         = MORFE.Eigenproblems.sort_left_eigenmodes(λ, λ_left, X)
 
-            normalize_biorthogonal!(model, Y, X)
+            normalise_biorthogonal!(model, Y, X)
 
             neig = length(λ)
             for i in 1:neig

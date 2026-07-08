@@ -332,12 +332,17 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 # §2  Cohomological solve on the augmented (z₁, z₂, θ₁, θ₂) system
 # ==================================================================
 println("\n§2 Cohomological solve  (NVAR = $NVAR, deg_z ≤ $max_degree_z, deg_θ ≤ $max_degree_θ, N_θ = $N_θ) …")
+left_modes_derivatives = left_eigenmode_orders_from_slice(
+	model.linear_terms, left_eigenmodes,
+	collect(master_eigenvalues))[:, 1:(end-1), :]
+
 r2 = @timed solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
 	master_modes, left_eigenmodes,
 	resonance_set;
 	master_modes_derivatives = master_modes_derivatives,
+	left_modes_derivatives = left_modes_derivatives,
 	conjugate_permutation    = [2, 1, 3, 4],  # z₁↔z₂; θ₁,θ₂ real → self-conjugate
 )
 (W, R) = r2.value

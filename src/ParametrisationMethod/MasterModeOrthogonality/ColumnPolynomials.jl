@@ -4,74 +4,101 @@
 
 """
 	precompute_orthogonality_operator_coefficients(fom_matrices, left_eigenmodes,
-												   master_eigenvalues)
+												   left_modes_derivatives = nothing)
 	-> Vector{Matrix{T}}
 
 Pre-compute the polynomial coefficient arrays for the orthogonality row operators
-`L_r(s)` using a downward Horner recurrence on the left eigenstructure.
+`J_r(s)` directly from the left-eigenvector order-blocks. No eigenvalue is used.
 
-## Return value
+## Mathematical origin
 
-An `NTuple{ROM, Matrix{T}}` where entry `r` is an `ORD × FOM` matrix
-`J_coeffs[r]`.  Row `j` of `J_coeffs[r]` stores the degree-`(j-1)` row-vector
-coefficient of `L_r`:
+The orthogonality condition for master mode `r` at a monomial with superharmonic
+`s` is the sesquilinear B-orthogonality of the companion left eigenvector
+`φ_r = [φ_{r,1}; …; φ_{r,ORD}]` (defined by `φ_rᴴ (λ_r B − A) = 0`) against the
+first-order state `𝒲`:
 
 ```
-L_r(s) = Σ_{j=1}^{ORD} J_coeffs[r][j, :] · s^{j-1}
+φ_rᴴ B 𝒲 = 0,     B = blockdiag(I, …, I, B_ORD)
 ```
+
+Reducing block-by-block, the row acting on the physical unknown `W` is
+
+```
+J_r(s) = Σ_{j=1}^{ORD} J_r[j, :] · s^(j-1)
+```
+
+with coefficients read straight off the (conjugated) eigenvector blocks:
+
+```
+J_r[j, :]   = conj(φ_{r,j})          j = 1, …, ORD-1
+J_r[ORD, :] = conj(B_ORDᴴ φ_{r,ORD}) = conj(B_ORDᴴ ℓ_r)
+```
+
+The conjugation is the sesquilinear `ᴴ` of the condition, stored so that the
+assembled matrix row acts **bilinearly** on `W` (`row · W = Σᵢ rowᵢ Wᵢ`).
 
 ## Arguments
 
-- `fom_matrices       :: NTuple{ORD+1, <:AbstractMatrix{T}}` – linear matrices of
-  the full-order model; `fom_matrices[k+1]` corresponds to `B_k` (0-indexed).
-- `left_eigenmodes    :: AbstractMatrix{T}` – left eigenvectors of
-  the master modes; `left_eigenmodes[:, r]` is the length-`FOM` vector for mode `r`.
-- `master_eigenvalues :: SVector{ROM, T}` – eigenvalues `λ_r` of the master modes.
+- `fom_matrices :: NTuple{ORD+1, <:AbstractMatrix{T}}` – linear matrices of the
+  full-order model; `fom_matrices[k+1]` corresponds to `B_k` (0-indexed).
+- `left_eigenmodes :: AbstractMatrix{T}` – physical-space (highest-order) left
+  eigenvector slice; `left_eigenmodes[:, r]` is `ℓ_r = φ_{r,ORD}` (length FOM).
+- `left_modes_derivatives :: Union{Nothing, AbstractArray{T,3}}` – lower-order
+  left eigenvector blocks, size `FOM × (ORD-1) × ROM`;
+  `left_modes_derivatives[:, j, r] = φ_{r,j}`. Required when `ORD > 1`
+  (the eigensolver returns them; see `solve_left`). May be `nothing` for `ORD == 1`.
 
-## Recurrence
+## Return value
 
-For each mode `r`, a single downward pass fills `J_coeffs[r]` (`ORD × FOM`):
-
-```
-J_r[ORD, :]   ←  B[ORD+1]ᵀ · ℓ_r
-J_r[j,   :]   ←  λ_r · J_r[j+1, :] + B[j+1]ᵀ · ℓ_r,   j = ORD-1, …, 1
-```
-
-Here `B[k+1]ᵀ · ℓ_r` is a `FOM`-vector equal to the row vector `ℓ_rᵀ · B[k+1]`
-stored as a column; this is standard Julia `mul!(dest, B', x)`.
+A `Vector{Matrix{T}}` of length `ROM`; entry `r` is the `ORD × FOM` matrix
+`J_coeffs[r]` whose row `j` stores the degree-`(j-1)` coefficient of `J_r(s)`.
 
 ## Complexity
 
-- Time:    `O(ROM · ORD · FOM²)` (one `FOM`-vector update per `(r, j)` pair)
+- Time:    one `B_ORDᴴ · ℓ_r` product per mode — `O(ROM · FOM²)` dense
+  (`O(ROM · nnz)` sparse); the remaining blocks are copies.
 - Storage: `O(ROM · ORD · FOM)`
 """
 function precompute_orthogonality_operator_coefficients(
 	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
 	left_eigenmodes::AbstractMatrix,
-	master_eigenvalues::SVector{ROM},
-) where {ORDP1, ROM}
-	T = promote_type(eltype(fom_matrices[1]), eltype(left_eigenmodes), eltype(master_eigenvalues))
+	left_modes_derivatives::Union{Nothing, AbstractArray{<:Number, 3}} = nothing,
+) where {ORDP1}
+	T = promote_type(eltype(fom_matrices[1]), eltype(left_eigenmodes))
+	if left_modes_derivatives !== nothing
+		T = promote_type(T, eltype(left_modes_derivatives))
+	end
 	ORD = ORDP1 - 1
 	FOM = size(first(fom_matrices), 1)
+	ROM = size(left_eigenmodes, 2)
 
 	@assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
 	@assert ROM ≥ 1 "ROM must be ≥ 1."
-	@assert size(left_eigenmodes) == (FOM, ROM) "left_eigenmodes must be FOM × ROM ($(FOM) × $(ROM))."
+	@assert size(left_eigenmodes, 1) == FOM "left_eigenmodes must be FOM × ROM ($(FOM) × $(ROM))."
+	@assert ORD == 1 || left_modes_derivatives !== nothing """
+	left_modes_derivatives must be provided for ORD > 1 systems.
+	Supply a FOM × (ORD-1) × ROM array with the lower-order left eigenvector blocks
+	left_modes_derivatives[:, j, r] = φ_{r,j} (as returned by solve_left).
+	"""
+	if left_modes_derivatives !== nothing && ORD > 1
+		@assert size(left_modes_derivatives) == (FOM, ORD - 1, ROM) """
+		left_modes_derivatives must be FOM × (ORD-1) × ROM ($(FOM) × $(ORD-1) × $(ROM)).
+		"""
+	end
 
 	result = Vector{Matrix{T}}(undef, ROM)
+	tmp = Vector{T}(undef, FOM)
 	for r in 1:ROM
-		ℓ = view(left_eigenmodes, :, r)    # length-FOM left eigenmode
-		λ = master_eigenvalues[r]
-
+		ℓ = view(left_eigenmodes, :, r)
 		J_r = Matrix{T}(undef, ORD, FOM)
 
-		# Highest degree: J_r[ORD, :] = B[ORDP1]ᵀ · ℓ  (= ℓᵀ · B[ORDP1] as a row)
-		mul!(view(J_r, ORD, :), fom_matrices[ORDP1]', ℓ)
+		# Highest degree: J_r[ORD, :] = conj(B_ORDᴴ · ℓ_r)  (= ℓ_rᴴ B_ORD as a bilinear row)
+		mul!(tmp, fom_matrices[ORDP1]', ℓ)
+		@views J_r[ORD, :] .= conj.(tmp)
 
-		# Downward recurrence: J_r[j, :] = λ · J_r[j+1, :] + B[j+1]ᵀ · ℓ
-		for j in (ORD-1):-1:1
-			view(J_r, j, :) .= λ .* view(J_r, j+1, :)                       # copy and scale
-			mul!(view(J_r, j, :), fom_matrices[j+1]', ℓ, one(T), one(T))     # accumulate
+		# Lower degrees: J_r[j, :] = conj(φ_{r,j}) — the eigenvector order-blocks
+		for j in 1:(ORD-1)
+			@views J_r[j, :] .= conj.(left_modes_derivatives[:, j, r])
 		end
 
 		result[r] = J_r
@@ -80,117 +107,145 @@ function precompute_orthogonality_operator_coefficients(
 end
 
 # =============================================================================
-# Pre-compute joint operator coefficients Q_r → (C_coeffs, E_coeffs)
+# Pre-compute joint operator coefficients → (C_coeffs, E_coeffs)
 # =============================================================================
 
 """
-	precompute_orthogonality_column_polynomials(J_coeffs,
-												generalised_right_eigenmodes,
+	precompute_orthogonality_column_polynomials(J_coeffs, right_master_blocks,
+												external_directions,
 												reduced_dynamics_linear)
 	-> (C_coeffs, E_coeffs)
 
-Pre-compute the polynomial coefficient arrays for the joint operator `D_r(s) =
-[C_r(s)  E_r(s)]` that couples the orthogonality equations to the unknown
-reduced dynamics and to the external forcing.
+Pre-compute the coefficient arrays of the operators `C_r(s)` (coupling to the
+unknown reduced dynamics) and `E_r(s)` (known external forcing) that appear in
+the orthogonality equation for master mode `r`:
 
-## Return values
+```
+J_r(s) W + C_r(s) f_m = − E_r(s) f_e − Σ_k G_{r,k}(s) ξ_k
+```
 
-- `C_coeffs :: Vector{Matrix{T}}` of length `ROM`, where `C_coeffs[r]` is an
-  `(ORD-1) × ROM` matrix.  Row `j` of `C_coeffs[r]` is the degree-`(j-1)`
-  coefficient of the master-mode block of `D_r`:
-  ```
-  C_r(s) = Σ_{j=1}^{ORD-1} C_coeffs[r][j, :] · s^{j-1}      (1 × ROM row polynomial)
-  ```
+## Mathematical origin
 
-- `E_coeffs :: Vector{Matrix{T}}` of length `ROM`, where `E_coeffs[r]` is an
-  `(ORD-1) × N_EXT` matrix.  Row `j` of `E_coeffs[r]` is the degree-`(j-1)`
-  coefficient of the external-forcing block of `D_r`:
-  ```
-  E_r(s) = Σ_{j=1}^{ORD-1} E_coeffs[r][j, :] · s^{j-1}      (1 × N_EXT row polynomial)
-  ```
+With `G_{r,k}(s) = Σ_{j=k+1}^{ORD} J_r[j, :] s^(j-1-k)` the Horner tails of the
+row operator, the couplings are bilinear contractions against the **right**
+eigenmode order-blocks `Y_k` (`Y_1` = physical mode, `Y_{k+1}` = next derivative
+block):
 
-  When `ORD = 1` both matrices have zero rows and the polynomials are identically
-  zero; the corresponding blocks are absent from the assembled system.
+```
+C_r(s) = Σ_{k=1}^{ORD-1} G_{r,k}(s) · Y_k^m        (master blocks, from the eigensolver)
+E_r(s) = Σ_{k=1}^{ORD-1} G_{r,k}(s) · Y_k^e        (external blocks)
+```
+
+The master blocks are supplied directly (`right_master_blocks`). The external
+blocks are generalised — the reduced linear dynamics couples them back to the
+master modes — and are generated by the block recurrence
+
+```
+Y_1^e = Φ_ext,       Y_{k+1}^e = Y_k^e Λ_e + Y_k^m Λ_me
+```
+
+where `Λ_me = Λ[1:ROM, ROM+1:NVAR]` and `Λ_e = Λ[ROM+1:NVAR, ROM+1:NVAR]` are
+the master↔external and external blocks of `reduced_dynamics_linear`. This is
+the one place an eigenvalue-derived matrix remains, confined to the per-order
+precompute.
+
+All contractions are **bilinear** (`Σᵢ J_r[·,i] Y[i,·]`): the sesquilinear
+conjugation of the orthogonality condition is already baked into `J_coeffs`.
 
 ## Arguments
 
-- `J_coeffs                    :: Vector{<:AbstractMatrix{T}}` – output of
-  [`precompute_orthogonality_operator_coefficients`](@ref); `J_coeffs[r]` is
-  `ORD × FOM`.
-- `generalised_right_eigenmodes :: AbstractMatrix{T}` of size `FOM × NVAR` –
-  generalised eigenvectors; columns `1:ROM` are the master modes, columns
-  `ROM+1:NVAR` are the external forcing modes.
-- `reduced_dynamics_linear      :: AbstractMatrix{T}` of size `NVAR × NVAR` –
-  Jordan-form matrix of the linear part of the reduced dynamics.
+- `J_coeffs :: Vector{<:AbstractMatrix{T}}` – output of
+  [`precompute_orthogonality_operator_coefficients`](@ref); `J_coeffs[r]` is `ORD × FOM`.
+- `right_master_blocks :: AbstractArray{T,3}` – right master-mode order-blocks,
+  size `FOM × ORD × ROM`; `right_master_blocks[:, k, m] = Y_k^m[:, m]`
+  (equal to the linear master monomials of the parametrisation `W`).
+  Only blocks `k ≤ ORD-1` are used.
+- `external_directions :: AbstractMatrix{T}` – physical external directions
+  `Φ_ext`, size `FOM × N_EXT`.
+- `reduced_dynamics_linear :: AbstractMatrix{T}` – `NVAR × NVAR` linear reduced
+  dynamics; only the `Λ_me` and `Λ_e` blocks are read.
 
-## Recurrence
+## Return values
 
-For each mode `r`, a single downward pass computes the `NVAR`-vector polynomial
-`Q_r` using two alternating buffers:
+- `C_coeffs :: Vector{Matrix{T}}` of length `ROM`; `C_coeffs[r]` is
+  `(ORD-1) × ROM`, row `p` = degree-`(p-1)` coefficient of `C_r(s)`.
+- `E_coeffs :: Vector{Matrix{T}}` of length `ROM`; `E_coeffs[r]` is
+  `(ORD-1) × N_EXT`, row `p` = degree-`(p-1)` coefficient of `E_r(s)`.
 
-```
-q ← Yᵀ · J_r[ORD, :]                                                    (j = ORD-1)
-C_coeffs[r][ORD-1, :] ← q[1:ROM];   E_coeffs[r][ORD-1, :] ← q[ROM+1:NVAR]
-
-q ← Yᵀ · J_r[j+1, :] + Λᵀ · q_prev,   j = ORD-2, …, 1
-C_coeffs[r][j, :] ← q[1:ROM];   E_coeffs[r][j, :] ← q[ROM+1:NVAR]
-```
-
-Here `Yᵀ · v = Y' * v` is the FOM → NVAR projection of a row vector `vᵀ`
-onto the eigenmode basis, and `Λᵀ · q` implements the right-multiply
-`q · Λ` stored as a column.  The buffer swap avoids copying.
+When `ORD == 1` both matrices have zero rows and the operators are identically
+zero (the corresponding blocks are absent from the assembled system).
 
 ## Complexity
 
-- Time:    `O(ROM · ORD · FOM · NVAR)` (one `NVAR`-vector update per `(r, j)`)
+- Time:    `O(ROM² · ORD² · FOM)` for the contractions plus
+  `O(ORD · FOM · NVAR · N_EXT)` for the external block recurrence.
 - Storage: `O(ROM · ORD · NVAR)`
 """
 function precompute_orthogonality_column_polynomials(
 	J_coeffs::AbstractVector{<:AbstractMatrix},
-	generalised_right_eigenmodes::AbstractMatrix,   # FOM × NVAR
-	reduced_dynamics_linear::AbstractMatrix,        # NVAR × NVAR
+	right_master_blocks::AbstractArray{<:Number, 3},   # FOM × ORD × ROM
+	external_directions::AbstractMatrix,               # FOM × N_EXT
+	reduced_dynamics_linear::AbstractMatrix,           # NVAR × NVAR
 )
-	T = promote_type(eltype(J_coeffs[1]), eltype(generalised_right_eigenmodes),
-		eltype(reduced_dynamics_linear))
+	T = promote_type(eltype(J_coeffs[1]), eltype(right_master_blocks),
+		eltype(external_directions), eltype(reduced_dynamics_linear))
 	ROM = length(J_coeffs)
 	ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
-	FOM = size(generalised_right_eigenmodes, 1)
-	NVAR = size(generalised_right_eigenmodes, 2)
-	N_EXT = NVAR - ROM
+	FOM = size(J_coeffs[1], 2)
+	N_EXT = size(external_directions, 2)
+	NVAR = ROM + N_EXT
 
-	@assert size(J_coeffs[1], 2) == FOM "J_coeffs rows must have length FOM = $(FOM)."
+	@assert size(right_master_blocks, 1) == FOM &&
+			size(right_master_blocks, 2) == ORD &&
+			size(right_master_blocks, 3) == ROM """
+	right_master_blocks must be FOM × ORD × ROM ($(FOM) × $(ORD) × $(ROM)).
+	"""
+	@assert size(external_directions, 1) == FOM "external_directions must have FOM = $(FOM) rows."
 	@assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
-	@assert ROM ≥ 1 && ROM ≤ NVAR "ROM must satisfy 1 ≤ ROM ≤ NVAR = $(NVAR)."
 
-	# C_coeffs[r] : (ORD-1) × ROM   — row j = degree-(j-1) coeff of C_r(s)
-	# E_coeffs[r] : (ORD-1) × N_EXT — row j = degree-(j-1) coeff of E_r(s)
+	# C_coeffs[r] : (ORD-1) × ROM   — row p = degree-(p-1) coeff of C_r(s)
+	# E_coeffs[r] : (ORD-1) × N_EXT — row p = degree-(p-1) coeff of E_r(s)
 	C_coeffs = [Matrix{T}(undef, ORD - 1, ROM) for _ in 1:ROM]
 	E_coeffs = [Matrix{T}(undef, ORD - 1, N_EXT) for _ in 1:ROM]
 
-	# Two alternating NVAR-length buffers for the current and previous Q_r step.
-	q = Vector{T}(undef, NVAR)
-	q_tmp = Vector{T}(undef, NVAR)
+	ORD == 1 && return C_coeffs, E_coeffs
 
-	for r in 1:ROM
-		Jr = J_coeffs[r]   # ORD × FOM
-
-		if ORD == 1
-			# No Q_r terms exist; C_coeffs[r] and E_coeffs[r] are 0×… (already allocated).
-			continue
+	# External order-blocks: Y_1^e = Φ_ext, Y_{k+1}^e = Y_k^e Λ_e + Y_k^m Λ_me.
+	Λ_me = view(reduced_dynamics_linear, 1:ROM, (ROM+1):NVAR)
+	Λ_e = view(reduced_dynamics_linear, (ROM+1):NVAR, (ROM+1):NVAR)
+	Ye = Vector{Matrix{T}}(undef, ORD - 1)
+	if N_EXT > 0
+		Ye[1] = Matrix{T}(external_directions)
+		for k in 1:(ORD-2)
+			Ye[k+1] = Ye[k] * Λ_e + view(right_master_blocks, :, k, :) * Λ_me
 		end
+	end
 
-		# ── Step j = ORD-1: Q_r[ORD-1] = Yᵀ · J_r[ORD, :] ─────────────────
-		mul!(q, generalised_right_eigenmodes', view(Jr, ORD, :))
-		C_coeffs[r][ORD-1, :] .= @view q[1:ROM]
-		N_EXT > 0 && (E_coeffs[r][ORD-1, :] .= @view q[(ROM+1):NVAR])
-
-		# ── Steps j = ORD-2, …, 1: Q_r[j] = Yᵀ · J_r[j+1,:] + Λᵀ · Q_r[j+1] ──
-		for j in (ORD-2):-1:1
-			mul!(q_tmp, generalised_right_eigenmodes', view(Jr, j+1, :))  # q_tmp = Yᵀ · J_r[j+1,:]
-			mul!(q_tmp, reduced_dynamics_linear', q, one(T), one(T))       # q_tmp += Λᵀ · Q_r[j+1]
-			q, q_tmp = q_tmp, q                                            # swap buffers (no copy)
-			C_coeffs[r][j, :] .= @view q[1:ROM]
-			N_EXT > 0 && (E_coeffs[r][j, :] .= @view q[(ROM+1):NVAR])
+	# Bilinear contractions of the row coefficients against the right blocks:
+	#   C_coeffs[r][p, m] = Σ_{k=1}^{ORD-p} J_r[p+k, :] · Y_k^m[:, m]
+	#   E_coeffs[r][p, e] = Σ_{k=1}^{ORD-p} J_r[p+k, :] · Y_k^e[:, e]
+	for r in 1:ROM
+		Jr = J_coeffs[r]
+		for p in 1:(ORD-1)
+			for m in 1:ROM
+				acc = zero(T)
+				for k in 1:(ORD-p)
+					@inbounds for i in 1:FOM
+						acc += Jr[p+k, i] * right_master_blocks[i, k, m]
+					end
+				end
+				C_coeffs[r][p, m] = acc
+			end
+			for e in 1:N_EXT
+				acc = zero(T)
+				for k in 1:(ORD-p)
+					Yk = Ye[k]
+					@inbounds for i in 1:FOM
+						acc += Jr[p+k, i] * Yk[i, e]
+					end
+				end
+				E_coeffs[r][p, e] = acc
+			end
 		end
 	end
 

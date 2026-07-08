@@ -7,9 +7,11 @@ dense `DefaultEigensolver` and extracts everything `solve_cohomological_problem`
 - `master_eigenvalues :: SVector{2, ComplexF64}` — (λ₁, conj λ₁), slowest oscillatory pair
 - `master_modes :: Matrix` (FOM × 2) — conjugate by construction, tip-normalised
 - `master_modes_derivatives :: Array` (FOM × 2 × 2) — blocks (λ₁φ, λ₁²φ)
-- `left_eigenmodes :: Matrix` (FOM × 2) — pencil left vectors ℓ with ℓᵀP(λ₁) = 0
-  (highest-order block of the companion left eigenvector), selected among
-  matching/conjugation candidates by normalised pencil residual
+- `left_eigenmodes :: Matrix` (FOM × 2) — sesquilinear pencil left vectors φ with
+  P(λ)ᴴ φ = 0 (highest-order block of the companion left eigenvector), selected
+  among matching/conjugation candidates by normalised pencil residual
+- `left_modes_derivatives :: Array` (FOM × 2 × 2) — lower-order left eigenvector
+  blocks φ₁, φ₂ (from `left_eigenmode_orders_from_slice`)
 
 Why not `solve_eigenproblem`: its global left/right matching and biorthogonal
 normalisation are ill-posed on the ~n-fold quasi-degenerate RC relaxation cluster of
@@ -72,7 +74,12 @@ function dea_eigenanalysis(model, B0, B1, B2, B3, idx_wtip, rc_target;
 	cands = (XL[:, 3, j1], conj.(XL[:, 3, j1]), XL[:, 3, j2], conj.(XL[:, 3, j2]))
 	resids = [norm(Pt(λ1) * ℓc) / (pencil_scale(λ1) * norm(ℓc)) for ℓc in cands]
 	ℓ = collect(cands[argmin(resids)])
-	left_eigenmodes = Matrix{ComplexF64}(hcat(ℓ, conj.(ℓ)))
+	# ℓ is the bilinear left vector (ℓᵀP(λ₁) = 0). The sesquilinear convention
+	# used by the orthogonality equations (P(λ)ᴴ φ = 0) gives, for real B_k,
+	# φ@λ₁ = conj(ℓ) and φ@conj(λ₁) = ℓ.
+	left_eigenmodes = Matrix{ComplexF64}(hcat(conj.(ℓ), ℓ))
+	left_modes_derivatives = left_eigenmode_orders_from_slice(
+		(B0, B1, B2, B3), left_eigenmodes, [λ1, conj(λ1)])[:, 1:2, :]
 
 	# ── acceptance (Phase 6) ──────────────────────────────────────────────────
 	resR = norm(P(λ1) * φ) / (pencil_scale(λ1) * norm(φ))
@@ -96,5 +103,6 @@ function dea_eigenanalysis(model, B0, B1, B2, B3, idx_wtip, rc_target;
 		@printf "Phase 6 checks passed: λ₁ = %+.6f %+.6fim  (residuals R %.1e | L %.1e)\n" real(λ1) imag(λ1) resR minimum(resids)
 	end
 
-	return (; λs, λ1, master_eigenvalues, master_modes, mmd, left_eigenmodes)
+	return (; λs, λ1, master_eigenvalues, master_modes, mmd, left_eigenmodes,
+		left_modes_derivatives)
 end

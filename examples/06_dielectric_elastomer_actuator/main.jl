@@ -61,7 +61,8 @@ n = fe.n
 # ─────────────────────────────────────────────────────────────────────────────
 println("\nEigenanalysis (dense companion form, 3n = $(3n)) …")
 eig = dea_eigenanalysis(model_auto, B0, B1, B2, B3, fe.idx_wtip, bp.ĉ / p.R)
-(; λ1, master_eigenvalues, master_modes, mmd, left_eigenmodes) = eig
+(; λ1, master_eigenvalues, master_modes, mmd, left_eigenmodes,
+	left_modes_derivatives) = eig
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Milestone 1 — autonomous reduction (backbone)
@@ -72,7 +73,8 @@ res2 = resonance_set_from_complex_normal_form_style(
 	mset2, Vector{ComplexF64}(master_eigenvalues), 0.05)
 @time W_a, R_a = solve_cohomological_problem(
 	model_auto, mset2, master_eigenvalues, master_modes, left_eigenmodes, res2;
-	master_modes_derivatives = mmd, conjugate_permutation = [2, 1])
+	master_modes_derivatives = mmd, left_modes_derivatives = left_modes_derivatives,
+	conjugate_permutation = [2, 1])
 
 # Realify the master equation ż₁ = ẋ₁ + i ẏ₁ in real variables (x₁, y₁):
 # Re(c) feeds ẋ₁, Im(c) feeds ẏ₁ (imaginary parts carry the frequency content).
@@ -104,7 +106,8 @@ res4 = resonance_set_from_complex_normal_form_style(
 	external_eigenvalues = ComplexF64[im * Ω, -im * Ω])
 @time W, R = solve_cohomological_problem(
 	model_f, mset4, master_eigenvalues, master_modes, left_eigenmodes, res4;
-	master_modes_derivatives = mmd, conjugate_permutation = [2, 1, 4, 3])
+	master_modes_derivatives = mmd, left_modes_derivatives = left_modes_derivatives,
+	conjugate_permutation = [2, 1, 4, 3])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. Acceptance checks + realification

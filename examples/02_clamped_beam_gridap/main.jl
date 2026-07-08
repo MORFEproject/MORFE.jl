@@ -284,12 +284,17 @@ end
 # 5. Solve cohomological equations
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
+left_modes_derivatives = left_eigenmode_orders_from_slice(
+	model.linear_terms, left_eigenmodes,
+	collect(master_eigenvalues))[:, 1:(ORD_model-1), :]
+
 _t_solve = @elapsed W, R = solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
 	master_modes, left_eigenmodes,
 	resonance_set;
 	master_modes_derivatives = master_modes_derivatives,
+	left_modes_derivatives = left_modes_derivatives,
 )
 
 # ------------------------------------------------------------------------------

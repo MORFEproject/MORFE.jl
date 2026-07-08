@@ -7,8 +7,6 @@ using Arpack
 using LinearAlgebra
 using LinearMaps
 using SparseArrays
-_ext(f) = joinpath(pkgdir(MORFE), "ext", "SpectralDecomposition", f)
-include(_ext("PropagateEigenmodes.jl"))  # defines MORFEArpackExt.PropagateEigenmodes
 
 # ── generalised_eigenpairs ─────────────────────────────────────────────────────
 

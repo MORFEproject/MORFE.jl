@@ -274,6 +274,8 @@ function exact_rom(θ₁_star, θ₂_star)
 		derivs★[:, 1, r] .= Y★[:, 2, r]
 	end
 
+	left_derivs★ = ep★.left_eigenmodes_orders[:, 1:1, 1:ROM_VAL]
+
 	res_set★ = resonance_set_from_complex_normal_form_style(
 		mset_ex, Vector{ComplexF64}(master_eigs★), 0.05)
 	print("  Cohomological solve: ")
@@ -281,6 +283,7 @@ function exact_rom(θ₁_star, θ₂_star)
 		model★, mset_ex,
 		master_eigs★, master_modes★, left_modes★, res_set★;
 		master_modes_derivatives = derivs★,
+		left_modes_derivatives = left_derivs★,
 		conjugate_permutation    = CONJ_EXACT)
 	return W★, R★
 end

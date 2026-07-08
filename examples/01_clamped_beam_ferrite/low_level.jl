@@ -163,13 +163,19 @@ function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::Mechanical_
 	R = solver.right_eig_result
 	FOM = size(R, 1) ÷ 2
 	L = similar(R)
+	M = model.linear_terms[3]
+	C = model.linear_terms[2]
 
 	for i in 1:(length(solver.eigenvalues)÷2)
 		L[(FOM+1):end, 2i-1] = R[1:FOM, 2i]
 		L[(FOM+1):end, 2i] = R[1:FOM, 2i-1]
 	end
 	for (i, λ) in enumerate(solver.eigenvalues)
-		L[1:FOM, i] = -(1 / conj(λ)) * model.linear_terms[1]' * L[(FOM+1):end, i]
+		# Sesquilinear left position block (conj(λ)M + C)ϕ — algebraically equal
+		# to -(1/conj(λ))Kᵀϕ, but built from the moderate-norm M, C instead of K
+		# (which amplifies eigensolver noise by (ω_max/ω₁)²).
+		ϕ = view(L, (FOM+1):2FOM, i)
+		L[1:FOM, i] = conj(λ) .* (M * ϕ) .+ C * ϕ
 	end
 	return solver.eigenvalues, reshape(L, FOM, 2, size(L, 2))
 end
@@ -196,7 +202,7 @@ select_master_modes_by_sorting(eigenproblem, ROM)
 
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[:, 1, 1:ROM]
-left_eigenmodes = Y[:, 2, 1:ROM]
+left_eigenmodes = X[:, 1:ROM]
 
 ORD_model = length(model.linear_terms) - 1   # = 2
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
@@ -205,6 +211,10 @@ for r in 1:ROM
 		master_modes_derivatives[:, k, r] .= Y[:, k+1, r]
 	end
 end
+
+# Lower-order left eigenvector blocks (scale-consistent with the physical
+# slice above — both come from the same Eigenproblem storage).
+left_modes_derivatives = eigenproblem.left_eigenmodes_orders[:, 1:(ORD_model-1), 1:ROM]
 
 # -----------------------------------------------------------------------
 # 7. Multiindex set and resonance set
@@ -233,6 +243,7 @@ _t_solve = @elapsed W, R = solve_cohomological_problem(
 	master_modes, left_eigenmodes,
 	resonance_set;
 	master_modes_derivatives = master_modes_derivatives,
+	left_modes_derivatives = left_modes_derivatives,
 	conjugate_permutation = [2, 1],
 )
 

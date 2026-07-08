@@ -49,14 +49,12 @@ function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::RayleighEig
     @assert solver.right_eig_result !== nothing "Run solve() first"
     R = solver.right_eig_result
     FOM = size(R, 1) ÷ 2
-    L = similar(R)
-
-    for i in 1:(length(solver.eigenvalues) ÷ 2)
-        L[(FOM + 1):end, 2i - 1] = R[1:FOM, 2i]
-        L[(FOM + 1):end, 2i] = R[1:FOM, 2i - 1]
-    end
-    for (i, λ) in enumerate(solver.eigenvalues)
-        L[1:FOM, i] = -(1 / conj(λ)) * model.linear_terms[1]' * L[(FOM + 1):end, i]
-    end
-    return solver.eigenvalues, reshape(L, FOM, 2, size(L, 2))
+    Y = reshape(R, FOM, 2, size(R, 2))
+    # Analytic sesquilinear left blocks φ = [(conj(λ)M + C)ϕ; ϕ] — algebraically
+    # equal to -(1/conj(λ))Kᵀϕ via the quadratic eigenrelation, but built from
+    # the moderate-norm M, C instead of K (which amplifies eigensolver noise by
+    # (ω_max/ω₁)²). Shared with StructureModalDampingEigensolver.
+    left = MORFE.Eigenproblems._structural_left_eigenmode_orders(
+        solver.eigenvalues, Y, model.linear_terms[3], model.linear_terms[2])
+    return solver.eigenvalues, left
 end

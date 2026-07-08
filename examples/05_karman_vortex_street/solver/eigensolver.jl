@@ -142,7 +142,13 @@ function solve_hopf_eigenproblem(
 
     master_eigenvalues = SVector{2, ComplexF64}(λ₁, λ₂)
     master_modes       = hcat(φ₁, φ₂)
-    left_eigenmodes    = hcat(ψ₁, ψ₂)
+    # ψ₁ is the BILINEAR left vector (ψ₁ᵀ(A − λ₁B) = 0). The orthogonality
+    # equations use the sesquilinear convention φᴴ(λB − A) = 0, which for the
+    # real matrices here is φ@λ₁ = conj(ψ₁), φ@λ₂ = conj(ψ₂). With these the
+    # assembled row φᴴB₁W = 0 equals the bilinear ψ₁ᵀB₁W = 0 exactly; passing
+    # ψ un-conjugated would pair each border row with the WRONG mode of the
+    # conjugate pair (cross-mode pairing ≈ 0 → near-singular resonant solves).
+    left_eigenmodes    = hcat(conj.(ψ₁), conj.(ψ₂))
 
     # ── All modes (positive-imaginary half, sorted by |Re(λ)|) ────────────────
     # Filter out conjugate duplicates; sort most-weakly-damped first so that

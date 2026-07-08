@@ -168,6 +168,10 @@ linear-operator tuple is read from `model.linear_terms`.
 - `resonance_set :: ResonanceSet`.
 - `initial_W`, `initial_R` — optionally supply already-initialised objects.
 - `master_modes_derivatives` — `FOM × (ORD-1) × ROM`; required when `ORD > 1`.
+- `left_modes_derivatives` — `FOM × (ORD-1) × ROM`; the lower-order left
+  eigenvector blocks `left_modes_derivatives[:, j, r] = φ_{r,j}` (as returned by
+  `solve_left`); required when `ORD > 1`. The orthogonality row operators are
+  read directly off these blocks — no eigenvalue folding.
 - `conjugate_permutation` — optional `AbstractVector{Int}` of length NVAR encoding the
   conjugate permutation on modes.  `perm[i] = j` means mode `j` is the complex conjugate
   of mode `i`.  When `nothing` (default), no conjugate-symmetry exploitation is performed.
@@ -191,6 +195,7 @@ function solve_cohomological_problem(
 	initial_W::Union{Nothing, Parametrisation} = nothing,
 	initial_R::Union{Nothing, ReducedDynamics} = nothing,
 	master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
+	left_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
 	conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
 	show_progress::Bool = true,
 	benchmark_dir::Union{Nothing, AbstractString} = nothing,
@@ -262,8 +267,12 @@ function solve_cohomological_problem(
 
 	# ── 3. Φ_ext-independent operators ───────────────────────────────────────
 	orthogonality_J_coeffs = precompute_orthogonality_operator_coefficients(
-		linear_terms, left_eigenmodes, master_eigenvalues,
+		linear_terms, left_eigenmodes, left_modes_derivatives,
 	)
+	# Right master-mode order-blocks: the linear master monomials of W hold all
+	# ORD derivative blocks (filled from the eigenvectors at initialisation).
+	right_master_blocks = view(W.poly.coefficients, :, :,
+		(unit_offset+1):(unit_offset+ROM))
 	Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset+1):(unit_offset+ROM))
 	invariance_C_coeffs, D_master_steps = precompute_master_column_polynomials(
 		linear_terms, master_modes, Λ_master,
@@ -276,7 +285,7 @@ function solve_cohomological_problem(
 		)
 		partial_eigenmodes = hcat(master_modes, zeros(T, FOM, N_EXT))
 		partial_orth_C_coeffs, partial_orth_E_coeffs = precompute_orthogonality_column_polynomials(
-			orthogonality_J_coeffs, partial_eigenmodes, Λ,
+			orthogonality_J_coeffs, right_master_blocks, zeros(T, FOM, N_EXT), Λ,
 		)
 		partial_ctx = _build_context(
 			linear_terms, partial_eigenmodes, lambda_diag,
@@ -306,7 +315,7 @@ function solve_cohomological_problem(
 		linear_terms, external_directions, Λ, D_master_steps,
 	)
 	orthogonality_C_coeffs, orthogonality_E_coeffs = precompute_orthogonality_column_polynomials(
-		orthogonality_J_coeffs, generalised_eigenmodes, Λ,
+		orthogonality_J_coeffs, right_master_blocks, external_directions, Λ,
 	)
 
 	# ── 6. Full context and main solve ────────────────────────────────────────

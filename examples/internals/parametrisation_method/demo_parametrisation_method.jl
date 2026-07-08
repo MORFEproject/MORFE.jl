@@ -34,6 +34,7 @@ using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_mat
 using MORFE.ExternalSystems: ExternalSystem
 using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
 using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.Eigenproblems: left_eigenmode_orders_from_slice
 using MORFE.InvarianceError: invariance_error_norms, invariance_error_convergence,
 	plot_invariance_convergence
 using LinearAlgebra
@@ -204,12 +205,17 @@ resonance_set = resonance_set_from_graph_style(
 # 8. Solve cohomological equations
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
+left_modes_derivatives = left_eigenmode_orders_from_slice(
+	model.linear_terms, left_eigenmodes,
+	collect(master_eigenvalues))[:, 1:(ORD_model-1), :]
+
 W, R = solve_cohomological_problem(
 	model, mset,
 	master_eigenvalues,
 	master_modes, left_eigenmodes,
 	resonance_set;
 	master_modes_derivatives = master_modes_derivatives,
+	left_modes_derivatives = left_modes_derivatives,
 	conjugate_permutation = [2, 1, 3],
 )
 

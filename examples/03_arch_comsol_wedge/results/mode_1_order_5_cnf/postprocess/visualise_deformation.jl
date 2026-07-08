@@ -43,8 +43,7 @@ const theta_phase = 0.0
 # §1  Mesh + DOF setup  (no assembly, no eigenproblem)
 # -----------------------------------------------------------------------
 
-const _mesh_path = joinpath(
-    @__DIR__, "../../../../MORFE2.0-main/input/morfe_examples/arch_2_force.mphtxt")
+const _mesh_path = joinpath(@__DIR__, "../../../arch_2_force.mphtxt")
 isfile(_mesh_path) || error("Mesh not found: $_mesh_path")
 
 println("\n§1  Loading mesh …")

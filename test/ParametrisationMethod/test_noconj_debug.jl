@@ -61,6 +61,10 @@ end
 # For a symmetric real system, left eigenmodes = right eigenmodes
 const _left_eigenmodes = _master_modes
 
+# Lower-order left eigenvector blocks from the physical slice
+const _left_modes_derivatives = MORFE.Eigenproblems.left_eigenmode_orders_from_slice(
+    (_K, _C, _M), _left_eigenmodes, [_λ₁, _λ₂])[:, 1:1, :]
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Multiindex set (shared; all monomials of total degree 1…max_degree in NVAR vars)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -98,7 +102,8 @@ function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
 
     model   = _make_model(f_vec)
     res_set = _make_resonance()
-    shared  = (master_modes_derivatives = _master_modes_derivatives, show_progress = false)
+    shared  = (master_modes_derivatives = _master_modes_derivatives,
+        left_modes_derivatives = _left_modes_derivatives, show_progress = false)
 
     W_conj, R_conj = solve_cohomological_problem(
         model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, res_set;

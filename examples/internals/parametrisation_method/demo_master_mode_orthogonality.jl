@@ -6,145 +6,165 @@ using MORFE.MasterModeOrthogonality:
 	evaluate_orthogonality_external_rhs,
 	assemble_orthogonality_matrix_and_rhs!
 using LinearAlgebra
+using Random
 using StaticArrays: SVector
 
 # -------------------------------------------------------------------
-# 1.  Define problem dimensions and parameters
+# 1.  A genuine complex second-order pencil and its eigenvectors
 # -------------------------------------------------------------------
+# The orthogonality condition at a monomial with superharmonic s is the
+# sesquilinear B-orthogonality of the companion LEFT eigenvector φ against
+# the first-order state 𝒲:
+#
+#     φᴴ B 𝒲 = 0,   𝒲 = [W₁; …; W_ORD],  W₁ = W,  W_{j+1} = s W_j + Y_j f + ξ_j
+#
+# Everything below is checked against that identity — no eigenvalue enters
+# the precomputation; the row coefficients are the (conjugated) left
+# eigenvector order-blocks.
+Random.seed!(42)
+
 FOM = 5          # full-order model dimension
-ROM = 2          # number of master modes (reduced coordinates)
-N_EXT = 1          # number of external forcing modes (NVAR = ROM + N_EXT)
+ROM = 2          # number of master modes
+N_EXT = 1          # number of external forcing modes
 NVAR = ROM + N_EXT
 
-ORD = 2          # polynomial order of the ODE (B matrices: B₀, B₁, B₂)
-ORDP1 = ORD + 1   # number of linear matrices
+ORD = 2          # ODE order (B matrices: B₀, B₁, B₂)
+ORDP1 = ORD + 1
 
-# Linear matrices B₀, B₁, B₂ (each FOM × FOM).
-# For a second-order system: B₂ x'' + B₁ x' + B₀ x = ...
-B0 = 2.0 * Matrix{ComplexF64}(I, FOM, FOM)
-B1 = 3.0 * Matrix{ComplexF64}(I, FOM, FOM)
-B2 = 5.0 * Matrix{ComplexF64}(I, FOM, FOM)
+# COMPLEX matrices: a real system would hide the sesquilinear conjugation.
+B0 = randn(ComplexF64, FOM, FOM)
+B1 = randn(ComplexF64, FOM, FOM)
+B2 = randn(ComplexF64, FOM, FOM)
+fom_matrices = (B0, B1, B2)   # fom_matrices[k+1] = Bₖ
 
-fom_matrices = (B0, B1, B2)   # NTuple{ORDP1}: fom_matrices[k+1] = Bₖ
+# Companion pencil (A, B) as in linear_first_order_matrices.
+A_comp = [zeros(ComplexF64, FOM, FOM) I; -B0 -B1]
+B_comp = [Matrix{ComplexF64}(I, FOM, FOM) zeros(ComplexF64, FOM, FOM);
+		  zeros(ComplexF64, FOM, FOM) B2]
 
-# Eigenvalues of the master modes.
-λ₁ = -0.1 + 1.0im
-λ₂ = -0.1 - 1.0im
-master_eigenvalues = SVector{ROM, ComplexF64}(λ₁, λ₂)
+# Right eigenpairs (λ, ψ):  (λB − A) ψ = 0.
+FR = eigen(A_comp, B_comp)
+# Left eigenvectors (solve_left convention): eigen of (Aᴴ, Bᴴ) has pencil
+# eigenvalue ν with the reported eigenvalue conj(ν); the eigenvector φ solves
+# φᴴ (λB − A) = 0 for λ = conj(ν).
+FL = eigen(A_comp', B_comp')
 
-# Left eigenmodes Xℓ_r (each a length-FOM vector).
-# For simplicity, use the first two standard basis vectors.
-Xℓ₁ = [1.0 + 0.0im, 0.0, 0.0, 0.0, 0.0]
-Xℓ₂ = [0.0 + 0.0im, 1.0, 0.0, 0.0, 0.0]
-left_eigenmodes = hcat(Xℓ₁, Xℓ₂)   # FOM × ROM matrix
+# Two master modes: pick two well-separated finite eigenvalues.
+finite = findall(x -> isfinite(x) && abs(x) < 1e6, FR.values)
+master_idx = finite[1:ROM]
+master_eigenvalues = SVector{ROM, ComplexF64}(FR.values[master_idx]...)
 
-# Generalised right eigenvectors Y (FOM × NVAR).
-# Columns 1:ROM = master modes, ROM+1:NVAR = external forcing modes.
-generalised_right_eigenmodes = Matrix{ComplexF64}(I, FOM, NVAR)
+right_blocks = zeros(ComplexF64, FOM, ORD, ROM)   # Y_k blocks (position, velocity)
+left_blocks = zeros(ComplexF64, FOM, ORD, ROM)    # φ_j blocks
+for (r, i) in enumerate(master_idx)
+	right_blocks[:, :, r] .= reshape(FR.vectors[:, i], FOM, ORD)
+	j = argmin(abs.(conj.(FL.values) .- FR.values[i]))
+	left_blocks[:, :, r] .= reshape(FL.vectors[:, j], FOM, ORD)
+end
+master_modes = right_blocks[:, 1, :]              # physical right slices ψ
+left_eigenmodes = left_blocks[:, ORD, :]          # physical left slices ℓ = φ_ORD
 
-# Reduced dynamics linear part Λ (NVAR × NVAR).
-# Eigenvalues: λ₁, λ₂ for master modes; λ_ext = 0+1im for the external mode.
-reduced_dynamics_linear = ComplexF64[-0.1+1.0im 0.0+0.0im 1.0+0.0im;   # coupling: forcing excites master mode 1
-	0.0+0.0im -0.1-1.0im 0.0+0.0im;   # no coupling to master mode 2
-	0.0+0.0im 0.0+0.0im 0.0+1.0im]
+println("Master eigenvalues: ", collect(master_eigenvalues))
 
-println("Reduced dynamics Λ (NVAR × NVAR):")
-display(reduced_dynamics_linear)
+# External forcing mode: physical direction Φ_ext, eigenvalue iΩ, coupled to
+# master mode 1 through Λ.
+Φ_ext = randn(ComplexF64, FOM, N_EXT)
+λ_ext = 0.0 + 1.0im
+reduced_dynamics_linear = ComplexF64[
+	master_eigenvalues[1] 0 1;   # forcing excites master mode 1
+	0 master_eigenvalues[2] 0;
+	0 0 λ_ext]
 
 # -------------------------------------------------------------------
-# 2.  Precompute J_coeffs: row operator coefficients L_r(s)
+# 2.  J_coeffs: row coefficients read off the left eigenvector blocks
 # -------------------------------------------------------------------
-# J_coeffs is Vector{Matrix{ComplexF64}}.
-# J_coeffs[r] is ORD × FOM; row j stores the degree-(j-1) coefficient of L_r(s).
-#
-# Recurrence (ORD = 2):
-#   J_r[2, :] = B₂^† · Xℓ_r
-#   J_r[1, :] = λ_r · J_r[2, :] + B₁^† · Xℓ_r
-#
-# => L_r(s) = J_r[1,:] + J_r[2,:] · s
-#           = Xℓ_r^† · (B₂·(s + λ_r) + B₁)   (row vector)
+#   J_r[j, :]   = conj(φ_{r,j})          j = 1 … ORD-1
+#   J_r[ORD, :] = conj(B_ORDᴴ φ_{r,ORD})
+# No eigenvalue is used.
 J_coeffs = precompute_orthogonality_operator_coefficients(
-	fom_matrices, left_eigenmodes, master_eigenvalues,
+	fom_matrices, left_eigenmodes, left_blocks[:, 1:(ORD-1), :],
 )
 
-println("\n=== Precomputed row operator coefficients J_coeffs ===")
+println("\n=== J_coeffs from left eigenvector order-blocks ===")
 for r in 1:ROM
 	println("\nJ_coeffs[$r] (ORD × FOM):")
 	display(J_coeffs[r])
 end
 
-# Manual verification for J_coeffs.
-println("\nManual J_coeffs verification")
+# Ground truth: the assembled bilinear row J_r(s)·W must equal φ_rᴴ B 𝒲(W)
+# for the pure-W lift 𝒲 = [W; sW].
+println("\nGround-truth check  J_r(s)ᵀ W  =  φ_rᴴ B 𝒲(W):")
 for r in 1:ROM
-	Xℓ = left_eigenmodes[:, r]
-	λ = master_eigenvalues[r]
-	J2_manual = B2' * Xℓ                    # degree-1 coefficient
-	J1_manual = B2' * Xℓ .* λ .+ B1' * Xℓ   # degree-0 coefficient
-	println("Mode $r  |  J_$r[2,:] error = ", norm(J_coeffs[r][2, :] - J2_manual))
-	println("Mode $r  |  J_$r[1,:] error = ", norm(J_coeffs[r][1, :] - J1_manual))
+	φ = vec(left_blocks[:, :, r])
+	for s in (0.3 + 0.5im, master_eigenvalues[r], -1.2 + 0.1im)
+		W = randn(ComplexF64, FOM)
+		row = J_coeffs[r][1, :] .+ J_coeffs[r][2, :] .* s
+		lift = vcat(W, s .* W)
+		err = abs(transpose(row) * W - φ' * B_comp * lift)
+		println("  mode $r, s = $(round(s, digits = 3)):  error = $err")
+	end
 end
 
 # -------------------------------------------------------------------
-# 3.  Precompute C_coeffs and E_coeffs: joint operator D_r(s) columns
+# 3.  C_coeffs / E_coeffs: couplings from the RIGHT eigenvector blocks
 # -------------------------------------------------------------------
-# C_coeffs[r] is (ORD-1) × ROM;   C_r(s) = Σ_{j=1}^{ORD-1} C_coeffs[r][j,:] · s^{j-1}
-# E_coeffs[r] is (ORD-1) × N_EXT; E_r(s) = Σ_{j=1}^{ORD-1} E_coeffs[r][j,:] · s^{j-1}
-#
-# For ORD = 2, ORD-1 = 1: both polynomials are constants (degree 0):
-#   Q_r[1] = Y^† · J_r[2, :] = Y^† · B₂^† · Xℓ_r
-#   C_coeffs[r][1, :] = Q_r[1][1:ROM]
-#   E_coeffs[r][1, :] = Q_r[1][ROM+1:NVAR]
-C_coeffs,
-E_coeffs = precompute_orthogonality_column_polynomials(
-	J_coeffs, generalised_right_eigenmodes, reduced_dynamics_linear,
+#   C_r(s) = Σ_k G_{r,k}(s) · Y_k^m      (right master blocks)
+#   E_r(s) = Σ_k G_{r,k}(s) · Y_k^e      (external blocks via Λ recurrence)
+C_coeffs, E_coeffs = precompute_orthogonality_column_polynomials(
+	J_coeffs, right_blocks, Φ_ext, reduced_dynamics_linear,
 )
 
-println("\n=== Precomputed joint operator coefficients ===")
+println("\n=== C_coeffs / E_coeffs from right eigenvector blocks ===")
 for r in 1:ROM
 	println("\nC_coeffs[$r] ((ORD-1) × ROM):")
 	display(C_coeffs[r])
-	println("\nE_coeffs[$r] ((ORD-1) × N_EXT):")
+	println("E_coeffs[$r] ((ORD-1) × N_EXT):")
 	display(E_coeffs[r])
 end
 
-# Manual verification.
-println("\n--- Manual verification ---")
-Y = generalised_right_eigenmodes
+# Manual check (ORD = 2 → constants): C_r[1, m] = J_r[2, :] · Y₁^m  (bilinear).
+println("\nManual verification (bilinear contraction):")
 for r in 1:ROM
-	Xℓ = left_eigenmodes[:, r]
-	Q1_manual = Y' * (B2' * Xℓ)    # = (Xℓ^† · B₂ · Y)^†, i.e. stored as column
-	C1_manual = Q1_manual[1:ROM]
-	E1_manual = Q1_manual[(ROM+1):NVAR]
-	println("Mode $r  |  C_coeffs[r][1,:] error = ", norm(C_coeffs[r][1, :] - C1_manual))
-	println("Mode $r  |  E_coeffs[r][1,:] error = ", norm(E_coeffs[r][1, :] - E1_manual))
+	C_manual = [transpose(J_coeffs[r][2, :]) * right_blocks[:, 1, m] for m in 1:ROM]
+	E_manual = [transpose(J_coeffs[r][2, :]) * Φ_ext[:, e] for e in 1:N_EXT]
+	println("  mode $r  |  C error = ", norm(C_coeffs[r][1, :] - C_manual),
+		"  |  E error = ", norm(E_coeffs[r][1, :] - E_manual))
 end
 
 # -------------------------------------------------------------------
-# 4.  Data for a specific multi-index
+# 4.  Full orthogonality identity  φᴴ B 𝒲 = J·W + C·f_m + E·f_e + Σ G_k·ξ_k
 # -------------------------------------------------------------------
-# Superharmonic s = Σᵢ kᵢ λᵢ
-s = -2.0 + 0.0im
-
-# Resonance pattern: only master mode 1 is resonant.
+s = master_eigenvalues[1]                     # exact resonance
 resonance = SVector{ROM, Bool}(true, true)
 nR = count(resonance)
 
-# Lower‑order couplings ξ_j (j = 1…ORD) – each is a FOM‑vector
-# In a real simulation these come from lower‑order multiindices.
-lower_order_couplings = SVector{ORD, Vector{ComplexF64}}(
-	[0.1, 0.1, 0.1, 0.1, 0.1],       # position
-	[10.0, 10.0, 10.0, 10.0, 10.0],  # velocity
-)
+W = randn(ComplexF64, FOM)
+f = randn(ComplexF64, NVAR)                   # f = [f_m; f_e]
+ξ = [randn(ComplexF64, FOM) for _ in 1:(ORD-1)]
+lower_order_couplings = SVector{ORD, Vector{ComplexF64}}(ξ[1], zeros(ComplexF64, FOM))
 
-# External dynamics amplitudes (length N_EXT).
-external_dynamics = ComplexF64[-1000.0]
+println("\n=== Full identity check at exact resonance s = λ₁ ===")
+for r in 1:ROM
+	φ = vec(left_blocks[:, :, r])
+	# True first-order state from the recurrence W_{j+1} = s W_j + Y_j f + ξ_j.
+	Y1 = hcat(right_blocks[:, 1, :], Φ_ext)   # physical blocks of all NVAR modes
+	W2 = s .* W .+ Y1 * f .+ ξ[1]
+	truth = φ' * B_comp * vcat(W, W2)
+
+	row = J_coeffs[r][1, :] .+ J_coeffs[r][2, :] .* s
+	Cf = sum(C_coeffs[r][1, m] * f[m] for m in 1:ROM)
+	Ef = sum(E_coeffs[r][1, e] * f[ROM+e] for e in 1:N_EXT)
+	Gξ = transpose(J_coeffs[r][2, :]) * ξ[1]
+	recon = transpose(row) * W + Cf + Ef + Gξ
+	println("  mode $r:  |φᴴB𝒲 − (J·W + C·f_m + E·f_e + G·ξ)| = ", abs(truth - recon))
+end
 
 # -------------------------------------------------------------------
-# 5.  Assemble the orthogonality matrix and right-hand side
+# 5.  Assembled system and low-level evaluators
 # -------------------------------------------------------------------
-# M   : nR × (FOM + nR)  with  M = [ L | C ]
-# rhs : length nR
-M   = Matrix{ComplexF64}(undef, nR, FOM + nR)
+external_dynamics = ComplexF64[f[ROM+e] for e in 1:N_EXT]
+
+M = Matrix{ComplexF64}(undef, nR, FOM + nR)
 rhs = zeros(ComplexF64, nR)
 assemble_orthogonality_matrix_and_rhs!(
 	M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
@@ -152,103 +172,43 @@ assemble_orthogonality_matrix_and_rhs!(
 )
 
 println("\n=== Assembled orthogonality system ===")
-println("\nSystem matrix M (nR × (FOM + nR)) = ($nR × $(FOM + nR)):")
+println("System matrix M ($nR × $(FOM + nR)):")
 display(M)
-println("\nRight-hand side rhs (length nR = $nR):")
+println("\nRight-hand side (length $nR):")
 display(rhs)
 
-println("\n--- Manual verification ---")
-M_manual = zeros(ComplexF64, nR, FOM + nR)
-rhs_manual = zeros(ComplexF64, nR)
-row_count = 1
-for r in 1:ROM
-	if resonance[r]
-		aux = B2' * left_eigenmodes[:, r]
-		M_manual[row_count, 1:FOM] = aux * (s + master_eigenvalues[r]) .+
-									 (B1' * left_eigenmodes[:, r])
-
-		for rr in 1:ROM
-			if resonance[rr]
-				M_manual[row_count, FOM+rr] = dot(
-					generalised_right_eigenmodes[:, rr], aux)
-			end
-		end
-
-		rhs_manual[row_count] = -lower_order_couplings[1]' * (B2' * left_eigenmodes[:, r])   # only j=1 coupling for ORD=2
-		global row_count += 1
-	end
+# The assembled equation  M · [W; f_res] = rhs  must be equivalent to the
+# identity of section 4 with φᴴB𝒲 = 0 moved around:
+#   J·W + C·f_res = −E·f_e − Σ G_k·ξ_k
+println("\nAssembly consistency (row equation vs identity):")
+for (row_i, r) in enumerate(findall(collect(resonance)))
+	lhs = transpose(M[row_i, 1:FOM]) * W +
+		  sum(M[row_i, FOM+m] * f[m] for m in 1:nR)
+	φ = vec(left_blocks[:, :, r])
+	Y1 = hcat(right_blocks[:, 1, :], Φ_ext)
+	W2 = s .* W .+ Y1 * f .+ ξ[1]
+	truth = φ' * B_comp * vcat(W, W2)
+	# lhs − rhs must equal φᴴB𝒲 (both express the same functional)
+	println("  row $row_i:  |(M·[W;f] − rhs) − φᴴB𝒲| = ", abs(lhs - rhs[row_i] - truth))
 end
-println("System matrix error:", norm(M - M_manual))
-println("RHS error:", norm(rhs - rhs_manual))
 
-# -------------------------------------------------------------------
-# 6.  Low-level function demonstrations
-# -------------------------------------------------------------------
-println("\n=== Low-level function demonstrations ===")
-
-# 6a.  Fused L_r(s) row + scalar lower-order RHS for mode r = 1.
+# Low-level evaluators.
 row1 = zeros(ComplexF64, FOM)
 rhs_lower_1 = evaluate_orthogonality_row_and_lower_order_rhs!(
 	row1, s, lower_order_couplings, J_coeffs[1],
 )
-println("\nL₁($s) row vector:")
+println("\nL₁(s) row (fused Horner):")
 display(row1)
-println("Lower-order RHS contribution for mode 1: ", rhs_lower_1)
+println("Lower-order RHS for mode 1: ", rhs_lower_1)
+println("Bilinear check: ", abs(rhs_lower_1 -
+								(-transpose(J_coeffs[1][2, :]) * ξ[1])))
 
-# 6b.  Resonant C_r(s) block for mode r = 1.
 c1 = zeros(ComplexF64, nR)
 evaluate_orthogonality_column_row!(c1, s, 1, C_coeffs, resonance)
-println("\nC₁($s) restricted to resonant modes: ", c1)
+println("\nC₁(s) resonant block: ", c1)
 
-# 6c.  Scalar external-forcing RHS for mode r = 1.
 rhs_ext_1 = evaluate_orthogonality_external_rhs(s, 1, external_dynamics, E_coeffs)
-println("External RHS contribution for mode 1: ", rhs_ext_1)
-
-println("\n--- Manual verification ---")
-
-# For ORD = 2:
-#   L_r(s) = (s+λ_r) Xℓ_r^† B₂ + Xℓ_r^† B₁   (row vector, length FOM)
-for r in 1:ROM
-	Xℓ = left_eigenmodes[:, r]
-	λ = master_eigenvalues[r]
-	L_r_manual = B2' * Xℓ .* conj(s + λ) .+ B1' * Xℓ  # (s+λ_r) Xℓ_r^† B₂ + Xℓ_r^† B₁
-	println("L_$r($s) error = ", norm(J_coeffs[r]' * [1.0; s] - L_r_manual))
-	#   row * [1; s] evaluates J_r[1,:] + J_r[2,:]*s = L_r(s)
-end
-
-# L_1(s) row reconstructed from J_coeffs.
-L1_from_J = J_coeffs[1][1, :] .+ J_coeffs[1][2, :] .* s
-println("\nL₁($s) from J_coeffs vs. row buffer error = ", norm(row1 - L1_from_J))
-
-# Lower-order RHS for mode 1 (ORD-1 = 1 coupling only):
-#   RHS_lower_1 = -J_r[2,:] · ξ₁ = -(B₂^†·Xℓ₁)^† · ξ₁
-Xℓ = left_eigenmodes[:, 1]
-rhs_lower_1_manual = -(B2' * Xℓ)' * lower_order_couplings[1]
-println("\nRHS_lower_1 error = ", abs(rhs_lower_1 - rhs_lower_1_manual))
-
-# Resonant C_r(s) for mode 1: constant (ORD-1 = 1), picks resonant columns.
-# C_coeffs[1][1, :] = Q_1[1][1:ROM]; resonance = [true, false] → take column 1.
-c1_manual = ComplexF64[ # = Xℓ^† · B₂ · Y
-	(B2'*Xℓ)'*generalised_right_eigenmodes[:, 1],
-	(B2'*Xℓ)'*generalised_right_eigenmodes[
-		:, 2],
-]
-println("\nC₁($s) resonant error = ", norm(c1 - c1_manual))
-
-# External RHS for mode 1 (constant polynomial, ORD-1 = 1):
-#   RHS_ext_1 = -E_coeffs[1][1, e] · external_dynamics[e]  for e = 1
-rhs_ext_1_manual = -(B2' * Xℓ)' * generalised_right_eigenmodes[:, 3] * external_dynamics[1]
-println("\nRHS_ext_1 error = ", abs(rhs_ext_1 - rhs_ext_1_manual))
-
-# Full RHS for mode 1 vs. assembled rhs[1].
-rhs_1_manual = rhs_lower_1_manual + rhs_ext_1_manual
-println("\nrhs[1] vs. manual error = ", abs(rhs[1] - rhs_1_manual))
-
-# First FOM columns of M[1, :] must equal L₁(s).
-println("M[1, 1:FOM] vs. L₁($s) error = ", norm(M[1, 1:FOM] - L1_from_J))
-
-# Last nR columns of M[1, :] must equal the resonant C₁(s) block.
-println("M[1, FOM+1:end] vs. C₁($s) error = ", norm(M[1, (FOM+1):end] - c1_manual))
+println("External RHS for mode 1: ", rhs_ext_1)
 
 println("\n" * "="^80)
 

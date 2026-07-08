@@ -108,7 +108,8 @@ function rom_amplitude_at(Ωk)
         external_eigenvalues = ComplexF64[im * Ωk, -im * Ωk])
     W_k, R_k = solve_cohomological_problem(
         model_k, mset4, master_eigenvalues, master_modes, left_eigenmodes, res_k;
-        master_modes_derivatives = mmd, conjugate_permutation = [2, 1, 4, 3],
+        master_modes_derivatives = mmd, left_modes_derivatives = left_modes_derivatives,
+        conjugate_permutation = [2, 1, 4, 3],
         show_progress = false)
     Tk = 2π / Ωk
     ts_k, Z_k = integrate_rom(R_k, mset4, ComplexF64[0, 0, 1, 1], 60 * Tk, Tk / 200)

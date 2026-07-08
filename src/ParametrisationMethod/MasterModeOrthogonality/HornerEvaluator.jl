@@ -21,15 +21,19 @@ the intermediate row vector
 L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
 ```
 
-is available.  Dotting with the pre-computed coupling vector `ξ[j]` gives the
-scalar contribution of lower-order solution terms at step `j`:
+is available.  Contracting **bilinearly** with the pre-computed coupling vector
+`ξ[j]` gives the scalar contribution of lower-order solution terms at step `j`:
 
 ```
-contribution[j] = -L_r[j](s) · ξ[j]
+contribution[j] = -L_r[j](s) · ξ[j] = -Σᵢ L_r[j](s)ᵢ · ξ[j]ᵢ
 ```
 
-The negative sign arises because these terms originate from the left-hand side
-of the cohomological equation.  Summed over `j = 1, …, ORD-1`:
+The contraction must not conjugate: the sesquilinear conjugation of the
+orthogonality condition is already baked into the row coefficients `J_r`
+(see [`precompute_orthogonality_operator_coefficients`](@ref)), so `row`
+holds the Horner tail `G_{r,j}(s)` with the `ᴴ` applied. The negative sign
+arises because these terms originate from the left-hand side of the
+cohomological equation.  Summed over `j = 1, …, ORD-1`:
 
 ```
 RHS_lower_r = -Σ_{j=1}^{ORD-1} L_r[j](s) · ξ[j]
@@ -72,8 +76,15 @@ function evaluate_orthogonality_row_and_lower_order_rhs!(
 	scalar_rhs = zero(T)
 	for j in (ORD-1):-1:1
 		# row = L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
-		# Accumulate scalar dot: scalar_rhs -= row · ξ[j]
-		scalar_rhs -= dot(row, lower_order_couplings[j])
+		# Accumulate bilinear contraction: scalar_rhs -= Σᵢ rowᵢ · ξ[j]ᵢ
+		# (no conjugation — the sesquilinear ᴴ is already baked into J_r; a
+		# conjugating dot() here would double-conjugate the row)
+		ξ = lower_order_couplings[j]
+		acc = zero(T)
+		@inbounds for i in eachindex(row)
+			acc += row[i] * ξ[i]
+		end
+		scalar_rhs -= acc
 		row .*= s
 		row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
 		# row = L_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
