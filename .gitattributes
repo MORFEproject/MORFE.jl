@@ -1,3 +1,1 @@
-website/** linguist-vendored
-demo/BenchmarkMorfe20/profile_after_opt.html linguist-generated=true
-demo/BenchmarkMorfe20/profile_sparse.html linguist-generated=true
+**/*.html linguist-detectable=false
