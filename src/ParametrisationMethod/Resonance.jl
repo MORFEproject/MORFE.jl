@@ -37,8 +37,11 @@ Four constructors are provided:
 module Resonance
 
 using ..Multiindices: MultiindexSet, find_in_set
+using ..FullOrderModel: NDOrderModel
+using ..Eigenproblems: Eigenproblem
 
 export ResonanceSet,
+	build_resonance_set,
 	resonance_set_from_graph_style,
 	resonance_set_from_complex_normal_form_style,
 	resonance_set_from_real_normal_form_style,
@@ -633,6 +636,50 @@ function Base.show(io::IO, rs::ResonanceSet{ROM, N_EXT, M}) where {ROM, N_EXT, M
 		length(rs.multiindices), " multiindices, ",
 		count(rs.inner_resonances), " inner resonances",
 		n_out > 0 ? ", $(count(rs.outer_resonances)) outer resonances" : "")
+end
+
+"""
+	build_resonance_set(model, style, mset, eigenproblem, tol, conjugacy_map)
+
+Build a `ResonanceSet` from a solved `Eigenproblem` according to the chosen
+parametrisation `style`. Accepted styles:
+- `:graph`
+- `:complex_normal_form`
+- `:real_normal_form` (requires `conjugacy_map`)
+"""
+function build_resonance_set(
+	model::NDOrderModel,
+	style::Symbol,
+	mset::MultiindexSet,
+	eigenproblem::Eigenproblem,
+	tol::Float64,
+	conjugacy_map::Union{Nothing, Vector{Int}}
+)
+	master_mask = eigenproblem.master_modes
+	outer_mask = .!eigenproblem.master_modes
+	master_eigenvalues = eigenproblem.eigenvalues[master_mask]
+	outer_eigenvalues = eigenproblem.eigenvalues[outer_mask]
+	external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
+						   Vector(model.external_system.eigenvalues)
+
+	if style === :graph
+		return resonance_set_from_graph_style(
+			mset, master_eigenvalues, external_eigenvalues, outer_eigenvalues, tol)
+
+	elseif style === :complex_normal_form
+		return resonance_set_from_complex_normal_form_style(
+			mset, master_eigenvalues, tol;
+			external_eigenvalues, outer_eigenvalues)
+
+	elseif style === :real_normal_form
+		@assert !isnothing(conjugacy_map) ":real_normal_form requires conjugacy_map to be set"
+		return resonance_set_from_real_normal_form_style(
+			mset, master_eigenvalues, conjugacy_map, tol;
+			external_eigenvalues, outer_eigenvalues)
+	else
+		throw(ArgumentError("Unknown resonance_style :$style. Choose :graph or :complex_normal_form"))
+	end
+	#TODO resonance_set_from_condition_number_estimate
 end
 
 end # module

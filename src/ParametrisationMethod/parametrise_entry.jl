@@ -1,15 +1,13 @@
-module ConvenienceMethods
-using ..CohomologicalEquations
-using ..Resonance
-using ..FullOrderModel
-using ..Eigenproblems
-using ..Multiindices
-using StaticArrays: SVector
+# High-level `parametrise(model, order, eigenproblem; …)` entry point.
+#
+# The generic function `parametrise` is owned by `ParametrisationMethod`
+# (declared there). This method body lives in a separate file because it calls
+# `solve_cohomological_problem` from `CohomologicalEquations`, which is included
+# *after* `ParametrisationMethod` in `src/MORFE.jl`. This file is therefore
+# included at MORFE top-level scope after the `using .CohomologicalEquations`
+# re-export block, so the bare names below resolve.
 
-export parametrise
-"""
-Script for the definitions of high level entry methods for a simple usabilty of the MORFE.jl package
-"""
+using StaticArrays: SVector
 
 """
 	parametrise(model, order, eigenproblem; resonance, resonance_tol, conjugacy_map) -> (W, R)
@@ -43,7 +41,7 @@ from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
 `(W, R)` — the solved [`Parametrisation`](@ref) and [`ReducedDynamics`](@ref).
 
 """
-function parametrise(
+function ParametrisationMethod.parametrise(
 	model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
 	order::Int,
 	eigenproblem::Eigenproblem;
@@ -93,7 +91,7 @@ function parametrise(
 
 	# Generate ResonanceSet
 	resonance_set = resonance isa ResonanceSet ? resonance :
-					_build_resonance_set(model, resonance, mset,
+					build_resonance_set(model, resonance, mset,
 		eigenproblem, resonance_tol, conjugacy_map)
 
 	# Solve cohomological equation
@@ -108,50 +106,4 @@ function parametrise(
 	)
 
 	return W, R
-end
-
-"""
-	_build_resonance_set
-
-Helper function that defines the resonance_set dependent on the parametrization style.
-Accepted styles:
-- `:graph`
-- `:complex_normal_form`
-- `:real_normal_form`
-"""
-function _build_resonance_set(
-	model::NDOrderModel,
-	style::Symbol,
-	mset::MultiindexSet,
-	eigenproblem::Eigenproblem,
-	tol::Float64,
-	conjugacy_map::Union{Nothing, Vector{Int}}
-)
-	master_mask = eigenproblem.master_modes
-	outer_mask = .!eigenproblem.master_modes
-	master_eigenvalues = eigenproblem.eigenvalues[master_mask]
-	outer_eigenvalues = eigenproblem.eigenvalues[outer_mask]
-	external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
-						   Vector(model.external_system.eigenvalues)
-
-	if style === :graph
-		return resonance_set_from_graph_style(
-			mset, master_eigenvalues, external_eigenvalues, outer_eigenvalues, tol)
-
-	elseif style === :complex_normal_form
-		return resonance_set_from_complex_normal_form_style(
-			mset, master_eigenvalues, tol;
-			external_eigenvalues, outer_eigenvalues)
-
-	elseif style === :real_normal_form
-		@assert !isnothing(conjugacy_map) ":real_normal_form requires conjugacy_map to be set"
-		return resonance_set_from_real_normal_form_style(
-			mset, master_eigenvalues, conjugacy_map, tol;
-			external_eigenvalues, outer_eigenvalues)
-	else
-		throw(ArgumentError("Unknown resonance_style :$style. Choose :graph or :complex_normal_form"))
-	end
-	#TODO resonance_set_from_condition_number_estimate
-end
-
 end

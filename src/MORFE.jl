@@ -19,7 +19,6 @@ include("FEMUtility.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
 include("Export/ParaviewExport.jl")
-include("ConvenienceMethods.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -41,7 +40,11 @@ using .FEMUtility
 using .BifurcationKitInterface
 using .InvarianceError
 using .ParaviewExport
-using .ConvenienceMethods
+
+# High-level `parametrise(model, order, eigenproblem; …)` method. Included here
+# (after the using-block above) so its body can resolve `solve_cohomological_problem`,
+# `build_resonance_set`, `all_multiindices_up_to`, etc. from the re-exported scope.
+include("ParametrisationMethod/parametrise_entry.jl")
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
@@ -118,7 +121,7 @@ function model_from_symbolics end
 function externalsystem_from_symbolics end
 export model_from_symbolics, externalsystem_from_symbolics
 
-# ConvenienceMethods
+# ParametrisationMethod high-level entry (also re-exported from the submodule)
 export parametrise
 
 end # module
