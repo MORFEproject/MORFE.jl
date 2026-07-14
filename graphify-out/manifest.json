@@ -14,85 +14,55 @@
     "ast_hash": "99257c2f51666d5bfb6e2e27045d87fe",
     "semantic_hash": "99257c2f51666d5bfb6e2e27045d87fe"
   },
-  "ext/FEMUtility/comsol_ferrite.jl": {
-    "mtime": 1781706768.2149906,
-    "ast_hash": "bc8da547de93530ce1b6cccff7571562",
-    "semantic_hash": "bc8da547de93530ce1b6cccff7571562"
-  },
-  "ext/FerriteBackend/ferrite_assembly.jl": {
-    "mtime": 1781706767.233215,
-    "ast_hash": "60192ae3012b825475af7d163d3cfee4",
-    "semantic_hash": "60192ae3012b825475af7d163d3cfee4"
-  },
   "ext/MORFEArpackExt.jl": {
-    "mtime": 1780010307.2443101,
-    "ast_hash": "36cea5c62268d8cbf86c864c03284bfd",
-    "semantic_hash": "36cea5c62268d8cbf86c864c03284bfd"
+    "mtime": 1783502068.135147,
+    "ast_hash": "3e5c621a76809ac42d720580cee98d28",
+    "semantic_hash": ""
   },
   "ext/MORFEBifurcationKitExt.jl": {
-    "mtime": 1779795226.9162648,
-    "ast_hash": "1e3b6032820420e80ee82d46021e379c",
-    "semantic_hash": "1e3b6032820420e80ee82d46021e379c"
-  },
-  "ext/MORFEFerriteExt.jl": {
-    "mtime": 1781706765.4777575,
-    "ast_hash": "c7d0c4a3c2157a5b40dfed1ff5443636",
-    "semantic_hash": "c7d0c4a3c2157a5b40dfed1ff5443636"
+    "mtime": 1783451880.2764542,
+    "ast_hash": "2434c0c79dbb91b0a20d2a83260168a5",
+    "semantic_hash": ""
   },
   "ext/MORFEGmshExt.jl": {
-    "mtime": 1779795122.7770567,
-    "ast_hash": "55d1cda303b82204e06bfc517e0c8afa",
-    "semantic_hash": "55d1cda303b82204e06bfc517e0c8afa"
+    "mtime": 1783451880.2970815,
+    "ast_hash": "98b98e051a638d5bf9883a6f55f17bbb",
+    "semantic_hash": ""
   },
   "ext/MORFEPardisoExt.jl": {
-    "mtime": 1779794787.5913057,
-    "ast_hash": "e2c245ca1f3059811f026d322dd3c29c",
-    "semantic_hash": "e2c245ca1f3059811f026d322dd3c29c"
+    "mtime": 1783451880.3074398,
+    "ast_hash": "522a09d0f02f7a561e3bd5bd7bd90c9d",
+    "semantic_hash": ""
   },
   "ext/MORFEPlotsExt.jl": {
-    "mtime": 1779795006.0634894,
-    "ast_hash": "5c071adb15aff2c893d166d4c92d8932",
-    "semantic_hash": "5c071adb15aff2c893d166d4c92d8932"
-  },
-  "ext/MORFEStructuralSVK.jl": {
-    "mtime": 1781706768.2152686,
-    "ast_hash": "a9b28f0981e64984a9c4ea33d3684211",
-    "semantic_hash": "a9b28f0981e64984a9c4ea33d3684211"
+    "mtime": 1783451880.3182473,
+    "ast_hash": "7c407fe5a35d80fb060d0dbb8cbe677e",
+    "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt.jl": {
-    "mtime": 1782461962.3192556,
-    "ast_hash": "b5be856e1249367e2d2b01659569a311",
-    "semantic_hash": "b5be856e1249367e2d2b01659569a311"
+    "mtime": 1783502063.189178,
+    "ast_hash": "6e38f52ff40c1ef69390fc90ca754459",
+    "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt/external_system.jl": {
-    "mtime": 1782461962.3197908,
+    "mtime": 1783451880.3399172,
     "ast_hash": "d5a962e7b1480760ba2507a67caf459a",
     "semantic_hash": "d5a962e7b1480760ba2507a67caf459a"
   },
   "ext/MORFESymbolicsExt/extraction.jl": {
-    "mtime": 1782461962.3202965,
-    "ast_hash": "c9ffc04bccfdedf2853a6a97dbe06ed4",
-    "semantic_hash": "c9ffc04bccfdedf2853a6a97dbe06ed4"
+    "mtime": 1783502063.18967,
+    "ast_hash": "670e0af51c7c16cd7fb8c3b115b47146",
+    "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt/polarization.jl": {
-    "mtime": 1782461962.320974,
-    "ast_hash": "fc3140fda75109a2999ea42b0572ad01",
-    "semantic_hash": "fc3140fda75109a2999ea42b0572ad01"
+    "mtime": 1783502063.1901422,
+    "ast_hash": "359f6ad52677f33939b6dd0d8d5c20fc",
+    "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt/toMultilinearMaps.jl": {
-    "mtime": 1782461962.321293,
-    "ast_hash": "df944479d22238eb44b7977d8843b637",
-    "semantic_hash": "df944479d22238eb44b7977d8843b637"
-  },
-  "ext/MORFEWriteVTKExt.jl": {
-    "mtime": 1780315646.2436981,
-    "ast_hash": "04da5433fe3f14359a204e44615872bc",
-    "semantic_hash": "04da5433fe3f14359a204e44615872bc"
-  },
-  "ext/Paraview/write_vtk.jl": {
-    "mtime": 1782067692.8065639,
-    "ast_hash": "ef6abe873ecfbce36911f54a4a6a8f1f",
-    "semantic_hash": "ef6abe873ecfbce36911f54a4a6a8f1f"
+    "mtime": 1783502063.1905968,
+    "ast_hash": "7f073aa669fdedfdc11a4b10ec51fe95",
+    "semantic_hash": ""
   },
   "ext/SDE_Python/sde_integrator.py": {
     "mtime": 1780331521.149273,
@@ -100,54 +70,19 @@
     "semantic_hash": "302518276da2c708e0df909a9692485d"
   },
   "ext/SpectralDecomposition/JordanChain.jl": {
-    "mtime": 1779797703.1107898,
-    "ast_hash": "7cdd3ae0e9037793497229ec73379b33",
-    "semantic_hash": "7cdd3ae0e9037793497229ec73379b33"
+    "mtime": 1783451880.3850188,
+    "ast_hash": "546eac8d63ee5f0c9883fab6a5bc7863",
+    "semantic_hash": ""
   },
   "ext/SpectralDecomposition/PropagateEigenmodes.jl": {
-    "mtime": 1779797727.4430366,
-    "ast_hash": "395e8bf8c772c445bc60b4b8499dfc5f",
-    "semantic_hash": "395e8bf8c772c445bc60b4b8499dfc5f"
-  },
-  "ext/StructuralSVK/mechanical_model.jl": {
-    "mtime": 1781706768.2156875,
-    "ast_hash": "66ef6bcaae36a9edc4cf41aa963dc373",
-    "semantic_hash": "66ef6bcaae36a9edc4cf41aa963dc373"
-  },
-  "ext/StructuralSVK/parametrise.jl": {
-    "mtime": 1782418217.4195976,
-    "ast_hash": "8b8e1e15cc4d6433f35f92c8dffa9d82",
-    "semantic_hash": "8b8e1e15cc4d6433f35f92c8dffa9d82"
-  },
-  "ext/StructuralSVK/postprocess.jl": {
-    "mtime": 1782387236.636197,
-    "ast_hash": "fbdf334b7e553092274e6fbea4d88f00",
-    "semantic_hash": "fbdf334b7e553092274e6fbea4d88f00"
-  },
-  "ext/StructuralSVK/rayleigh_solver.jl": {
-    "mtime": 1781706767.366996,
-    "ast_hash": "2bc8b124ada8f04065a0192954603dca",
-    "semantic_hash": "2bc8b124ada8f04065a0192954603dca"
-  },
-  "ext/StructuralSVK/types.jl": {
-    "mtime": 1781706767.3676674,
-    "ast_hash": "abae32507ba6c738cd008643540d4ee8",
-    "semantic_hash": "abae32507ba6c738cd008643540d4ee8"
+    "mtime": 1783451880.395237,
+    "ast_hash": "e13e466d6c0798017ded13a3a559404c",
+    "semantic_hash": ""
   },
   "src/BifurcationSolvers/BifurcationKitInterface.jl": {
     "mtime": 1779839519.5668118,
     "ast_hash": "e8b1b95ffc369e575979cfdffc478dda",
     "semantic_hash": "e8b1b95ffc369e575979cfdffc478dda"
-  },
-  "src/ConvenienceMethods.jl": {
-    "mtime": 1782741581.0444343,
-    "ast_hash": "f1e5ae0d393e0d795614e899f9f57d56",
-    "semantic_hash": "f1e5ae0d393e0d795614e899f9f57d56"
-  },
-  "src/Export/ParaviewExport.jl": {
-    "mtime": 1780351227.7290883,
-    "ast_hash": "a6e2fe653f3ad567a98bb7d3571ba95b",
-    "semantic_hash": "a6e2fe653f3ad567a98bb7d3571ba95b"
   },
   "src/FEMUtility.jl": {
     "mtime": 1780778291.0092452,
@@ -160,162 +95,162 @@
     "semantic_hash": "003fb0a59d33c5c5757e87f6ac1ff04c"
   },
   "src/FullOrderModel/FullOrderModel.jl": {
-    "mtime": 1781706767.2345023,
+    "mtime": 1783451880.4385412,
     "ast_hash": "15538af151180ca629bb66b6668737aa",
     "semantic_hash": "15538af151180ca629bb66b6668737aa"
   },
   "src/FullOrderModel/MultilinearMaps.jl": {
-    "mtime": 1781706765.4785159,
-    "ast_hash": "1b708160bc823d5b7590aeedce54723e",
-    "semantic_hash": "1b708160bc823d5b7590aeedce54723e"
+    "mtime": 1784027869.0743535,
+    "ast_hash": "9e48b55db036bf996dd82107940bfd26",
+    "semantic_hash": ""
   },
   "src/MORFE.jl": {
-    "mtime": 1782741581.0450864,
-    "ast_hash": "d199f59fc13180a2b81f8eb34f0c084a",
-    "semantic_hash": "d199f59fc13180a2b81f8eb34f0c084a"
+    "mtime": 1784027830.409077,
+    "ast_hash": "a594fe36125da954915fb2d1602026bf",
+    "semantic_hash": ""
   },
   "src/Multiindices.jl": {
-    "mtime": 1781706767.2354233,
+    "mtime": 1783524340.4197357,
     "ast_hash": "75a7b6577fb7fa03f13348fd7ff29921",
     "semantic_hash": "75a7b6577fb7fa03f13348fd7ff29921"
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl": {
-    "mtime": 1779360770.0593128,
-    "ast_hash": "6c12f335175d53b274221569ecd1afff",
-    "semantic_hash": "6c12f335175d53b274221569ecd1afff"
+    "mtime": 1783451880.4747818,
+    "ast_hash": "1b10c335c5b256d8d5e6d461bdef1e4f",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalContext.jl": {
-    "mtime": 1779360771.2156758,
-    "ast_hash": "83bb4f7bf9b1a91e6f5c202e055d9b2b",
-    "semantic_hash": "83bb4f7bf9b1a91e6f5c202e055d9b2b"
+    "mtime": 1783451880.4866557,
+    "ast_hash": "bab4c66886578e0d3aa0017b20373f7c",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl": {
-    "mtime": 1780790451.974101,
-    "ast_hash": "4277bdc0d954a9217e9698a047c6a86f",
-    "semantic_hash": "4277bdc0d954a9217e9698a047c6a86f"
+    "mtime": 1783502068.136578,
+    "ast_hash": "2545e5252135baefd82ea1d7fd18870a",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl": {
-    "mtime": 1781706767.2359014,
+    "mtime": 1783451880.497466,
     "ast_hash": "c55da5805e61522d6af65471117b1e90",
     "semantic_hash": "c55da5805e61522d6af65471117b1e90"
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl": {
-    "mtime": 1781706767.2364593,
-    "ast_hash": "ca209156e6df592af78ee8597fa5ff1c",
-    "semantic_hash": "ca209156e6df592af78ee8597fa5ff1c"
+    "mtime": 1783451880.508583,
+    "ast_hash": "6c5f0ed1871a989e4eaf0cc6d10d6df8",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/ConjugateSymmetry.jl": {
-    "mtime": 1779360776.4931355,
-    "ast_hash": "873a8f217cd7885486c5d9e49c6d32e4",
-    "semantic_hash": "873a8f217cd7885486c5d9e49c6d32e4"
+    "mtime": 1783451880.5207646,
+    "ast_hash": "9117bc22baad89987ada40d6998345bc",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/OperatorData.jl": {
-    "mtime": 1779360779.3563378,
-    "ast_hash": "afcf52266446379cce2548001559c63e",
-    "semantic_hash": "afcf52266446379cce2548001559c63e"
+    "mtime": 1783451880.532839,
+    "ast_hash": "9a120a94abf6158df0c7cbcedca37ede",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl": {
-    "mtime": 1781706767.236786,
-    "ast_hash": "479aff69fcefdcb8738133f301083ec8",
-    "semantic_hash": "479aff69fcefdcb8738133f301083ec8"
+    "mtime": 1783451880.5441415,
+    "ast_hash": "b5550c120e5e296d9bcc14979ae216ca",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl": {
-    "mtime": 1781706767.2371793,
+    "mtime": 1783451880.5601902,
     "ast_hash": "03f226cbccce23eddb0d63fc56477992",
     "semantic_hash": "03f226cbccce23eddb0d63fc56477992"
   },
   "src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl": {
-    "mtime": 1779360766.3767056,
-    "ast_hash": "d57f7be7c12f2d75b46058d0aa325f77",
-    "semantic_hash": "d57f7be7c12f2d75b46058d0aa325f77"
+    "mtime": 1783451880.5774016,
+    "ast_hash": "af2e4985ac8fe32ef2c037b244b147af",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl": {
-    "mtime": 1779360767.8333905,
-    "ast_hash": "8e953e76e0fcb34bea4de5c735b36e82",
-    "semantic_hash": "8e953e76e0fcb34bea4de5c735b36e82"
+    "mtime": 1783451880.5925198,
+    "ast_hash": "d4a5c81092f506d282e624a7465d40cf",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl": {
-    "mtime": 1779360696.5224292,
-    "ast_hash": "38cd04c01fdee7fb68466e65697eee00",
-    "semantic_hash": "38cd04c01fdee7fb68466e65697eee00"
+    "mtime": 1783502068.1368546,
+    "ast_hash": "1e18708cea303eedd041dbfc377e32e2",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/HornerEvaluator.jl": {
-    "mtime": 1779360711.379842,
-    "ast_hash": "8858aaeed0b30b56f11dcb0d9f05ff5e",
-    "semantic_hash": "8858aaeed0b30b56f11dcb0d9f05ff5e"
+    "mtime": 1783502068.1370416,
+    "ast_hash": "987b0767a643fbed8ae0bd141a908956",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl": {
-    "mtime": 1779360715.9494517,
-    "ast_hash": "753e57442daa289a72ccc2d60904425c",
-    "semantic_hash": "753e57442daa289a72ccc2d60904425c"
+    "mtime": 1783502068.1373553,
+    "ast_hash": "e501cf0d53139e6341d26e79b26468f7",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/ParametrisationMethod.jl": {
-    "mtime": 1779360744.1789868,
-    "ast_hash": "752618e05026ab0c6a3d385e325da97c",
-    "semantic_hash": "752618e05026ab0c6a3d385e325da97c"
+    "mtime": 1783603241.5466053,
+    "ast_hash": "c7784fa8746fe9c8836e3d7b8c6bac71",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/Resonance.jl": {
-    "mtime": 1782741581.0458755,
-    "ast_hash": "c500233e5ad4092b4aa9b1c3a54c320e",
-    "semantic_hash": "c500233e5ad4092b4aa9b1c3a54c320e"
+    "mtime": 1783603223.788861,
+    "ast_hash": "8af7a69272795eea56900b3b4a034e60",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl": {
-    "mtime": 1781815860.1552281,
+    "mtime": 1783451880.6330335,
     "ast_hash": "6de9405482a23625c4ef71a2d71534c3",
     "semantic_hash": "6de9405482a23625c4ef71a2d71534c3"
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/CacheBuilder.jl": {
-    "mtime": 1780568286.4179072,
-    "ast_hash": "0e4ce47c94b1ea9953e69c41ee27fee4",
-    "semantic_hash": "0e4ce47c94b1ea9953e69c41ee27fee4"
+    "mtime": 1783451880.646668,
+    "ast_hash": "fdffab23ddf1b7867789ec2d2bbe2448",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/CachedEval.jl": {
-    "mtime": 1779360729.4402635,
-    "ast_hash": "e52f10f4235a19b2949bf432e4e62dff",
-    "semantic_hash": "e52f10f4235a19b2949bf432e4e62dff"
+    "mtime": 1783451880.6599958,
+    "ast_hash": "eb2614b9358c2d6b42cce29e8106a804",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.jl": {
-    "mtime": 1779360730.8896172,
-    "ast_hash": "e176a20ba159c197775ee3f916fcd1ae",
-    "semantic_hash": "e176a20ba159c197775ee3f916fcd1ae"
+    "mtime": 1783451880.6734676,
+    "ast_hash": "9c84d1ab61d3102277ad0ae37687f465",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/NonCachedEval.jl": {
-    "mtime": 1780501848.3510447,
-    "ast_hash": "9c24842af455ea8d25ac23002cdc2b17",
-    "semantic_hash": "9c24842af455ea8d25ac23002cdc2b17"
+    "mtime": 1783451880.687209,
+    "ast_hash": "3e097f59f7fb5132a1e82a421863b1fd",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/Structs.jl": {
-    "mtime": 1779360736.6001647,
-    "ast_hash": "0c294c326b12f8ab05f4fd4a19d9aa85",
-    "semantic_hash": "0c294c326b12f8ab05f4fd4a19d9aa85"
+    "mtime": 1783451880.700832,
+    "ast_hash": "198b362982e42a0906a37ae1350db184",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/Symmetry.jl": {
-    "mtime": 1780787157.4715867,
-    "ast_hash": "558dde6f77ca677397db445491ef93e1",
-    "semantic_hash": "558dde6f77ca677397db445491ef93e1"
+    "mtime": 1783451880.7147396,
+    "ast_hash": "59a8a570d0a1a72057771deeba12e486",
+    "semantic_hash": ""
   },
   "src/Polynomials.jl": {
-    "mtime": 1779360756.6326497,
-    "ast_hash": "ab02bd1ea7b5d0147059b70f3c55e5d0",
-    "semantic_hash": "ab02bd1ea7b5d0147059b70f3c55e5d0"
+    "mtime": 1783502063.1931453,
+    "ast_hash": "0fbb21e63740c424a16e460d6d043e36",
+    "semantic_hash": ""
   },
   "src/Realification.jl": {
-    "mtime": 1781706767.2382474,
+    "mtime": 1783451880.7442563,
     "ast_hash": "53f0c01370812f6efeab588f0c3c1b31",
     "semantic_hash": "53f0c01370812f6efeab588f0c3c1b31"
   },
   "src/SpectralDecomposition/Eigenproblems.jl": {
-    "mtime": 1781706767.2387018,
-    "ast_hash": "d03fca617907af9385e4db154c4c475b",
-    "semantic_hash": "d03fca617907af9385e4db154c4c475b"
+    "mtime": 1783502068.1376362,
+    "ast_hash": "ffda76e86620b2acfefa28bec3933c23",
+    "semantic_hash": ""
   },
   "src/SpectralDecomposition/Eigensolvers.jl": {
-    "mtime": 1781706767.239021,
+    "mtime": 1783451880.7587826,
     "ast_hash": "143477c79a8e53697054946d964cf5b4",
     "semantic_hash": "143477c79a8e53697054946d964cf5b4"
   },
   "src/Validation/InvarianceError.jl": {
-    "mtime": 1781986615.386097,
+    "mtime": 1783451880.773866,
     "ast_hash": "02e3ca637cb68d38c8620867fdea58fe",
     "semantic_hash": "02e3ca637cb68d38c8620867fdea58fe"
   },
@@ -394,434 +329,14 @@
     "ast_hash": "58cbf7e014ea93acc6be040f717aa3d9",
     "semantic_hash": ""
   },
-  "examples/01_clamped_beam_ferrite/low_level.jl": {
-    "mtime": 1781706767.364373,
-    "ast_hash": "e78c0ae1e03af4b4336ec97691d3cd8d",
-    "semantic_hash": ""
-  },
-  "examples/01_clamped_beam_ferrite/main.jl": {
-    "mtime": 1781706768.2096105,
-    "ast_hash": "aee6802a08ce9ebe5cd4a7f8668cff6e",
-    "semantic_hash": ""
-  },
-  "examples/01_clamped_beam_ferrite/validate.jl": {
-    "mtime": 1781706766.462719,
-    "ast_hash": "c67a54d0a9e43e620c26a1d7ecc4107c",
-    "semantic_hash": ""
-  },
   "examples/02_clamped_beam_gridap/main.jl": {
-    "mtime": 1781706766.8351963,
-    "ast_hash": "fd3a04fc2d641bf4347535a570d7fab4",
+    "mtime": 1783502067.9791687,
+    "ast_hash": "a3b64305c5bd893e84b94dc1f1d677c7",
     "semantic_hash": ""
   },
   "examples/02_clamped_beam_gridap/validate.jl": {
     "mtime": 1781706766.4628656,
     "ast_hash": "c67a54d0a9e43e620c26a1d7ecc4107c",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/main.jl": {
-    "mtime": 1782141011.1145544,
-    "ast_hash": "e6800b4c9d26958ce862c4d5cd0027b9",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/results/mode_1_order_5_cnf/config.jl": {
-    "mtime": 1781170175.6328845,
-    "ast_hash": "e7cb338d2e643ab21203c7a982f659bd",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/results/mode_1_order_5_cnf/postprocess/compute_backbone.jl": {
-    "mtime": 1781170175.6321394,
-    "ast_hash": "a49d85bf4e46bcfb86eac911b905b752",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/results/mode_1_order_5_cnf/postprocess/visualise_deformation.jl": {
-    "mtime": 1781170175.6325116,
-    "ast_hash": "c4e19b7e1dd7248628ce92b5db0ddace",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/results/visualise_structure_and_modes/paraview/view_mesh.py": {
-    "mtime": 1781170175.6420968,
-    "ast_hash": "2b1b956d82d0ea8cbc0962cba7aa8cde",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/tools/node_dof_table.jl": {
-    "mtime": 1781706765.50464,
-    "ast_hash": "b372cd024db23599c413d01714a6c8ca",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/tools/visualise_structure_and_modes.jl": {
-    "mtime": 1781706768.2108023,
-    "ast_hash": "93a7b7987876a386fa1ccebda87f7944",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/backbone/compute_backbone.jl": {
-    "mtime": 1781706766.3815222,
-    "ast_hash": "ee3f01fc858fcccc956d58b0f77fa680",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/backbone/compute_backbone_theta2.jl": {
-    "mtime": 1781706766.3819354,
-    "ast_hash": "5ee3e5ad072c801ab4c737e0c8c8f252",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/fem/bivariate_geometry.jl": {
-    "mtime": 1781706765.5077574,
-    "ast_hash": "385db42a89b6e747c3f02f3f13c0569a",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/fem/bivariate_polynomials.jl": {
-    "mtime": 1781706765.50817,
-    "ast_hash": "d9e5fe823b104868fbd0bde8cba550ff",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/fem/parametric_assembly.jl": {
-    "mtime": 1781706765.5087981,
-    "ast_hash": "21155c09eb580041d8079f67e87cbc85",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/fem/parametric_geometry.jl": {
-    "mtime": 1781706765.509207,
-    "ast_hash": "48f49238cd4788370bb47993fc46c5c2",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/fem/theta_polynomials.jl": {
-    "mtime": 1781706765.5096028,
-    "ast_hash": "b82f72dde34e9ef113a1e56768f80ed0",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/main.jl": {
-    "mtime": 1781984600.3132074,
-    "ast_hash": "7a61cd70541254ce48710fe86b5285bd",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/plotting/backbone_plots.jl": {
-    "mtime": 1781706765.5103796,
-    "ast_hash": "08530cd34fd0c371e5b1c1e992783feb",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validate.jl": {
-    "mtime": 1781706766.4631188,
-    "ast_hash": "c67a54d0a9e43e620c26a1d7ecc4107c",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validation/backbone_physical_amplitude.jl": {
-    "mtime": 1781798249.373863,
-    "ast_hash": "12864313a50b7c73bbb6bdaa5856c04e",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validation/check_eigenvalue_scaling.jl": {
-    "mtime": 1781794912.738871,
-    "ast_hash": "252a85313875b0f82987e74025c0ace1",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validation/eigenfrequency_error_heatmap.jl": {
-    "mtime": 1781973976.4421554,
-    "ast_hash": "48d47ccd0f6fd2c6e3f0f42af22d5586",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validation/exact_geometry_assembly.jl": {
-    "mtime": 1781706766.6969593,
-    "ast_hash": "c7c44443b62ceb38daaf3a97e78d6f9e",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validation/exact_nonlinear_maps.jl": {
-    "mtime": 1781706765.5112202,
-    "ast_hash": "6cceefca320ad9ee61f6bf4405a6bbf4",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validation/plot_backbone.py": {
-    "mtime": 1781960279.743769,
-    "ast_hash": "9acb2eab8fca300fe9e00033028c5eae",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/validation/run_validation.jl": {
-    "mtime": 1781706766.925223,
-    "ast_hash": "704e9b5d5502052d07d8b901cb61e2d7",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/compare_orders.py": {
-    "mtime": 1783085325.7871656,
-    "ast_hash": "2be4373b13eabed1c5337fbe4045a560",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/config.jl": {
-    "mtime": 1783165032.3911335,
-    "ast_hash": "a58f75eb8c5978cf7d2a32ffdc2c97ca",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/exports.jl": {
-    "mtime": 1783085337.3423357,
-    "ast_hash": "a4e94c2ffbed196dcebd5c2c12e43773",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/fem/energy_gram.jl": {
-    "mtime": 1783026706.328924,
-    "ast_hash": "f98c069adb7985f4ca3859dd21cc4e0a",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/fem/fem_setup.jl": {
-    "mtime": 1782913055.9990566,
-    "ast_hash": "893ce371cf919519c2a671259d1c277e",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/fem/fluid_maps.jl": {
-    "mtime": 1783165016.3695805,
-    "ast_hash": "a8571cb6ad2cebc331b5a894b1155e0f",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/fem/linear_operators.jl": {
-    "mtime": 1783165024.0739427,
-    "ast_hash": "b27de134d2a01e5e7320fc4ac38fa7e1",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/fem/mesh.jl": {
-    "mtime": 1783165042.7079716,
-    "ast_hash": "5f5d1bb36e184d24c3a733ab3c183d29",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/NS2D.jl": {
-    "mtime": 1738705676.0,
-    "ast_hash": "d8f2fb0cffb98e4690aef4c9ab5bf95c",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/input/cylinder.jl": {
-    "mtime": 1738684854.0,
-    "ast_hash": "7c328c3459535bc25dcf6dbcc2ae60b9",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/input/demo.jl": {
-    "mtime": 1713185801.0,
-    "ast_hash": "ce8a2e6ff0a8a4263c1ba11c41119002",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/matcont/NS.m": {
-    "mtime": 1713798478.0,
-    "ast_hash": "4c0f12e9d1ad263298ce5205408892b9",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/matcont/cmdfigure.m": {
-    "mtime": 1713457357.0,
-    "ast_hash": "14aaec73c12d6ec0d7098695d3b5bdbc",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/matcont/models/cylinder.m": {
-    "mtime": 1713798479.0,
-    "ast_hash": "0ae0723a08ee0cf5f3fe632b6d85ebcf",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/matcont/prova.m": {
-    "mtime": 1713457357.0,
-    "ast_hash": "3f3f766901f9ed811aa42e9cce382731",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/matcont/terms2use_check.m": {
-    "mtime": 1713778863.0,
-    "ast_hash": "a4ade66d89d1db8618702271833faa00",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/output/Ale_test/minimal_test_eig.m": {
-    "mtime": 1772616746.0,
-    "ast_hash": "190ad916c9f1400f0ea4f1522569d9ee",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/output/Ale_test/read_csv_sparse.m": {
-    "mtime": 1772032327.0,
-    "ast_hash": "964c778888a2bde81b31a530cf700799",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/output/Ale_test/test_eig.m": {
-    "mtime": 1772012933.0,
-    "ast_hash": "b6f904aba2a4409cbb014fb59aa67625",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_analysis.jl": {
-    "mtime": 1738715132.0,
-    "ast_hash": "51c6d0b5c3b2adf2229b3a93e2a04be1",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_defs.jl": {
-    "mtime": 1713549905.0,
-    "ast_hash": "d776dcd9b0364efd6eae14d526a49682",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_dpim.jl": {
-    "mtime": 1713549857.0,
-    "ast_hash": "8b3d665859f11ac12ee99d6478c7fcc9",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_dpim_FEM.jl": {
-    "mtime": 1713863033.0,
-    "ast_hash": "23d9d498078ca531ded3d2557900a3f0",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_dpim_output.jl": {
-    "mtime": 1713631499.0,
-    "ast_hash": "2f076c47f72fb87290f5c0b8ddfe3ffd",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_dpim_realification.jl": {
-    "mtime": 1713509179.0,
-    "ast_hash": "b2b3ad62e9c21210de3b28e949b6e729",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_eig.jl": {
-    "mtime": 1714076518.0,
-    "ast_hash": "c2871d634c79ac26bb28a984c0e600a1",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_elemental.jl": {
-    "mtime": 1738713495.0,
-    "ast_hash": "a09c744488da80394164376a94afede2",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_export_KM.jl": {
-    "mtime": 1738705695.0,
-    "ast_hash": "4fecc016f04beeae2d019a290443b47f",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_globalprocedure.jl": {
-    "mtime": 1730036487.0,
-    "ast_hash": "74c7b87ce64e034751e4ad32f4628e3a",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_inflow.jl": {
-    "mtime": 1713199900.0,
-    "ast_hash": "0df696a71817f5ce1c048d8431f97da9",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_matcont.jl": {
-    "mtime": 1713792965.0,
-    "ast_hash": "a7653d4f1d393d1b31a2a4c98e95e338",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_newmark.jl": {
-    "mtime": 1713800816.0,
-    "ast_hash": "6d438d0afd949749879f02fb2a82fec9",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_outgmsh.jl": {
-    "mtime": 1713185604.0,
-    "ast_hash": "33a8722e2e329d22a17b51c4be4b536b",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_outvtk.jl": {
-    "mtime": 1713791569.0,
-    "ast_hash": "b85b2b247c5c174b28f3709c008c106b",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_param_struct.jl": {
-    "mtime": 1713462713.0,
-    "ast_hash": "d9fcf876bf78574cb20068eaf0758fba",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_readgmsh.jl": {
-    "mtime": 1713015301.0,
-    "ast_hash": "13886dbb9337c36d7c5b6fc4e53ee909",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/NS2D_test.jl": {
-    "mtime": 1713183038.0,
-    "ast_hash": "a2c827915fc0a764d37d4cb7d5d22392",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/quadrature.jl": {
-    "mtime": 1691754772.0,
-    "ast_hash": "af18fd00bb62cb7b942b2c6658e4c8f8",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/source/shape_functions.jl": {
-    "mtime": 1691753870.0,
-    "ast_hash": "d5ce507c86addbf7709d5e16c89c57cb",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/00README.json": {
-    "mtime": 1761834604.0,
-    "ast_hash": "eeb022b8ad5c7fcaba800e4083971271",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/main.jl": {
-    "mtime": 1783085399.361378,
-    "ast_hash": "a70b0502c4bc17a035cae27ba0e63894",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord7/data/lift_karman.m": {
-    "mtime": 1782914058.5598931,
-    "ast_hash": "4588db6da47761a604ad7c0df020b743",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord7/data/vec_fields_karman.m": {
-    "mtime": 1782914058.5582952,
-    "ast_hash": "ad48b8b679e35204c127ee423e2f60f3",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord7/data/vec_fields_karman_DFDX.m": {
-    "mtime": 1782914058.5588,
-    "ast_hash": "6366efd86d9aa16c866068c32ef7aed3",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord9/data/lift_karman.m": {
-    "mtime": 1783025568.021597,
-    "ast_hash": "67079f2373e8f6c2a91165b68ff737c2",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord9/data/vec_fields_karman.m": {
-    "mtime": 1783025568.019828,
-    "ast_hash": "fe6524d70d936eee8a0f80e63dbd2c88",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord9/data/vec_fields_karman_DFDX.m": {
-    "mtime": 1783025568.0201716,
-    "ast_hash": "4d4ca30b0c26dc7fedbf90e152b79981",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/paraview/visualise_orbit_snapshot.jl": {
-    "mtime": 1782917358.5649085,
-    "ast_hash": "8ed9c5fde919a3c7803e2962f200e4d3",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/paraview/visualise_paraview.jl": {
-    "mtime": 1782901720.5090191,
-    "ast_hash": "213b529e09a91877ed220a42ff1f876b",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/solve_rom.jl": {
-    "mtime": 1783084355.9003778,
-    "ast_hash": "a51bbd7c58329f5bdc5665e463402e2a",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/solver/eigensolver.jl": {
-    "mtime": 1783024355.3647616,
-    "ast_hash": "9e1fd22a70c5d80e40b213ff420d9538",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/solver/rom_palc.jl": {
-    "mtime": 1782849960.755056,
-    "ast_hash": "d90da8c80239df9da4f0c4d5efed9609",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/solver/steady_state.jl": {
-    "mtime": 1782761090.1702802,
-    "ast_hash": "e04e021f4fc043c0dcd3e9ee8296421b",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/validation/average_tke.py": {
-    "mtime": 1783083693.0819087,
-    "ast_hash": "5591c03f59f3996eea5be86194f191d2",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/validation/generate_matlab.py": {
-    "mtime": 1782841340.3418138,
-    "ast_hash": "2d396379f00db01dd71ad143dee5225a",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/validation/run_tke.py": {
-    "mtime": 1783085421.4056063,
-    "ast_hash": "0578f2efab4fe74c84d396b8c083e619",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/validation/validate_tke.jl": {
-    "mtime": 1783043762.9897358,
-    "ast_hash": "d4b393c4fd392fdf7b9c4fff7cb978d8",
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/config.jl": {
@@ -835,8 +350,8 @@
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/main.jl": {
-    "mtime": 1781779767.1486595,
-    "ast_hash": "98d0ffb0f449cd1adbd3fa5131133f37",
+    "mtime": 1783502068.1324694,
+    "ast_hash": "7146adcad40799048f43f87c774ca61d",
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/model/bias.jl": {
@@ -855,8 +370,8 @@
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/solver/eigensolver.jl": {
-    "mtime": 1781706766.930706,
-    "ast_hash": "79f2b08b831acfe048d0ee52a5da2e15",
+    "mtime": 1783502068.132804,
+    "ast_hash": "884ee6e5e6f641d789861fd0ebd3a696",
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/solver/rom_utils.jl": {
@@ -865,138 +380,13 @@
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/validation/compare_rom_fom.jl": {
-    "mtime": 1781780011.7146778,
-    "ast_hash": "d86cdb5bb19640402cd761db543dff41",
+    "mtime": 1783502068.133189,
+    "ast_hash": "0daf7d1a8005fe8d77dc3ec15bb5d35e",
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/validation/fom_reference.jl": {
     "mtime": 1781706766.9321613,
     "ast_hash": "b74057777934e6efac24d42ce42a01bf",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/config.jl": {
-    "mtime": 1782426031.9133255,
-    "ast_hash": "72d41186b5813fb9b37c78f55d2eff8f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/convert_to_npz.jl": {
-    "mtime": 1782401148.8811584,
-    "ast_hash": "29ee31e67dd257ac71ca67573094b75d",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/fem/arch_assembly.jl": {
-    "mtime": 1782046332.536491,
-    "ast_hash": "7df3faaacb0c9a9c86fe2436ee3ec810",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/fem/arch_geometry.jl": {
-    "mtime": 1781982998.9553556,
-    "ast_hash": "555c344610fef712d9d43a98a84fdd71",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/fem/parametric_geometry.jl": {
-    "mtime": 1781982998.9642234,
-    "ast_hash": "734a34c2a1cc9c5ee7db28846e1fb950",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/fem/theta_polynomials.jl": {
-    "mtime": 1781977418.6953752,
-    "ast_hash": "b82f72dde34e9ef113a1e56768f80ed0",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/main.jl": {
-    "mtime": 1782425406.8975198,
-    "ast_hash": "8c0b8003fb437b61f1d18a5900eb3231",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/reference/compute_references.jl": {
-    "mtime": 1782468840.4377015,
-    "ast_hash": "9a2b4301e846c55c34743418b397f300",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/tools/visualise_structure_and_modes.jl": {
-    "mtime": 1782068493.605536,
-    "ast_hash": "31e27be3c5b224327deb8057d124f12f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/backbone.jl": {
-    "mtime": 1782411760.0192401,
-    "ast_hash": "25c087042ced907cbc96cf3f07cf3cbe",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/backbone_bk.jl": {
-    "mtime": 1782136678.3983912,
-    "ast_hash": "42a19edff5aafd7fd4664c2d9472bd85",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/dynamical_system.py": {
-    "mtime": 1782387277.193938,
-    "ast_hash": "001effd90a0c0c3383b162a5536e34c2",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/generate_dynamical_system.py": {
-    "mtime": 1782229344.86637,
-    "ast_hash": "598180d886cd0672431ef5ec45fa9065",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plot_backbone.py": {
-    "mtime": 1782151463.1243923,
-    "ast_hash": "079647a140154b6f594b1760ea76569f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_backbone_absolute.py": {
-    "mtime": 1782411635.172071,
-    "ast_hash": "3cd3b67d576b82d7823b22cd3289b3a4",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_backbone_absolute_reduced.py": {
-    "mtime": 1782411689.3169923,
-    "ast_hash": "2182ef8da049abc82c4c53c3d7e8b72f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_backbone_per_case.py": {
-    "mtime": 1782411656.6270068,
-    "ast_hash": "5fe40869d04f385c538ddb96203ec64a",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_backbone_per_case_reduced.py": {
-    "mtime": 1782411722.117924,
-    "ast_hash": "103eead29a63cdb954516fe1ffce80b1",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_backbone_shift.py": {
-    "mtime": 1782411636.740011,
-    "ast_hash": "8b10ac07b631f3af73c21dc4c205d6a0",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_backbone_shift_reduced.py": {
-    "mtime": 1782411698.0656006,
-    "ast_hash": "0f141ea2b8faf77525fa558d0ea586fd",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_cubic_force.py": {
-    "mtime": 1782148073.223624,
-    "ast_hash": "ae57a5522872654237549c8198c97622",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_eigenfreq_vs_h.py": {
-    "mtime": 1782582457.3034434,
-    "ast_hash": "4bfa2393c0cec9c0787b94825ff12074",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/plots/plot_quad_force.py": {
-    "mtime": 1782147522.5369484,
-    "ast_hash": "b66075ea4937b6863d4bc1395562ce39",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/validate_cubic_force.jl": {
-    "mtime": 1782148052.7967858,
-    "ast_hash": "93c1f59c5b1e648317ab9de87f24bacc",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/validation/validate_quadratic_force.jl": {
-    "mtime": 1782147500.933702,
-    "ast_hash": "568d476c599d1bcc392b7b5635712f23",
     "semantic_hash": ""
   },
   "examples/common/results_io.jl": {
@@ -1020,18 +410,13 @@
     "semantic_hash": ""
   },
   "examples/internals/eigensolver/demo_eigenproblem.jl": {
-    "mtime": 1781706765.6801698,
-    "ast_hash": "b126f7ae399dc2ce87c47a88a4ac4634",
+    "mtime": 1783502068.1341085,
+    "ast_hash": "a6ae5f1875f67c59496f0bcd0b2aef09",
     "semantic_hash": ""
   },
   "examples/internals/eigensolver/demo_eigensolver.jl": {
     "mtime": 1781706765.6838462,
     "ast_hash": "f451b514b12bc8630752f0c4d0f3c601",
-    "semantic_hash": ""
-  },
-  "examples/internals/eigensolver/demo_propagation.jl": {
-    "mtime": 1781706765.6858554,
-    "ast_hash": "a85c12392a0ba2ab1e66bdf371c3e6a4",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/demo_NDOrderModel.jl": {
@@ -1055,8 +440,8 @@
     "semantic_hash": ""
   },
   "examples/internals/parametrisation_method/demo_master_mode_orthogonality.jl": {
-    "mtime": 1781706765.6891747,
-    "ast_hash": "b604ae4cbaf9b444dcc7191a5cc88c9c",
+    "mtime": 1783502068.134536,
+    "ast_hash": "4bd1ae6b10a2b6cc39a3a16ec6ba7e21",
     "semantic_hash": ""
   },
   "examples/internals/parametrisation_method/demo_multilinear_terms.jl": {
@@ -1065,8 +450,8 @@
     "semantic_hash": ""
   },
   "examples/internals/parametrisation_method/demo_parametrisation_method.jl": {
-    "mtime": 1782733088.890539,
-    "ast_hash": "53e7909fc9569be61d3d370b34e8f4bd",
+    "mtime": 1783502068.1348143,
+    "ast_hash": "48402fddbf59a8dbcb1c9d178351e885",
     "semantic_hash": ""
   },
   "examples/internals/parametrisation_method/demo_parametrisation_method.py": {
@@ -1075,7 +460,7 @@
     "semantic_hash": ""
   },
   "examples/internals/parametrisation_method/demo_parametrisation_method_2.py": {
-    "mtime": 1782915162.0990474,
+    "mtime": 1783194671.177152,
     "ast_hash": "a53447c5668297ddd0ea887aa7013b90",
     "semantic_hash": ""
   },
@@ -1105,8 +490,8 @@
     "semantic_hash": ""
   },
   "test/Extensions/test_morfe_symbolics.jl": {
-    "mtime": 1782461962.3228064,
-    "ast_hash": "e1acf91931cd6a1601f1f7bb0a49540e",
+    "mtime": 1783502063.1936855,
+    "ast_hash": "6cd10fbde30e8eb4b84ed3eeb1fb891d",
     "semantic_hash": ""
   },
   "test/FEMUtility/test_gmsh_to_comsol.jl": {
@@ -1130,8 +515,8 @@
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_conjugate_symmetry.jl": {
-    "mtime": 1780763752.3763642,
-    "ast_hash": "50b405734e7a574e1eb24bd36b5c2c3f",
+    "mtime": 1783502068.1379426,
+    "ast_hash": "42c3ef9dad2250ba1b3c642a207e4686",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_invariance_equation.jl": {
@@ -1140,8 +525,8 @@
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_noconj_debug.jl": {
-    "mtime": 1780763757.9503253,
-    "ast_hash": "47505b05cc854eb8c32263693c7ca084",
+    "mtime": 1783502068.1386352,
+    "ast_hash": "e8c209aacec35b07774734ad558b44f5",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_parametrisation_method.jl": {
@@ -1175,18 +560,8 @@
     "semantic_hash": ""
   },
   "test/SpectralDecomposition/test_eigenproblems.jl": {
-    "mtime": 1781706767.3407574,
-    "ast_hash": "255fd0cdc72dbedb21b08f9b56a93352",
-    "semantic_hash": ""
-  },
-  "test/StructuralSVK/run_gates.jl": {
-    "mtime": 1781706767.79071,
-    "ast_hash": "9c98ec3364e8955d527b52430d944b2a",
-    "semantic_hash": ""
-  },
-  "test/StructuralSVK/test_structural_svk.jl": {
-    "mtime": 1781706767.791018,
-    "ast_hash": "7fe2c91a4f863ac089f6b9f897243f2a",
+    "mtime": 1783502068.1389563,
+    "ast_hash": "594f27400ce0ef2a19da2b84d6cda308",
     "semantic_hash": ""
   },
   "test/Utils/test_multiindices.jl": {
@@ -1195,8 +570,8 @@
     "semantic_hash": ""
   },
   "test/Utils/test_polynomials.jl": {
-    "mtime": 1781706767.3416784,
-    "ast_hash": "5363bf4deec47e3f9eb9ca8aa4e4f8d2",
+    "mtime": 1783502063.1941037,
+    "ast_hash": "eaf43b6ed5921cc5a915119a42bf4db6",
     "semantic_hash": ""
   },
   "test/Utils/test_realification.jl": {
@@ -1205,8 +580,8 @@
     "semantic_hash": ""
   },
   "test/runtests.jl": {
-    "mtime": 1781987527.803686,
-    "ast_hash": "f999bef672a944def92f57886f74217d",
+    "mtime": 1784027955.6164193,
+    "ast_hash": "eb0458674e4c100e1372a5d162478f76",
     "semantic_hash": ""
   },
   "website/assets/dpim-scheme.jsx": {
@@ -1219,24 +594,14 @@
     "ast_hash": "3cffc25ed16b871a549b1ad2698ab1a8",
     "semantic_hash": ""
   },
-  "website/assets/karman/generate_charts.py": {
-    "mtime": 1783116902.551226,
-    "ast_hash": "351511fdac725f2bd157eb06c2997090",
-    "semantic_hash": ""
-  },
-  "website/assets/karman/generate_flow_anim.py": {
-    "mtime": 1783117180.8421915,
-    "ast_hash": "a313ecbd0cc7abab03b3d5f6e4fc2709",
-    "semantic_hash": ""
-  },
   "website/assets/manifold-bg.js": {
     "mtime": 1778882477.0,
     "ast_hash": "37491d7181d611a0e24d5c0a69de97dc",
     "semantic_hash": ""
   },
   "website/assets/nav.js": {
-    "mtime": 1779624309.4986324,
-    "ast_hash": "798b1b742c8588c8949e74fccd337c61",
+    "mtime": 1783213436.8173778,
+    "ast_hash": "5d5a67467ab52f680cc08676a8d89069",
     "semantic_hash": ""
   },
   "website/assets/team-data.js": {
@@ -1265,8 +630,8 @@
     "semantic_hash": ""
   },
   "website/docs/assets/nav-inject.js": {
-    "mtime": 1779740306.3626094,
-    "ast_hash": "adfc5e47857b0f0c7f6d5e932fd88be8",
+    "mtime": 1783213574.2280738,
+    "ast_hash": "9d006cb18b67a989ecda22f269e2f9fc",
     "semantic_hash": ""
   },
   "website/docs/assets/themeswap.js": {
@@ -1319,16 +684,6 @@
     "ast_hash": "5991262b63a0b7095c017063c757da58",
     "semantic_hash": ""
   },
-  "examples/01_clamped_beam_ferrite/README.md": {
-    "mtime": 1781706767.3641374,
-    "ast_hash": "dae30a846e0572adfac80cd1fae8fa29",
-    "semantic_hash": ""
-  },
-  "examples/01_clamped_beam_ferrite/results/summary.txt": {
-    "mtime": 1781703477.39676,
-    "ast_hash": "eba109090bafe47fa3d493892abad234",
-    "semantic_hash": ""
-  },
   "examples/02_clamped_beam_gridap/README.md": {
     "mtime": 1781706766.6942446,
     "ast_hash": "19700769145d0e330955e85fdd5b86aa",
@@ -1342,106 +697,6 @@
   "examples/02_clamped_beam_gridap/results/summary.txt": {
     "mtime": 1781172391.186381,
     "ast_hash": "dd309b1a99a23b425dca4bf8c5ef3815",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/README.md": {
-    "mtime": 1781706766.6951168,
-    "ast_hash": "b15cd1d349fd8ddc3a4d666a53e188ca",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/results/mode_1_order_5_cnf/summary.txt": {
-    "mtime": 1781172643.3931394,
-    "ast_hash": "a41ee3276910aa661dd23cf40c8d796b",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/results/summary.txt": {
-    "mtime": 1781704108.620067,
-    "ast_hash": "6983e155b14115c91079cecd751f9b5e",
-    "semantic_hash": ""
-  },
-  "examples/03_arch_comsol_wedge/results/visualise_structure_and_modes/node_dof_table.txt": {
-    "mtime": 1781170175.6476233,
-    "ast_hash": "61f14d768f106cdd5a3e6e57f911bed8",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/PARAMETRIC_FEM_MATH.md": {
-    "mtime": 1781863115.8800056,
-    "ast_hash": "3a6765c38a2f17de1eda6365fb2e211b",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/README.md": {
-    "mtime": 1781706766.6190825,
-    "ast_hash": "2b742e76616c55d9318d42e8e215c936",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/backbone/backbone_derivation.md": {
-    "mtime": 1781706765.5061603,
-    "ast_hash": "8416f674f2bea552b6da7bc1443c4683",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/data/summary.txt": {
-    "mtime": 1781772204.920793,
-    "ast_hash": "863916ec75674a589b003e1c47286a1c",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/data/summary.txt": {
-    "mtime": 1781706766.8462965,
-    "ast_hash": "4836a9a23a2d740c900abfe5fcbbf0e6",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/summary.txt": {
-    "mtime": 1781706766.9222753,
-    "ast_hash": "4836a9a23a2d740c900abfe5fcbbf0e6",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/README.md": {
-    "mtime": 1783084531.232335,
-    "ast_hash": "447f06b9da4720fa6a1dbfd6a2bd3b3f",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/REFERENCE_ANALYSIS.md": {
-    "mtime": 1781005030.8431833,
-    "ast_hash": "094ce88e52d72b52bbd782a372ee68f0",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/output/eig/eigenfrequencies.txt": {
-    "mtime": 1713888318.0,
-    "ast_hash": "3abb2c27dca2716bb901267550a2016f",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/output/eig/eigenfrequencies_nu.txt": {
-    "mtime": 1713888319.0,
-    "ast_hash": "3abb2c27dca2716bb901267550a2016f",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/output/equations.txt": {
-    "mtime": 1713860223.0,
-    "ast_hash": "334cb8958170cbbafee189b67a2ebc69",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/DPIM2D_NS/output/outRFULL.txt": {
-    "mtime": 1713860223.0,
-    "ast_hash": "d35f33a69e47aaf1eda3af606275587e",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord7/data/reduced_dynamics.txt": {
-    "mtime": 1783078233.9665387,
-    "ast_hash": "709691b3ec6253de9286554b18717d02",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord7/summary.txt": {
-    "mtime": 1783079971.6898425,
-    "ast_hash": "d1570d18a5026578443535e4c336c726",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord9/data/reduced_dynamics.txt": {
-    "mtime": 1783085838.2753558,
-    "ast_hash": "339485fa5505fe88da206c617f3f9749",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/Re49.03_ord9/summary.txt": {
-    "mtime": 1783096521.4432898,
-    "ast_hash": "5d7bc46bf126a0d8fde1e8abe8871ddb",
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/README.md": {
@@ -1459,126 +714,6 @@
     "ast_hash": "dd8dc70fd3843fc536e1f9251712ccce",
     "semantic_hash": ""
   },
-  "examples/07_parametric_arch/ANALYSIS.md": {
-    "mtime": 1782045875.13122,
-    "ast_hash": "b9a36ed75c04162c8d08c81733599eff",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/data/arch_h0.005/summary.txt": {
-    "mtime": 1782056562.8171043,
-    "ast_hash": "cef0db28d368fd3a8d373e394edaacfd",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/data/arch_h0.100/summary.txt": {
-    "mtime": 1781994489.5541575,
-    "ast_hash": "9f94dde79b503b4fefb4319dc93f75eb",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_0.0mm/summary.txt": {
-    "mtime": 1782429729.2535965,
-    "ast_hash": "b82ee4b7402679f0b6d47e7e894b7567",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_0.5mm/summary.txt": {
-    "mtime": 1782422721.1683335,
-    "ast_hash": "3efef5a80878506101fc29c1d345817d",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_1.0mm/summary.txt": {
-    "mtime": 1782422725.7935793,
-    "ast_hash": "c229c3659d0bd9832502f27057a1d3dc",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_1.5mm/summary.txt": {
-    "mtime": 1782422731.1319027,
-    "ast_hash": "fc3feb5c13b757888314ef0607673bba",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_10.0mm/summary.txt": {
-    "mtime": 1782430387.8523114,
-    "ast_hash": "48f9e900d9d540c431a77a68ea2c4067",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_2.0mm/summary.txt": {
-    "mtime": 1782422735.607254,
-    "ast_hash": "4c79dadd342651c235cdaa7f43fd5d10",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_2.5mm/summary.txt": {
-    "mtime": 1782469198.8376465,
-    "ast_hash": "5bd4cd5858f186b62c3f92d35d99fb4f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_3.0mm/summary.txt": {
-    "mtime": 1782422744.335975,
-    "ast_hash": "8280614758822be704639a8b1aca3efa",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_3.5mm/summary.txt": {
-    "mtime": 1782422748.7761898,
-    "ast_hash": "c33d01ccd232834500eed767197eff3e",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_4.0mm/summary.txt": {
-    "mtime": 1782422753.324297,
-    "ast_hash": "035bbd426824d9db294688761523b334",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_4.5mm/summary.txt": {
-    "mtime": 1782422757.975683,
-    "ast_hash": "f8721ecb5e8b4ca998de5d0ed1c80684",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_5.0mm/summary.txt": {
-    "mtime": 1782430054.3933513,
-    "ast_hash": "cf574bc5acd134323b347d676c154286",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_5.5mm/summary.txt": {
-    "mtime": 1782422767.1751542,
-    "ast_hash": "8564a4cfd1c911dec311c654c9c1d5b3",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_6.0mm/summary.txt": {
-    "mtime": 1782422771.532345,
-    "ast_hash": "a7655d32082fc43c9c8bb60c3ce6c3cf",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_6.5mm/summary.txt": {
-    "mtime": 1782422776.1850052,
-    "ast_hash": "34af2b387ede3c483a7c73ab1dbba7f7",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_7.0mm/summary.txt": {
-    "mtime": 1782422780.8254764,
-    "ast_hash": "feeedc799bb3dfce9019305cfe5eddcc",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_7.5mm/summary.txt": {
-    "mtime": 1782469521.8491225,
-    "ast_hash": "8cc26971d315f0c8ec1944e021210413",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_8.0mm/summary.txt": {
-    "mtime": 1782422789.7135718,
-    "ast_hash": "36526c68aab8f926492f482ee5c0effd",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_8.5mm/summary.txt": {
-    "mtime": 1782422794.2361197,
-    "ast_hash": "991eca5a80da3e863ee993020e626a4c",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_9.0mm/summary.txt": {
-    "mtime": 1782422798.7406723,
-    "ast_hash": "642fcfe5b9eb2c4baeeca9ed7dc547e4",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/reference/arch_h_9.5mm/summary.txt": {
-    "mtime": 1782422803.4660966,
-    "ast_hash": "9e31f651126706b2be9b1646d3ec370a",
-    "semantic_hash": ""
-  },
   "examples/README.md": {
     "mtime": 1781706766.7027762,
     "ast_hash": "fc4ab0607fde13c738c5792de4da9841",
@@ -1592,11 +727,6 @@
   "examples/mesh_import/README.md": {
     "mtime": 1781706765.926087,
     "ast_hash": "773a68bed608b64b968c945d17057d85",
-    "semantic_hash": ""
-  },
-  "mesh_viewer.html": {
-    "mtime": 1780931528.7146904,
-    "ast_hash": "dcfd98986cfe6ac156c95a65a1df84bc",
     "semantic_hash": ""
   },
   "multi_threaded_solve_analysis.md": {
@@ -1614,11 +744,6 @@
     "ast_hash": "ee052b6be9ede7b748e8ce015e22ffd0",
     "semantic_hash": ""
   },
-  "plan_decouple_dependencies.md": {
-    "mtime": 1781706767.2340562,
-    "ast_hash": "a5df43d6bc41f10f8b8ebd62b41234a3",
-    "semantic_hash": ""
-  },
   "profile_analysis.md": {
     "mtime": 1778022664.565615,
     "ast_hash": "f92561de2665f63dd835d866233d64e2",
@@ -1627,21 +752,6 @@
   "test/SpectralDecomposition/EigensolverTestsFrancesco/statement.md": {
     "mtime": 1781706767.340222,
     "ast_hash": "02bacadd7905522ded642f1b561c272b",
-    "semantic_hash": ""
-  },
-  "website/assets/karman/karman_flow.html": {
-    "mtime": 1783117189.9922683,
-    "ast_hash": "ccfc34b05700e18057203961ef1a18ac",
-    "semantic_hash": ""
-  },
-  "website/assets/karman/lift_vs_Re.html": {
-    "mtime": 1783116902.6952786,
-    "ast_hash": "711f8447c13142f9dfc2a39960d9bd47",
-    "semantic_hash": ""
-  },
-  "website/assets/karman/tke_vs_Re.html": {
-    "mtime": 1783116902.6988719,
-    "ast_hash": "13d778496a21785b1caf22052d287e14",
     "semantic_hash": ""
   },
   "website/docs/api.html": {
@@ -1780,118 +890,38 @@
     "semantic_hash": ""
   },
   "website/dpim-preview.html": {
-    "mtime": 1779205684.0726066,
-    "ast_hash": "3e5c8441fa522a7aaeaa74b190d8c5c5",
+    "mtime": 1783213453.4195921,
+    "ast_hash": "c1870f06384f5301cc58d728caa3e077",
     "semantic_hash": ""
   },
   "website/features.html": {
-    "mtime": 1779741445.1008353,
-    "ast_hash": "895ee5396fc5cb280c654f2666ce7739",
+    "mtime": 1783213453.3896751,
+    "ast_hash": "6ae0a1810dc36c8148d98660e8bd4037",
     "semantic_hash": ""
   },
   "website/gallery.html": {
-    "mtime": 1779205686.2364264,
-    "ast_hash": "c16bc281c4a27dc35926592ffd5ec5f9",
+    "mtime": 1783213453.411351,
+    "ast_hash": "dc6d659ca96f321b8b50ee319a019d1c",
     "semantic_hash": ""
   },
   "website/index.html": {
-    "mtime": 1781706768.2016592,
-    "ast_hash": "5df9150b0b90df080d70ce63cf0ecb20",
+    "mtime": 1783213453.3851314,
+    "ast_hash": "728994f21930e96b9a97a92118b1884e",
     "semantic_hash": ""
   },
   "website/publications.html": {
-    "mtime": 1779735809.6247137,
-    "ast_hash": "0c15666b302419279e062ae33ebb02ff",
+    "mtime": 1783213453.3951566,
+    "ast_hash": "9f838757a2b6e20f513f1618e62744b7",
     "semantic_hash": ""
   },
   "website/team.html": {
-    "mtime": 1779871665.080452,
-    "ast_hash": "ca44991a8ae78f547fdab812e3afdfdd",
-    "semantic_hash": ""
-  },
-  "website/tutorial-karman.html": {
-    "mtime": 1783117307.564436,
-    "ast_hash": "49db8fb2fa016f0c2250b02f88f42a67",
-    "semantic_hash": ""
-  },
-  "website/tutorial-micromirror.html": {
-    "mtime": 1783085673.2456565,
-    "ast_hash": "82e17143c0449f75dd85c23b9d1d82d6",
-    "semantic_hash": ""
-  },
-  "website/tutorial-roadmap.html": {
-    "mtime": 1783095982.0679572,
-    "ast_hash": "3d062db656ee7ff07459e267271d8476",
-    "semantic_hash": ""
-  },
-  "website/tutorials.html": {
-    "mtime": 1783096982.839844,
-    "ast_hash": "02b153ea379a7891e5104d904c669d15",
+    "mtime": 1783213453.4156013,
+    "ast_hash": "2356e6a8d5891d745ee41b8158a40ee3",
     "semantic_hash": ""
   },
   "website/uploads/dpim-preview.html": {
     "mtime": 1778882477.0,
     "ast_hash": "a425501bb75690391e3f8af703a69f7d",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/Manifolds.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "917a7ca0eda27fe55a3bf616458f2937",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/bifurcation_diagram_TKE.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "976668857cf4bf12ba6f9f3e7936d04c",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/bifurcation_diagram_TKE_orders_atbif_g.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "565e54f47f10ac99d8736d74f5781968",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/comparison_Carini_bifurcation_g.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "5ef0f20e63e8759e2bc5d6d6ef6bfb52",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/eigens_over_time.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "81e2e8e721c16756f7b7bcb3b3cda4aa",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/imag_eig_FOMvsROMplusmode.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "dfdbd4a291e624d33dbcaf51b5dabbad",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/mesh_justgeom.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "9490c69ac09c7abcc1b9940a34c81771",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/normalised_RMSE_logy.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "1d9a42c870b008eda0b20f7fbc9e7dd8",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/figures/real_eig_FOMvsROMplusmode.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "1e9b90f18e65bcb776ef43fc11e88059",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/vort_figures/vort_FOMvsROM_complete.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "d7a561c1f740fbc9ba40b0470fb4f73a",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/vort_figures/vort_diffU.pdf": {
-    "mtime": 1761834565.0,
-    "ast_hash": "40b524f2eb1c807276d0859be8003dd8",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/from_reference_paper/arXiv-2510.26542v1/vort_figures/vort_predDu.pdf": {
-    "mtime": 1761834566.0,
-    "ast_hash": "bbff6848181f1919f466ffe99570d26e",
     "semantic_hash": ""
   },
   "benchmark/ferrite/results/archived/invariance_convergence_full.png": {
@@ -1902,296 +932,6 @@
   "benchmark/ferrite/results/archived/invariance_convergence_master.png": {
     "mtime": 1781170192.183913,
     "ast_hash": "39bd3464b80c23328ca5b97ede5a790c",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=-0.100_t2=0.000.png": {
-    "mtime": 1781960284.4271533,
-    "ast_hash": "20d9dc0f7c1c80d6a8f558d2a394e4a7",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=-0.100_t2=3.000.png": {
-    "mtime": 1781960284.6922104,
-    "ast_hash": "7f4f028e9659f83cc4ed8dc99364cd05",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=-0.100_t2=6.000.png": {
-    "mtime": 1781960284.951035,
-    "ast_hash": "71593f58267fc3a59773b06507cc2254",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=0.000_t2=0.000.png": {
-    "mtime": 1781960284.52488,
-    "ast_hash": "8ad5c5ae3196259114ab75aceb68effb",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=0.000_t2=3.000.png": {
-    "mtime": 1781960284.7740316,
-    "ast_hash": "3e47808c6a8f089cdcb3090ba257a1bb",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=0.000_t2=6.000.png": {
-    "mtime": 1781960285.0301025,
-    "ast_hash": "1dc68ba5efd8309183d26c9179fdf5fb",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=0.100_t2=0.000.png": {
-    "mtime": 1781960284.6063697,
-    "ast_hash": "5e6f13125e2eda052fb90cb79d59c293",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=0.100_t2=3.000.png": {
-    "mtime": 1781960284.8685067,
-    "ast_hash": "60e76b01afc0877ee54cb0f33fa095ce",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_physical_t1=0.100_t2=6.000.png": {
-    "mtime": 1781960285.1208155,
-    "ast_hash": "d417ebcdbc34bff94f58e5f89ffdfe5f",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/backbone_shift_physical.png": {
-    "mtime": 1781960285.2512336,
-    "ast_hash": "c9a57f6db086a498c55f8f7446c39696",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results/figures/eigenfrequency_error_heatmap.png": {
-    "mtime": 1781974673.2026925,
-    "ast_hash": "a0168769fcacf1861c18463c25990884",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_curve.png": {
-    "mtime": 1781706766.848301,
-    "ast_hash": "e6300437dd6da2c45e294173e85f94ef",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_curves.png": {
-    "mtime": 1781706766.8491898,
-    "ast_hash": "96beddf539c20d8bbd1dadfc1fe890b8",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=-0.100_t2=0.000.png": {
-    "mtime": 1781706766.8514123,
-    "ast_hash": "2aab238342ec3a54cbe72064e9457bb0",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=-0.100_t2=3.000.png": {
-    "mtime": 1781706766.8527465,
-    "ast_hash": "0301596b470a72f4d775ed2584ab5f7e",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=-0.100_t2=6.000.png": {
-    "mtime": 1781706766.8549867,
-    "ast_hash": "72d2a6faf8046199ecd149b218a3888c",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=0.000_t2=0.000.png": {
-    "mtime": 1781706766.8570642,
-    "ast_hash": "65176a25b75659e4d2291f3f6fe0d75a",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=0.000_t2=3.000.png": {
-    "mtime": 1781706766.8612459,
-    "ast_hash": "2982bd3478551f079b55428012991b5e",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=0.000_t2=6.000.png": {
-    "mtime": 1781706766.8623054,
-    "ast_hash": "476ebdeecc2e4dd1c940504a988df913",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=0.100_t2=0.000.png": {
-    "mtime": 1781706766.863315,
-    "ast_hash": "468e3c24efbc6fa5386c3c9bdd2b5270",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=0.100_t2=3.000.png": {
-    "mtime": 1781706766.864337,
-    "ast_hash": "de97026ca23549d14b81e6f5594fa5a0",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_physical_t1=0.100_t2=6.000.png": {
-    "mtime": 1781706766.8655896,
-    "ast_hash": "bfb39fcc27374c3afd4e055967a0df1b",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_shift.png": {
-    "mtime": 1781706766.866472,
-    "ast_hash": "788bee691a80c6f9eb28c9ee5d9896e2",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_shift_physical.png": {
-    "mtime": 1781706766.8703759,
-    "ast_hash": "711e67c6380fcf3d819aeee98100853f",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_theta2_curves.png": {
-    "mtime": 1781706766.8711388,
-    "ast_hash": "8c5628e9ad10f7d4116bc7ae09072a84",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/backbone_theta2_shift.png": {
-    "mtime": 1781706766.8716707,
-    "ast_hash": "cd3aef2f55af2925ba3b2ffa8af89d20",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/eigenfrequency_error_heatmap.png": {
-    "mtime": 1781706766.8749826,
-    "ast_hash": "fd4176721903eee4ffe8d6f461557fb7",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/omega0_slope_minus2.png": {
-    "mtime": 1781706766.8756604,
-    "ast_hash": "d96d920d7eac6f9ec043eb0f2a9b52a4",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/omega0_vs_theta2.png": {
-    "mtime": 1781706766.8764663,
-    "ast_hash": "9f95ba53dc8a0fa128438606a5b72d01",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=-0.050_t2=0.000.png": {
-    "mtime": 1781706766.879176,
-    "ast_hash": "39af9422f8bfaa2f7d5e1e82a0a412c7",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=-0.100_t2=0.000.png": {
-    "mtime": 1781706766.8817801,
-    "ast_hash": "dfc509b614dc404c561af80165466fe9",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=-0.200_t2=0.000.png": {
-    "mtime": 1781706766.8845444,
-    "ast_hash": "c60a6e7e136879701cf1efed38bbf1d0",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.000_t2=0.000.png": {
-    "mtime": 1781706766.8873787,
-    "ast_hash": "129bb853b40b4fa475f648a2764170dd",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.000_t2=1.500.png": {
-    "mtime": 1781706766.8893123,
-    "ast_hash": "2d0eba574c5a2da1246fb65d43f4fc78",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.000_t2=3.000.png": {
-    "mtime": 1781706766.8915956,
-    "ast_hash": "da5caefa9139dbcbf0775fb908a7bfae",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.000_t2=4.500.png": {
-    "mtime": 1781706766.8942256,
-    "ast_hash": "a07e402c9a6341b36049e322051e2349",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.000_t2=6.000.png": {
-    "mtime": 1781706766.8974006,
-    "ast_hash": "f87a6d8bfe15d135f841af80252b81a2",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.000_t2=7.000.png": {
-    "mtime": 1781706766.9025805,
-    "ast_hash": "03cf20bd21532dfc200d88aba43de009",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.050_t2=0.000.png": {
-    "mtime": 1781706766.9043694,
-    "ast_hash": "290fa4b5657814595a06c482c7432134",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.050_t2=1.500.png": {
-    "mtime": 1781706766.9064734,
-    "ast_hash": "4e5c89563a78e1b3eb4541a00cf16117",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.100_t2=0.000.png": {
-    "mtime": 1781706766.9092548,
-    "ast_hash": "ef97d28159c7b789c4c8d801654defd0",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_backbone_t1=0.200_t2=0.000.png": {
-    "mtime": 1781706766.9111383,
-    "ast_hash": "4042d408e09b3d8fc94357b2fa234461",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/figures/validation_omega0.png": {
-    "mtime": 1781706766.9126818,
-    "ast_hash": "19f07c2e4baa18124d1cb18ee0a12a02",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/backbone_curve.png": {
-    "mtime": 1781706766.913786,
-    "ast_hash": "e6300437dd6da2c45e294173e85f94ef",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/backbone_curves.png": {
-    "mtime": 1781706766.9143498,
-    "ast_hash": "96beddf539c20d8bbd1dadfc1fe890b8",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/backbone_shift.png": {
-    "mtime": 1781706766.9152708,
-    "ast_hash": "788bee691a80c6f9eb28c9ee5d9896e2",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/backbone_theta2_curves.png": {
-    "mtime": 1781706766.9159915,
-    "ast_hash": "8c5628e9ad10f7d4116bc7ae09072a84",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/backbone_theta2_shift.png": {
-    "mtime": 1781706766.9166186,
-    "ast_hash": "cd3aef2f55af2925ba3b2ffa8af89d20",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/omega0_slope_minus2.png": {
-    "mtime": 1781706766.917124,
-    "ast_hash": "d96d920d7eac6f9ec043eb0f2a9b52a4",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/omega0_vs_theta2.png": {
-    "mtime": 1781706766.9177334,
-    "ast_hash": "9f95ba53dc8a0fa128438606a5b72d01",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/validation_backbone_t1=0.000_t2=0.000.png": {
-    "mtime": 1781706766.9183435,
-    "ast_hash": "b482638cccdcbc8508ce9d6923d52ba4",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/validation_backbone_t1=0.000_t2=0.050.png": {
-    "mtime": 1781706766.9193099,
-    "ast_hash": "38d7eabe46b29f56b6e08bddf93c8715",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/validation_backbone_t1=0.050_t2=0.000.png": {
-    "mtime": 1781706766.9199398,
-    "ast_hash": "8a9dfa119efb9a5cd299536a25535b62",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/validation_backbone_t1=0.050_t2=0.050.png": {
-    "mtime": 1781706766.9205146,
-    "ast_hash": "1461da827bbf83a716ab9fb2e8eb038b",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/validation_backbone_t1=0.100_t2=0.000.png": {
-    "mtime": 1781706766.9212973,
-    "ast_hash": "51f8a835d2c9a2c8ac47c950bbc72de6",
-    "semantic_hash": ""
-  },
-  "examples/04_parametric_clamped_beam/results_5925dofs/reference/figures/validation_omega0.png": {
-    "mtime": 1781706766.921929,
-    "ast_hash": "e3490c36b6d74997a8377341c1708043",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/comparison/lift_vs_Re.png": {
-    "mtime": 1783096611.5977898,
-    "ast_hash": "cd6cce45b00fd53c08072a722b409261",
-    "semantic_hash": ""
-  },
-  "examples/05_karman_vortex_street/results/comparison/tke_vs_Re.png": {
-    "mtime": 1783096611.6730382,
-    "ast_hash": "991b3350c9ba9552024f22c153b3ba32",
     "semantic_hash": ""
   },
   "examples/06_dielectric_elastomer_actuator/validation/figures/closure_comparison.png": {
@@ -2207,311 +947,6 @@
   "examples/06_dielectric_elastomer_actuator/validation/figures/rom_vs_fom_timehist.png": {
     "mtime": 1781780076.8905122,
     "ast_hash": "204494144d620220bd55c1b3389dec62",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_0.0mm.png": {
-    "mtime": 1782409256.4405303,
-    "ast_hash": "e41e6ce57d9b23e36e91386ca626e5a9",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_0.0mm_reduced.png": {
-    "mtime": 1782409308.4638865,
-    "ast_hash": "46387b4027f5ee5b95482f609f167932",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_0.5mm.png": {
-    "mtime": 1782409256.5484207,
-    "ast_hash": "497eb72d799f910c6d1ca1a5095f81df",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_0.5mm_reduced.png": {
-    "mtime": 1782409308.5893147,
-    "ast_hash": "324259fc80bc808da509dbed567a90ea",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_1.0mm.png": {
-    "mtime": 1782409256.6545126,
-    "ast_hash": "623105f954ee04751fe7c32a2117b375",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_1.0mm_reduced.png": {
-    "mtime": 1782409308.7131264,
-    "ast_hash": "2533f664afb4d1adbb28815abc88043a",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_1.5mm.png": {
-    "mtime": 1782409256.7677023,
-    "ast_hash": "0e8616a51970188f8791954e3773c35d",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_1.5mm_reduced.png": {
-    "mtime": 1782409308.8425043,
-    "ast_hash": "4bf5803c8ef45d642b87e5b375be62bb",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_10.0mm.png": {
-    "mtime": 1782409258.6600277,
-    "ast_hash": "7033033bf850b589b877bf3237039a8c",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_10.0mm_reduced.png": {
-    "mtime": 1782409310.9867902,
-    "ast_hash": "20cc2d28ea3ef556b95cee03f05adc98",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_2.0mm.png": {
-    "mtime": 1782409256.8715374,
-    "ast_hash": "9485df5128be43346fa64f5f53593ada",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_2.0mm_reduced.png": {
-    "mtime": 1782409308.9711998,
-    "ast_hash": "41a1f4816dd6c7e303654053c955de77",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_2.5mm.png": {
-    "mtime": 1782409256.97689,
-    "ast_hash": "fb7a2e92be432db5adaa87b91a75e007",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_2.5mm_reduced.png": {
-    "mtime": 1782409309.092418,
-    "ast_hash": "30674f94522bfb3b250b344649cff4a0",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_3.0mm.png": {
-    "mtime": 1782409257.0857909,
-    "ast_hash": "b049c0256615770d8a0b3697cac751de",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_3.0mm_reduced.png": {
-    "mtime": 1782409309.2176263,
-    "ast_hash": "08c1c75306d5fe412ddffdf2eb07940f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_3.5mm.png": {
-    "mtime": 1782409257.2050772,
-    "ast_hash": "5e16698eebe6daf6edb3f532e4312639",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_3.5mm_reduced.png": {
-    "mtime": 1782409309.3383899,
-    "ast_hash": "08929b6b2e5b07febb8c52c74ee603e0",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_4.0mm.png": {
-    "mtime": 1782409257.3170109,
-    "ast_hash": "b028229d0ae9e84c72780dbefa6b88d8",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_4.0mm_reduced.png": {
-    "mtime": 1782409309.4626539,
-    "ast_hash": "086b6eb46bedfa80fb173d4d45d5f86f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_4.5mm.png": {
-    "mtime": 1782409257.4259117,
-    "ast_hash": "556e768d5a7cf8996a2a3aab20203bff",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_4.5mm_reduced.png": {
-    "mtime": 1782409309.587036,
-    "ast_hash": "88491b5be75aebd52019403c4cec6852",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_5.0mm.png": {
-    "mtime": 1782409257.537563,
-    "ast_hash": "815dae0235984ba936bb1dba49311b6c",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_5.0mm_reduced.png": {
-    "mtime": 1782409309.711561,
-    "ast_hash": "2b819ee89b0ff09840c852ffd9b92045",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_5.5mm.png": {
-    "mtime": 1782409257.64732,
-    "ast_hash": "de943195aadcbc490b58476a262c67f0",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_5.5mm_reduced.png": {
-    "mtime": 1782409309.8331835,
-    "ast_hash": "b46c7c8f7fcd482b62b8d6e5d7032220",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_6.0mm.png": {
-    "mtime": 1782409257.7582686,
-    "ast_hash": "15b68eded6d0b51be99e5d4dcdefb0d0",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_6.0mm_reduced.png": {
-    "mtime": 1782409309.9618962,
-    "ast_hash": "479a2c96d87c1d1d6da9841813ded9f1",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_6.5mm.png": {
-    "mtime": 1782409257.8672714,
-    "ast_hash": "119a5ea4af054bfb337aece9c1694e76",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_6.5mm_reduced.png": {
-    "mtime": 1782409310.0859454,
-    "ast_hash": "dfb840955c089dbdba934abfd62b6060",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_7.0mm.png": {
-    "mtime": 1782409257.9771798,
-    "ast_hash": "9946fbd54e7d7c4da4d09a4073e161d6",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_7.0mm_reduced.png": {
-    "mtime": 1782409310.2120433,
-    "ast_hash": "eab69b35b45421e6dbe2946d7356cebd",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_7.5mm.png": {
-    "mtime": 1782409258.0858226,
-    "ast_hash": "f268ec2dafefbe9c7820dab2de50b9d4",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_7.5mm_reduced.png": {
-    "mtime": 1782409310.338337,
-    "ast_hash": "508fda17b32c4e6e8bb79e59028fb26f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_8.0mm.png": {
-    "mtime": 1782409258.198169,
-    "ast_hash": "6a6864e2f1f86aeffdc72e20126e6470",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_8.0mm_reduced.png": {
-    "mtime": 1782409310.4641583,
-    "ast_hash": "8c181905ea7038a38bcbb12b6305f577",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_8.5mm.png": {
-    "mtime": 1782409258.3098626,
-    "ast_hash": "e4c381e55d6ab5fe2dee374e303e1d9d",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_8.5mm_reduced.png": {
-    "mtime": 1782409310.5931358,
-    "ast_hash": "630c0d5ba237436c011752d299e6c369",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_9.0mm.png": {
-    "mtime": 1782409258.4290876,
-    "ast_hash": "0ffc776c2832445090f5948ec93d1b67",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_9.0mm_reduced.png": {
-    "mtime": 1782409310.7309074,
-    "ast_hash": "c75b1ae8cbff3d75ef983397de201ed8",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_9.5mm.png": {
-    "mtime": 1782409258.5460265,
-    "ast_hash": "28d91b3666508642344ab9adf5189d39",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_9.5mm_reduced.png": {
-    "mtime": 1782409310.8568633,
-    "ast_hash": "8c2d9aaf510757d0c72c67e856cb156d",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_absolute.png": {
-    "mtime": 1782409250.2590625,
-    "ast_hash": "0742cf02f0116a7c87573a6bebe95d33",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_absolute_reduced.png": {
-    "mtime": 1782409300.6684823,
-    "ast_hash": "a363937f26568cf6d19cc75706903c10",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.000.png": {
-    "mtime": 1782063021.5941167,
-    "ast_hash": "cacd6b98173620f1876101133ffa0b2d",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.001.png": {
-    "mtime": 1782063021.803783,
-    "ast_hash": "43661dc31080ff07112030c373963307",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.002.png": {
-    "mtime": 1782063022.0242958,
-    "ast_hash": "5bd1bbb3127d220e8c861976239842e9",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.003.png": {
-    "mtime": 1782063022.2460258,
-    "ast_hash": "85e28b05e8f7f512cdcaad56983413b7",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.004.png": {
-    "mtime": 1782063022.567231,
-    "ast_hash": "cdb50559a74d1a4ff08d4f021c16547f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.005.png": {
-    "mtime": 1782063022.7960098,
-    "ast_hash": "8ed74a3fd7085749a91f323a8b9460ee",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.006.png": {
-    "mtime": 1782063023.018252,
-    "ast_hash": "148d71c9bc6bda47ee8f06ce45559944",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.007.png": {
-    "mtime": 1782063023.2350376,
-    "ast_hash": "f2a608b03541337b076f8392d4702e7b",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.008.png": {
-    "mtime": 1782063023.3384554,
-    "ast_hash": "219d1ffc88e0cfd266ff09bec80214f3",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.009.png": {
-    "mtime": 1782063023.658154,
-    "ast_hash": "0a26af6c87a65de400f6942612212279",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_h0.010.png": {
-    "mtime": 1782063023.7612813,
-    "ast_hash": "adb5347cee516b696f4f6ee9b0e4de34",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_shift.png": {
-    "mtime": 1782409253.7432835,
-    "ast_hash": "23cd8cb1900b95ac609bf77c096fe8c4",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/backbone_shift_reduced.png": {
-    "mtime": 1782409305.9962962,
-    "ast_hash": "830ab0deb6910ec01811468a6e82b133",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/backbone/eigenfreq_vs_h.png": {
-    "mtime": 1782595835.7482123,
-    "ast_hash": "2eb7e769d7eed6dbe3c8109f9415e27e",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/paraview/arch.svg": {
-    "mtime": 1782069507.4321797,
-    "ast_hash": "b578f94c877d24f386857c440a8b203d",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/validation/cubic_force_errors.png": {
-    "mtime": 1782148166.3997808,
-    "ast_hash": "c40d0315f333b83419697f493287e94f",
-    "semantic_hash": ""
-  },
-  "examples/07_parametric_arch/results/validation/quad_force_errors.png": {
-    "mtime": 1782147810.3741608,
-    "ast_hash": "af18d4c688c93a082d3cd122af544efb",
     "semantic_hash": ""
   },
   "examples/internals/eigensolver/results/archived/eigenpairs_complex_plane.png": {
@@ -2667,6 +1102,76 @@
   "website/uploads/logo.svg": {
     "mtime": 1778882477.0,
     "ast_hash": "b28df3c67dd1eab4b5e0c119785df6d2",
+    "semantic_hash": ""
+  },
+  ".githooks/commit-msg": {
+    "mtime": 1783198209.9561448,
+    "ast_hash": "b36260eeb329a635ae4275ca399b0e66",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_master_mode_orthogonality.jl": {
+    "mtime": 1783502068.1382232,
+    "ast_hash": "ed40a267561208e82c6f9d638e6fe16c",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/generate_charts.py": {
+    "mtime": 1783251731.1590917,
+    "ast_hash": "cb226bea712fffbd31cfe4163a629ef1",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/generate_flow_anim.py": {
+    "mtime": 1783213518.0832427,
+    "ast_hash": "5cc5c8260d9a7f8ec87ab2527fc2ea6d",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/generate_thumb.py": {
+    "mtime": 1783213518.0840821,
+    "ast_hash": "0b4d5612f64db8e131532b6fb77d54f5",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/karman_flow.html": {
+    "mtime": 1783194671.2580047,
+    "ast_hash": "8b229278609c3140e1900f334c0818c4",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/lift_vs_Re.html": {
+    "mtime": 1783252849.8528566,
+    "ast_hash": "4bd1e475eff39a1139639592785d2f43",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/tke_vs_Re.html": {
+    "mtime": 1783252861.211898,
+    "ast_hash": "954a8f1a44b9ce54ccb285161576f0d0",
+    "semantic_hash": ""
+  },
+  "website/tutorials/index.html": {
+    "mtime": 1783213508.8030355,
+    "ast_hash": "5357b292104368f7e5736692dc968d99",
+    "semantic_hash": ""
+  },
+  "website/tutorials/karman.html": {
+    "mtime": 1783213508.809714,
+    "ast_hash": "cc3ef9facf8781722b31438ce2adfb8a",
+    "semantic_hash": ""
+  },
+  "website/tutorials/micromirror.html": {
+    "mtime": 1783213508.815526,
+    "ast_hash": "e17b81f0f86626e2a4b08c10984e13c3",
+    "semantic_hash": ""
+  },
+  "website/tutorials/roadmap.html": {
+    "mtime": 1783213508.8198538,
+    "ast_hash": "e303e749623c772fa34f4b3cd4be3bb7",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/karman_thumb.svg": {
+    "mtime": 1783195783.0529232,
+    "ast_hash": "b664c7060306468ca395f62e2f8a9de7",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/parametrise_entry.jl": {
+    "mtime": 1783603278.1380568,
+    "ast_hash": "7d2e813b7cbb8327a50d4e5ed5de9478",
     "semantic_hash": ""
   }
 }
