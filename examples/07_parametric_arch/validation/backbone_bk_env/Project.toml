@@ -1,6 +1,0 @@
-[deps]
-BifurcationKit = "0f109fa4-8a5d-4b75-95aa-f515264e7665"
-MORFE = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

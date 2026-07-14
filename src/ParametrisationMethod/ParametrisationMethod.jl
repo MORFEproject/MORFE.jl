@@ -23,7 +23,13 @@ using ..Polynomials: DensePolynomial, restrict_polynomial_to_degree
 
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
 	compute_higher_derivative_coefficients!,
-	restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree
+	restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree,
+	parametrise
+
+# High-level entry point. The generic function is owned here; its method is
+# defined in `parametrise_entry.jl`, included after `CohomologicalEquations`
+# (which it calls) is available — see src/MORFE.jl.
+function parametrise end
 
 """
 	Parametrisation{ORD, NVAR, T}
