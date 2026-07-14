@@ -18,7 +18,6 @@ include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl"
 include("FEMUtility.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
-include("Export/ParaviewExport.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -39,7 +38,6 @@ using .CohomologicalEquations
 using .FEMUtility
 using .BifurcationKitInterface
 using .InvarianceError
-using .ParaviewExport
 
 # High-level `parametrise(model, order, eigenproblem; …)` method. Included here
 # (after the using-block above) so its body can resolve `solve_cohomological_problem`,
@@ -56,12 +54,11 @@ export DensePolynomial, evaluate, extract_component
 
 # MultilinearMaps
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, ExternalSystem
-# FEMMultilinearMap interface methods (to be extended by FEM backends)
+# FEMMultilinearMap interface methods (to be extended by FEM backends,
+# e.g. MORFEFerrite's StructuralSVK / FluidNavierStokes)
 export fem_elements, fem_n_qp, fem_ndofs_per_cell,
 	scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
 	fem_reinit!
-# Ferrite extension entry points (populated by MORFEFerriteExt when Ferrite is loaded)
-export ferrite_nonlinearity, ferrite_assemble_KM!
 
 # FullOrderModel
 export FullOrderModel, FirstOrderModel, NDOrderModel,
@@ -111,10 +108,6 @@ export make_bk_problem
 
 # Validation
 export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
-
-# Paraview export
-export write_paraview_mesh, write_paraview_modes, write_paraview_manifold,
-	write_paraview_deformation
 
 # MORFESymbolicsExt
 function model_from_symbolics end

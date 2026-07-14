@@ -69,20 +69,8 @@ if GROUP == "examples"
                 "demo_multiindices_factorisations.jl"))
             @test true
         end
-        # Examples 01–05 each manage their own Pkg environment (Pkg.activate + Pkg.instantiate
-        # in main.jl) and require FEM backends (Ferrite, Gridap) not present in the MORFE
-        # test environment. Run them standalone:
-        #   julia --project=examples/01_clamped_beam_ferrite examples/01_clamped_beam_ferrite/main.jl
-        #   julia --project=examples/01_clamped_beam_ferrite examples/01_clamped_beam_ferrite/validate.jl
-        # See examples/README.md for details.
-    end
-end
-
-if GROUP == "structural_svk"
-    # High-level SVK + Ferrite UI (MORFEStructuralSVK extension). Needs the
-    # Ferrite/FerriteGmsh/Arpack/LinearMaps test extras, so run via:
-    #   GROUP=structural_svk julia --project -e 'using Pkg; Pkg.test()'
-    @testset "MORFEStructuralSVK" begin
-        include("StructuralSVK/test_structural_svk.jl")
+        # The remaining examples (02 Gridap, 06 dielectric) manage their own Pkg
+        # environment (Pkg.activate + Pkg.instantiate in main.jl). Run them standalone.
+        # Ferrite-backed examples and the SVK/Fluid UIs live in MORFEFerrite.jl.
     end
 end
