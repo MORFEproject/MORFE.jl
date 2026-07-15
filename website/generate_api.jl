@@ -31,7 +31,7 @@ const MODS = [
 	(MORFE.FEMUtility, "FEMUtility"),
 	(MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
 	(MORFE.InvarianceError, "InvarianceError"),
-	(MORFE.ParaviewExport, "ParaviewExport"),
+	# ParaviewExport moved to MORFEFerrite.jl (Ferrite/VTK export lives there now).
 ]
 
 # ── Extraction helpers ────────────────────────────────────────────────────────

@@ -111,13 +111,12 @@ document.addEventListener('DOMContentLoaded', function () {
     <li><a href="#FEMUtility">FEMUtility</a></li>
     <li><a href="#BifurcationKitInterface">BifurcationKitInterface</a></li>
     <li><a href="#InvarianceError">InvarianceError</a></li>
-    <li><a href="#ParaviewExport">ParaviewExport</a></li>
   </ul>
 
   <h4>Resources</h4>
   <ul>
 	<li><a href="index.html">Getting started</a></li>
-	<li><a href="tutorials/">Demo scripts</a></li>
+	<li><a href="tutorials.html">Demo scripts</a></li>
 	<li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li>
   </ul>
 </aside>
@@ -125,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>API Reference</span></div>
   <h1>API Reference</h1>
-  <p class="lede">19 modules · 191 documented entries · generated 6 June 2026</p>
+  <p class="lede">18 modules · 193 documented entries · generated 15 July 2026</p>
 
   <div id="Multiindices" class="api-module-h">Multiindices</div>
   <div class="api-module-desc" data-module="Multiindices"><div class="markdown"><p>Module <code>Multiindices</code> — graded-lexicographic multiindex sets and combinatorial utilities.</p>
@@ -182,15 +181,15 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-_last_index_below_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L352" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L352" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64, allowed_indices::AbstractVector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L367" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L367" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64, allowed_indices::AbstractVector{Int64})</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>_last_index_below_degree&#40;set::MultiindexSet, max_total_deg::Int&#41; -&gt; Int</code></pre>
-<p>Return the last column index <code>i</code> in the Grlex‑sorted set such that the total degree of <code>set&#91;i&#93;</code> is strictly less than <code>max_total_deg</code>. If no such index exists, return <code>0</code>. O&#40;1&#41; via the precomputed <code>degree_offsets</code> field.</p>
-</div><div class="markdown"><pre><code>_last_index_below_degree&#40;set::MultiindexSet, max_total_deg::Int,
+<div class="markdown"><pre><code>_last_index_below_degree&#40;set::MultiindexSet, max_total_deg::Int,
 						 allowed_indices::AbstractVector&#123;Int&#125;&#41; -&gt; Int</code></pre>
 <p>Same as the 2‑argument version, but restricted to the indices listed in <code>allowed_indices</code> &#40;must be sorted in increasing order&#41;. Uses the O&#40;1&#41; <code>degree_offsets</code> boundary then <code>searchsortedlast</code> to locate the answer; no per-element degree sums are computed.</p>
+</div><div class="markdown"><pre><code>_last_index_below_degree&#40;set::MultiindexSet, max_total_deg::Int&#41; -&gt; Int</code></pre>
+<p>Return the last column index <code>i</code> in the Grlex‑sorted set such that the total degree of <code>set&#91;i&#93;</code> is strictly less than <code>max_total_deg</code>. If no such index exists, return <code>0</code>. O&#40;1&#41; via the precomputed <code>degree_offsets</code> field.</p>
 </div>
   </div>
 </div>
@@ -335,14 +334,14 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-find_in_set">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L292" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L292" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L330" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L330" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::AbstractVector&#123;Int&#125;&#41; -&gt; Union&#123;Int, Nothing&#125;</code></pre>
-<p>Return the column index of <code>exp</code> in <code>set.exponents</code> using binary search, exploiting the fact that the set is sorted according to Grlex. Returns <code>nothing</code> if <code>exp</code> is not present.</p>
-</div><div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::NTuple&#123;N,Int&#125;&#41; where N -&gt; Union&#123;Int, Nothing&#125;</code></pre>
+<div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::NTuple&#123;N,Int&#125;&#41; where N -&gt; Union&#123;Int, Nothing&#125;</code></pre>
 <p>Tuple version – avoids allocating a vector for the exponent.</p>
+</div><div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::AbstractVector&#123;Int&#125;&#41; -&gt; Union&#123;Int, Nothing&#125;</code></pre>
+<p>Return the column index of <code>exp</code> in <code>set.exponents</code> using binary search, exploiting the fact that the set is sorted according to Grlex. Returns <code>nothing</code> if <code>exp</code> is not present.</p>
 </div>
   </div>
 </div>
@@ -468,11 +467,13 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-type" id="Polynomials-DensePolynomial">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L153" target="_blank" rel="noopener">DensePolynomial</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L154" target="_blank" rel="noopener">DensePolynomial</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>DensePolynomial&#40;dict::Dict&#123;Vector&#123;Int&#125;, SVector&#123;K,T&#125;&#125;&#41; where &#123;K,T&#125;</code></pre>
 <p>Vector-valued polynomial from an <code>exponent → SVector</code> dictionary. Coefficients are laid out column-by-column &#40;parallel fill&#41;.</p>
+</div><div class="markdown"><pre><code>DensePolynomial&#40;coeff_vec::Vector&#123;SVector&#123;K,T&#125;&#125;, mset&#41;</code></pre>
+<p>Vector-valued polynomial from the old <code>Vector&#123;SVector&#125;</code> layout. Converts to a contiguous <code>&#40;K × L&#41;</code> matrix, filling columns in parallel.</p>
 </div><div class="markdown"><pre><code>DensePolynomial&#40;dict::Dict&#123;Vector&#123;Int&#125;, T&#125;&#41; where T&lt;:Number</code></pre>
 <p>Scalar polynomial from an <code>exponent → coefficient</code> dictionary.</p>
 </div><div class="markdown"><pre><code>DensePolynomial&#123;T, NVAR, N, A&#125;</code></pre>
@@ -488,15 +489,13 @@ document.addEventListener('DOMContentLoaded', function () {
 <li><p><code>max_exponents::SVector&#123;NVAR,Int&#125;</code> — per-variable max exponent &#40;used to pre-allocate the power table in <code>evaluate</code>&#41;.</p>
 </li>
 </ul>
-</div><div class="markdown"><pre><code>DensePolynomial&#40;coeff_vec::Vector&#123;SVector&#123;K,T&#125;&#125;, mset&#41;</code></pre>
-<p>Vector-valued polynomial from the old <code>Vector&#123;SVector&#125;</code> layout. Converts to a contiguous <code>&#40;K × L&#41;</code> matrix, filling columns in parallel.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="Polynomials-_monomial_vector!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L349" target="_blank" rel="noopener">_monomial_vector!</a>(m::Vector{Tv}, poly::DensePolynomial{T, NVAR, N, A} where {N, A&lt;:AbstractArray{T, N}}, vals::AbstractVector{&lt;:Number}) where {Tv, T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L350" target="_blank" rel="noopener">_monomial_vector!</a>(m::Vector{Tv}, poly::DensePolynomial{T, NVAR, N, A} where {N, A&lt;:AbstractArray{T, N}}, vals::AbstractVector{&lt;:Number}) where {Tv, T, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_monomial_vector&#33;&#40;m, poly, vals&#41;</code></pre>
@@ -507,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-_precompute_powers">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L317" target="_blank" rel="noopener">_precompute_powers</a>(::Type{T}, vals::AbstractVector{&lt;:Number}, max_exps::StaticArraysCore.SVector{NVAR, Int64}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L318" target="_blank" rel="noopener">_precompute_powers</a>(::Type{T}, vals::AbstractVector{&lt;:Number}, max_exps::StaticArraysCore.SVector{NVAR, Int64}) where {T, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_precompute_powers&#40;T, vals, max_exps&#41; -&gt; NTuple of Vectors</code></pre>
@@ -518,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-coeff_shape">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L218" target="_blank" rel="noopener">coeff_shape</a>(p::DensePolynomial{T, NVAR, N, A} where A&lt;:AbstractArray{T, N}) where {T, NVAR, N}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L219" target="_blank" rel="noopener">coeff_shape</a>(p::DensePolynomial{T, NVAR, N, A} where A&lt;:AbstractArray{T, N}) where {T, NVAR, N}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>coeff_shape&#40;p&#41; -&gt; NTuple</code></pre>
@@ -529,8 +528,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-coefficient">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L252" target="_blank" rel="noopener">coefficient</a>(p::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, exp::AbstractVector{Int64}) where {T, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L252" target="_blank" rel="noopener">coefficient</a>(p::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, exp::AbstractVector{Int64}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L253" target="_blank" rel="noopener">coefficient</a>(p::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, exp::AbstractVector{Int64}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L253" target="_blank" rel="noopener">coefficient</a>(p::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, exp::AbstractVector{Int64}) where {T, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>coefficient&#40;p, exp&#41; -&gt; scalar or view</code></pre>
@@ -541,8 +540,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-each_term">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L474" target="_blank" rel="noopener">each_term</a>(poly::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}) where {T, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L474" target="_blank" rel="noopener">each_term</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L475" target="_blank" rel="noopener">each_term</a>(poly::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L475" target="_blank" rel="noopener">each_term</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}) where {T, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>each_term&#40;poly&#41; -&gt; generator of &#40;exponent, coefficient&#41;</code></pre>
@@ -559,29 +558,29 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-evaluate">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L414" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L414" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L414" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, N, A} where A&lt;:AbstractArray{T, N}, vals::AbstractVector{&lt;:Number}) where {T, NVAR, N}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L414" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}, component::Int64) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, N, A} where A&lt;:AbstractArray{T, N}, vals::AbstractVector{&lt;:Number}) where {T, NVAR, N}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}, component::Int64) where {T, NVAR}</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,N&#125;, vals&#41; -&gt; Array</code></pre>
-<p>General tensor-valued case: reshape to &#40;prod&#40;leading_dims&#41;, L&#41;, gemv, reshape back.</p>
-</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,1&#125;, vals&#41; -&gt; T</code></pre>
-<p>Scalar polynomial evaluation: <code>sum&#40;c_i * m_i&#41;</code> without conjugation.</p>
-</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, vals, component::Int&#41; -&gt; T</code></pre>
-<p>Evaluate a single component of a vector-valued polynomial without allocating a full output vector.</p>
-</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, vals&#41; -&gt; Vector&#123;T&#125;</code></pre>
+<div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, vals&#41; -&gt; Vector&#123;T&#125;</code></pre>
 <p>Vector-valued polynomial evaluation via BLAS <code>gemv</code>:</p>
 <pre><code>result &#61; coefficients  &#40;K × L&#41;  *  m  &#40;L,&#41;  →  &#40;K,&#41;</code></pre>
 <p>A single BLAS call, no per-term allocation.</p>
+</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,N&#125;, vals&#41; -&gt; Array</code></pre>
+<p>General tensor-valued case: reshape to &#40;prod&#40;leading_dims&#41;, L&#41;, gemv, reshape back.</p>
+</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, vals, component::Int&#41; -&gt; T</code></pre>
+<p>Evaluate a single component of a vector-valued polynomial without allocating a full output vector.</p>
+</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,1&#125;, vals&#41; -&gt; T</code></pre>
+<p>Scalar polynomial evaluation: <code>sum&#40;c_i * m_i&#41;</code> without conjugation.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="Polynomials-extract_component">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L459" target="_blank" rel="noopener">extract_component</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, idx::Int64) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L460" target="_blank" rel="noopener">extract_component</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, idx::Int64) where {T, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>extract_component&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, idx&#41; -&gt; DensePolynomial&#123;T,NVAR,1&#125;</code></pre>
@@ -592,7 +591,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-linear_matrix_of_polynomial">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L559" target="_blank" rel="noopener">linear_matrix_of_polynomial</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L560" target="_blank" rel="noopener">linear_matrix_of_polynomial</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}) where {T, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>linear_matrix_of_polynomial&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;&#41; -&gt; Matrix&#123;T&#125;</code></pre>
@@ -603,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-mmap_polynomial">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L177" target="_blank" rel="noopener">mmap_polynomial</a>(path::AbstractString, coeff_size::NTuple{M, Int64}, ::Type{T}, mset::MultiindexSet; write) where {M, T&lt;:Number}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L178" target="_blank" rel="noopener">mmap_polynomial</a>(path::AbstractString, coeff_size::NTuple{M, Int64}, ::Type{T}, mset::MultiindexSet; write) where {M, T&lt;:Number}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>mmap_polynomial&#40;path, coeff_size::NTuple, T::Type, mset; write&#61;false&#41;</code></pre>
@@ -615,12 +614,23 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
 </div>
   </div>
 </div>
+<div class="api api-function" id="Polynomials-restrict_polynomial_to_degree">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L602" target="_blank" rel="noopener">restrict_polynomial_to_degree</a>(poly::DensePolynomial, max_degree::Int64)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>restrict_polynomial_to_degree&#40;poly::DensePolynomial, max_degree::Int&#41; -&gt; DensePolynomial</code></pre>
+<p>Returns a polynom that contains all the monomials of <code>poly</code> that are of degree lower or equal than <code>max_degree</code>. </p>
+</div>
+  </div>
+</div>
 <div class="api api-function" id="Polynomials-similar_poly">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L515" target="_blank" rel="noopener">similar_poly</a>(dict::Dict{StaticArraysCore.SVector{NVAR, Int64}, T}) where {NVAR, T&lt;:Number}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L515" target="_blank" rel="noopener">similar_poly</a>(dict::Dict{StaticArraysCore.SVector{NVAR, Int64}, StaticArraysCore.SVector{K, T}}) where {NVAR, K, T&lt;:Number}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L515" target="_blank" rel="noopener">similar_poly</a>(dict::Dict{StaticArraysCore.SVector{NVAR, Int64}, Vector{T}}) where {NVAR, T&lt;:Number}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L516" target="_blank" rel="noopener">similar_poly</a>(dict::Dict{StaticArraysCore.SVector{NVAR, Int64}, T}) where {NVAR, T&lt;:Number}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L516" target="_blank" rel="noopener">similar_poly</a>(dict::Dict{StaticArraysCore.SVector{NVAR, Int64}, StaticArraysCore.SVector{K, T}}) where {NVAR, K, T&lt;:Number}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L516" target="_blank" rel="noopener">similar_poly</a>(dict::Dict{StaticArraysCore.SVector{NVAR, Int64}, Vector{T}}) where {NVAR, T&lt;:Number}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>similar_poly&#40;dict::Dict&#123;SVector&#123;NVAR,Int&#125;, SVector&#123;K,T&#125;&#125;&#41; where &#123;NVAR, K, T&lt;:Number&#125;</code></pre>
@@ -641,7 +651,7 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
 <li><p><code>FEMMultilinearMap&#123;ORD&#125;</code> — abstract base for FEM-backed terms that expose element-level primitives &#40;<code>fem_elements</code>, <code>scatter_qp&#33;</code>, <code>accumulate_qp&#33;</code>, <code>assemble_element&#33;</code>, …&#41;. Implementing these methods enables the O4 batched RHS-C assembly path in <code>MultilinearTerms</code>.</p>
 </li>
 </ul>
-<p>See <code>demo/Gridap/</code> and <code>demo/Ferrite/</code> for reference FEM backend implementations.</p>
+<p>See <code>MORFEFerrite.jl</code> &#40;StructuralSVK / FluidNavierStokes&#41; and <code>examples/02_clamped_beam_gridap/</code> for reference FEM backend implementations.</p>
 </div></div>
 <div class="api api-type" id="MultilinearMaps-AbstractMultilinearMap">
   <div class="api-sig">
@@ -651,7 +661,7 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
   <div class="api-body">
 <div class="markdown"><pre><code>AbstractMultilinearMap&#123;ORD&#125;</code></pre>
 <p>Abstract supertype for all multilinear terms accepted by <code>NDOrderModel</code>.</p>
-<p>Every concrete subtype must expose the fields <code>multiindex</code>, <code>multiplicity_external</code>, and <code>deg</code> with the same semantics as <code>MultilinearMap</code>.</p>
+<p>Every concrete subtype must expose the fields <code>multiindex</code>, <code>multiplicity_external</code>, <code>deg</code>, and <code>fully_asymmetric</code> with the same semantics as <code>MultilinearMap</code>.</p>
 </div>
   </div>
 </div>
@@ -664,6 +674,13 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
 <div class="markdown"><pre><code>FEMMultilinearMap&#123;ORD&#125; &lt;: AbstractMultilinearMap&#123;ORD&#125;</code></pre>
 <p>Abstract type for FEM-backed multilinear terms that expose element-level primitives.</p>
 <p>Implementing the interface below enables the RHS batched accumulation path in <code>MultilinearTerms.jl</code>: the mesh is traversed exactly once per &#40;monomial, term, split&#41; rather than once per factorisation entry.</p>
+<p>Required fields &#40;same semantics as <code>MultilinearMap</code>&#41;:</p>
+<ul>
+<li><p><code>multiindex</code>, <code>multiplicity_external</code>, <code>deg</code></p>
+</li>
+<li><p><code>fully_asymmetric::Union&#123;Nothing, Bool&#125;</code> — <code>nothing</code> &#61; not set &#40;triggers <code>@info</code> at <code>NDOrderModel</code> construction if multiindex implies symmetry&#41;; <code>false</code> &#61; acknowledged symmetric; <code>true</code> &#61; override to <code>FullyAsymmetric</code>. FEM backends whose integrand is symmetric by construction should default to <code>false</code>.</p>
+</li>
+</ul>
 <p>Required methods &#40;extend <code>MORFE.*</code>&#41;:</p>
 <ul>
 <li><p><code>fem_elements&#40;t&#41;</code>                                             → element iterator</p>
@@ -689,7 +706,7 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
 <div class="api api-type" id="MultilinearMaps-MultilinearMap">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L167" target="_blank" rel="noopener">MultilinearMap</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L199" target="_blank" rel="noopener">MultilinearMap</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>MultilinearMap&#40;f, multiindex&#41;</code></pre>
@@ -723,16 +740,35 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
 <pre><code>multiindex &#61; &#40;0, 2,...&#41;
 f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res, x^&#40;1&#41;_2, x^&#40;1&#41;_1, ...&#41;</code></pre>
 <ul>
-<li><p>Set <code>force_asymmetric &#61; true</code> to override the symmetry assumption: the term is treated as <code>FullyAsymmetric</code> regardless of <code>multiindex</code>, so every ordered argument permutation is evaluated independently with multiplier 1. Use this when <code>f&#33;</code> is <strong>not</strong> symmetric in arguments that share a derivative order.</p>
+<li><p>Set <code>fully_asymmetric &#61; true</code> to override the symmetry assumption: the term is treated as <code>FullyAsymmetric</code> regardless of <code>multiindex</code>, so every ordered argument permutation is evaluated independently with multiplier 1. Use this when <code>f&#33;</code> is <strong>not</strong> symmetric in arguments that share a derivative order.</p>
 </li>
 </ul>
+<div class="admonition note"><p class="admonition-title">Default: `fully_asymmetric` not set (`nothing`)</p><p>When this keyword is omitted, the following assumptions hold &#40;and an <code>@info</code> message is emitted when the term is added to an <code>NDOrderModel</code>&#41;. Explicitly passing <code>fully_asymmetric &#61; false</code> applies the same behaviour silently, without triggering the message.</p>
+<ol>
+<li><p><strong><code>f&#33;</code> is symmetric within each derivative-order group.</strong> For every <code>k</code> with <code>multiindex&#91;k&#93; &gt; 1</code>, permuting any two of the <code>multiindex&#91;k&#93;</code> argument slots that belong to derivative order <code>k</code> leaves the result unchanged.</p>
+</li>
+<li><p><strong>Symmetry type is inferred automatically from <code>multiindex</code>:</strong></p>
+<ul>
+<li><p>All entries ≤ 1 → <code>FullyAsymmetric</code>: each factor slot uses a distinct derivative order; <code>f&#33;</code> is called directly with multiplier 1.</p>
+</li>
+<li><p>Exactly one entry &gt; 1 → <code>FullySymmetric</code>: all slots share one derivative order; each unique unordered selection of factor indices is evaluated once, scaled by the multinomial coefficient <code>deg&#33; / ∏ mᵢ&#33;</code>.</p>
+</li>
+<li><p>Multiple entries &gt; 1 → <code>GroupwiseSymmetric</code>: slots span several derivative orders; each unique unordered selection is evaluated once, scaled by the product of per-group multinomial coefficients.</p>
+</li>
+</ul>
+</li>
+<li><p><strong>Permutations are never evaluated separately.</strong> Only one representative per equivalence class of argument orderings is passed to <code>f&#33;</code>; the combinatorial count is applied as a scalar multiplier on the output.</p>
+</li>
+</ol>
+<p>If <code>f&#33;</code> does <strong>not</strong> satisfy assumption 1, pass <code>fully_asymmetric &#61; true</code>.</p>
+</div>
 </div>
   </div>
 </div>
 <div class="api api-function" id="MultilinearMaps-accumulate_qp!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L93" target="_blank" rel="noopener">accumulate_qp!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L99" target="_blank" rel="noopener">accumulate_qp!</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>accumulate_qp&#33;&#40;Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -743,7 +779,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-assemble_element!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L102" target="_blank" rel="noopener">assemble_element!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L108" target="_blank" rel="noopener">assemble_element!</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>assemble_element&#33;&#40;accum, Fe, element, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -754,16 +790,11 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-evaluate_term!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L254" target="_blank" rel="noopener">evaluate_term!</a>(res, term::MultilinearMap{ORD}, xs, r) where ORD</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L254" target="_blank" rel="noopener">evaluate_term!</a>(res, t::FEMMultilinearMap{ORD}, xs, r) where ORD</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L248" target="_blank" rel="noopener">evaluate_term!</a>(res, term::MultilinearMap{ORD}, xs, r) where ORD</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L248" target="_blank" rel="noopener">evaluate_term!</a>(res, t::FEMMultilinearMap{ORD}, xs, r) where ORD</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>evaluate_term&#33;&#40;res, t::FEMMultilinearMap&#123;ORD&#125;, xs, r&#41;</code></pre>
-<p>Direct &#40;uncached&#41; evaluation of a FEM-backed multilinear term at state <code>xs</code> and external state <code>r</code>, accumulating the result into <code>res</code>. To be used in InvarianceError.jl.</p>
-<p>Internal argument slots &#40;determined by <code>t.multiindex</code>&#41; are scattered to quadrature-point field quantities via <code>scatter_qp&#33;</code> and assembled element-wise.</p>
-<p>For <code>me &#61; 0</code>: <code>∇W_args</code> is a homogeneous <code>NTuple&#123;N_INT, QP_TYPE&#125;</code> — type-stable.</p>
-<p>For <code>me &gt; 0</code>: the external arg slots in <code>∇W_args</code> receive <code>r</code> directly &#40;not scattered&#41;. <code>r</code> is a small N<em>EXT-dimensional external-state vector, not a FOM displacement field. The concrete &#96;accumulate</em>qp&#33;<code>evaluates the full multilinear map</code>F&#40;∇u₁,…,∇uₙ, r₁,…,rₘₑ&#41;&#96; at the actual inputs.</p>
-</div><div class="markdown"><pre><code>evaluate_term&#33;&#40;res, term, xs, r&#41;</code></pre>
+<div class="markdown"><pre><code>evaluate_term&#33;&#40;res, term, xs, r&#41;</code></pre>
 <p>Evaluate a single <code>MultilinearMap</code> and accumulate &#40;adds&#41; the result into <code>res</code>.</p>
 <h1>Arguments</h1>
 <ul>
@@ -776,13 +807,18 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <li><p><code>r</code>: external state vector &#40;or <code>nothing</code> if not used&#41;. If <code>r</code> is <code>nothing</code> but the term expects external arguments, an error is thrown.</p>
 </li>
 </ul>
+</div><div class="markdown"><pre><code>evaluate_term&#33;&#40;res, t::FEMMultilinearMap&#123;ORD&#125;, xs, r&#41;</code></pre>
+<p>Direct &#40;uncached&#41; evaluation of a FEM-backed multilinear term at state <code>xs</code> and external state <code>r</code>, accumulating the result into <code>res</code>. To be used in InvarianceError.jl.</p>
+<p>Internal argument slots &#40;determined by <code>t.multiindex</code>&#41; are scattered to quadrature-point field quantities via <code>scatter_qp&#33;</code> and assembled element-wise.</p>
+<p>For <code>me &#61; 0</code>: <code>∇W_args</code> is a homogeneous <code>NTuple&#123;N_INT, QP_TYPE&#125;</code> — type-stable.</p>
+<p>For <code>me &gt; 0</code>: the external arg slots in <code>∇W_args</code> receive <code>r</code> directly &#40;not scattered&#41;. <code>r</code> is a small N<em>EXT-dimensional external-state vector, not a FOM displacement field. The concrete &#96;accumulate</em>qp&#33;<code>evaluates the full multilinear map</code>F&#40;∇u₁,…,∇uₙ, r₁,…,rₘₑ&#41;&#96; at the actual inputs.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="MultilinearMaps-fem_elements">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L55" target="_blank" rel="noopener">fem_elements</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L61" target="_blank" rel="noopener">fem_elements</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>fem_elements&#40;t::FEMMultilinearMap&#41; -&gt; iterator</code></pre>
@@ -793,7 +829,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-fem_getdetJdV">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L110" target="_blank" rel="noopener">fem_getdetJdV</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L116" target="_blank" rel="noopener">fem_getdetJdV</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>fem_getdetJdV&#40;element, q, t::FEMMultilinearMap&#41; -&gt; Real</code></pre>
@@ -804,7 +840,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-fem_n_qp">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L63" target="_blank" rel="noopener">fem_n_qp</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L69" target="_blank" rel="noopener">fem_n_qp</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>fem_n_qp&#40;t::FEMMultilinearMap&#41; -&gt; Int</code></pre>
@@ -815,7 +851,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-fem_ndofs_per_cell">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L70" target="_blank" rel="noopener">fem_ndofs_per_cell</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L76" target="_blank" rel="noopener">fem_ndofs_per_cell</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>fem_ndofs_per_cell&#40;t::FEMMultilinearMap&#41; -&gt; Int</code></pre>
@@ -826,7 +862,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-fem_qp_buffer">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L118" target="_blank" rel="noopener">fem_qp_buffer</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L124" target="_blank" rel="noopener">fem_qp_buffer</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>fem_qp_buffer&#40;t::FEMMultilinearMap&#41;</code></pre>
@@ -837,7 +873,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-fem_reinit!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L77" target="_blank" rel="noopener">fem_reinit!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L83" target="_blank" rel="noopener">fem_reinit!</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>fem_reinit&#33;&#40;element, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -848,7 +884,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="MultilinearMaps-scatter_qp!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L85" target="_blank" rel="noopener">scatter_qp!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L91" target="_blank" rel="noopener">scatter_qp!</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>scatter_qp&#33;&#40;∇W_col, W_global, element, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -915,7 +951,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-type" id="FullOrderModel-FirstOrderModel">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L280" target="_blank" rel="noopener">FirstOrderModel</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L308" target="_blank" rel="noopener">FirstOrderModel</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>FirstOrderModel&#123;MT, N_NL&#125; &lt;: AbstractFullOrderModel</code></pre>
@@ -940,7 +976,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-type" id="FullOrderModel-NDOrderModel">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L29" target="_blank" rel="noopener">NDOrderModel</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L57" target="_blank" rel="noopener">NDOrderModel</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>NDOrderModel&#123;ORD, ORDP1, N_NL, T, MT&#125; &lt;: AbstractFullOrderModel</code></pre>
@@ -1014,9 +1050,9 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="FullOrderModel-evaluate_nonlinear_terms!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L316" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors) where {ORD, ORDP1, N_NL}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L316" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors, r) where {ORD, ORDP1, N_NL}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L316" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::FirstOrderModel, order::Int64, state_vector)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L344" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors) where {ORD, ORDP1, N_NL}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L344" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors, r) where {ORD, ORDP1, N_NL}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L344" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::FirstOrderModel, order::Int64, state_vector)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>evaluate_nonlinear_terms&#33;&#40;res, model::FirstOrderModel, order, state_vectors&#41;</code></pre>
@@ -1042,9 +1078,9 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="FullOrderModel-linear_first_order_matrices">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L167" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:(SparseMatrixCSC{T})}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L167" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:AbstractMatrix{T}}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L167" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::FirstOrderModel)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L195" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:(SparseMatrixCSC{T})}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L195" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:AbstractMatrix{T}}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L195" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::FirstOrderModel)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>linear_first_order_matrices&#40;model::NDOrderModel&#41;</code></pre>
@@ -1113,7 +1149,7 @@ Works only for sparse matrices</code></pre>
 </li>
 </ul>
 <h3>Compute eigenproblem <a href="@ref"><code>solve_eigenproblem</code></a></h3>
-<p>Function that takes a <a href="@ref"><code>NDOrderModel</code></a> and a <a href="@ref"><code>AbstractEigensolver</code></a> and calculates the eigenvalues and left and right eigenvectors. Additionally it takes a function to sort the eigenvectors and a function to normalize. It generates and returns an EigenProblem and is the main interaction of this module.</p>
+<p>Function that takes a <a href="@ref"><code>NDOrderModel</code></a> and a <a href="@ref"><code>AbstractEigensolver</code></a> and calculates the eigenvalues and left and right eigenvectors. Additionally it takes a function to sort the eigenvectors and a function to normalise. It generates and returns an EigenProblem and is the main interaction of this module.</p>
 <h3>Master mode selection</h3>
 <p>The selection of the master modes is done after using <code>solve_eigenproblem</code>. There are the options:</p>
 <ol>
@@ -1128,19 +1164,28 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Eigenproblems-AbstractEigensolver">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L58" target="_blank" rel="noopener">AbstractEigensolver</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L59" target="_blank" rel="noopener">AbstractEigensolver</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>AbstractEigensolver</code></pre>
 <p>Abstract supertype for all eigensolvers accepted by <code>solve_eigenproblem</code>.</p>
 <p>Concrete subtypes must implement <code>solve</code> and <code>solve_left</code> for <code>NDOrderModel</code>. Two built-in subtypes are provided: <code>DefaultEigensolver</code> and <code>ArpackEigensolver</code>.</p>
+<h2>Interface contract — full order-blocks</h2>
+<p>Both <code>solve</code> and <code>solve_left</code> must return eigenvectors as <code>FOM × ORD × n</code> arrays containing ALL companion order-blocks, not just the physical slice:</p>
+<ul>
+<li><p>right: <code>&#40;λB − A&#41; ψ &#61; 0</code>, blocks <code>ψ &#61; &#91;ψ_1; …; ψ_ORD&#93;</code> with <code>ψ_&#123;k&#43;1&#125; &#61; λ ψ_k</code>;</p>
+</li>
+<li><p>left &#40;sesquilinear&#41;: <code>φᴴ &#40;λB − A&#41; &#61; 0</code>, reported eigenvalue <code>λ</code> &#40;the pencil eigenvalue of the adjoint problem is <code>conj&#40;λ&#41;</code>&#41;.</p>
+</li>
+</ul>
+<p>The eigensolver is the single owner of eigenvalue knowledge: it uses <code>λ</code> to <em>define</em> the eigenvector blocks, and downstream code &#40;orthogonality and invariance operators&#41; reads the blocks without ever folding eigenvalues. Solvers that naturally produce only the physical left slice can reconstruct the blocks with <a href="@ref"><code>left_eigenmode_orders_from_slice</code></a>.</p>
 </div>
   </div>
 </div>
 <div class="api api-type" id="Eigenproblems-ArpackEigensolver">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L125" target="_blank" rel="noopener">ArpackEigensolver</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L141" target="_blank" rel="noopener">ArpackEigensolver</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>ArpackEigensolver &lt;: AbstractEigensolver</code></pre>
@@ -1151,7 +1196,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Eigenproblems-DefaultEigensolver">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L75" target="_blank" rel="noopener">DefaultEigensolver</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L91" target="_blank" rel="noopener">DefaultEigensolver</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>DefaultEigensolver &lt;: AbstractEigensolver</code></pre>
@@ -1162,11 +1207,11 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Eigenproblems-Eigenproblem">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L312" target="_blank" rel="noopener">Eigenproblem</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L420" target="_blank" rel="noopener">Eigenproblem</a></code>
   </div>
   <div class="api-body">
-<div class="markdown"><p>mutable struct Eigenproblem&#123;T&#125; 	solver::AbstractEigensolver 	eigenvalues::Array&#123;Complex&#123;T&#125;&#125; 	eigenmodes::Array&#123;Complex&#123;T&#125;&#125; 	left<em>eigenmodes::Union&#123;Nothing, Matrix&#123;Complex&#123;T&#125;&#125;&#125; 	master</em>modes::Union&#123;Nothing, Vector&#123;Bool&#125;&#125; 	external_modes::Union&#123;Nothing, Vector&#123;Bool&#125;&#125;</p>
-<p>Stores sorted and biorthogonally normalised left/right eigenpairs of the generalised eigenproblem <code>A x &#61; λ B x</code>, together with a master-mode selector. Right eigenmodes are stored as a 3D array <code>FOM × ORD × n_eigs</code>. Left eigenmodes store only the physical-space &#40;highest-order&#41; slice <code>FOM × n_eigs</code>.</p>
+<div class="markdown"><p>mutable struct Eigenproblem&#123;T&#125; 	solver::AbstractEigensolver 	eigenvalues::Array&#123;Complex&#123;T&#125;&#125; 	eigenmodes::Array&#123;Complex&#123;T&#125;&#125; 	left<em>eigenmodes::Union&#123;Nothing, Matrix&#123;Complex&#123;T&#125;&#125;&#125; 	left</em>eigenmodes<em>orders::Union&#123;Nothing, Array&#123;Complex&#123;T&#125;, 3&#125;&#125; 	master</em>modes::Union&#123;Nothing, Vector&#123;Bool&#125;&#125; 	external_modes::Union&#123;Nothing, Vector&#123;Bool&#125;&#125;</p>
+<p>Stores sorted and biorthogonally normalised left/right eigenpairs of the generalised eigenproblem <code>A x &#61; λ B x</code>, together with a master-mode selector. Right eigenmodes are stored as a 3D array <code>FOM × ORD × n_eigs</code>. Left eigenmodes are stored both as the full order-block array <code>FOM × ORD × n_eigs</code> &#40;<code>left_eigenmodes_orders</code>&#41; and as the physical-space &#40;highest-order&#41; slice <code>FOM × n_eigs</code> &#40;<code>left_eigenmodes</code>&#41;. The full blocks feed the orthogonality row operators directly — no eigenvalue folding is needed to reconstruct them.</p>
 <h1>Fields</h1>
 <ul>
 <li><p><code>solver</code>: the <code>AbstractEigensolver</code> used to compute eigenpairs</p>
@@ -1177,6 +1222,8 @@ Works only for sparse matrices</code></pre>
 </li>
 <li><p><code>left_eigenmodes</code>: physical-space left eigenvectors &#40;FOM × n_eigs&#41;; <code>nothing</code> until set</p>
 </li>
+<li><p><code>left_eigenmodes_orders</code>: full left eigenvector order-blocks &#40;FOM × ORD × n_eigs&#41;; <code>nothing</code> when the solver supplied only the physical slice</p>
+</li>
 <li><p><code>master_modes</code>: <code>Vector&#123;Bool&#125;</code> flagging master modes; <code>nothing</code> until set by a <code>select_master_modes_*</code> call</p>
 </li>
 </ul>
@@ -1186,7 +1233,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Eigenproblems-MorfeEigensolver">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L145" target="_blank" rel="noopener">MorfeEigensolver</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L161" target="_blank" rel="noopener">MorfeEigensolver</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><p>struct MorfeEigensolver &lt;: AbstractEigensolver 	nev::Union&#123;Nothing, Int64&#125; end</p>
@@ -1197,7 +1244,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Eigenproblems-StructureModalDampingEigensolver">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L214" target="_blank" rel="noopener">StructureModalDampingEigensolver</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L230" target="_blank" rel="noopener">StructureModalDampingEigensolver</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>StructureModalDampingEigensolver &lt;: AbstractEigensolver</code></pre>
@@ -1217,10 +1264,24 @@ Works only for sparse matrices</code></pre>
 </div>
   </div>
 </div>
+<div class="api api-function" id="Eigenproblems-_structural_left_eigenmode_orders">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L340" target="_blank" rel="noopener">_structural_left_eigenmode_orders</a>(λ::AbstractVector, Y::AbstractArray{&lt;:Complex, 3}, mass::AbstractMatrix, damping::AbstractMatrix)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>_structural_left_eigenmode_orders&#40;λ, Y, mass, damping&#41; -&gt; Array&#123;ComplexF64, 3&#125;</code></pre>
+<p>Analytic companion left-eigenvector order-blocks for a proportionally damped second-order structure <code>M ẍ &#43; C ẋ &#43; K x &#61; 0</code> with real symmetric <code>M, K</code> and <code>C &#61; αM &#43; βK</code>. For the sesquilinear left eigenvector <code>φ</code> &#40;solving <code>φᴴ &#40;λB − A&#41; &#61; 0</code> on the companion pencil&#41; with real position mode <code>ϕ &#61; Y&#91;:, 1, k&#93;</code>:</p>
+<pre><code>φ_2 &#61; ϕ                    &#40;physical slice&#41;
+φ_1 &#61; &#40;conj&#40;λ&#41; M &#43; C&#41; ϕ</code></pre>
+<p>These are exactly the blocks <code>solve_left</code> would return — algebraically equal to <code>-&#40;1/conj&#40;λ&#41;&#41; Kᵀϕ</code> via the quadratic eigenrelation, but built from the moderate-norm <code>M</code>, <code>C</code> instead of <code>K</code> &#40;which amplifies eigensolver noise by <code>&#40;ω_max/ω₁&#41;²</code>&#41;. No adjoint eigensolve is needed because the proportional damping makes the blocks analytic in <code>ϕ</code>.</p>
+</div>
+  </div>
+</div>
 <div class="api api-function" id="Eigenproblems-get_eigenpairs">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L485" target="_blank" rel="noopener">get_eigenpairs</a>(ep::Eigenproblem)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L619" target="_blank" rel="noopener">get_eigenpairs</a>(ep::Eigenproblem)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>get_eigenpairs&#40;ep::Eigenproblem&#41;</code></pre>
@@ -1228,24 +1289,41 @@ Works only for sparse matrices</code></pre>
 </div>
   </div>
 </div>
-<div class="api api-function" id="Eigenproblems-normalize_biorthogonal!">
+<div class="api api-function" id="Eigenproblems-left_eigenmode_orders_from_slice">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L463" target="_blank" rel="noopener">normalize_biorthogonal!</a>(model::NDOrderModel, eigenmodes::Array{T}, left_eigenmodes::Array{T}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L292" target="_blank" rel="noopener">left_eigenmode_orders_from_slice</a>(linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:(AbstractMatrix), left_slice::AbstractMatrix, eigenvalues::AbstractVector) where ORDP1</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>normalize_biorthogonal&#33;&#40;
+<div class="markdown"><pre><code>left_eigenmode_orders_from_slice&#40;linear_terms, left_slice, eigenvalues&#41;
+-&gt; Array&#123;ComplexF64, 3&#125;</code></pre>
+<p>Reconstruct the full left eigenvector order-blocks from the physical-space slice, for callers that compute only the latter. For the sesquilinear left eigenvector <code>φ &#61; &#91;φ_1; …; φ_ORD&#93;</code> of reported eigenvalue <code>λ</code> &#40;physical slice <code>ℓ &#61; φ_ORD</code>, satisfying <code>L&#40;λ&#41;ᴴ ℓ &#61; 0</code> with <code>L&#40;s&#41; &#61; Σ_k B_k s^k</code>&#41;, the companion block equations give</p>
+<pre><code>φ_&#123;ORD-1&#125; &#61; conj&#40;λ&#41; · &#40;B_ORDᴴ ℓ&#41; &#43; B_&#123;ORD-1&#125;ᴴ ℓ
+φ_j       &#61; conj&#40;λ&#41; · φ_&#123;j&#43;1&#125;   &#43; B_jᴴ ℓ          j &#61; ORD-2, …, 1</code></pre>
+<p>The eigenvalue is used only to <em>define</em> the eigenvector from its slice — the per-monomial cohomological solve reads the blocks and never touches it. Prefer eigensolvers that return the full blocks directly &#40;<code>solve_left</code> does&#41;; use this only when a slice is all you have.</p>
+<p>The slice may carry an arbitrary per-mode scale: the blocks scale with it, and the orthogonality equations are invariant under per-mode row scaling.</p>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="Eigenproblems-normalise_biorthogonal!">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L583" target="_blank" rel="noopener">normalise_biorthogonal!</a>(model::NDOrderModel, eigenmodes::Array{T}, left_eigenmodes::Array{T}) where T</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>normalise_biorthogonal&#33;&#40;
 	model::NDOrderModel,
 	eigenmodes::Matrix&#123;T&#125;,
 	left_eigenmodes::Matrix&#123;T&#125;&#41;</code></pre>
-<p>Normalize eigenmodes to fulfill the equation 	x<em>i^H * B * y</em>j &#61; δ_&#123;ij&#125;</p>
+<p>Normalise eigenmodes to fulfill the equation 	x<em>i^H * B * y</em>j &#61; δ_&#123;ij&#125;</p>
+<p>Both sides are scaled symmetrically: with <code>s &#61; sqrt&#40;x_i^H B y_i&#41;</code>, the right eigenmode is divided by <code>s</code> and the left eigenmode by <code>conj&#40;s&#41;</code>, so the sesquilinear pairing becomes exactly 1.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="Eigenproblems-select_master_modes_by_hand">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L494" target="_blank" rel="noopener">select_master_modes_by_hand</a>(ep::Eigenproblem, mastermodes::Vector{Bool})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L628" target="_blank" rel="noopener">select_master_modes_by_hand</a>(ep::Eigenproblem, mastermodes::Vector{Bool})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>select_master_modes_by_hand&#40;ep::Eigenproblem, mastermodes::Vector&#123;Bool&#125;&#41;</code></pre>
@@ -1256,7 +1334,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Eigenproblems-select_master_modes_by_sorting">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L505" target="_blank" rel="noopener">select_master_modes_by_sorting</a>(ep::Eigenproblem, nev::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L640" target="_blank" rel="noopener">select_master_modes_by_sorting</a>(ep::Eigenproblem, nev::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>select_master_modes_by_sorting&#40;ep::Eigenproblem, nev::Int64&#41;</code></pre>
@@ -1267,7 +1345,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Eigenproblems-select_master_modes_by_target_frequency">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L516" target="_blank" rel="noopener">select_master_modes_by_target_frequency</a>(ep::Eigenproblem, target_frequencies::Vector, tol::Float64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L651" target="_blank" rel="noopener">select_master_modes_by_target_frequency</a>(ep::Eigenproblem, target_frequencies::Vector, tol::Float64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>select_master_modes_by_target_frequency&#40;ep::Eigenproblem, target_frequencies::Vector, tol&#41;</code></pre>
@@ -1278,19 +1356,14 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Eigenproblems-solve">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L266" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L266" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L266" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L266" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L266" target="_blank" rel="noopener">solve</a>(::AbstractMatrix, ::AbstractMatrix, ::StructureModalDampingEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(::AbstractMatrix, ::AbstractMatrix, ::StructureModalDampingEigensolver)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver&#41;</code></pre>
-<p>Thin wrapper: extracts <code>M &#61; model.linear_terms&#91;end&#93;</code> and <code>K &#61; model.linear_terms&#91;1&#93;</code> and delegates to <code>solve&#40;M, K, solver&#41;</code>.</p>
-</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
-<p>Solves right eigenproblem using <code>eigen</code> from LinearAlgebra.  Let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
-&#36;	&#40;A-\lambda_k B&#41;y_k &#61; 0&#36;
-</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
+<div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
 <p>Solves right eigenproblem using <code>generalised_eigenpairs</code> from <code>MORFE.Eigensolvers</code>.  Let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
 &#36;	&#40;A-\lambda_k B&#41;y_k &#61; 0&#36;
 </div><div class="markdown"><pre><code>solve&#40;mass::AbstractMatrix, stiffness::AbstractMatrix, solver::StructureModalDampingEigensolver&#41;</code></pre>
@@ -1298,51 +1371,56 @@ Works only for sparse matrices</code></pre>
 &#36;	&#40;K-\omega_k^2*M&#41;\y_&#123;k,U&#125;&#61;0 &#36;
 &#36;	y_&#123;k,V&#125;&#61;\lambda_k y_&#123;k,U&#125; &#36;
 <p>and assumes &#36;C &#61; \alpha*M &#43; \beta*K&#36;.</p>
+</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver&#41;</code></pre>
+<p>Thin wrapper: extracts <code>M &#61; model.linear_terms&#91;end&#93;</code> and <code>K &#61; model.linear_terms&#91;1&#93;</code> and delegates to <code>solve&#40;M, K, solver&#41;</code>.</p>
+</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
+<p>Solves right eigenproblem using <code>eigen</code> from LinearAlgebra.  Let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
+&#36;	&#40;A-\lambda_k B&#41;y_k &#61; 0&#36;
 </div>
   </div>
 </div>
 <div class="api api-function" id="Eigenproblems-solve_eigenproblem">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L276" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L276" target="_blank" rel="noopener">solve_eigenproblem</a>(stiffness::AbstractMatrix, mass::AbstractMatrix, solver::StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L276" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel; solver, sorter!, normalizer!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L496" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L496" target="_blank" rel="noopener">solve_eigenproblem</a>(stiffness::AbstractMatrix, mass::AbstractMatrix, solver::StructureModalDampingEigensolver; sorter!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L496" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel; solver, sorter!, normaliser!)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>solve_eigenproblem&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
-<p>Specialised path for <code>StructureModalDampingEigensolver</code>: mass-normalization is built into <code>solve</code>, and the physical-space left eigenmodes equal the position block of the right eigenmodes &#40;<code>X&#91;:, ORD, k&#93; &#61; Y&#91;:, 1, k&#93;</code>&#41;.  No adjoint solve or biorthogonal normalization is needed.</p>
-<p>The optional <code>sorter&#33;</code> kwarg has the same semantics as in the general <code>solve_eigenproblem</code>: pass <code>&#40;args...&#41; -&gt; nothing</code> to preserve the solver&#39;s natural ordering.</p>
-</div><div class="markdown"><pre><code>solve_eigenproblem&#40;stiffness, mass, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
-<p>Convenience overload: pass <code>K</code> and <code>M</code> directly without constructing an <code>NDOrderModel</code>.</p>
-</div><div class="markdown"><pre><code>solve_eigenproblem&#40;
+<div class="markdown"><pre><code>solve_eigenproblem&#40;
 	model::NDOrderModel;
 	solver::AbstractEigensolver &#61; DefaultEigensolver&#40;&#41;,
-	sorter::Function &#61; sort_by_magnitude,
-	normalizer::Function &#61; normalize_biorthogonal&#41;</code></pre>
-<p>Computes left and right eigenpairs of the problem described in <code>model</code> by using the defined <code>solver</code>. Additionally <code>sorter</code> sorts the eigenpairs and <code>normalizer</code> is used to normalize the eigenmodes.</p>
+	sorter&#33;::Function &#61; sort_by_magnitude&#33;,
+	normaliser&#33;::Function &#61; normalise_biorthogonal&#33;&#41;</code></pre>
+<p>Computes left and right eigenpairs of the problem described in <code>model</code> by using the defined <code>solver</code>. Additionally <code>sorter&#33;</code> sorts the eigenpairs and <code>normaliser&#33;</code> is used to normalise the eigenmodes.</p>
+</div><div class="markdown"><pre><code>solve_eigenproblem&#40;stiffness, mass, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
+<p>Convenience overload: pass <code>K</code> and <code>M</code> directly without constructing an <code>NDOrderModel</code>. The Rayleigh damping matrix <code>C &#61; αM &#43; βK</code> is rebuilt from the solver parameters for the left eigenvector order-blocks.</p>
+</div><div class="markdown"><pre><code>solve_eigenproblem&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
+<p>Specialised path for <code>StructureModalDampingEigensolver</code>: mass-normalisation is built into <code>solve</code>, and the left eigenvector order-blocks are analytic in the position mode &#40;see <a href="@ref"><code>_structural_left_eigenmode_orders</code></a>&#41;.  No adjoint solve or biorthogonal normalisation is needed.</p>
+<p>The optional <code>sorter&#33;</code> kwarg has the same semantics as in the general <code>solve_eigenproblem</code>: pass <code>&#40;args...&#41; -&gt; nothing</code> to preserve the solver&#39;s natural ordering.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="Eigenproblems-solve_left">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L104" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L104" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L104" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L209" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L209" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L209" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
+<div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
+<p>Solves left eigenproblem using σ-shift to recover the correct eigenvalues.</p>
+</div><div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
 <p>Solves left eigenproblem using <code>eigen</code> from LinearAlgebra.  let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
 &#36;	x_k^H&#40;A-\lambda_k B&#41; &#61; 0&#36;
-</div><div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
-<p>Solves left eigenproblem using σ-shift to recover the correct eigenvalues.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="Eigenproblems-sort_by_magnitude!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L411" target="_blank" rel="noopener">sort_by_magnitude!</a>(eigenvalues, eigenmodes)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L530" target="_blank" rel="noopener">sort_by_magnitude!</a>(eigenvalues, eigenmodes)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>sort_by_magnitude&#33;&#40;eigenvalues, eigenmodes&#41;</code></pre>
@@ -1353,7 +1431,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Eigenproblems-sort_left_eigenmodes">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L424" target="_blank" rel="noopener">sort_left_eigenmodes</a>(eigenvalues, left_eigenvalues, left_eigenmodes)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L543" target="_blank" rel="noopener">sort_left_eigenmodes</a>(eigenvalues, left_eigenvalues, left_eigenmodes)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>sort_left_eigenmodes&#40;eigenvalues, left_eigenvalues, left_eigenmodes&#41;</code></pre>
@@ -1477,7 +1555,7 @@ Works only for sparse matrices</code></pre>
 </li>
 <li><p><strong><code>external_eigenvalues</code></strong> &#40;optional&#41;: eigenvalues of the external forcing system. They enter <code>s</code> through the multiindex coefficients but do <strong>not</strong> produce a target row.  Pass them so that <code>s</code> is computed over the full <code>NVAR &#61; ROM &#43; N_EXT</code> index.</p>
 </li>
-<li><p><strong><code>outer_eigenvalues</code></strong> &#40;optional&#41;: additional resonance targets &#40;e.g. forcing frequencies tested for near-resonance&#41;.  They define the rows of <code>outer_resonances</code> but do <strong>not</strong> enter <code>s</code>.</p>
+<li><p><strong><code>outer_eigenvalues</code></strong> &#40;optional&#41;: additional resonance targets &#40;eigenvalues not included in <code>master_eigenvalues</code>, tested for near-resonance&#41;.  They define the rows of <code>outer_resonances</code> but do <strong>not</strong> enter <code>s</code>.</p>
 </li>
 </ul>
 <h2>Choosing a resonance style</h2>
@@ -1496,7 +1574,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-ConditionNumberEstimateCondition">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L316" target="_blank" rel="noopener">ConditionNumberEstimateCondition</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L318" target="_blank" rel="noopener">ConditionNumberEstimateCondition</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>ConditionNumberEstimateCondition &lt;: OuterResonanceCondition</code></pre>
@@ -1518,7 +1596,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-EigenvalueCondition">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L279" target="_blank" rel="noopener">EigenvalueCondition</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L281" target="_blank" rel="noopener">EigenvalueCondition</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>EigenvalueCondition &lt;: OuterResonanceCondition</code></pre>
@@ -1537,7 +1615,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-GraphInternal">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L212" target="_blank" rel="noopener">GraphInternal</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L214" target="_blank" rel="noopener">GraphInternal</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>GraphInternal &lt;: InternalResonance</code></pre>
@@ -1548,7 +1626,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-InternalResonance">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L204" target="_blank" rel="noopener">InternalResonance</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L206" target="_blank" rel="noopener">InternalResonance</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>InternalResonance</code></pre>
@@ -1559,7 +1637,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-NormalFormInternal">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L220" target="_blank" rel="noopener">NormalFormInternal</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L222" target="_blank" rel="noopener">NormalFormInternal</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>NormalFormInternal &lt;: InternalResonance</code></pre>
@@ -1570,7 +1648,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-OuterResonanceCondition">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L268" target="_blank" rel="noopener">OuterResonanceCondition</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L270" target="_blank" rel="noopener">OuterResonanceCondition</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>OuterResonanceCondition</code></pre>
@@ -1582,7 +1660,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-RealEigenvalueCondition">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L297" target="_blank" rel="noopener">RealEigenvalueCondition</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L299" target="_blank" rel="noopener">RealEigenvalueCondition</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>RealEigenvalueCondition &lt;: OuterResonanceCondition</code></pre>
@@ -1597,7 +1675,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-type" id="Resonance-ResonanceSet">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L63" target="_blank" rel="noopener">ResonanceSet</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L65" target="_blank" rel="noopener">ResonanceSet</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>ResonanceSet&#123;ROM, N_EXT, M&#125;</code></pre>
@@ -1618,7 +1696,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Resonance-_build_inner_matrix">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L395" target="_blank" rel="noopener">_build_inner_matrix</a>(strategy::MORFE.Resonance.InternalResonance, inner_cond::Union{Nothing, MORFE.Resonance.OuterResonanceCondition}, super_eigenvalues, multiindices::MultiindexSet, n_int::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L397" target="_blank" rel="noopener">_build_inner_matrix</a>(strategy::MORFE.Resonance.InternalResonance, inner_cond::Union{Nothing, MORFE.Resonance.OuterResonanceCondition}, super_eigenvalues, multiindices::MultiindexSet, n_int::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><p>Build the <code>n_int × NMON</code> inner resonance matrix.</p>
@@ -1629,7 +1707,7 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Resonance-_build_outer_matrix">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L422" target="_blank" rel="noopener">_build_outer_matrix</a>(outer_cond::MORFE.Resonance.OuterResonanceCondition, super_eigenvalues, multiindices::MultiindexSet, n_out::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L424" target="_blank" rel="noopener">_build_outer_matrix</a>(outer_cond::MORFE.Resonance.OuterResonanceCondition, super_eigenvalues, multiindices::MultiindexSet, n_out::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><p>Build the <code>n_out × NMON</code> outer resonance matrix using <code>outer_cond</code>.</p>
@@ -1639,8 +1717,8 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Resonance-apply_internal_resonances!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L228" target="_blank" rel="noopener">apply_internal_resonances!</a>(::AbstractMatrix{Bool}, ::MORFE.Resonance.NormalFormInternal, ::AbstractVector{Int64}, ::Int64, ::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L228" target="_blank" rel="noopener">apply_internal_resonances!</a>(mat::AbstractMatrix{Bool}, ::MORFE.Resonance.GraphInternal, mi::AbstractVector{Int64}, n_int::Int64, k::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L230" target="_blank" rel="noopener">apply_internal_resonances!</a>(::AbstractMatrix{Bool}, ::MORFE.Resonance.NormalFormInternal, ::AbstractVector{Int64}, ::Int64, ::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L230" target="_blank" rel="noopener">apply_internal_resonances!</a>(mat::AbstractMatrix{Bool}, ::MORFE.Resonance.GraphInternal, mi::AbstractVector{Int64}, n_int::Int64, k::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>apply_internal_resonances&#33;&#40;mat, strategy, mi, n_int, k&#41;</code></pre>
@@ -1654,11 +1732,30 @@ Works only for sparse matrices</code></pre>
 </div>
   </div>
 </div>
+<div class="api api-function" id="Resonance-build_resonance_set">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L641" target="_blank" rel="noopener">build_resonance_set</a>(model::NDOrderModel, style::Symbol, mset::MultiindexSet, eigenproblem::Eigenproblem, tol::Float64, conjugacy_map::Union{Nothing, Vector{Int64}})</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>build_resonance_set&#40;model, style, mset, eigenproblem, tol, conjugacy_map&#41;</code></pre>
+<p>Build a <code>ResonanceSet</code> from a solved <code>Eigenproblem</code> according to the chosen parametrisation <code>style</code>. Accepted styles:</p>
+<ul>
+<li><p><code>:graph</code></p>
+</li>
+<li><p><code>:complex_normal_form</code></p>
+</li>
+<li><p><code>:real_normal_form</code> &#40;requires <code>conjugacy_map</code>&#41;</p>
+</li>
+</ul>
+</div>
+  </div>
+</div>
 <div class="api api-function" id="Resonance-empty_resonance_set">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L106" target="_blank" rel="noopener">empty_resonance_set</a>(multiindices::MultiindexSet{NVAR}, n_int::Int64) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L106" target="_blank" rel="noopener">empty_resonance_set</a>(multiindices::MultiindexSet{NVAR}, n_int::Int64, n_out::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L108" target="_blank" rel="noopener">empty_resonance_set</a>(multiindices::MultiindexSet{NVAR}, n_int::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L108" target="_blank" rel="noopener">empty_resonance_set</a>(multiindices::MultiindexSet{NVAR}, n_int::Int64, n_out::Int64) where NVAR</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>empty_resonance_set&#40;multiindices, n_internal, n_outer&#61;0&#41; -&gt; ResonanceSet</code></pre>
@@ -1669,11 +1766,11 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Resonance-is_resonant">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L145" target="_blank" rel="noopener">is_resonant</a>(cond::MORFE.Resonance.EigenvalueCondition, target::Int64, s::ComplexF64, k::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L145" target="_blank" rel="noopener">is_resonant</a>(cond::MORFE.Resonance.RealEigenvalueCondition, target::Int64, s::ComplexF64, k::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L145" target="_blank" rel="noopener">is_resonant</a>(cond::MORFE.Resonance.ConditionNumberEstimateCondition, target::Int64, s::ComplexF64, ::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L145" target="_blank" rel="noopener">is_resonant</a>(rs::ResonanceSet{ROM}, idx::Int64, target::Int64) where ROM</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L145" target="_blank" rel="noopener">is_resonant</a>(rs::ResonanceSet{ROM}, mi::Vector{Int64}, target::Int64) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L147" target="_blank" rel="noopener">is_resonant</a>(cond::MORFE.Resonance.EigenvalueCondition, target::Int64, s::ComplexF64, k::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L147" target="_blank" rel="noopener">is_resonant</a>(cond::MORFE.Resonance.RealEigenvalueCondition, target::Int64, s::ComplexF64, k::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L147" target="_blank" rel="noopener">is_resonant</a>(cond::MORFE.Resonance.ConditionNumberEstimateCondition, target::Int64, s::ComplexF64, ::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L147" target="_blank" rel="noopener">is_resonant</a>(rs::ResonanceSet{ROM}, idx::Int64, target::Int64) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L147" target="_blank" rel="noopener">is_resonant</a>(rs::ResonanceSet{ROM}, mi::Vector{Int64}, target::Int64) where ROM</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>is_resonant&#40;rs, idx, target&#41; -&gt; Bool
@@ -1685,7 +1782,7 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <div class="api api-function" id="Resonance-n_internal">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L99" target="_blank" rel="noopener">n_internal</a>(::ResonanceSet{ROM}) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L101" target="_blank" rel="noopener">n_internal</a>(::ResonanceSet{ROM}) where ROM</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>n_internal&#40;rs::ResonanceSet&#123;ROM&#125;&#41; -&gt; ROM</code></pre>
@@ -1696,7 +1793,7 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <div class="api api-function" id="Resonance-resonance_set_from_complex_normal_form_style">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L480" target="_blank" rel="noopener">resonance_set_from_complex_normal_form_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, tol::Union{Float64, Vector{Vector{Float64}}}; external_eigenvalues, outer_eigenvalues) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L482" target="_blank" rel="noopener">resonance_set_from_complex_normal_form_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, tol::Union{Float64, Vector{Vector{Float64}}}; external_eigenvalues, outer_eigenvalues) where NVAR</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>resonance_set_from_complex_normal_form_style&#40;
@@ -1710,7 +1807,7 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <div class="api api-function" id="Resonance-resonance_set_from_condition_number_estimate">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L555" target="_blank" rel="noopener">resonance_set_from_condition_number_estimate</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, spectral_radius::Float64, target_condition_numbers::Vector{Float64}, max_cond::Float64; external_eigenvalues, outer_eigenvalues, inner_target_indices, outer_target_indices, conjugacy_map) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L557" target="_blank" rel="noopener">resonance_set_from_condition_number_estimate</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, spectral_radius::Float64, target_condition_numbers::Vector{Float64}, max_cond::Float64; external_eigenvalues, outer_eigenvalues, inner_target_indices, outer_target_indices, conjugacy_map) where NVAR</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>resonance_set_from_condition_number_estimate&#40;
@@ -1728,31 +1825,31 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <div class="api api-function" id="Resonance-resonance_set_from_graph_style">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L607" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_eigenvalues::Vector{ComplexF64}, tol::Union{Float64, Vector{Vector{Float64}}}) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L607" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_condition::MORFE.Resonance.OuterResonanceCondition) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L447" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_eigenvalues::Vector{ComplexF64}, tol::Union{Float64, Vector{Vector{Float64}}}) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L447" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_condition::MORFE.Resonance.OuterResonanceCondition) where NVAR</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>resonance_set_from_graph_style&#40;multiindices, master_eigenvalues, external_eigenvalues, outer_condition&#41;</code></pre>
-<p>Advanced overload that accepts a pre-built <code>OuterResonanceCondition</code> for the outer rows. <code>outer_condition.target_indices</code> must use <strong>local</strong> indices <code>1:n_out</code>. <code>n_out</code> is inferred as <code>maximum&#40;outer_condition.target_indices&#41;</code> &#40;or 0 if empty&#41;.</p>
-</div><div class="markdown"><pre><code>resonance_set_from_graph_style&#40;
+<div class="markdown"><pre><code>resonance_set_from_graph_style&#40;
 	multiindices, master_eigenvalues, external_eigenvalues,
 	outer_eigenvalues, tol&#41;</code></pre>
 <p>Build a <code>ResonanceSet</code> using the <strong>graph style</strong>: every monomial of total degree ≥ 2 is marked resonant with all <code>ROM</code> master modes.  Outer targets are flagged by eigenvalue proximity <code>|λⱼ - s| &lt; tol</code>.</p>
 <ul>
 <li><p><code>master_eigenvalues</code>: ROM eigenvalues; enter <code>s</code> and are inner targets.</p>
 </li>
-<li><p><code>external_eigenvalues</code>: enter <code>s</code> only &#40;e.g. forcing frequencies in the multiindex&#41;.</p>
+<li><p><code>external_eigenvalues</code>: enter <code>s</code> only &#40;e.g. forcing frequencies in the multiindex, since external_eigenvalues cant be targets&#41;.</p>
 </li>
-<li><p><code>outer_eigenvalues</code>: outer targets &#40;e.g. forcing eigenvalues tested for near-resonance&#41;. Pass <code>ComplexF64&#91;&#93;</code> when there are no outer targets.</p>
+<li><p><code>outer_eigenvalues</code>: outer targets &#40;eigenvalues not included in <code>master_eigenvalues</code>, tested for near-resonance&#41;. Pass <code>ComplexF64&#91;&#93;</code> when there are no outer targets.</p>
 </li>
 </ul>
+</div><div class="markdown"><pre><code>resonance_set_from_graph_style&#40;multiindices, master_eigenvalues, external_eigenvalues, outer_condition&#41;</code></pre>
+<p>Advanced overload that accepts a pre-built <code>OuterResonanceCondition</code> for the outer rows. <code>outer_condition.target_indices</code> must use <strong>local</strong> indices <code>1:n_out</code>. <code>n_out</code> is inferred as <code>maximum&#40;outer_condition.target_indices&#41;</code> &#40;or 0 if empty&#41;.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="Resonance-resonance_set_from_real_normal_form_style">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L515" target="_blank" rel="noopener">resonance_set_from_real_normal_form_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, conjugacy_map::Vector{Int64}, tol::Union{Float64, Vector{Vector{Float64}}}; external_eigenvalues, outer_eigenvalues) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L517" target="_blank" rel="noopener">resonance_set_from_real_normal_form_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, conjugacy_map::Vector{Int64}, tol::Union{Float64, Vector{Vector{Float64}}}; external_eigenvalues, outer_eigenvalues) where NVAR</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>resonance_set_from_real_normal_form_style&#40;
@@ -1766,7 +1863,7 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <div class="api api-function" id="Resonance-resonant_multiindices">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L186" target="_blank" rel="noopener">resonant_multiindices</a>(rs::ResonanceSet{ROM}, target::Int64) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L188" target="_blank" rel="noopener">resonant_multiindices</a>(rs::ResonanceSet{ROM}, target::Int64) where ROM</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>resonant_multiindices&#40;rs, target&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -1777,8 +1874,8 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <div class="api api-function" id="Resonance-resonant_targets">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L168" target="_blank" rel="noopener">resonant_targets</a>(rs::ResonanceSet, idx::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L168" target="_blank" rel="noopener">resonant_targets</a>(rs::ResonanceSet, mi::Vector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L170" target="_blank" rel="noopener">resonant_targets</a>(rs::ResonanceSet, idx::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L170" target="_blank" rel="noopener">resonant_targets</a>(rs::ResonanceSet, mi::Vector{Int64})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>resonant_targets&#40;rs, idx&#41; -&gt; AbstractVector&#123;Bool&#125;
@@ -1790,8 +1887,8 @@ resonant_targets&#40;rs, mi&#41;  -&gt; Union&#123;AbstractVector&#123;Bool&#125
 <div class="api api-function" id="Resonance-set_resonance!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L121" target="_blank" rel="noopener">set_resonance!</a>(rs::ResonanceSet{ROM}, target::Int64, idx::Int64, value::Bool) where ROM</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L121" target="_blank" rel="noopener">set_resonance!</a>(rs::ResonanceSet{ROM}, target::Int64, mi::Vector{Int64}, value::Bool) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L123" target="_blank" rel="noopener">set_resonance!</a>(rs::ResonanceSet{ROM}, target::Int64, idx::Int64, value::Bool) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L123" target="_blank" rel="noopener">set_resonance!</a>(rs::ResonanceSet{ROM}, target::Int64, mi::Vector{Int64}, value::Bool) where ROM</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>set_resonance&#33;&#40;rs, target, idx, value&#41; -&gt; rs
@@ -1874,7 +1971,7 @@ set_resonance&#33;&#40;rs, target, mi, value&#41;  -&gt; rs</code></pre>
 <div class="api api-function" id="InvarianceEquation-assemble_cohomological_matrix_and_rhs!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl#L196" target="_blank" rel="noopener">assemble_cohomological_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::Number, linear_terms::NTuple{ORDP1, var"#s203"} where var"#s203"&lt;:(AbstractMatrix), C_coeffs::Vector{&lt;:AbstractMatrix}, E_coeffs::Vector{&lt;:AbstractMatrix}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector}, external_dynamics::AbstractVector, g_buffer::AbstractVector) where {ROM, ORDP1}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl#L196" target="_blank" rel="noopener">assemble_cohomological_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::Number, linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:(AbstractMatrix), C_coeffs::Vector{&lt;:AbstractMatrix}, E_coeffs::Vector{&lt;:AbstractMatrix}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector}, external_dynamics::AbstractVector, g_buffer::AbstractVector) where {ROM, ORDP1}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>assemble_cohomological_matrix_and_rhs&#33;&#40;M, rhs, s, linear_terms, C_coeffs, E_coeffs,
@@ -1888,7 +1985,7 @@ set_resonance&#33;&#40;rs, target, mi, value&#41;  -&gt; rs</code></pre>
 <div class="api api-function" id="InvarianceEquation-build_sparse_L_and_rhs!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L156" target="_blank" rel="noopener">build_sparse_L_and_rhs!</a>(rhs::AbstractVector, L_template::SparseArrays.SparseMatrixCSC, mappings::Vector{Vector{Int64}}, linear_terms::NTuple{ORDP1, var"#s203"} where var"#s203"&lt;:SparseArrays.SparseMatrixCSC, s, lower_order_couplings::AbstractVector{&lt;:AbstractVector}) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L156" target="_blank" rel="noopener">build_sparse_L_and_rhs!</a>(rhs::AbstractVector, L_template::SparseArrays.SparseMatrixCSC, mappings::Vector{Vector{Int64}}, linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:SparseArrays.SparseMatrixCSC, s, lower_order_couplings::AbstractVector{&lt;:AbstractVector}) where ORDP1</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>build_sparse_L_and_rhs&#33;&#40;rhs, L_template, mappings, linear_terms, s, lower_order_couplings&#41;
@@ -1974,7 +2071,7 @@ for L &#61; ORD-1, …, 1:
 <div class="api api-function" id="InvarianceEquation-evaluate_system_matrix_and_lower_order_rhs!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L5" target="_blank" rel="noopener">evaluate_system_matrix_and_lower_order_rhs!</a>(parametrisation_operator::AbstractMatrix, lower_order_rhs::AbstractVector, s::Number, lower_order_couplings::AbstractVector{&lt;:AbstractVector}, linear_terms::NTuple{ORDP1, var"#s202"} where var"#s202"&lt;:(AbstractMatrix)) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L5" target="_blank" rel="noopener">evaluate_system_matrix_and_lower_order_rhs!</a>(parametrisation_operator::AbstractMatrix, lower_order_rhs::AbstractVector, s::Number, lower_order_couplings::AbstractVector{&lt;:AbstractVector}, linear_terms::NTuple{ORDP1, var"#s225"} where var"#s225"&lt;:(AbstractMatrix)) where ORDP1</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>evaluate_system_matrix_and_lower_order_rhs&#33;&#40;parametrisation_operator,
@@ -2015,7 +2112,7 @@ for L &#61; ORD-1, …, 1:
 <div class="api api-function" id="InvarianceEquation-precompute_column_polynomials">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_column_polynomials</a>(fom_matrices::NTuple{ORDP1, var"#s203"} where var"#s203"&lt;:AbstractMatrix{T}, generalised_right_eigenmodes::AbstractMatrix{T}, reduced_dynamics_linear::AbstractMatrix{T}, ROM::Int64) where {ORDP1, T&lt;:Number}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_column_polynomials</a>(fom_matrices::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:AbstractMatrix{T}, generalised_right_eigenmodes::AbstractMatrix{T}, reduced_dynamics_linear::AbstractMatrix{T}, ROM::Int64) where {ORDP1, T&lt;:Number}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>precompute_column_polynomials&#40;fom_matrices, generalised_right_eigenmodes,
@@ -2067,7 +2164,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="api api-function" id="InvarianceEquation-precompute_external_column_polynomials">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl#L182" target="_blank" rel="noopener">precompute_external_column_polynomials</a>(fom_matrices::NTuple{ORDP1, var"#s203"} where var"#s203"&lt;:(AbstractMatrix), external_directions::AbstractMatrix, reduced_dynamics_linear::AbstractMatrix, D_master_steps::Vector{&lt;:AbstractMatrix}) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl#L182" target="_blank" rel="noopener">precompute_external_column_polynomials</a>(fom_matrices::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:(AbstractMatrix), external_directions::AbstractMatrix, reduced_dynamics_linear::AbstractMatrix, D_master_steps::Vector{&lt;:AbstractMatrix}) where ORDP1</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>precompute_external_column_polynomials&#40;fom_matrices, external_directions,
@@ -2086,7 +2183,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="api api-function" id="InvarianceEquation-precompute_master_column_polynomials">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl#L126" target="_blank" rel="noopener">precompute_master_column_polynomials</a>(fom_matrices::NTuple{ORDP1, var"#s203"} where var"#s203"&lt;:(AbstractMatrix), master_modes::AbstractMatrix, Λ_master::AbstractMatrix) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl#L126" target="_blank" rel="noopener">precompute_master_column_polynomials</a>(fom_matrices::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:(AbstractMatrix), master_modes::AbstractMatrix, Λ_master::AbstractMatrix) where ORDP1</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>precompute_master_column_polynomials&#40;fom_matrices, master_modes, Λ_master&#41;
@@ -2106,7 +2203,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="api api-function" id="InvarianceEquation-precompute_sparse_L_template">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L100" target="_blank" rel="noopener">precompute_sparse_L_template</a>(linear_terms::NTuple{ORDP1, var"#s203"} where var"#s203"&lt;:SparseArrays.SparseMatrixCSC) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L100" target="_blank" rel="noopener">precompute_sparse_L_template</a>(linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:SparseArrays.SparseMatrixCSC) where ORDP1</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>precompute_sparse_L_template&#40;linear_terms&#41; -&gt; &#40;L_template, mappings&#41;</code></pre>
@@ -2123,48 +2220,27 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <table><tr><th align="left">Symbol</th><th align="left">Meaning</th></tr><tr><td align="left">FOM</td><td align="left">Full-order model dimension</td></tr><tr><td align="left">ROM</td><td align="left">Number of master modes &#40;reduced coordinates&#41;</td></tr><tr><td align="left">N_EXT</td><td align="left">Number of external forcing modes</td></tr><tr><td align="left">NVAR</td><td align="left"><code>ROM &#43; N_EXT</code> &#40;total reduced variables&#41;</td></tr><tr><td align="left">R</td><td align="left">Set of resonant master modes &#40;&#96;</td></tr></table>
 <p>Non-resonant master modes have trivial &#40;zero&#41; reduced dynamics and are excluded from the orthogonality equations.</p>
 <hr />
-<h1>Per-multiindex orthogonality equation</h1>
-<p>For each multi-index <strong>γ</strong> and superharmonic <code>s_k &#61; Σᵢ γᵢ λᵢ</code>, the orthogonality condition with respect to master mode <code>r</code> has the block structure</p>
-<pre><code>&#91; L_r&#40;s&#41;  C_r&#40;s&#41; &#93; * &#91; W; f_res &#93; &#61; RHS_r</code></pre>
-<p>where:</p>
-<ul>
-<li><p><code>L_r&#40;s&#41;</code> &#40;<code>1 × FOM</code>&#41; acts on the parametrisation <code>W</code>,</p>
-</li>
-<li><p><code>C_r&#40;s&#41;</code> &#40;<code>1 × |R|</code>&#41; acts on the unknown reduced dynamics of the resonant modes <code>f_res</code>,</p>
-</li>
-<li><p><code>RHS_r</code> is a scalar containing all known contributions &#40;lower-order terms and external forcing&#41;.</p>
-</li>
-</ul>
-<p>The external forcing modes are <strong>not</strong> unknowns; their contributions are incorporated into <code>RHS_r</code> via the operator <code>E_r&#40;s&#41;</code>.</p>
+<h1>Mathematical origin: sesquilinear B-orthogonality</h1>
+<p>For each multi-index <strong>γ</strong> with superharmonic <code>s &#61; Σᵢ γᵢ λᵢ</code>, the condition for master mode <code>r</code> is the sesquilinear B-orthogonality of the companion left eigenvector <code>φ_r &#61; &#91;φ_&#123;r,1&#125;; …; φ_&#123;r,ORD&#125;&#93;</code> &#40;solving <code>φ_rᴴ &#40;λ_r B − A&#41; &#61; 0</code>&#41; against the first-order state <code>𝒲</code> of the monomial:</p>
+<pre><code>φ_rᴴ B 𝒲 &#61; 0,     𝒲 &#61; &#91;W_1; …; W_ORD&#93;,   W_1 &#61; W,   W_&#123;j&#43;1&#125; &#61; s W_j &#43; Y_j f &#43; ξ_j</code></pre>
+<p>Here <code>Y_j</code> are the right eigenmode order-blocks, <code>f</code> the reduced-dynamics coefficient at <strong>γ</strong> &#40;master part unknown, external part known forcing&#41; and <code>ξ_j</code> the known lower-order couplings. Solving the recurrence and collecting terms reduces the condition to a single row equation</p>
+<pre><code>L_r&#40;s&#41; W &#43; C_r&#40;s&#41; f_res &#61; − E_r&#40;s&#41; f_ext − Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; ξ_k</code></pre>
+<p>with</p>
+<pre><code>L_r&#40;s&#41;   &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_r&#91;j&#93; · s^&#123;j-1&#125;          &#40;1 × FOM row on W&#41;
+G_&#123;r,k&#125;&#40;s&#41; &#61; Σ_&#123;j&#61;k&#43;1&#125;^&#123;ORD&#125; J_r&#91;j&#93; · s^&#123;j-1-k&#125;     &#40;Horner tails of L_r&#41;
+C_r&#40;s&#41;   &#61; Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; · Y_k^m       &#40;coupling to unknown f_res&#41;
+E_r&#40;s&#41;   &#61; Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; · Y_k^e       &#40;known forcing → RHS&#41;</code></pre>
+<p>Only the <code>|R|</code> resonant master columns of <code>C_r</code> are assembled; non-resonant master modes have identically-zero reduced dynamics at <strong>γ</strong>.</p>
 <hr />
-<h1>Joint operator <code>D_r</code> and its blocks <code>C_r</code> and <code>E_r</code></h1>
-<p>Define the joint operator acting on the full reduced state as</p>
-<pre><code>D_r&#40;s&#41; &#61; &#91; C_r&#40;s&#41;  E_r&#40;s&#41; &#93;,      size: 1 × NVAR</code></pre>
-<p>where <code>C_r</code> acts on the master modes and <code>E_r</code> acts on the external forcing. <code>D_r</code> is built via Horner&#39;s method:</p>
-<pre><code>D_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; Q_r&#91;j&#93; · s^&#123;j-1&#125;</code></pre>
-<p>with <code>Q_r&#91;j&#93;</code> &#40;<code>1 × NVAR</code>&#41; pre-computed by a downward recurrence.</p>
-<p>Because the external forcing is known, the term <code>E_r&#40;s&#41; · &#40;external dynamics&#41;</code> is moved to the right-hand side. Consequently, the linear system for the unknowns <code>&#91;W; f_res&#93;</code> involves only <code>L_r</code> and <code>C_r</code>.</p>
-<hr />
-<h1>Construction of <code>L_r</code> and <code>Q_r</code> via Horner</h1>
-<pre><code>L_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_r&#91;j&#93; · s^&#123;j-1&#125;</code></pre>
-<p>with <code>J_r&#91;j&#93;</code> &#40;<code>1 × FOM</code>&#41; computed by the downward recurrence</p>
-<pre><code>J_r&#91;ORD&#93;   &#61; Xℓ_r · B&#91;ORD&#43;1&#93;
-J_r&#91;j&#93;     &#61; λ_r · J_r&#91;j&#43;1&#93; &#43; Xℓ_r · B&#91;j&#43;1&#93;,   j &#61; ORD-1, …, 1</code></pre>
-<p>where <code>Xℓ_r</code> is the left eigenmode of master mode <code>r</code>, <code>λ_r</code> its eigenvalue, and <code>B&#91;k&#93;</code> the <code>k</code>-th coefficient matrix of the linear part of the full-order model.</p>
-<p>For the joint operator:</p>
-<pre><code>Q_r&#91;ORD-1&#93; &#61; J_r&#91;ORD&#93; · Y
-Q_r&#91;j&#93;     &#61; J_r&#91;j&#43;1&#93; · Y &#43; Q_r&#91;j&#43;1&#93; · Λ,   j &#61; ORD-2, …, 1</code></pre>
-<p>where:</p>
-<ul>
-<li><p><code>Y &#61; generalised_right_eigenmodes</code> &#40;<code>FOM × NVAR</code>&#41; collects the generalised eigenvectors of all master and external forcing modes,</p>
-</li>
-<li><p><code>Λ &#61; reduced_dynamics_linear</code> &#40;<code>NVAR × NVAR</code>&#41; is the Jordan matrix of the linear part of the reduced dynamics.</p>
-</li>
-</ul>
-<p>The split <code>Q_r &#61; &#91; Ĉ_r  Ê_r &#93;</code> yields <code>C_r&#40;s&#41;</code> from the first <code>ROM</code> entries and <code>E_r&#40;s&#41;</code> from the remaining <code>N_EXT</code> entries of each <code>Q_r&#91;j&#93;</code>.</p>
+<h1>Coefficients from eigenvector order-blocks &#40;no eigenvalue folding&#41;</h1>
+<p>The row coefficients are read directly off the &#40;conjugated&#41; left eigenvector order-blocks — no eigenvalue appears:</p>
+<pre><code>J_r&#91;j&#93;   &#61; conj&#40;φ_&#123;r,j&#125;&#41;              j &#61; 1, …, ORD-1
+J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
+<p>The conjugation is the sesquilinear <code>ᴴ</code> of the condition; it is baked into the stored coefficients so that every assembled contraction &#40;<code>row · W</code>, <code>row · ξ</code>, <code>row · Y</code>&#41; is <strong>bilinear</strong>.</p>
+<p><code>C_r</code>/<code>E_r</code> contract the same tails <code>G_&#123;r,k&#125;</code> against the right eigenmode order-blocks: master blocks come from the eigensolver, external blocks from the recurrence <code>Y_&#123;k&#43;1&#125;^e &#61; Y_k^e Λ_e &#43; Y_k^m Λ_me</code> &#40;the master↔external coupling of the reduced linear dynamics — the one confined place an eigenvalue-derived matrix remains&#41;.</p>
 <hr />
 <h1>Precomputation and assembly</h1>
-<p><code>Q_r</code> coefficients are pre-computed for all <code>NVAR &#61; ROM &#43; N_EXT</code> entries. At assembly time, only a subset is used:</p>
+<p><code>J_r</code>, <code>C_r</code> and <code>E_r</code> coefficients are pre-computed once per order. At assembly time, only a subset is used:</p>
 <ul>
 <li><p><strong>LHS matrix</strong> <code>&#91;L_r  C_r&#93;</code>: only the <code>|R|</code> columns of <code>C_r&#40;s&#41;</code> corresponding to resonant master modes are included; non-resonant columns are omitted because their reduced dynamics is identically zero.</p>
 </li>
@@ -2210,7 +2286,7 @@ Q_r&#91;j&#93;     &#61; J_r&#91;j&#43;1&#93; · Y &#43; Q_r&#91;j&#43;1&#93; ·
 <div class="api api-function" id="MasterModeOrthogonality-assemble_orthogonality_matrix_and_rhs!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl#L211" target="_blank" rel="noopener">assemble_orthogonality_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::T, J_coeffs::AbstractVector{&lt;:AbstractMatrix{T}}, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}, external_dynamics::AbstractVector{T}) where {T, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl#L189" target="_blank" rel="noopener">assemble_orthogonality_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::T, J_coeffs::AbstractVector{&lt;:AbstractMatrix{T}}, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}, external_dynamics::AbstractVector{T}) where {T, ROM}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>assemble_orthogonality_matrix_and_rhs&#33;&#40;M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
@@ -2223,7 +2299,7 @@ Q_r&#91;j&#93;     &#61; J_r&#91;j&#43;1&#93; · Y &#43; Q_r&#91;j&#43;1&#93; ·
 <div class="api api-function" id="MasterModeOrthogonality-evaluate_orthogonality_column_row!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L204" target="_blank" rel="noopener">evaluate_orthogonality_column_row!</a>(c::AbstractVector{T}, s::T, r::Int64, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}) where {T, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L259" target="_blank" rel="noopener">evaluate_orthogonality_column_row!</a>(c::AbstractVector{T}, s::T, r::Int64, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}) where {T, ROM}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>evaluate_orthogonality_column_row&#33;&#40;c, s, r, C_coeffs, resonance&#41; -&gt; c</code></pre>
@@ -2258,7 +2334,7 @@ c&#91;resonant_rank&#40;j&#41;&#93; ← val</code></pre>
 <div class="api api-function" id="MasterModeOrthogonality-evaluate_orthogonality_external_rhs">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L283" target="_blank" rel="noopener">evaluate_orthogonality_external_rhs</a>(s::T, r::Int64, external_dynamics::AbstractVector{T}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L338" target="_blank" rel="noopener">evaluate_orthogonality_external_rhs</a>(s::T, r::Int64, external_dynamics::AbstractVector{T}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}) where T</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>evaluate_orthogonality_external_rhs&#40;s, r, external_dynamics, E_coeffs&#41; -&gt; T</code></pre>
@@ -2304,9 +2380,9 @@ c&#91;resonant_rank&#40;j&#41;&#93; ← val</code></pre>
 <h2>Mathematical context</h2>
 <p>At step <code>j</code> of the Horner recurrence &#40;before the scalar multiply by <code>s</code>&#41;, the intermediate row vector</p>
 <pre><code>L_r&#91;j&#93;&#40;s&#41; &#61; Σ_&#123;k&#61;j&#43;1&#125;^&#123;ORD&#125; J_r&#91;k, :&#93; · s^&#123;k-&#40;j&#43;1&#41;&#125;</code></pre>
-<p>is available.  Dotting with the pre-computed coupling vector <code>ξ&#91;j&#93;</code> gives the scalar contribution of lower-order solution terms at step <code>j</code>:</p>
-<pre><code>contribution&#91;j&#93; &#61; -L_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code></pre>
-<p>The negative sign arises because these terms originate from the left-hand side of the cohomological equation.  Summed over <code>j &#61; 1, …, ORD-1</code>:</p>
+<p>is available.  Contracting <strong>bilinearly</strong> with the pre-computed coupling vector <code>ξ&#91;j&#93;</code> gives the scalar contribution of lower-order solution terms at step <code>j</code>:</p>
+<pre><code>contribution&#91;j&#93; &#61; -L_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93; &#61; -Σᵢ L_r&#91;j&#93;&#40;s&#41;ᵢ · ξ&#91;j&#93;ᵢ</code></pre>
+<p>The contraction must not conjugate: the sesquilinear conjugation of the orthogonality condition is already baked into the row coefficients <code>J_r</code> &#40;see <a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a>&#41;, so <code>row</code> holds the Horner tail <code>G_&#123;r,j&#125;&#40;s&#41;</code> with the <code>ᴴ</code> applied. The negative sign arises because these terms originate from the left-hand side of the cohomological equation.  Summed over <code>j &#61; 1, …, ORD-1</code>:</p>
 <pre><code>RHS_lower_r &#61; -Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; L_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code></pre>
 <p>The sum runs to <code>ORD-1</code> &#40;one fewer than in <a href="@ref"><code>InvarianceEquation</code></a>&#41; because the joint operator <code>Q_r</code> has one fewer degree.  Sharing the loop with the <code>L_r&#40;s&#41;</code> evaluation avoids recomputing the <code>L_r&#91;j&#93;</code> intermediates.</p>
 <h2>Arguments</h2>
@@ -2330,44 +2406,45 @@ c&#91;resonant_rank&#40;j&#41;&#93; ← val</code></pre>
 <div class="api api-function" id="MasterModeOrthogonality-precompute_orthogonality_column_polynomials">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L86" target="_blank" rel="noopener">precompute_orthogonality_column_polynomials</a>(J_coeffs::AbstractVector{&lt;:AbstractMatrix}, generalised_right_eigenmodes::AbstractMatrix, reduced_dynamics_linear::AbstractMatrix)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L113" target="_blank" rel="noopener">precompute_orthogonality_column_polynomials</a>(J_coeffs::AbstractVector{&lt;:AbstractMatrix}, right_master_blocks::AbstractArray{&lt;:Number, 3}, external_directions::AbstractMatrix, reduced_dynamics_linear::AbstractMatrix)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>precompute_orthogonality_column_polynomials&#40;J_coeffs,
-											generalised_right_eigenmodes,
+<div class="markdown"><pre><code>precompute_orthogonality_column_polynomials&#40;J_coeffs, right_master_blocks,
+											external_directions,
 											reduced_dynamics_linear&#41;
 -&gt; &#40;C_coeffs, E_coeffs&#41;</code></pre>
-<p>Pre-compute the polynomial coefficient arrays for the joint operator <code>D_r&#40;s&#41; &#61; &#91;C_r&#40;s&#41;  E_r&#40;s&#41;&#93;</code> that couples the orthogonality equations to the unknown reduced dynamics and to the external forcing.</p>
-<h2>Return values</h2>
-<ul>
-<li><p><code>C_coeffs :: Vector&#123;Matrix&#123;T&#125;&#125;</code> of length <code>ROM</code>, where <code>C_coeffs&#91;r&#93;</code> is an <code>&#40;ORD-1&#41; × ROM</code> matrix.  Row <code>j</code> of <code>C_coeffs&#91;r&#93;</code> is the degree-<code>&#40;j-1&#41;</code> coefficient of the master-mode block of <code>D_r</code>:</p>
-<pre><code>C_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; C_coeffs&#91;r&#93;&#91;j, :&#93; · s^&#123;j-1&#125;      &#40;1 × ROM row polynomial&#41;</code></pre>
-</li>
-<li><p><code>E_coeffs :: Vector&#123;Matrix&#123;T&#125;&#125;</code> of length <code>ROM</code>, where <code>E_coeffs&#91;r&#93;</code> is an <code>&#40;ORD-1&#41; × N_EXT</code> matrix.  Row <code>j</code> of <code>E_coeffs&#91;r&#93;</code> is the degree-<code>&#40;j-1&#41;</code> coefficient of the external-forcing block of <code>D_r</code>:</p>
-<pre><code>E_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; E_coeffs&#91;r&#93;&#91;j, :&#93; · s^&#123;j-1&#125;      &#40;1 × N_EXT row polynomial&#41;</code></pre>
-<p>When <code>ORD &#61; 1</code> both matrices have zero rows and the polynomials are identically zero; the corresponding blocks are absent from the assembled system.</p>
-</li>
-</ul>
+<p>Pre-compute the coefficient arrays of the operators <code>C_r&#40;s&#41;</code> &#40;coupling to the unknown reduced dynamics&#41; and <code>E_r&#40;s&#41;</code> &#40;known external forcing&#41; that appear in the orthogonality equation for master mode <code>r</code>:</p>
+<pre><code>J_r&#40;s&#41; W &#43; C_r&#40;s&#41; f_m &#61; − E_r&#40;s&#41; f_e − Σ_k G_&#123;r,k&#125;&#40;s&#41; ξ_k</code></pre>
+<h2>Mathematical origin</h2>
+<p>With <code>G_&#123;r,k&#125;&#40;s&#41; &#61; Σ_&#123;j&#61;k&#43;1&#125;^&#123;ORD&#125; J_r&#91;j, :&#93; s^&#40;j-1-k&#41;</code> the Horner tails of the row operator, the couplings are bilinear contractions against the <strong>right</strong> eigenmode order-blocks <code>Y_k</code> &#40;<code>Y_1</code> &#61; physical mode, <code>Y_&#123;k&#43;1&#125;</code> &#61; next derivative block&#41;:</p>
+<pre><code>C_r&#40;s&#41; &#61; Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; · Y_k^m        &#40;master blocks, from the eigensolver&#41;
+E_r&#40;s&#41; &#61; Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; · Y_k^e        &#40;external blocks&#41;</code></pre>
+<p>The master blocks are supplied directly &#40;<code>right_master_blocks</code>&#41;. The external blocks are generalised — the reduced linear dynamics couples them back to the master modes — and are generated by the block recurrence</p>
+<pre><code>Y_1^e &#61; Φ_ext,       Y_&#123;k&#43;1&#125;^e &#61; Y_k^e Λ_e &#43; Y_k^m Λ_me</code></pre>
+<p>where <code>Λ_me &#61; Λ&#91;1:ROM, ROM&#43;1:NVAR&#93;</code> and <code>Λ_e &#61; Λ&#91;ROM&#43;1:NVAR, ROM&#43;1:NVAR&#93;</code> are the master↔external and external blocks of <code>reduced_dynamics_linear</code>. This is the one place an eigenvalue-derived matrix remains, confined to the per-order precompute.</p>
+<p>All contractions are <strong>bilinear</strong> &#40;<code>Σᵢ J_r&#91;·,i&#93; Y&#91;i,·&#93;</code>&#41;: the sesquilinear conjugation of the orthogonality condition is already baked into <code>J_coeffs</code>.</p>
 <h2>Arguments</h2>
 <ul>
-<li><p><code>J_coeffs                    :: Vector&#123;&lt;:AbstractMatrix&#123;T&#125;&#125;</code> – output of <a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a>; <code>J_coeffs&#91;r&#93;</code> is <code>ORD × FOM</code>.</p>
+<li><p><code>J_coeffs :: Vector&#123;&lt;:AbstractMatrix&#123;T&#125;&#125;</code> – output of <a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a>; <code>J_coeffs&#91;r&#93;</code> is <code>ORD × FOM</code>.</p>
 </li>
-<li><p><code>generalised_right_eigenmodes :: AbstractMatrix&#123;T&#125;</code> of size <code>FOM × NVAR</code> – generalised eigenvectors; columns <code>1:ROM</code> are the master modes, columns <code>ROM&#43;1:NVAR</code> are the external forcing modes.</p>
+<li><p><code>right_master_blocks :: AbstractArray&#123;T,3&#125;</code> – right master-mode order-blocks, size <code>FOM × ORD × ROM</code>; <code>right_master_blocks&#91;:, k, m&#93; &#61; Y_k^m&#91;:, m&#93;</code> &#40;equal to the linear master monomials of the parametrisation <code>W</code>&#41;. Only blocks <code>k ≤ ORD-1</code> are used.</p>
 </li>
-<li><p><code>reduced_dynamics_linear      :: AbstractMatrix&#123;T&#125;</code> of size <code>NVAR × NVAR</code> – Jordan-form matrix of the linear part of the reduced dynamics.</p>
+<li><p><code>external_directions :: AbstractMatrix&#123;T&#125;</code> – physical external directions <code>Φ_ext</code>, size <code>FOM × N_EXT</code>.</p>
+</li>
+<li><p><code>reduced_dynamics_linear :: AbstractMatrix&#123;T&#125;</code> – <code>NVAR × NVAR</code> linear reduced dynamics; only the <code>Λ_me</code> and <code>Λ_e</code> blocks are read.</p>
 </li>
 </ul>
-<h2>Recurrence</h2>
-<p>For each mode <code>r</code>, a single downward pass computes the <code>NVAR</code>-vector polynomial <code>Q_r</code> using two alternating buffers:</p>
-<pre><code>q ← Yᵀ · J_r&#91;ORD, :&#93;                                                    &#40;j &#61; ORD-1&#41;
-C_coeffs&#91;r&#93;&#91;ORD-1, :&#93; ← q&#91;1:ROM&#93;;   E_coeffs&#91;r&#93;&#91;ORD-1, :&#93; ← q&#91;ROM&#43;1:NVAR&#93;
-
-q ← Yᵀ · J_r&#91;j&#43;1, :&#93; &#43; Λᵀ · q_prev,   j &#61; ORD-2, …, 1
-C_coeffs&#91;r&#93;&#91;j, :&#93; ← q&#91;1:ROM&#93;;   E_coeffs&#91;r&#93;&#91;j, :&#93; ← q&#91;ROM&#43;1:NVAR&#93;</code></pre>
-<p>Here <code>Yᵀ · v &#61; Y&#39; * v</code> is the FOM → NVAR projection of a row vector <code>vᵀ</code> onto the eigenmode basis, and <code>Λᵀ · q</code> implements the right-multiply <code>q · Λ</code> stored as a column.  The buffer swap avoids copying.</p>
+<h2>Return values</h2>
+<ul>
+<li><p><code>C_coeffs :: Vector&#123;Matrix&#123;T&#125;&#125;</code> of length <code>ROM</code>; <code>C_coeffs&#91;r&#93;</code> is <code>&#40;ORD-1&#41; × ROM</code>, row <code>p</code> &#61; degree-<code>&#40;p-1&#41;</code> coefficient of <code>C_r&#40;s&#41;</code>.</p>
+</li>
+<li><p><code>E_coeffs :: Vector&#123;Matrix&#123;T&#125;&#125;</code> of length <code>ROM</code>; <code>E_coeffs&#91;r&#93;</code> is <code>&#40;ORD-1&#41; × N_EXT</code>, row <code>p</code> &#61; degree-<code>&#40;p-1&#41;</code> coefficient of <code>E_r&#40;s&#41;</code>.</p>
+</li>
+</ul>
+<p>When <code>ORD &#61;&#61; 1</code> both matrices have zero rows and the operators are identically zero &#40;the corresponding blocks are absent from the assembled system&#41;.</p>
 <h2>Complexity</h2>
 <ul>
-<li><p>Time:    <code>O&#40;ROM · ORD · FOM · NVAR&#41;</code> &#40;one <code>NVAR</code>-vector update per <code>&#40;r, j&#41;</code>&#41;</p>
+<li><p>Time:    <code>O&#40;ROM² · ORD² · FOM&#41;</code> for the contractions plus <code>O&#40;ORD · FOM · NVAR · N_EXT&#41;</code> for the external block recurrence.</p>
 </li>
 <li><p>Storage: <code>O&#40;ROM · ORD · NVAR&#41;</code></p>
 </li>
@@ -2378,33 +2455,37 @@ C_coeffs&#91;r&#93;&#91;j, :&#93; ← q&#91;1:ROM&#93;;   E_coeffs&#91;r&#93;&#9
 <div class="api api-function" id="MasterModeOrthogonality-precompute_orthogonality_operator_coefficients">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_orthogonality_operator_coefficients</a>(fom_matrices::NTuple{ORDP1, var"#s203"} where var"#s203"&lt;:(AbstractMatrix), left_eigenmodes::AbstractMatrix, master_eigenvalues::StaticArraysCore.SVector{ROM}) where {ORDP1, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_orthogonality_operator_coefficients</a>(fom_matrices::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:(AbstractMatrix), left_eigenmodes::AbstractMatrix) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_orthogonality_operator_coefficients</a>(fom_matrices::NTuple{ORDP1, var"#s225"} where var"#s225"&lt;:(AbstractMatrix), left_eigenmodes::AbstractMatrix, left_modes_derivatives::Union{Nothing, AbstractArray{&lt;:Number, 3}}) where ORDP1</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>precompute_orthogonality_operator_coefficients&#40;fom_matrices, left_eigenmodes,
-											   master_eigenvalues&#41;
+											   left_modes_derivatives &#61; nothing&#41;
 -&gt; Vector&#123;Matrix&#123;T&#125;&#125;</code></pre>
-<p>Pre-compute the polynomial coefficient arrays for the orthogonality row operators <code>L_r&#40;s&#41;</code> using a downward Horner recurrence on the left eigenstructure.</p>
-<h2>Return value</h2>
-<p>An <code>NTuple&#123;ROM, Matrix&#123;T&#125;&#125;</code> where entry <code>r</code> is an <code>ORD × FOM</code> matrix <code>J_coeffs&#91;r&#93;</code>.  Row <code>j</code> of <code>J_coeffs&#91;r&#93;</code> stores the degree-<code>&#40;j-1&#41;</code> row-vector coefficient of <code>L_r</code>:</p>
-<pre><code>L_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_coeffs&#91;r&#93;&#91;j, :&#93; · s^&#123;j-1&#125;</code></pre>
+<p>Pre-compute the polynomial coefficient arrays for the orthogonality row operators <code>J_r&#40;s&#41;</code> directly from the left-eigenvector order-blocks. No eigenvalue is used.</p>
+<h2>Mathematical origin</h2>
+<p>The orthogonality condition for master mode <code>r</code> at a monomial with superharmonic <code>s</code> is the sesquilinear B-orthogonality of the companion left eigenvector <code>φ_r &#61; &#91;φ_&#123;r,1&#125;; …; φ_&#123;r,ORD&#125;&#93;</code> &#40;defined by <code>φ_rᴴ &#40;λ_r B − A&#41; &#61; 0</code>&#41; against the first-order state <code>𝒲</code>:</p>
+<pre><code>φ_rᴴ B 𝒲 &#61; 0,     B &#61; blockdiag&#40;I, …, I, B_ORD&#41;</code></pre>
+<p>Reducing block-by-block, the row acting on the physical unknown <code>W</code> is</p>
+<pre><code>J_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_r&#91;j, :&#93; · s^&#40;j-1&#41;</code></pre>
+<p>with coefficients read straight off the &#40;conjugated&#41; eigenvector blocks:</p>
+<pre><code>J_r&#91;j, :&#93;   &#61; conj&#40;φ_&#123;r,j&#125;&#41;          j &#61; 1, …, ORD-1
+J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj&#40;B_ORDᴴ ℓ_r&#41;</code></pre>
+<p>The conjugation is the sesquilinear <code>ᴴ</code> of the condition, stored so that the assembled matrix row acts <strong>bilinearly</strong> on <code>W</code> &#40;<code>row · W &#61; Σᵢ rowᵢ Wᵢ</code>&#41;.</p>
 <h2>Arguments</h2>
 <ul>
-<li><p><code>fom_matrices       :: NTuple&#123;ORD&#43;1, &lt;:AbstractMatrix&#123;T&#125;&#125;</code> – linear matrices of the full-order model; <code>fom_matrices&#91;k&#43;1&#93;</code> corresponds to <code>B_k</code> &#40;0-indexed&#41;.</p>
+<li><p><code>fom_matrices :: NTuple&#123;ORD&#43;1, &lt;:AbstractMatrix&#123;T&#125;&#125;</code> – linear matrices of the full-order model; <code>fom_matrices&#91;k&#43;1&#93;</code> corresponds to <code>B_k</code> &#40;0-indexed&#41;.</p>
 </li>
-<li><p><code>left_eigenmodes    :: AbstractMatrix&#123;T&#125;</code> – left eigenvectors of the master modes; <code>left_eigenmodes&#91;:, r&#93;</code> is the length-<code>FOM</code> vector for mode <code>r</code>.</p>
+<li><p><code>left_eigenmodes :: AbstractMatrix&#123;T&#125;</code> – physical-space &#40;highest-order&#41; left eigenvector slice; <code>left_eigenmodes&#91;:, r&#93;</code> is <code>ℓ_r &#61; φ_&#123;r,ORD&#125;</code> &#40;length FOM&#41;.</p>
 </li>
-<li><p><code>master_eigenvalues :: SVector&#123;ROM, T&#125;</code> – eigenvalues <code>λ_r</code> of the master modes.</p>
+<li><p><code>left_modes_derivatives :: Union&#123;Nothing, AbstractArray&#123;T,3&#125;&#125;</code> – lower-order left eigenvector blocks, size <code>FOM × &#40;ORD-1&#41; × ROM</code>; <code>left_modes_derivatives&#91;:, j, r&#93; &#61; φ_&#123;r,j&#125;</code>. Required when <code>ORD &gt; 1</code> &#40;the eigensolver returns them; see <code>solve_left</code>&#41;. May be <code>nothing</code> for <code>ORD &#61;&#61; 1</code>.</p>
 </li>
 </ul>
-<h2>Recurrence</h2>
-<p>For each mode <code>r</code>, a single downward pass fills <code>J_coeffs&#91;r&#93;</code> &#40;<code>ORD × FOM</code>&#41;:</p>
-<pre><code>J_r&#91;ORD, :&#93;   ←  B&#91;ORD&#43;1&#93;ᵀ · ℓ_r
-J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#93;ᵀ · ℓ_r,   j &#61; ORD-1, …, 1</code></pre>
-<p>Here <code>B&#91;k&#43;1&#93;ᵀ · ℓ_r</code> is a <code>FOM</code>-vector equal to the row vector <code>ℓ_rᵀ · B&#91;k&#43;1&#93;</code> stored as a column; this is standard Julia <code>mul&#33;&#40;dest, B&#39;, x&#41;</code>.</p>
+<h2>Return value</h2>
+<p>A <code>Vector&#123;Matrix&#123;T&#125;&#125;</code> of length <code>ROM</code>; entry <code>r</code> is the <code>ORD × FOM</code> matrix <code>J_coeffs&#91;r&#93;</code> whose row <code>j</code> stores the degree-<code>&#40;j-1&#41;</code> coefficient of <code>J_r&#40;s&#41;</code>.</p>
 <h2>Complexity</h2>
 <ul>
-<li><p>Time:    <code>O&#40;ROM · ORD · FOM²&#41;</code> &#40;one <code>FOM</code>-vector update per <code>&#40;r, j&#41;</code> pair&#41;</p>
+<li><p>Time:    one <code>B_ORDᴴ · ℓ_r</code> product per mode — <code>O&#40;ROM · FOM²&#41;</code> dense &#40;<code>O&#40;ROM · nnz&#41;</code> sparse&#41;; the remaining blocks are copies.</p>
 </li>
 <li><p>Storage: <code>O&#40;ROM · ORD · FOM&#41;</code></p>
 </li>
@@ -2426,7 +2507,7 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
 <div class="api api-type" id="ParametrisationMethod-Parametrisation">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L27" target="_blank" rel="noopener">Parametrisation</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L34" target="_blank" rel="noopener">Parametrisation</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>Parametrisation&#123;ORD, NVAR, T&#125;</code></pre>
@@ -2446,7 +2527,7 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
 <div class="api api-type" id="ParametrisationMethod-ReducedDynamics">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L56" target="_blank" rel="noopener">ReducedDynamics</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L63" target="_blank" rel="noopener">ReducedDynamics</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>ReducedDynamics&#123;ROM, NVAR, T&#125;</code></pre>
@@ -2466,7 +2547,7 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
 <div class="api api-function" id="ParametrisationMethod-compute_higher_derivative_coefficients!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L133" target="_blank" rel="noopener">compute_higher_derivative_coefficients!</a>(param_coeff::AbstractArray{T, 3}, red_coeff::AbstractMatrix{T}, external_dynamics::AbstractVector{T}, superharmonic::T, global_index::Int64, generalised_eigenmodes::AbstractMatrix{T}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L140" target="_blank" rel="noopener">compute_higher_derivative_coefficients!</a>(param_coeff::AbstractArray{T, 3}, red_coeff::AbstractMatrix{T}, external_dynamics::AbstractVector{T}, superharmonic::T, global_index::Int64, generalised_eigenmodes::AbstractMatrix{T}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}) where T</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>compute_higher_derivative_coefficients&#33;&#40;
@@ -2512,10 +2593,10 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
 <div class="api api-function" id="ParametrisationMethod-create_parametrisation_method_objects">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L86" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L86" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L86" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L86" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L93" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L93" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L93" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L93" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>create_parametrisation_method_objects&#40;mset::MultiindexSet&#123;NVAR&#125;, ORD::Int, FOM::Int, ROM::Int, external_system_size::Int, ::Type&#123;T&#125;&#61;Complex&#41;</code></pre>
@@ -2542,6 +2623,28 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
 <li><p><code>T</code>: element type.</p>
 </li>
 </ul>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="ParametrisationMethod-restrict_Parametrisation_to_degree">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L220" target="_blank" rel="noopener">restrict_Parametrisation_to_degree</a>(W::Parametrisation, max_degree::Int64)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>function restrict_Parametrisation_to_degree&#40;W::Parametrisation, max_degree::Int&#41; -&gt; Parametrisation</code></pre>
+<p>Returns a new Parametrisation that contains all the monomials of <code>poly</code> that are of degree lower or equal than <code>max_degree</code>. </p>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="ParametrisationMethod-restrict_ReducedDynamics_to_degree">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L230" target="_blank" rel="noopener">restrict_ReducedDynamics_to_degree</a>(R::ReducedDynamics, max_degree::Int64)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>function restrict_ReducedDynamics_to_degree&#40;R::ReducedDynamics, max_degree::Int&#41; -&gt; ReducedDynamics</code></pre>
+<p>Returns a new ReducedDynamics that contains all the monomials of <code>poly</code> that are of degree lower or equal than <code>max_degree</code>. </p>
 </div>
   </div>
 </div>
@@ -2839,7 +2942,7 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
 <div class="api api-function" id="MultilinearTerms-_derivative_orders">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/RightHandSide/MultilinearTerms/Symmetry.jl#L83" target="_blank" rel="noopener">_derivative_orders</a>(t::AbstractMultilinearMap)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/RightHandSide/MultilinearTerms/Symmetry.jl#L84" target="_blank" rel="noopener">_derivative_orders</a>(t::AbstractMultilinearMap)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_derivative_orders&#40;t&#41; → NTuple</code></pre>
@@ -2998,7 +3101,7 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
   <div class="api-body">
 <div class="markdown"><pre><code>symmetry_type&#40;t&#41; -&gt; SymmetryType</code></pre>
 <p>Classify a <code>AbstractMultilinearMap</code> as <code>FullyAsymmetric</code>, <code>FullySymmetric</code>, or <code>GroupwiseSymmetric</code> based on its <code>multiindex</code> field.</p>
-<p>For <code>MultilinearMap</code>, setting <code>force_asymmetric &#61; true</code> on the term overrides the <code>multiindex</code>-based classification and always returns <code>FullyAsymmetric</code>.</p>
+<p>Setting <code>fully_asymmetric &#61; true</code> on any term overrides the <code>multiindex</code>-based classification and always returns <code>FullyAsymmetric</code>.</p>
 </div>
   </div>
 </div>
@@ -3101,13 +3204,13 @@ J_r&#91;j,   :&#93;   ←  λ_r · J_r&#91;j&#43;1, :&#93; &#43; B&#91;j&#43;1&#
 <div class="api api-type" id="CohomologicalEquations-CohomologicalBuffers">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L58" target="_blank" rel="noopener">CohomologicalBuffers</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L61" target="_blank" rel="noopener">CohomologicalBuffers</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>CohomologicalBuffers&#123;T&#125;&#40;FOM, ROM&#41; -&gt; CohomologicalBuffers</code></pre>
 <p>Allocate all buffers for a system of full-order dimension <code>FOM</code> and <code>ROM</code> master modes.</p>
 </div><div class="markdown"><pre><code>CohomologicalBuffers&#123;T&#125;</code></pre>
-<p>Pre-allocated scratch buffers for the cohomological system assembly and solve.</p>
+<p>Pre-allocated scratch buffers for the cohomological system assembly and solve. Use <code>system_matrix</code> for dense and <code>system_matrix_rows</code>&#43; <code>system_matrix_columns</code> for sparse dispatch.</p>
 </div>
   </div>
 </div>
@@ -3192,7 +3295,7 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-type" id="CohomologicalEquations-SparseLinearSolverState">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L92" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L107" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>SparseLinearSolverState&#123;T&#125;&#40;L_template, L_mappings, FOM, ROM&#41; -&gt; SparseLinearSolverState</code></pre>
@@ -3386,13 +3489,11 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_solve_monomial!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L76" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, nR, resonance, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L76" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, nR, resonance, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L97" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, nR, resonance, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L97" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, nR, resonance, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, nR, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
-<p><strong>Dense path.</strong> Assemble the <code>&#40;FOM&#43;nR&#41;</code> bordered system via <code>_assemble_bordered_system&#33;</code>, then solve it in-place with <code>lu&#33;</code> &#43; <code>ldiv&#33;</code>. The solution is written into <code>ctx.buffers.rhs&#91;1:FOM&#43;nR&#93;</code>.</p>
-</div><div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, nR, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
 <p><strong>Sparse path</strong> &#40;dispatched when <code>MT &lt;: SparseMatrixCSC</code>&#41;. Builds <code>L&#40;s&#41;</code> as a <code>SparseMatrixCSC</code> from the union-pattern template, then:</p>
 <ul>
 <li><p><strong>Non-resonant</strong> &#40;<code>nR &#61;&#61; 0</code>&#41;: solves <code>L&#40;s&#41; W_α &#61; rhs</code> directly via <code>_sparse_solve</code>.</p>
@@ -3401,6 +3502,8 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 </li>
 </ul>
 <p>Results are written into <code>ctx.buffers.rhs&#91;1:FOM&#43;nR&#93;</code>.</p>
+</div><div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, nR, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
+<p><strong>Dense path.</strong> Assemble the <code>&#40;FOM&#43;nR&#41;</code> bordered system via <code>_assemble_bordered_system&#33;</code>, then solve it in-place with <code>lu&#33;</code> &#43; <code>ldiv&#33;</code>. The solution is written into <code>ctx.buffers.rhs&#91;1:FOM&#43;nR&#93;</code>.</p>
 </div>
   </div>
 </div>
@@ -3516,7 +3619,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_cohomological_problem">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L134" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, master_eigenvalues::StaticArraysCore.SVector{ROM, ComplexF64}, master_modes::Matrix{ComplexF64}, left_eigenmodes::AbstractMatrix{ComplexF64}, resonance_set::ResonanceSet; initial_W, initial_R, master_modes_derivatives, conjugate_permutation, show_progress, benchmark_dir) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L134" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, master_eigenvalues::StaticArraysCore.SVector{ROM, ComplexF64}, master_modes::Matrix{ComplexF64}, left_eigenmodes::AbstractMatrix{ComplexF64}, resonance_set::ResonanceSet; initial_W, initial_R, master_modes_derivatives, left_modes_derivatives, conjugate_permutation, show_progress, benchmark_dir) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_cohomological_problem&#40;
@@ -3559,6 +3662,8 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 </li>
 <li><p><code>master_modes_derivatives</code> — <code>FOM × &#40;ORD-1&#41; × ROM</code>; required when <code>ORD &gt; 1</code>.</p>
 </li>
+<li><p><code>left_modes_derivatives</code> — <code>FOM × &#40;ORD-1&#41; × ROM</code>; the lower-order left eigenvector blocks <code>left_modes_derivatives&#91;:, j, r&#93; &#61; φ_&#123;r,j&#125;</code> &#40;as returned by <code>solve_left</code>&#41;; required when <code>ORD &gt; 1</code>. The orthogonality row operators are read directly off these blocks — no eigenvalue folding.</p>
+</li>
 <li><p><code>conjugate_permutation</code> — optional <code>AbstractVector&#123;Int&#125;</code> of length NVAR encoding the conjugate permutation on modes.  <code>perm&#91;i&#93; &#61; j</code> means mode <code>j</code> is the complex conjugate of mode <code>i</code>.  When <code>nothing</code> &#40;default&#41;, no conjugate-symmetry exploitation is performed. The caller must verify that the eigenvectors satisfy the conjugate symmetry before passing this argument — two eigenvalues forming a conjugate pair is necessary but not sufficient &#40;the eigenspace must be one-dimensional, or the eigenvectors must be chosen conjugately&#41;.</p>
 </li>
 <li><p><code>show_progress</code> — print a progress line to <code>stderr</code> while solving &#40;default: <code>true</code>&#41;. Suppressed automatically when <code>stderr</code> is not a TTY.</p>
@@ -3586,7 +3691,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="FEMUtility-abaqus_to_gmsh">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L7" target="_blank" rel="noopener">abaqus_to_gmsh</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L7" target="_blank" rel="noopener">abaqus_to_gmsh</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>abaqus_to_gmsh&#40;inp_file::String, gmsh_file::String&#41;</code></pre>
@@ -3599,7 +3704,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="FEMUtility-abaqus_to_gmsh_linear">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L22" target="_blank" rel="noopener">abaqus_to_gmsh_linear</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L20" target="_blank" rel="noopener">abaqus_to_gmsh_linear</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>abaqus_to_gmsh_linear&#40;inp_file::String, gmsh_file::String&#41;</code></pre>
@@ -3611,7 +3716,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="FEMUtility-comsol_to_gmsh">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L34" target="_blank" rel="noopener">comsol_to_gmsh</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L30" target="_blank" rel="noopener">comsol_to_gmsh</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>comsol_to_gmsh&#40;comsol_file::String, gmsh_file::String&#41;</code></pre>
@@ -3623,7 +3728,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="FEMUtility-comsol_to_gmsh_linear">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L47" target="_blank" rel="noopener">comsol_to_gmsh_linear</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L41" target="_blank" rel="noopener">comsol_to_gmsh_linear</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>comsol_to_gmsh_linear&#40;comsol_file::String, gmsh_file::String&#41;</code></pre>
@@ -3635,7 +3740,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="FEMUtility-gmsh_to_comsol">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L59" target="_blank" rel="noopener">gmsh_to_comsol</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FEMUtility.jl#L51" target="_blank" rel="noopener">gmsh_to_comsol</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>gmsh_to_comsol&#40;gmsh_file::String, comsol_file::String&#41;</code></pre>
@@ -3694,9 +3799,9 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>invariance_error_convergence&#40;model, W, R;
-							 n_samples    &#61; 1000,
+							 n_samples &#61; 1000,
 							 r_magnitudes &#61; &#91;0.0&#93;,
-							 rng          &#61; Random.default_rng&#40;&#41;&#41;
+							 rng &#61; Random.default_rng&#40;&#41;&#41;
 → Vector of NamedTuples, one per entry in &#96;r_magnitudes&#96;</code></pre>
 <p>For each forcing magnitude <code>|r|</code> in <code>r_magnitudes</code>, draw <code>n_samples</code> points with master-mode coordinates from <code>N&#40;0,1&#41;</code> and external coordinates sampled uniformly on a sphere of radius <code>|r|</code>.  Each result NamedTuple contains:</p>
 <ul>
@@ -3729,10 +3834,10 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>invariance_error_norms&#40;model, W, R;
-					   n_samples  &#61; 1000,
-					   amplitude  &#61; 1.0,
+					   n_samples &#61; 1000,
+					   amplitude &#61; 1.0,
 					   r_external &#61; nothing,
-					   rng        &#61; Random.default_rng&#40;&#41;&#41;
+					   rng &#61; Random.default_rng&#40;&#41;&#41;
 → NamedTuple&#123;&#40;:max, :mean, :rms, :pointwise&#41;&#125;</code></pre>
 <p>Evaluate the invariance-equation residual ‖E&#40;z&#41;‖₂ over a Gaussian point cloud in reduced coordinates.</p>
 <p><code>amplitude</code> is the standard deviation of each complex master-mode component &#40;real and imaginary parts drawn i.i.d. from <code>N&#40;0, amplitude²/2&#41;</code>&#41;. External coordinates are fixed to zero unless <code>r_external</code> is provided.</p>
@@ -3750,74 +3855,6 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 </div>
   </div>
 </div>
-  <div id="ParaviewExport" class="api-module-h">ParaviewExport</div>
-  <div class="api-module-desc" data-module="ParaviewExport"><div class="markdown"><p>Module <code>ParaviewExport</code> — stubs for Paraview/VTK export.</p>
-<p>Requires WriteVTK.jl <strong>and</strong> Ferrite.jl to be loaded; the actual implementations live in <code>ext/MORFEWriteVTKExt.jl</code> and are activated automatically when both packages are in scope.</p>
-</div></div>
-<div class="api api-function" id="ParaviewExport-write_paraview_deformation">
-  <div class="api-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/ParaviewExport.jl#L68" target="_blank" rel="noopener">write_paraview_deformation</a>(args...; kwargs...)</code>
-  </div>
-  <div class="api-body">
-<div class="markdown"><pre><code>write_paraview_deformation&#40;outdir, grid, dh, W, free, r_amplitude;
-                            theta&#61;0.0, label&#61;&quot;deformation&quot;&#41;</code></pre>
-<p>Write a single <code>.vtu</code> at the backbone point <code>z₁ &#61; r_amplitude · exp&#40;i·theta&#41;</code> with two vector point-data fields:</p>
-<ul>
-<li><p><code>u_total</code>      — full deformation <code>Re&#91;W&#40;z₁, z̄₁&#41;&#93;</code></p>
-</li>
-<li><p><code>u_nonlinear</code>  — nonlinear part <code>Re&#91;W&#40;z₁, z̄₁&#41; − W_lin&#40;z₁, z̄₁&#41;&#93;</code></p>
-</li>
-</ul>
-<p><code>theta &#61; 0</code> &#40;default&#41; gives a real displacement aligned with the eigenvector.</p>
-<p>Requires WriteVTK.jl and Ferrite.jl.</p>
-</div>
-  </div>
-</div>
-<div class="api api-function" id="ParaviewExport-write_paraview_manifold">
-  <div class="api-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/ParaviewExport.jl#L53" target="_blank" rel="noopener">write_paraview_manifold</a>(args...; kwargs...)</code>
-  </div>
-  <div class="api-body">
-<div class="markdown"><pre><code>write_paraview_manifold&#40;outdir, grid, dh, W, free; alpha_indices&#61;nothing&#41;</code></pre>
-<p>Write manifold coefficient columns of <code>W</code> to individual <code>.vtu</code> files. <code>alpha_indices</code> selects which monomials to export &#40;all by default&#41;.</p>
-<p>Requires WriteVTK.jl and Ferrite.jl.</p>
-</div>
-  </div>
-</div>
-<div class="api api-function" id="ParaviewExport-write_paraview_mesh">
-  <div class="api-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/ParaviewExport.jl#L13" target="_blank" rel="noopener">write_paraview_mesh</a>(args...; kwargs...)</code>
-  </div>
-  <div class="api-body">
-<div class="markdown"><pre><code>write_paraview_mesh&#40;filename, grid; dh&#61;nothing, prescribed_dofs&#61;nothing&#41;</code></pre>
-<p>Write the undeformed Ferrite mesh to <code>filename.vtu</code>.</p>
-<p>When <code>dh</code> and <code>prescribed_dofs</code> &#40;&#61; <code>ch.prescribed_dofs</code>&#41; are supplied, the following point-data arrays are embedded so that clicking any node in Paraview shows its metadata:</p>
-<p>node<em>id            — 1-indexed node number &#40;Int32&#41;   x, y, z            — coordinates as named scalar fields &#40;Float64&#41;   dof</em>x, dof<em>y, dof</em>z — free DOF indices &#40;Int32, same as reduced K/M vectors&#41;; -1 &#61; constrained</p>
-<p>Requires WriteVTK.jl and Ferrite.jl.</p>
-</div>
-  </div>
-</div>
-<div class="api api-function" id="ParaviewExport-write_paraview_modes">
-  <div class="api-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/ParaviewExport.jl#L35" target="_blank" rel="noopener">write_paraview_modes</a>(args...; kwargs...)</code>
-  </div>
-  <div class="api-body">
-<div class="markdown"><pre><code>write_paraview_modes&#40;outdir, grid, dh, eigenvalues, Y, free; n_modes&#61;10, prefix&#61;&quot;mode&quot;&#41;</code></pre>
-<p>Write the first <code>n_modes</code> eigenmodes to <code>outdir/mode_kk.vtu</code> and collect them in a PVD file <code>outdir/modes.pvd</code> &#40;one &quot;time&quot; frame per mode&#41;.</p>
-<ul>
-<li><p><code>Y</code>: position eigenvectors, shape <code>&#40;n_free, ORD, n_eig&#41;</code> from <code>solve_eigenproblem</code>.</p>
-</li>
-<li><p><code>free</code>: sorted vector of free &#40;unconstrained&#41; global DOF indices.</p>
-</li>
-</ul>
-<p>Requires WriteVTK.jl and Ferrite.jl.</p>
-</div>
-  </div>
-</div>
 </main>
 </div>
 
@@ -3828,13 +3865,13 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 		<div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
 		<p style="color:var(--ink-3);font-size:13px;max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
 	  </div>
-	  <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="tutorials/">Tutorials</a></li><li><a href="api.html">API Reference</a></li></ul></div>
+	  <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="tutorials.html">Tutorials</a></li><li><a href="api.html">API Reference</a></li></ul></div>
 	  <div><h4>Code</h4><ul><li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/issues" target="_blank" rel="noopener">Issues</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li></ul></div>
 	  <div><h4>Cite</h4><ul><li><a href="publications.html">Publications</a></li><li style="color:var(--ink-3);font-size:12px;">Citation details will appear with first publication.</li></ul></div>
 	</div>
 	<div style="display:flex;justify-content:space-between;align-items:center;margin-top:48px;padding-top:24px;border-top:1px solid var(--hair);color:var(--ink-3);font-size:12px;">
 	  <div>© MORFE contributors · MIT license</div>
-	  <div class="mono">generated · 6 June 2026 · julia 1.11</div>
+	  <div class="mono">generated · 15 July 2026 · julia 1.11</div>
 	</div>
   </div>
 </footer>

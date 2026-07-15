@@ -14,9 +14,9 @@ Every runnable example satisfies:
 1. **Entry point** is `main.jl` at the example root. Running it end-to-end
    produces files on disk — a run that only prints to the terminal is non-compliant.
 2. **Outputs** go under `results/` (never the CWD):
-   - *Single-run examples* (01, 02, 04): `results/data/` (W.jls, R.jls,
+   - *Single-run examples* (02): `results/data/` (W.jls, R.jls,
      R_coefficients.csv), `results/figures/`, `results/summary.txt`.
-   - *Config-driven examples* (03, 05): `results/<run_name>/data/`,
+   - *Config-driven examples*: `results/<run_name>/data/`,
      `figures/`, `summary.txt`; `<run_name>` is derived from the config.
 3. **`summary.txt`** contains at minimum: model description, master modes,
    eigenfrequencies, parametrisation order, wall-clock time, Julia version,
@@ -32,14 +32,22 @@ Every runnable example satisfies:
 
 | Folder | Model | Demonstrates | Status | Approx. runtime |
 | ------ | ----- | ------------ | ------ | --------------- |
-| `01_clamped_beam_ferrite/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Ferrite.jl FEM backend via `MORFEFerriteExt` | runnable | < 1 min |
-| `02_clamped_beam_gridap/` | Same beam | Full DPIM pipeline with Gridap.jl FEM backend | runnable | 8 min |
-| `03_arch_comsol_wedge/` | Arch wedge (COMSOL mesh import) | COMSOL `.mphtxt` → MORFE pipeline | runnable | < 1 min |
-| `04_parametric_clamped_beam/` | Two-parameter ROM: axial stretch θ₁ + arch pre-deformation θ₂ | Bivariate parametric ROM in (z₁, z₂, θ₁, θ₂) with N_EXT=2 | runnable | not yet measured |
-| `05_karman_vortex_street/` | Cylinder wake flow (Kármán vortex street) | Fluid DPIM with Ferrite.jl, non-symmetric FOM (~57 954 free DOFs) | runnable | not yet measured |
-| `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator | **DRAFT** — design notes only, not yet runnable | draft | N/A |
+| `02_clamped_beam_gridap/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Gridap.jl FEM backend | runnable | 8 min |
+| `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator (pure-Julia Hermite beam) | Coupled electrostatic-mechanical ROM, order-3 `NDOrderModel` | runnable | minutes |
 | `mesh_import/` | Test meshes | Abaqus/COMSOL → GMSH format conversion | utility | seconds |
 | `internals/` | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method | utility | seconds–1 min |
+
+All **Ferrite.jl-backed examples** moved to the companion package
+[MORFEFerrite.jl](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples):
+
+| Folder (in MORFEFerrite.jl) | Model |
+| --------------------------- | ----- |
+| `01_clamped_beam_ferrite/` | Clamped-clamped SVK beam — high-level `StructuralSVK` UI + low-level pipeline |
+| `03_arch_comsol_wedge/` | Arch wedge, COMSOL `.mphtxt` P18 mesh |
+| `04_parametric_clamped_beam/` | Two-parameter ROM (axial stretch θ₁ + bending-mode arch θ₂), general `ParametricStructural` engine |
+| `05_karman_vortex_street/` | Cylinder wake flow (Kármán), `FluidNavierStokes` backend |
+| `07_parametric_arch/` | Single-parameter sinusoidal arch, `ParametricStructural` |
+| `08_mems_micromirror/` | MEMS scanning micromirror, `StructuralSVK` |
 
 ---
 
@@ -48,38 +56,26 @@ Every runnable example satisfies:
 From the repository root:
 
 ```bash
-julia --project=examples/01_clamped_beam_ferrite -e '
+julia --project=examples/02_clamped_beam_gridap -e '
   using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/01_clamped_beam_ferrite/main.jl")'
+  include("examples/02_clamped_beam_gridap/main.jl")'
 ```
 
 Each example's own `README.md` has the exact command.
 
 ## Validation
 
-After a fresh run, compare against the reference:
-
-```bash
-julia --project=examples/04_parametric_clamped_beam \
-  examples/04_parametric_clamped_beam/validate.jl
-```
-
-Reference results are regenerated only by deliberately blessing a verified run:
-
-```bash
-cp examples/04_parametric_clamped_beam/results/data/R_coefficients.csv \
-   examples/04_parametric_clamped_beam/results/reference/
-git add examples/04_parametric_clamped_beam/results/reference/
-git commit -m "Bless reference results for example 04"
-```
+After a fresh run, compare against the reference with the example's
+`validate.jl` (where provided). Reference results are regenerated only by
+deliberately blessing a verified run into the tracked reference folder.
 
 ## Notes on CI
 
-Examples 01–05 each call `Pkg.activate` and `Pkg.instantiate` at startup —
-they manage their own environments and cannot be `include()`d directly from the
-MORFE test suite (which uses a different environment). Run them as standalone
-processes or in a dedicated CI job. The lightweight internals demos do work from
-the test suite via `GROUP=examples julia --project test/runtests.jl`.
+Examples call `Pkg.activate` and `Pkg.instantiate` at startup — they manage
+their own environments and cannot be `include()`d directly from the MORFE test
+suite (which uses a different environment). Run them as standalone processes or
+in a dedicated CI job. The lightweight internals demos do work from the test
+suite via `GROUP=examples julia --project test/runtests.jl`.
 
 ## Historical result sets and large binaries
 

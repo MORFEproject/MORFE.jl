@@ -40,12 +40,23 @@ add https://github.com/MORFEproject/MORFE.jl.git
 
 ## Quick Start
 
-For St. Venant-Kirchhoff structural models with the Ferrite backend, the
-`MORFEStructuralSVK` extension gives the shortest path from mesh to ROM:
+MORFE is FEM-backend-agnostic: it owns the DPIM solver and the abstract
+`FEMMultilinearMap` interface. The Ferrite.jl backends — the St. Venant-Kirchhoff
+"mesh → ROM" UI (`StructuralSVK`), the general parametric-structural engine
+(`ParametricStructural`), and the incompressible-fluid backend
+(`FluidNavierStokes`) — live in the companion package
+[**MORFEFerrite.jl**](https://github.com/MORFEproject/MORFEFerrite.jl):
 
 ```julia
-using MORFE, Ferrite, FerriteGmsh, Arpack, LinearMaps
-SVK = Base.get_extension(MORFE, :MORFEStructuralSVK)
+using Pkg
+Pkg.add(url="https://github.com/MORFEproject/MORFEFerrite.jl.git")
+```
+
+The shortest path from mesh to ROM:
+
+```julia
+using MORFE, MORFEFerrite
+SVK = MORFEFerrite.StructuralSVK
 
 beam = SVK.mechanical_model("beam.msh";
     material  = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
@@ -64,10 +75,14 @@ SVK.save_rom(rom, "results")
 
 The low-level API (explicit `NDOrderModel`, eigensolvers, resonance sets,
 `solve_cohomological_problem`) remains fully available — see
-[`examples/01_clamped_beam_ferrite/low_level.jl`](examples/01_clamped_beam_ferrite/low_level.jl)
-for the same computation written out in full.
+[`examples/01_clamped_beam_ferrite/low_level.jl`](https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/low_level.jl)
+in MORFEFerrite for the same computation written out in full.
 
-For detailed examples, see the [`examples/`](examples/) directory.
+For detailed examples, see [`examples/`](examples/) here (Gridap beam,
+dielectric actuator, internals) and
+[MORFEFerrite's `examples/`](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples)
+(Ferrite beam, COMSOL arch, parametric beam/arch, Kármán vortex street, MEMS
+micromirror).
 
 ---
 
@@ -80,14 +95,17 @@ MORFE.jl/
 │   ├── Multiindices.jl               # Multiindex set utilities
 │   ├── Polynomials.jl                # Dense polynomial representation
 │   ├── Realification.jl              # Complex-to-real transformation
-│   ├── FullOrderModel/               # FOM types and nonlinear maps
+│   ├── FullOrderModel/               # FOM types and nonlinear maps (FEMMultilinearMap interface)
 │   ├── SpectralDecomposition/        # Eigensolvers and mode propagation
 │   └── ParametrisationMethod/        # DPIM core: resonance, invariance equation, ROM
-├── examples/                         # Worked examples (numbered) + internals/
+├── examples/                         # Gridap beam, dielectric actuator, internals/, mesh_import/
 ├── benchmark/                        # Benchmark scripts
 ├── test/                             # Test suite
-└── docs/                             # Documentation source
+└── website/                          # Project website (morfeproject.github.io/MORFE.jl)
 ```
+
+Ferrite.jl backends, the SVK/parametric/fluid UIs, and all Ferrite examples live in
+[MORFEFerrite.jl](https://github.com/MORFEproject/MORFEFerrite.jl).
 
 ---
 
@@ -112,10 +130,8 @@ MORFE.jl/
 
 ## Documentation
 
-Full documentation is available at **[morfeproject.github.io/MORFE.jl](https://morfeproject.github.io/MORFE.jl)**.
-
-- [Project Overview & Roadmap](docs/src/project-overview.md)
-- [Module Structure & Dependencies](folder_structure_and_dependencies.md)
+Full documentation is available at **[morfeproject.github.io/MORFE.jl](https://morfeproject.github.io/MORFE.jl)** —
+tutorials, DPIM theory, and the API reference.
 
 ---
 
@@ -133,7 +149,7 @@ Contributions are welcome. Please open an issue or submit a pull request on [Git
 
 ## References
 
-- Haller, G. & Ponsioen, S. (2016). *Nonlinear normal modes and spectral submanifolds*. Nonlinear Dynamics.
+- Cabré, X., Fontich, E. & de la Llave, R. (2003). *The parameterization method for invariant manifolds I: Manifolds associated to non-resonant subspaces.* Indiana University Mathematics Journal 52(2), 283–328.
 - Opreni, A. et al. (2023). *High-order direct parametrisation of invariant manifolds for model order reduction of finite element structures.* Nonlinear Dynamics.
 
 ---
