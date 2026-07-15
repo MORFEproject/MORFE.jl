@@ -98,9 +98,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Demos</h4>
     <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
     </ul>
 
     <h4>Tutorials</h4>
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h2 id="featured">Featured demo — works today</h2>
 
-    <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener" style="display:block; margin:18px 0 28px; border:1px solid var(--hair); border-radius:6px; overflow:hidden; background:rgba(10,10,15,0.55); transition:border-color .2s;" onmouseover="this.style.borderColor='var(--jl-purple)'" onmouseout="this.style.borderColor='var(--hair)'">
+    <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener" style="display:block; margin:18px 0 28px; border:1px solid var(--hair); border-radius:6px; overflow:hidden; background:rgba(10,10,15,0.55); transition:border-color .2s;" onmouseover="this.style.borderColor='var(--jl-purple)'" onmouseout="this.style.borderColor='var(--hair)'">
       <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:0;">
         <div style="padding: 30px 32px;">
           <div style="display:flex; gap:10px; margin-bottom:10px;">
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
           </div>
           <h3 style="font-size:24px; margin:6px 0 12px;">Parametrisation method demo</h3>
-          <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current API: <code>NDOrderModel</code> → eigenproblem → resonance detection → <code>solve_cohomological_problem</code>. Ships in <code>demo/ParametrisationMethod/</code>.</p>
+          <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current API: <code>NDOrderModel</code> → eigenproblem → resonance detection → <code>solve_cohomological_problem</code>. Ships in <code>examples/internals/</code>.</p>
           <div style="display:flex; gap:24px; font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:0.06em;">
             <span>JULIA 1.10+</span>
             <span>CURRENT API</span>
@@ -200,7 +200,7 @@ W, R  = solve_cohomological_problem(
           <div class="meta"><span>Navier–Stokes</span><span>parametric ROM</span><span>order 9</span></div>
         </div>
       </a>
-      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">
+      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">
         <div class="thumb">
           <span class="corner">DPIM core</span>
           <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
@@ -238,7 +238,7 @@ W, R  = solve_cohomological_problem(
           <div class="meta"><span>NDOrderModel</span><span>DPIM core</span></div>
         </div>
       </a>
-      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">
+      <a class="tut-card" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">
         <div class="thumb">
           <span class="corner">Ferrite.jl</span>
           <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
@@ -263,7 +263,7 @@ W, R  = solve_cohomological_problem(
           <div class="meta"><span>Ferrite.jl</span><span>FEMMultilinearMap</span></div>
         </div>
       </a>
-      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">
+      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">
         <div class="thumb">
           <span class="corner">Gridap.jl</span>
           <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
@@ -471,7 +471,7 @@ W, R  = solve_cohomological_problem(
     </ul>
     <h5 style="margin-top:32px;">Edit</h5>
     <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">Demo scripts ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">Demo scripts ↗</a></li>
     </ul>
   </aside>
 

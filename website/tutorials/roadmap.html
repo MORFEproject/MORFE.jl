@@ -37,9 +37,9 @@
 
     <h4>Demos</h4>
     <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
     </ul>
 
     <h4>Tutorials</h4>
@@ -247,7 +247,7 @@
 
     <div class="adm warn" style="border-left:4px solid #f59e0b; background:rgba(245,158,11,0.06); border-radius:0 4px 4px 0; padding:0.6rem 1rem; margin:0 0 1.8rem;">
       <div class="adm-head" style="font-weight:600; font-size:0.88rem; color:var(--ink); margin-bottom:0.3rem;">Target API — not yet runnable</div>
-      <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">This tutorial depends on the planned high-level API (<code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>) which is still under development. For a working entry point today, see the <a href="../api.html">current API docs</a> and the <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">demo scripts</a>.</div>
+      <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">This tutorial depends on the planned high-level API (<code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>) which is still under development. For a working entry point today, see <code>MORFEFerrite.StructuralSVK</code> (<code>mechanical_model</code> + <code>parametrise</code>), the <a href="../api.html">current API docs</a>, and the <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">MORFEFerrite examples</a>.</div>
     </div>
 
     <h2 id="today">What works today</h2>
@@ -260,7 +260,7 @@
         <p style="font-size:14px; color:var(--ink-2); margin:6px 0 0;">Full pipeline examples running against the current API, shipping inside the package.</p>
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/tree/main/demo" target="_blank" rel="noopener">View demos <span class="arrow">→</span></a>
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">View examples <span class="arrow">→</span></a>
         <a class="btn" href="../api.html">Current API</a>
       </div>
     </div>

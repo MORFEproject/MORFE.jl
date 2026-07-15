@@ -86,9 +86,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Demos</h4>
     <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/ParametrisationMethod/demo_parametrisation_method.jl" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Ferrite/demo_mechanical_problem.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/demo/Gridap/demo_mechanical_problem.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
     </ul>
 
     <h4>Tutorials</h4>
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="adm-head">Runs today — current API</div>
       <div class="adm-body">
         <p>All code on this page is the real, shipped implementation in
-        <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener"><code>examples/05_karman_vortex_street</code></a>.
+        <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener"><code>examples/05_karman_vortex_street</code></a>.
         Three commands reproduce every number and figure.</p>
       </div>
     </div>
@@ -165,7 +165,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="adm-body">
         <p>Julia ≥ 1.10 (the example instantiates its own environment, Gmsh included) and, for the post-processing step only, Python 3 with <code>numpy</code> + <code>matplotlib</code>.</p>
         <pre class="code" style="margin-top:10px;">git clone https://github.com/MORFEproject/MORFE.jl.git
-cd MORFE.jl/examples/05_karman_vortex_street
+git clone https://github.com/MORFEproject/MORFEFerrite.jl.git   <span class="cm"># side by side</span>
+cd MORFEFerrite.jl/examples/05_karman_vortex_street
 julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 min</span></pre>
       </div>
     </div>
@@ -226,8 +227,9 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
 <span class="cm"># stage 4 — linearise around u₀:  B₁ ṡ + B₀ s = F(s, η′)</span>
 (<span class="var">B₀</span>, <span class="var">B₁</span>) <span class="op">=</span> <span class="fn">assemble_linear_operators</span>(<span class="var">s₀_full</span>, <span class="var">fom</span>; <span class="var">Re0</span> <span class="op">=</span> <span class="var">Re₀</span>)</pre>
         <p>
-          Both functions are plain Ferrite assembly code from the example (<code>solver/steady_state.jl</code>,
-          <code>fem/linear_operators.jl</code>) — this part is yours, in whatever FEM library you
+          Both functions ship in <code>MORFEFerrite.FluidNavierStokes</code>
+          (<code>solve_steady_state</code>, <code>assemble_linear_operators</code> — plain Ferrite
+          assembly code) — but this part can be yours, in whatever FEM library you
           use. MORFE operates only on the sparse matrices $\mathbf B_0, \mathbf B_1$ once they exist.
         </p>
         <div class="adm note">
@@ -435,7 +437,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
     <ul>
       <li><a class="inline" href="micromirror.html">MEMS micromirror</a> — the structural counterpart with a 1:2 internal resonance (target-API preview).</li>
       <li><a class="inline" href="../api.html#current-api">Current API reference</a> — <code>NDOrderModel</code>, multilinear maps, resonance sets, <code>solve_cohomological_problem</code>.</li>
-      <li><a class="inline" href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
+      <li><a class="inline" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
     </ul>
 
     <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
@@ -445,8 +447,8 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
         <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">The full pipeline ships in <code>examples/05_karman_vortex_street</code> — <code>main.jl</code>, <code>solve_rom.jl</code>, <code>compare_orders.py</code>.</p>
       </div>
       <div style="display:flex; gap:10px;">
-        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder <span class="arrow">→</span></a>
-        <a class="btn" href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder <span class="arrow">→</span></a>
+        <a class="btn" href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener">GitHub</a>
       </div>
     </div>
 
@@ -474,7 +476,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
     </ul>
     <h5 style="margin-top:32px;">Links</h5>
     <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder ↗</a></li>
     </ul>
   </aside>
 
