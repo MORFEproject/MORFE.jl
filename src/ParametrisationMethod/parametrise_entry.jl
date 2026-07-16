@@ -47,6 +47,14 @@ from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
 - `external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing`: override for
   the external eigenvalues used in resonance detection (default: taken from
   `model.external_system`).
+- `master_modes_derivatives = nothing`, `left_modes_derivatives = nothing`:
+  explicit `(FOM, ORD-1, ROM)` derivative/order blocks. Needed when the
+  `Eigenproblem` was solved on a *lower-order* operator than `model` (e.g. an
+  augmented `(K, C, M, 0)` ORD-3 model with a second-order structural
+  eigenproblem): the internal slices then don't match `ORD`, and callers supply
+  blocks built from the eigenpairs (right: `λ^{k-1}·Y[:, 2, r]`; left: via
+  `left_eigenmode_orders_from_slice(model.linear_terms, …)`). Default `nothing`
+  → sliced from the `Eigenproblem` storage as before.
 
 ## Returns
 
@@ -62,7 +70,9 @@ function ParametrisationMethod.parametrise(
 	conjugacy_map = nothing,
 	mset::Union{Nothing, MultiindexSet} = nothing,
 	conjugate_permutation::Union{Nothing, Vector{Int}} = nothing,
-	external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing) where {ORD, ORDP1, N_NL, N_EXT, LT, MT}
+	external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing,
+	master_modes_derivatives = nothing,
+	left_modes_derivatives = nothing) where {ORD, ORDP1, N_NL, N_EXT, LT, MT}
 
 	# Extract eigenproblem
 	master_mask = eigenproblem.master_modes
@@ -82,22 +92,28 @@ function ParametrisationMethod.parametrise(
 	ROM = length(master_eigs_vec)
 	master_eigenvalues = SVector{ROM, ComplexF64}(master_eigs_vec)
 
-	# For ORD > 1: derivatives live in higher slices [:, 2:end, master_mask]
-	master_modes_derivatives = ORD > 1 ?
-							   @view(eigenproblem.eigenmodes[:, 2:end, master_mask]) :   # FOM × (ORD-1) × ROM
-							   nothing
+	# For ORD > 1: derivatives live in higher slices [:, 2:end, master_mask].
+	# An explicit kwarg overrides the slicing (lower-order Eigenproblem storage
+	# feeding a higher-order model — see docstring).
+	if master_modes_derivatives === nothing
+		master_modes_derivatives = ORD > 1 ?
+								   @view(eigenproblem.eigenmodes[:, 2:end, master_mask]) :   # FOM × (ORD-1) × ROM
+								   nothing
+	end
 
 	# For ORD > 1: lower-order left eigenvector blocks φ_1 … φ_{ORD-1} feed the
 	# orthogonality row operators directly (no eigenvalue folding).
-	left_modes_derivatives = if ORD > 1
-		@assert eigenproblem.left_eigenmodes_orders !== nothing """
-		Eigenproblem stores only the physical-space left eigenmode slice, but
-		ORD > 1 orthogonality solves need the full left eigenvector order-blocks.
-		Use an eigensolver path that supplies them (solve_left returns FOM × ORD × n).
-		"""
-		@view(eigenproblem.left_eigenmodes_orders[:, 1:(ORD-1), master_mask])   # FOM × (ORD-1) × ROM
-	else
-		nothing
+	if left_modes_derivatives === nothing
+		left_modes_derivatives = if ORD > 1
+			@assert eigenproblem.left_eigenmodes_orders !== nothing """
+			Eigenproblem stores only the physical-space left eigenmode slice, but
+			ORD > 1 orthogonality solves need the full left eigenvector order-blocks.
+			Use an eigensolver path that supplies them (solve_left returns FOM × ORD × n).
+			"""
+			@view(eigenproblem.left_eigenmodes_orders[:, 1:(ORD-1), master_mask])   # FOM × (ORD-1) × ROM
+		else
+			nothing
+		end
 	end
 
 	# Multiindex set: default graded-total, or a validated custom set.
