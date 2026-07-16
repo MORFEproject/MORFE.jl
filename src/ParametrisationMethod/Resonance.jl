@@ -639,13 +639,17 @@ function Base.show(io::IO, rs::ResonanceSet{ROM, N_EXT, M}) where {ROM, N_EXT, M
 end
 
 """
-	build_resonance_set(model, style, mset, eigenproblem, tol, conjugacy_map)
+	build_resonance_set(model, style, mset, eigenproblem, tol, conjugacy_map;
+	                    external_eigenvalues = nothing)
 
 Build a `ResonanceSet` from a solved `Eigenproblem` according to the chosen
 parametrisation `style`. Accepted styles:
 - `:graph`
 - `:complex_normal_form`
 - `:real_normal_form` (requires `conjugacy_map`)
+
+`external_eigenvalues` overrides the eigenvalues of the external system used
+in resonance detection (default: taken from `model.external_system`).
 """
 function build_resonance_set(
 	model::NDOrderModel,
@@ -653,14 +657,17 @@ function build_resonance_set(
 	mset::MultiindexSet,
 	eigenproblem::Eigenproblem,
 	tol::Float64,
-	conjugacy_map::Union{Nothing, Vector{Int}}
+	conjugacy_map::Union{Nothing, Vector{Int}};
+	external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing
 )
 	master_mask = eigenproblem.master_modes
 	outer_mask = .!eigenproblem.master_modes
 	master_eigenvalues = eigenproblem.eigenvalues[master_mask]
 	outer_eigenvalues = eigenproblem.eigenvalues[outer_mask]
-	external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
-						   Vector(model.external_system.eigenvalues)
+	if external_eigenvalues === nothing
+		external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
+							   Vector(model.external_system.eigenvalues)
+	end
 
 	if style === :graph
 		return resonance_set_from_graph_style(

@@ -28,6 +28,17 @@ should_run(group) = GROUP == "all" || GROUP == group
             @testset "ConjugateSymmetry" begin
                 include("ParametrisationMethod/test_conjugate_symmetry.jl")
             end
+            @testset "ParametriseEntry" begin
+                include("ParametrisationMethod/test_parametrise_entry.jl")
+            end
+        end
+    end
+    if should_run("rom_io")
+        @testset "RomIO" begin
+            include("Export/test_rom_io.jl")
+        end
+        @testset "RomComparison" begin
+            include("Validation/test_rom_comparison.jl")
         end
     end
     if should_run("spectral_decomposition")

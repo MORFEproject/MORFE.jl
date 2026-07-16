@@ -35,6 +35,18 @@ from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
   checks. Only used when `resonance` is a `Symbol`.
 - `conjugacy_map::Union{Nothing, Vector{Int}} = nothing`: local conjugacy map of length
   `ROM + n_outer`; required when `resonance = :real_normal_form`, ignored otherwise.
+- `mset::Union{Nothing, MultiindexSet} = nothing`: custom multiindex set (e.g. an
+  anisotropic z-total × θ-box set for parametric ROMs). Must have `NVAR = ROM + N_EXT`
+  variables, minimum total degree ≥ 1, contain every unit multiindex, and be
+  **downward closed** (every divisor of a member is a member) as well as closed
+  under the conjugate permutation when one is used — the graded solve relies on
+  both. `nothing` → `all_multiindices_up_to(NVAR, order; min_degree = 1)`.
+- `conjugate_permutation::Union{Nothing, Vector{Int}} = nothing`: NVAR-length
+  permutation pairing conjugate coordinates (self-paired entries for real modes);
+  passed through to the cohomological solve to enforce conjugate symmetry.
+- `external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing`: override for
+  the external eigenvalues used in resonance detection (default: taken from
+  `model.external_system`).
 
 ## Returns
 
@@ -47,7 +59,10 @@ function ParametrisationMethod.parametrise(
 	eigenproblem::Eigenproblem;
 	resonance::Union{Symbol, ResonanceSet} = :graph,
 	resonance_tol::Float64 = 1e-2,
-	conjugacy_map = nothing) where {ORD, ORDP1, N_NL, N_EXT, LT, MT}
+	conjugacy_map = nothing,
+	mset::Union{Nothing, MultiindexSet} = nothing,
+	conjugate_permutation::Union{Nothing, Vector{Int}} = nothing,
+	external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing) where {ORD, ORDP1, N_NL, N_EXT, LT, MT}
 
 	# Extract eigenproblem
 	master_mask = eigenproblem.master_modes
@@ -85,14 +100,29 @@ function ParametrisationMethod.parametrise(
 		nothing
 	end
 
-	# Generate MultiindexSet
+	# Multiindex set: default graded-total, or a validated custom set.
 	@assert order > 0 "order must be an integer bigger than zero"
-	mset = all_multiindices_up_to(NVAR, order; min_degree = 1)
+	if mset === nothing
+		mset = all_multiindices_up_to(NVAR, order; min_degree = 1)
+	else
+		mset isa MultiindexSet{NVAR} || throw(ArgumentError(
+			"custom mset has $(length(first(mset.exponents))) variables, " *
+			"but the model requires NVAR = ROM + N_EXT = $NVAR"))
+		sum(first(mset.exponents)) ≥ 1 || throw(ArgumentError(
+			"custom mset must not contain the zero multiindex (min total degree ≥ 1)"))
+		for i in 1:NVAR
+			unit = [j == i ? 1 : 0 for j in 1:NVAR]
+			find_in_set(mset, unit) === nothing && throw(ArgumentError(
+				"custom mset is missing the unit multiindex e_$i; the linear " *
+				"initialisation of the parametrisation requires all unit multiindices"))
+		end
+	end
 
 	# Generate ResonanceSet
 	resonance_set = resonance isa ResonanceSet ? resonance :
 					build_resonance_set(model, resonance, mset,
-		eigenproblem, resonance_tol, conjugacy_map)
+		eigenproblem, resonance_tol, conjugacy_map;
+		external_eigenvalues = external_eigenvalues)
 
 	# Solve cohomological equation
 	W,
@@ -103,6 +133,7 @@ function ParametrisationMethod.parametrise(
 		resonance_set;
 		master_modes_derivatives = master_modes_derivatives,
 		left_modes_derivatives = left_modes_derivatives,
+		conjugate_permutation = conjugate_permutation,
 	)
 
 	return W, R

@@ -18,6 +18,8 @@ include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl"
 include("FEMUtility.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
+include("Export/RomIO.jl")
+include("Validation/RomComparison.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -38,6 +40,8 @@ using .CohomologicalEquations
 using .FEMUtility
 using .BifurcationKitInterface
 using .InvarianceError
+using .RomIO
+using .RomComparison
 
 # High-level `parametrise(model, order, eigenproblem; …)` method. Included here
 # (after the using-block above) so its body can resolve `solve_cohomological_problem`,
@@ -108,6 +112,10 @@ export make_bk_problem
 
 # Validation
 export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
+export compare_rom_coefficients
+
+# ROM persistence
+export save_rom, read_rom_coefficients, write_rom_coefficients_csv
 
 # MORFESymbolicsExt
 function model_from_symbolics end
