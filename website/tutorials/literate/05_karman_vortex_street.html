@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kármán vortex street — FluidNavierStokes · MORFE Literate</title>
+<style>
+:root { --bg:#0a0a0f; --ink:#e8e8ee; --ink2:#a0a0b0; --hair:#26262f; --acc:#9558B2; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 840px; margin: 0 auto; padding: 40px 20px 80px; }
+h1 { font-size: 30px; margin: 8px 0 4px; }
+h2 { font-size: 21px; margin-top: 2.2em; border-bottom: 1px solid var(--hair); padding-bottom: 6px; }
+p, li { color: var(--ink2); }
+strong, code { color: var(--ink); }
+a { color: #b78ccf; }
+pre { background:#111118; border:1px solid var(--hair); border-radius:6px;
+  padding:14px 16px; overflow-x:auto; font-size:13.5px; line-height:1.55; }
+code { font-family: "JuliaMono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+.kicker { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--acc); }
+.btnrow { display:flex; gap:10px; flex-wrap:wrap; margin:18px 0 30px; }
+.btn { display:inline-block; padding:8px 14px; border:1px solid var(--hair); border-radius:6px;
+  color:var(--ink); text-decoration:none; font-size:13.5px; }
+.btn:hover { border-color: var(--acc); }
+.note { border-left:3px solid var(--acc); background:rgba(149,88,178,0.07);
+  padding:10px 14px; border-radius:0 6px 6px 0; font-size:14px; color:var(--ink2); }
+</style></head><body><main>
+<span class="kicker">MORFE · Literate example</span>
+<h1>Kármán vortex street — FluidNavierStokes</h1>
+<div class="btnrow"><a class="btn" href="../karman.html">Custom tutorial page</a>
+<a class="btn" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder on GitHub ↗</a>
+<a class="btn" href="../index.html">All tutorials</a></div>
+<div class="note">Standardized rendering of the example's <code>main.jl</code>
+(narrative comments + code, not executed here). Run it yourself with the
+commands in the script header; expected numbers are asserted by the example's
+<code>validate.jl</code> and quoted in its README.</div>
+<pre><code>main.jl — Kármán vortex street DPIM run &#40;STEP 1 of 3&#41;.</code></pre>
+<p>What this computes ────────────────── The 2D incompressible flow past a cylinder loses stability at Re_c ≈ 49 through a Hopf bifurcation — the Kármán vortex street. This script reduces the ~58 000-DOF finite-element model to a SINGLE complex ODE &#40;a Stuart–Landau equation&#41;</p>
+<pre><code>ż₁ &#61; λ z₁ &#43; c₁₀₁ z₁ η′ &#43; c₂₁₀ z₁|z₁|² &#43; …</code></pre>
+<p>by the Direct Parametrisation of Invariant Manifolds &#40;DPIM&#41;. The Reynolds number is carried along as an extra parametric coordinate η′ &#61; 1/Re − 1/Re₀, so ONE run at the expansion point Re₀ describes the whole bifurcation neighbourhood.</p>
+<p>How to run ────────── 	julia –project&#61;. main.jl          # ≈ 7 min &#40;Apple Silicon&#41;: 35 s setup &#43; order-9 solve</p>
+<p>Outputs land in results/Re&#123;Re₀&#125;<em>ord&#123;MAX</em>ORD&#125;/ &#40;ROM, lift polynomial, TKE Gram, CSVs; see README.md&#41;. One run at MAX_ORD suffices for the whole order-convergence study — the cohomological solve is graded, so lower orders are exact truncations.</p>
+<p>Then:   julia –project&#61;. solve<em>rom.jl     &#40;limit-cycle branch per truncation order&#41; 		python3 compare</em>orders.py          &#40;lift &amp; avg-TKE vs Re, one curve per order&#41;</p>
+<p>All parameters in config.jl.</p>
+<pre><code class="language-julia">using Pkg: Pkg
+Pkg.activate&#40;@__DIR__&#41;
+if &#33;isfile&#40;joinpath&#40;@__DIR__, &quot;Manifest.toml&quot;&#41;&#41;</code></pre>
+<p>MORFE.jl is expected as a sibling checkout &#40;folder MORFE.jl or MORFE<em>jl&#41;, either next to this repository or one directory above it; override with ENV&#91;&quot;MORFE</em>PATH&quot;&#93; if it lives elsewhere.</p>
+<pre><code class="language-julia">	morfe &#61; get&#40;ENV, &quot;MORFE_PATH&quot;, &quot;&quot;&#41;
+	if isempty&#40;morfe&#41;
+		cands &#61; &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41; for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;
+		append&#33;&#40;cands, &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41; for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;&#41;
+		morfe &#61; first&#40;filter&#40;isdir, cands&#41;&#41;
+	end
+	Pkg.develop&#40;&#91;
+		Pkg.PackageSpec&#40;path &#61; morfe&#41;,
+		Pkg.PackageSpec&#40;path &#61; joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;&#41;&#41;,
+	&#93;&#41;
+	Pkg.add&#40;&#91;
+		&quot;Ferrite&quot;, &quot;FerriteGmsh&quot;, &quot;Gmsh&quot;,
+		&quot;Arpack&quot;, &quot;LinearMaps&quot;,
+		&quot;StaticArrays&quot;, &quot;KLU&quot;,
+	&#93;&#41;
+end
+Pkg.instantiate&#40;&#41;
+
+using MORFE
+using MORFEFerrite</code></pre>
+<p>Promoted fluid backend &#40;was fem/&#123;fem<em>setup,linear</em>operators,fluid<em>maps,energy</em>gram&#125;.jl</p>
+<ul>
+<li><p>solver/steady<em>state.jl&#41;: setup</em>fem, solve<em>steady</em>state, assemble<em>linear</em>operators,</p>
+</li>
+</ul>
+<p>FluidConvection, make<em>param</em>coupling, make<em>base</em>forcing, assemble<em>K</em>visc, lift/energy helpers. Mesh <em>generation</em> &#40;Gmsh&#41; stays example-local in fem/mesh.jl.</p>
+<pre><code class="language-julia">using MORFEFerrite.FluidNavierStokes
+using Ferrite
+using FerriteGmsh
+using Gmsh
+using Arpack
+using LinearMaps
+using StaticArrays
+using LinearAlgebra
+using SparseArrays
+using Printf
+using Serialization
+using DelimitedFiles
+
+include&#40;joinpath&#40;@__DIR__, &quot;config.jl&quot;&#41;&#41;
+include&#40;joinpath&#40;@__DIR__, &quot;fem&quot;, &quot;mesh.jl&quot;&#41;&#41;
+include&#40;joinpath&#40;@__DIR__, &quot;solver&quot;, &quot;eigensolver.jl&quot;&#41;&#41;
+include&#40;joinpath&#40;@__DIR__, &quot;exports.jl&quot;&#41;&#41;</code></pre>
+<p>Results directory &#40;deterministic name — the same config overwrites the previous run&#41;</p>
+<pre><code class="language-julia">const RESULTS_DIR &#61; joinpath&#40;@__DIR__, &quot;results&quot;, @sprintf&#40;&quot;Re&#37;.2f_ord&#37;d&quot;, Re₀, MAX_ORD&#41;&#41;
+const DATA_DIR &#61; joinpath&#40;RESULTS_DIR, &quot;data&quot;&#41;
+mkpath&#40;DATA_DIR&#41;
+mkpath&#40;joinpath&#40;RESULTS_DIR, &quot;figures&quot;&#41;&#41;
+
+_log &#61; open&#40;joinpath&#40;RESULTS_DIR, &quot;summary.log&quot;&#41;, &quot;w&quot;&#41;
+_out &#61; TeeIO&#40;stdout, _log&#41;   # everything printed to _out also lands in summary.log
+
+println&#40;_out, _sep&#41;
+println&#40;_out, &quot;Kármán Vortex Street DPIM  &#40;Re₀ &#61; &#36;Re₀,  order &#61; &#36;MAX_ORD&#41;&quot;&#41;
+println&#40;_out, &quot;  results → &#36;RESULTS_DIR&quot;&#41;
+println&#40;_out, _sep&#41;</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 1 — Mesh: Turek–Schäfer channel &#40;2.2 × 0.41 m&#41; with a Ø 0.1 m cylinder ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;1/10&#93; Generating Turek–Schäfer mesh ...&quot;&#41;
+r_mesh &#61; @timed generate_mesh&#40;;
+	h_cyl &#61; MESH_H_CYL,
+	h_wake &#61; MESH_H_WAKE,
+	h_bulk &#61; MESH_H_BULK,
+&#41;
+meshfile &#61; r_mesh.value</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 2 — FEM setup: P2/P1 Taylor-Hood velocity/pressure spaces.     Dirichlet BCs &#40;Poiseuille inlet, no-slip walls/cylinder&#41; are eliminated;     the DPIM operates on the remaining <code>free_dpim</code> DOFs, where the perturbation     around the base flow vanishes on every prescribed boundary. ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;2/10&#93; Ferrite P2/P1 Taylor-Hood FEM setup ...&quot;&#41;
+r_fem &#61; @timed setup_fem&#40;meshfile&#41;
+fom &#61; r_fem.value
+println&#40;_out, &quot;  Free DOFs &#40;steady state&#41;: &#36;&#40;fom.n_free&#41;&quot;&#41;
+println&#40;_out, &quot;  Free DOFs &#40;DPIM&#41;: &#36;&#40;fom.n_free_dpim&#41;&quot;&#41;</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 3 — Base flow: steady Navier-Stokes solution u₀ at Re₀ &#40;Newton iteration&#41;.     The manifold is expanded around this fixed point. ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;3/10&#93; Newton steady-state at Re₀ &#61; &#36;Re₀ ...&quot;&#41;
+r_ss &#61; @timed solve_steady_state&#40;fom; Re0 &#61; Re₀&#41;
+&#40;_, _, s₀_full&#41; &#61; r_ss.value</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 4 — Linearised operators. The perturbation s &#61; &#91;u′; p′&#93; obeys the descriptor     system  B₁ ṡ &#43; B₀ s &#61; F&#40;s, η′&#41;:  B₁ is the velocity mass matrix &#40;singular —     pressure has no time derivative&#41;, B₀ &#61; −A_lin collects viscosity, base-flow     convection and the pressure/incompressibility coupling. ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;4/10&#93; Assembling linearised NSE operators ...&quot;&#41;
+r_ops &#61; @timed assemble_linear_operators&#40;s₀_full, fom; Re0 &#61; Re₀&#41;
+&#40;B₀, B₁&#41; &#61; r_ops.value
+println&#40;_out, &quot;  B₁ nnz &#61; &#36;&#40;nnz&#40;B₁&#41;&#41;,  B₀ nnz &#61; &#36;&#40;nnz&#40;B₀&#41;&#41;&quot;&#41;</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 5 — The η′ trick. With ν &#61; D/Re, the parameter η′ &#61; 1/Re − 1/Re₀ enters the     equations LINEARLY through the viscous term:       g₁&#40;s, η′&#41; &#61; −D·η′·K<em>raw·u′        &#40;operator change on the perturbation&#41;       h₀&#40;η′&#41;    &#61; −D·η′·K</em>raw·u₀        &#40;base-flow forcing; u₀ is the FULL base     flow — its prescribed inlet DOFs carry the Poiseuille profile, so h₀ needs     the rectangular free×ALL block of K_raw, not the free×free one.&#41; ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;5/10&#93; Assembling K_visc and base-flow forcing h₀ ...&quot;&#41;
+r_kvisc &#61; @timed assemble_K_visc&#40;fom&#41;
+&#40;K_visc, K_visc_rect&#41; &#61; r_kvisc.value
+K_visc .*&#61; -_CYL_D
+h₀_vec &#61; -_CYL_D .* &#40;K_visc_rect * s₀_full&#41;
+println&#40;_out, &quot;  K_visc nnz &#61; &#36;&#40;nnz&#40;K_visc&#41;&#41;&quot;&#41;</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 6 — Master modes: the Hopf pair. Shift-invert ARPACK on A<em>lin y &#61; λ B₁ y finds     the least-damped complex-conjugate eigenpair λ₁,₂ &#61; σ₀ ± iω₀ &#40;σ₀ ≈ 0 near     Re</em>c, ω₀ ≈ 16.86 rad/s — the shedding frequency&#41;. Its right/left     eigenvectors seed the two master coordinates z₁, z̄₁ of the manifold. ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;6/10&#93; Shift-invert ARPACK eigenproblem ...&quot;&#41;
+r_eig &#61; @timed solve_hopf_eigenproblem&#40;
+	-B₀, B₁;
+	nev &#61; EIG_NEV,
+	sigma_re &#61; EIG_SIGMA_RE,
+	sigma_im &#61; EIG_SIGMA_IM,
+	target_freq &#61; EIG_TARGET_FREQ,
+&#41;
+&#40;master_eigenvalues, master_modes, left_eigenmodes, all_eigenvalues, all_modes&#41; &#61; r_eig.value</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 7 — Full-order model for the DPIM: the quadratic convection f₂&#40;s,s&#41; &#61; −&#40;u·∇&#41;u     &#40;FEM-assembled on the fly&#41;, the two η′ terms from stage 5, and the     parameter itself as a trivial external system η̇′ &#61; 0. The multiindex set     enumerates every monomial z₁^a z̄₁^b η′^c up to total degree MAX_ORD. ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;7/10&#93; Building NDOrderModel and multiindex set ...&quot;&#41;
+mset &#61; all_multiindices_up_to&#40;NVAR, MAX_ORD; min_degree &#61; 1&#41;
+convection &#61; FluidConvection&#40;fom; max_unique_cols &#61; length&#40;mset&#41;&#41;
+g₁ &#61; make_param_coupling&#40;K_visc&#41;
+h₀ &#61; make_base_forcing&#40;h₀_vec&#41;
+ext_sys &#61; ExternalSystem&#40;&#40;0.0 &#43; 0.0im,&#41;&#41;
+
+model &#61; NDOrderModel&#40;&#40;B₀, B₁&#41;, &#40;convection, g₁, h₀&#41;, ext_sys&#41;
+println&#40;_out, &quot;  &#36;&#40;length&#40;mset&#41;&#41; monomials &#40;NVAR&#61;&#36;NVAR, order ≤ &#36;MAX_ORD&#41;&quot;&#41;</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 8 — DPIM solve. The normal-form-style resonance set keeps only the resonant     monomials z₁|z₁|^&#123;2k&#125; η′^j in the reduced dynamics; everything else is     absorbed into the manifold map W. Solving the cohomological equations     order-by-order yields       W : &#40;z₁, z̄₁, η′&#41; ↦ full state      &#40;the invariant-manifold embedding&#41;       R : ż &#61; R&#40;z&#41;                        &#40;the reduced dynamics on it&#41;     The solve is graded — degree-N coefficients never depend on degrees &gt; N —     which is why lower orders are exact truncations of this run. ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;8/10&#93; Solving cohomological equations &#40;order &#36;MAX_ORD&#41; ...&quot;&#41;
+lambda_im &#61; ComplexF64&#91;complex&#40;0.0, imag&#40;λ&#41;&#41; for λ in master_eigenvalues&#93;
+resonance_set &#61; resonance_set_from_complex_normal_form_style&#40;
+	mset, Vector&#123;ComplexF64&#125;&#40;lambda_im&#41;, 0.05 * abs&#40;imag&#40;master_eigenvalues&#91;1&#93;&#41;&#41;;
+	external_eigenvalues &#61; ComplexF64&#91;0.0 &#43; 0.0im&#93;&#41;
+
+println&#40;_out, &quot;\nResonance set  &#40;NVAR&#61;&#36;NVAR, max_degree&#61;&#36;MAX_ORD&#41;&quot;&#41;
+for t in 1:NVAR
+	cols &#61; resonant_multiindices&#40;resonance_set, t&#41;
+	@printf&#40;_out, &quot;     Target &#37;d:  &#37;d monomials\n&quot;, t, length&#40;cols&#41;&#41;
+	isempty&#40;cols&#41; || println&#40;_out, &quot;       &quot;, join&#40;&#91;&quot;&#36;&#40;mset.exponents&#91;k&#93;&#41;&quot; for k in cols&#93;, &quot;  &quot;&#41;&#41;
+end
+
+conj_map &#61; &#91;2, 1, 3&#93;   # mode 1 &#40;Im&gt;0&#41; ↔ mode 2 &#40;Im&lt;0&#41;; η′ self-conjugate
+r_dpim &#61; @timed solve_cohomological_problem&#40;
+	model, mset,
+	master_eigenvalues,
+	master_modes .* 1e-2, left_eigenmodes .* 1e-2,   # scale modes for better numerical stability &#40;see discussion in #48&#41;
+	resonance_set;
+	conjugate_permutation &#61; conj_map,
+&#41;
+&#40;W, R&#41; &#61; r_dpim.value</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 9 — Report the reduced dynamics: the first row ż₁ &#61; R₁&#40;z₁, z̄₁, η′&#41; is the     Stuart-Landau equation &#40;row 2 is its conjugate, row 3 is η̇′ &#61; 0&#41;.     Supercritical Hopf ⇔ Re&#40;c₂₁₀&#41; &lt; 0 for the &#91;2,1,0&#93; monomial. ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;9/10&#93; Reduced dynamics — first row ż₁ &#61; R₁&#40;z₁, z̄₁, η′&#41; ...&quot;&#41;
+export_reduced_dynamics&#40;_out, DATA_DIR, R, master_eigenvalues;
+	re0 &#61; Re₀, ord &#61; MAX_ORD, nvar &#61; NVAR&#41;</code></pre>
+<p>───────────────────────────────────────────────────────────────────────────── 10 — Save the ROM and the two physical observables that compare<em>orders.py      evaluates along the limit cycle:        · lift polynomial  L&#40;z&#41; &#61; L0 &#43; Σ &#40;lᵀW</em>α&#41; z^α   &#40;pressure lift on the cylinder&#41;        · TKE Gram matrix  G &#61; W<em>velᵀ M</em>vel W_vel / |Ω| &#40;period-averaged kinetic energy&#41; ─────────────────────────────────────────────────────────────────────────────</p>
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;10/10&#93; Saving ROM and exporting observables ...&quot;&#41;
+
+export_rom&#40;DATA_DIR, W, R&#41;</code></pre>
+<p>Lift functional: l picks the pressure traction −p·n_y on the cylinder boundary.</p>
+<pre><code class="language-julia">l_free &#61; compute_pressure_lift_weights&#40;fom&#41;&#91;fom.free_dpim&#93;
+L0_lift &#61; dot&#40;l_free, real.&#40;s₀_full&#91;fom.free_dpim&#93;&#41;&#41;   # base-flow lift
+L_coeffs_lift &#61; export_lift_polynomial&#40;_out, DATA_DIR, W, l_free, L0_lift&#41;</code></pre>
+<p>TKE Gram: the L×L matrix that lets Python evaluate ⟨TKE⟩ without FOM-sized data.</p>
+<pre><code class="language-julia">&#40;M_vel, vel_rows, area&#41; &#61; prepare_energy_gram&#40;fom&#41;
+write_energy_gram&#40;DATA_DIR, W, M_vel, vel_rows, area&#41;
+println&#40;_out, &quot;  tke_gram_re.csv, tke_gram_im.csv, tke_avector.csv  written to data/&quot;&#41;
+
+export_vtk_bundle&#40;DATA_DIR, fom, s₀_full, master_eigenvalues, all_eigenvalues, all_modes&#41;
+
+csv_path &#61; export_coefficient_csvs&#40;_out, DATA_DIR, R, mset, L0_lift, L_coeffs_lift&#41;
+EXPORT_MATLAB &amp;&amp; export_matlab_model&#40;_out, DATA_DIR, csv_path; re0 &#61; Re₀, ord &#61; MAX_ORD&#41;
+
+write_summary&#40;_out, RESULTS_DIR, fom, master_eigenvalues,
+	r_mesh, r_fem, r_ss, r_ops, r_kvisc, r_eig, r_dpim;
+	re0 &#61; Re₀, ord &#61; MAX_ORD, nvar &#61; NVAR&#41;
+
+close&#40;_log&#41;</code></pre>
+
+</main></body></html>

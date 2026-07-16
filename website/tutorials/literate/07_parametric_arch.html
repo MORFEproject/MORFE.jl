@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parametric sinusoidal arch — ParametricStructural · MORFE Literate</title>
+<style>
+:root { --bg:#0a0a0f; --ink:#e8e8ee; --ink2:#a0a0b0; --hair:#26262f; --acc:#9558B2; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 840px; margin: 0 auto; padding: 40px 20px 80px; }
+h1 { font-size: 30px; margin: 8px 0 4px; }
+h2 { font-size: 21px; margin-top: 2.2em; border-bottom: 1px solid var(--hair); padding-bottom: 6px; }
+p, li { color: var(--ink2); }
+strong, code { color: var(--ink); }
+a { color: #b78ccf; }
+pre { background:#111118; border:1px solid var(--hair); border-radius:6px;
+  padding:14px 16px; overflow-x:auto; font-size:13.5px; line-height:1.55; }
+code { font-family: "JuliaMono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+.kicker { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--acc); }
+.btnrow { display:flex; gap:10px; flex-wrap:wrap; margin:18px 0 30px; }
+.btn { display:inline-block; padding:8px 14px; border:1px solid var(--hair); border-radius:6px;
+  color:var(--ink); text-decoration:none; font-size:13.5px; }
+.btn:hover { border-color: var(--acc); }
+.note { border-left:3px solid var(--acc); background:rgba(149,88,178,0.07);
+  padding:10px 14px; border-radius:0 6px 6px 0; font-size:14px; color:var(--ink2); }
+</style></head><body><main>
+<span class="kicker">MORFE · Literate example</span>
+<h1>Parametric sinusoidal arch — ParametricStructural</h1>
+<div class="btnrow"><a class="btn" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/07_parametric_arch" target="_blank" rel="noopener">Example folder on GitHub ↗</a>
+<a class="btn" href="../index.html">All tutorials</a></div>
+<div class="note">Standardized rendering of the example's <code>main.jl</code>
+(narrative comments + code, not executed here). Run it yourself with the
+commands in the script header; expected numbers are asserted by the example's
+<code>validate.jl</code> and quoted in its README.</div>
+<h1>Parametric structural ROM — generic pipeline</h1>
+<p>Computes a geometrically parametric invariant-manifold ROM with <code>MORFEFerrite.ParametricStructural</code>: the reference map is additive, <code>x&#40;θ,x₀&#41; &#61; x₀ &#43; Σᵢ θᵢ ψᵢ&#40;x₀&#41;</code>, each parameter θᵢ scaling an independent shape field, with per-parameter &#40;multiindex-box&#41; θ-series truncation.</p>
+<p><strong>Everything problem-specific lives in <code>config.jl</code></strong> &#40;mesh, material, shape fields, orders, bases, providers&#41;. This file is the generic pipeline — it is textually identical across the parametric examples &#40;04, 07&#41;; adapting to a new problem means editing <code>config.jl</code> only.</p>
+<p>Smoke run:   <code>MORFE_FAST&#61;1 julia --project&#61;. main.jl</code> Full run:    <code>julia --project&#61;. main.jl</code> Check:       <code>julia --project&#61;. validate.jl</code></p>
+<pre><code class="language-julia">using Pkg: Pkg
+Pkg.activate&#40;@__DIR__&#41;
+if &#33;isfile&#40;joinpath&#40;@__DIR__, &quot;Manifest.toml&quot;&#41;&#41;</code></pre>
+<p>One-time environment setup. MORFE.jl is expected as a sibling checkout &#40;folder MORFE.jl or MORFE<em>jl&#41;, next to this repository or one directory above it; override with ENV&#91;&quot;MORFE</em>PATH&quot;&#93;. Collapses to plain Pkg.instantiate&#40;&#41; once the packages are registered.</p>
+<pre><code class="language-julia">	morfe &#61; get&#40;ENV, &quot;MORFE_PATH&quot;, &quot;&quot;&#41;
+	if isempty&#40;morfe&#41;
+		cands &#61; &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41; for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;
+		append&#33;&#40;cands, &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41; for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;&#41;
+		morfe &#61; first&#40;filter&#40;isdir, cands&#41;&#41;
+	end
+	Pkg.develop&#40;&#91;
+		Pkg.PackageSpec&#40;path &#61; morfe&#41;,
+		Pkg.PackageSpec&#40;path &#61; joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;&#41;&#41;,
+	&#93;&#41;
+	Pkg.add&#40;&#91;&quot;Ferrite&quot;, &quot;FerriteGmsh&quot;, &quot;Arpack&quot;, &quot;LinearMaps&quot;, &quot;StaticArrays&quot;, &quot;Tensors&quot;&#93;&#41;
+end
+Pkg.instantiate&#40;&#41;
+
+using MORFE, MORFEFerrite
+using Ferrite, FerriteGmsh, Arpack, LinearMaps
+using SparseArrays, LinearAlgebra, Printf, Tensors, StaticArrays
+const PS &#61; MORFEFerrite.ParametricStructural
+const SVK &#61; MORFEFerrite.StructuralSVK
+const Tens3 &#61; Tensor&#123;2, 3, Float64, 9&#125;</code></pre>
+<h2>The case: everything problem-specific comes from config.jl</h2>
+<pre><code class="language-julia">include&#40;joinpath&#40;@__DIR__, &quot;config.jl&quot;&#41;&#41;</code></pre>
+<h2>FE space and boundary conditions</h2>
+<pre><code class="language-julia">grid &#61; togrid&#40;MESH&#41;
+ip &#61; Lagrange&#123;RefHexahedron, 2&#125;&#40;&#41;^3
+geo_ip &#61; Lagrange&#123;RefHexahedron, 2&#125;&#40;&#41;
+qr &#61; QuadratureRule&#123;RefHexahedron&#125;&#40;3&#41;
+cv &#61; CellValues&#40;qr, ip, geo_ip&#41;
+dh &#61; DofHandler&#40;grid&#41;; add&#33;&#40;dh, :u, ip&#41;; close&#33;&#40;dh&#41;
+ch &#61; ConstraintHandler&#40;dh&#41;
+add&#33;&#40;ch, Dirichlet&#40;:u, getfacetset&#40;grid, &quot;Dirichlet&quot;&#41;, &#40;x, t&#41; -&gt; zeros&#40;3&#41;, &#91;1, 2, 3&#93;&#41;&#41;
+close&#33;&#40;ch&#41;; update&#33;&#40;ch, 0.0&#41;
+free &#61; sort&#40;setdiff&#40;1:ndofs&#40;dh&#41;, ch.prescribed_dofs&#41;&#41;
+free_to_local &#61; Dict&#40;d &#61;&gt; i for &#40;i, d&#41; in enumerate&#40;free&#41;&#41;
+n_free &#61; length&#40;free&#41;
+println&#40;&quot;Total DOFs: &quot;, ndofs&#40;dh&#41;, &quot;   free: &quot;, n_free&#41;</code></pre>
+<h2>Base operators and eigenproblem &#40;θ &#61; 0 configuration&#41;</h2>
+<pre><code class="language-julia">K0_full, M0_full &#61; BASE_KM&#40;dh, cv&#41;
+K_ref &#61; K0_full&#91;free, free&#93;; M_ref &#61; M0_full&#91;free, free&#93;
+solver_eig &#61; StructureModalDampingEigensolver&#40;NEV, ALPHA, BETA&#41;
+eigenproblem &#61; solve_eigenproblem&#40;K_ref, M_ref, solver_eig; sorter&#33; &#61; &#40;args...&#41; -&gt; nothing&#41;
+&#40;eigenvalues, Y, X&#41; &#61; get_eigenpairs&#40;eigenproblem&#41;
+select_master_modes_by_sorting&#40;eigenproblem, ROM&#41;
+master_eigenvalues &#61; SVector&#123;ROM, ComplexF64&#125;&#40;eigenvalues&#91;1:ROM&#93;&#41;
+master_modes &#61; Y&#91;:, 1, 1:ROM&#93;
+left_eigenmodes &#61; X&#91;:, 1:ROM&#93;
+master_modes_derivatives &#61; zeros&#40;ComplexF64, n_free, 2, ROM&#41;
+for r in 1:ROM
+	master_modes_derivatives&#91;:, 1, r&#93; .&#61; Y&#91;:, 2, r&#93;
+	master_modes_derivatives&#91;:, 2, r&#93; .&#61; master_eigenvalues&#91;r&#93; .* Y&#91;:, 2, r&#93;
+end
+println&#40;&quot;master eigenvalues: &quot;, collect&#40;master_eigenvalues&#41;&#41;</code></pre>
+<h2>Shape-field geometry provider &#40;analytic, or built from the eigen data&#41;</h2>
+<pre><code class="language-julia">provider &#61; GEOM_BUILDER&#40;dh, free, master_modes, ndofs&#40;dh&#41;&#41;</code></pre>
+<h2>Parametric stiffness/mass coefficient matrices over the θ box</h2>
+<pre><code class="language-julia">K_arr, M_arr &#61; PARAM_KM&#40;dh, cv, provider, free&#41;
+K &#61; K_arr&#91;1&#93;; M &#61; M_arr&#91;1&#93;; C &#61; ALPHA * M &#43; BETA * K
+RUN_SANITY_CHECKS &amp;&amp; SANITY&#40;K_arr, M_arr, K_ref, master_eigenvalues, master_modes&#41;</code></pre>
+<h2>Parametric nonlinear maps and linear K/C/M corrections</h2>
+<pre><code class="language-julia">pgn_quad &#61; PS.ParametricGeometricNonlinearity&#123;2&#125;&#40;dh, cv, LAMBDA_LAME, MU_LAME,
+	provider, free_to_local, n_free, BASIS_QUAD&#41;
+pgn_cube &#61; PS.ParametricGeometricNonlinearity&#123;3&#125;&#40;dh, cv, LAMBDA_LAME, MU_LAME,
+	provider, free_to_local, n_free, BASIS_CUBIC&#41;
+quad_maps &#61; PS.multilinear_maps&#40;pgn_quad&#41;
+cube_maps &#61; PS.multilinear_maps&#40;pgn_cube&#41;
+K_corrections &#61; PS.build_K_corrections&#40;K_arr, BASIS_K&#41;
+C_corrections &#61; PS.build_C_corrections&#40;K_arr, M_arr, ALPHA, BETA, BASIS_K&#41;
+M_corrections &#61; PS.build_M_corrections&#40;M_arr, BASIS_K&#41;
+println&#40;&quot;maps: quad&#61;&#36;&#40;length&#40;quad_maps&#41;&#41; cube&#61;&#36;&#40;length&#40;cube_maps&#41;&#41; &quot;,
+	&quot;Kcorr&#61;&#36;&#40;length&#40;K_corrections&#41;&#41; Ccorr&#61;&#36;&#40;length&#40;C_corrections&#41;&#41; Mcorr&#61;&#36;&#40;length&#40;M_corrections&#41;&#41;&quot;&#41;</code></pre>
+<h2>Augmented model, multiindex set, and the cohomological solve</h2>
+<pre><code class="language-julia">ext_sys &#61; ExternalSystem&#40;ntuple&#40;_ -&gt; complex&#40;0.0, 0.0&#41;, N_EXT&#41;&#41;
+ZERO &#61; spzeros&#40;eltype&#40;K&#41;, n_free, n_free&#41;
+model &#61; NDOrderModel&#40;&#40;K, C, M, ZERO&#41;,
+	&#40;quad_maps..., cube_maps...,
+		K_corrections..., C_corrections..., M_corrections...&#41;,
+	ext_sys&#41;
+mset &#61; BUILD_MSET&#40;&#41;
+println&#40;&quot;monomials: &quot;, length&#40;mset&#41;&#41;
+# The resonance policy is stated explicitly: complex-normal-form style over the
+# master eigenvalues with the frozen external states; outer &#40;non-master&#41; modes
+# are deliberately not added as resonance targets.
+resonance_set &#61; resonance_set_from_complex_normal_form_style&#40;
+	mset, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05;
+	external_eigenvalues &#61; zeros&#40;ComplexF64, N_EXT&#41;&#41;
+left_modes_derivatives &#61; left_eigenmode_orders_from_slice&#40;
+	model.linear_terms, left_eigenmodes, collect&#40;master_eigenvalues&#41;&#41;&#91;:, 1:&#40;end-1&#41;, :&#93;
+
+@time &#40;W, R&#41; &#61; parametrise&#40;model, MAXZ, eigenproblem;
+	mset &#61; mset,
+	resonance &#61; resonance_set,
+	conjugate_permutation &#61; PERMUTATION,
+	master_modes_derivatives &#61; master_modes_derivatives,
+	left_modes_derivatives &#61; left_modes_derivatives&#41;</code></pre>
+<h2>Save the standard result layout &#40;data/&#123;W.jls, R.jls, R_coefficients.csv&#125;&#41;</h2>
+<pre><code class="language-julia">MORFE.save_rom&#40;joinpath&#40;@__DIR__, &quot;results&quot;&#41;, W, R; metadata &#61; META&#40;&#41;&#41;
+println&#40;&quot;\nResults written to &#36;&#40;joinpath&#40;@__DIR__, &quot;results&quot;&#41;&#41;&quot;&#41;</code></pre>
+
+</main></body></html>
