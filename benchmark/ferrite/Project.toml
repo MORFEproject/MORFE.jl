@@ -9,4 +9,4 @@ MORFE = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-Arpack = "0.5.3"
+Arpack = "= 0.5.3"
