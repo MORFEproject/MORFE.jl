@@ -3,7 +3,7 @@ Module `LowerOrderCouplings` — computation of lower-order coupling vectors `ξ
 
 For each monomial `α` the cohomological right-hand side includes a coupling term
 
-	ξ[α] = Σ_{β+γ=α, |β|≥1} R_β · (|γ₁| W_{γ+e₁} + … + |γₙ| W_{γ+eₙ})
+	ξ[α] = Σ_{β+γ=α, β after e_i in GrLex} R_β · (|γ₁| W_{γ+e₁} + … + |γₙ| W_{γ+eₙ})
 
 that links the current monomial to all lower-degree coefficients of `W` and `R`
 already computed.  `compute_lower_order_couplings` evaluates this sum efficiently
