@@ -181,7 +181,9 @@ export_reduced_dynamics&#40;_out, DATA_DIR, R, master_eigenvalues;
 <p>───────────────────────────────────────────────────────────────────────────── 10 — Save the ROM and the two physical observables that compare<em>orders.py      evaluates along the limit cycle:        · lift polynomial  L&#40;z&#41; &#61; L0 &#43; Σ &#40;lᵀW</em>α&#41; z^α   &#40;pressure lift on the cylinder&#41;        · TKE Gram matrix  G &#61; W<em>velᵀ M</em>vel W_vel / |Ω| &#40;period-averaged kinetic energy&#41; ─────────────────────────────────────────────────────────────────────────────</p>
 <pre><code class="language-julia">println&#40;_out, &quot;\n&#91;10/10&#93; Saving ROM and exporting observables ...&quot;&#41;
 
-export_rom&#40;DATA_DIR, W, R&#41;</code></pre>
+MORFE.save_rom&#40;RESULTS_DIR, W, R; metadata &#61; &#91;
+	&quot;example&quot; &#61;&gt; &quot;05_karman_vortex_street&quot;, &quot;Re0&quot; &#61;&gt; Re₀,
+	&quot;max_order&quot; &#61;&gt; MAX_ORD, &quot;fast&quot; &#61;&gt; FAST&#93;&#41;</code></pre>
 <p>Lift functional: l picks the pressure traction −p·n_y on the cylinder boundary.</p>
 <pre><code class="language-julia">l_free &#61; compute_pressure_lift_weights&#40;fom&#41;&#91;fom.free_dpim&#93;
 L0_lift &#61; dot&#40;l_free, real.&#40;s₀_full&#91;fom.free_dpim&#93;&#41;&#41;   # base-flow lift
@@ -193,7 +195,8 @@ println&#40;_out, &quot;  tke_gram_re.csv, tke_gram_im.csv, tke_avector.csv  wri
 
 export_vtk_bundle&#40;DATA_DIR, fom, s₀_full, master_eigenvalues, all_eigenvalues, all_modes&#41;
 
-csv_path &#61; export_coefficient_csvs&#40;_out, DATA_DIR, R, mset, L0_lift, L_coeffs_lift&#41;
+export_lift_csv&#40;_out, DATA_DIR, mset, L0_lift, L_coeffs_lift&#41;
+csv_path &#61; joinpath&#40;DATA_DIR, &quot;R_coefficients.csv&quot;&#41;
 EXPORT_MATLAB &amp;&amp; export_matlab_model&#40;_out, DATA_DIR, csv_path; re0 &#61; Re₀, ord &#61; MAX_ORD&#41;
 
 write_summary&#40;_out, RESULTS_DIR, fom, master_eigenvalues,

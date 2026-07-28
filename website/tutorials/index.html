@@ -88,12 +88,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   <!-- Sidebar -->
   <aside class="docs-side">
-    <div class="ver"><span><a href="index.html">Tutorials</a></span></div>
+    <div class="ver"><span><a href="index.html" class="active">Tutorials</a></span></div>
     <h4>Getting started</h4>
     <ul>
-      <li><a href="../nopage.html">Installation</a></li>
+      <li><a href="../api.html#install">Installation</a></li>
       <li><a href="../api.html">Current API</a></li>
-      <li><a href="../nopage.html">Concepts &amp; vocabulary</a></li>
+      <li><a href="../api.html#concepts">Concepts &amp; vocabulary</a></li>
     </ul>
 
     <h4>Demos</h4>
@@ -105,7 +105,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Tutorials</h4>
     <ul>
+      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
       <li><a href="karman.html">Kármán vortex street</a></li>
+      <li><a href="parametric.html">Geometry as a coordinate</a></li>
       <li><a href="micromirror.html">MEMS micromirror</a></li>
       <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
       <li><a href="roadmap.html">Shallow arch 🚧</a></li>
@@ -114,12 +116,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Manual</h4>
     <ul>
-      <li><a href="../nopage.html">FE input format</a></li>
-      <li><a href="../nopage.html">Master subspace</a></li>
-      <li><a href="../nopage.html">Choosing order</a></li>
-      <li><a href="../nopage.html">Forcing &amp; resonances</a></li>
-      <li><a href="../nopage.html">Continuation</a></li>
-      <li><a href="../nopage.html">Post-processing</a></li>
+      <li><a href="../api.html#fe-input">FE input format</a></li>
+      <li><a href="../api.html#master">Master subspace</a></li>
+      <li><a href="../api.html#order">Choosing order</a></li>
+      <li><a href="../api.html#forcing">Forcing &amp; resonances</a></li>
+      <li><a href="../api.html#continuation">Continuation</a></li>
+      <li><a href="../api.html#current-api">Post-processing</a></li>
     </ul>
 
   </aside>
@@ -186,15 +188,58 @@ W, R  = solve_cohomological_problem(
     <h2 id="all">All tutorials</h2>
 
     <h3 id="demos" style="margin-top:0; font-size:16px; color:var(--ink-2); font-weight:500; letter-spacing:0.02em;">Available now — current API</h3>
+    <p style="color:var(--ink-2); font-size:14px; margin:6px 0 18px;">
+      A ladder: <strong>L0</strong> edit one case block · <strong>L1</strong> a config-driven
+      pipeline · <strong>L2</strong> a case that carries its own code. Every tutorial links a
+      standardized <em>Literate</em> rendering of the script it describes.
+    </p>
 
     <div class="tut-grid">
+      <a class="tut-card" href="structural_svk.html">
+        <div class="thumb">
+          <span class="corner">StructuralSVK</span>
+          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(50 112)">
+              <rect x="-12" y="-46" width="12" height="92" fill="#9558B2" opacity="0.25" stroke="#9558B2" stroke-width="1"/>
+              <path d="M0,0 C 100,0 200,-40 300,-56" stroke="#9558B2" stroke-width="2.5" fill="none"/>
+              <path d="M0,0 C 100,0 200,40 300,56" stroke="#9558B2" stroke-width="2" fill="none" opacity="0.35"/>
+              <rect x="300" y="-46" width="12" height="92" fill="#9558B2" opacity="0.25" stroke="#9558B2" stroke-width="1"/>
+            </g>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L0 · start here</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+          <h3>From a mesh to a ROM</h3>
+          <p>Two library calls turn a mesh into a nonlinear ROM. Shows the case/pipeline split and drives a Gmsh beam, a COMSOL arch and a CAD micromirror with one identical pipeline.</p>
+          <div class="meta"><span>SVK</span><span>Gmsh · COMSOL · CAD</span><span>~1 min</span></div>
+        </div>
+      </a>
+      <a class="tut-card" href="parametric.html">
+        <div class="thumb">
+          <span class="corner">ParametricStructural</span>
+          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(50 130)">
+              <path d="M0,0 C 100,-30 200,-30 300,0" stroke="#9558B2" stroke-width="2.5" fill="none"/>
+              <path d="M0,0 C 100,-58 200,-58 300,0" stroke="#9558B2" stroke-width="2" fill="none" opacity="0.6"/>
+              <path d="M0,0 C 100,-86 200,-86 300,0" stroke="#9558B2" stroke-width="1.6" fill="none" opacity="0.35"/>
+              <path d="M0,0 C 100,-114 200,-114 300,0" stroke="#9558B2" stroke-width="1.2" fill="none" opacity="0.2"/>
+            </g>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L2 · case with code</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+          <h3>Geometry as a coordinate</h3>
+          <p>Carry shape parameters inside the ROM: one solve covers a family of geometries, and the frequency sensitivities fall straight out of the reduced dynamics.</p>
+          <div class="meta"><span>θ-series</span><span>box truncation</span><span>~2 min</span></div>
+        </div>
+      </a>
       <a class="tut-card" href="karman.html">
         <div class="thumb">
           <span class="corner">Navier–Stokes</span>
           <img src="assets/karman/karman_thumb.svg" alt="Vorticity of the base flow plus the Hopf mode past the cylinder — the Kármán vortex street" loading="lazy" />
         </div>
         <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Tutorial · current API</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L1 · config-driven</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
           <h3>Kármán vortex street</h3>
           <p>The complete MORFE setup on a 57 860-DOF Navier–Stokes flow: steady state, multilinear maps, master modes, and a ROM parametric in Re. The recommended full walkthrough.</p>
           <div class="meta"><span>Navier–Stokes</span><span>parametric ROM</span><span>order 9</span></div>
@@ -456,7 +501,7 @@ W, R  = solve_cohomological_problem(
 
     <div class="adm note" style="margin-top:36px;">
       <div class="adm-head">Reproducibility</div>
-      <div class="adm-body"><p>Every tutorial pins a Julia version and Project.toml. Mesh files (Gmsh format) are downloaded automatically by the script. See <a href="../nopage.html">Installation</a> for how to add MORFE.jl from GitHub.</p></div>
+      <div class="adm-body"><p>Every tutorial pins a Julia version and Project.toml. Mesh files (Gmsh format) are downloaded automatically by the script. See <a href="../api.html#install">Installation</a> for how to add MORFE.jl from GitHub.</p></div>
     </div>
 
   </main>
