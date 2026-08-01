@@ -93,7 +93,8 @@ function _make_sparse_solver(
 	::Type{<:SparseMatrixCSC}, linear_terms, FOM::Int, ROM::Int,
 )
 	L_template, L_mappings = precompute_sparse_L_template(linear_terms)
-	return SparseLinearSolverState{ComplexF64}(L_template, L_mappings, FOM, ROM)
+	T = eltype(L_template)
+	return SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM)
 end
 
 """

@@ -141,18 +141,23 @@ RHS_r = RHS_lower_r + RHS_ext_r
 
 # Full system assembly
 
-Stacking the per-mode conditions for all `r ∈ R` yields the global linear system
+Stacking one row per master mode — resonant or not — yields the global linear system
 
 ```
-[ L   C ] · [ W; f_res ] = RHS_R
+[ P L   P C P + τ Q ] · [ W; f ] = P · RHS_R,      P = diag(resonance), Q = I − P
 ```
 
 where:
-- `L` is `|R| × FOM` (rows `L_r`),
-- `C` is `|R| × |R|` (resonant columns of `C_r` from the joint operator),
-- `f_res` is the vector of unknown reduced-dynamics coefficients for the resonant
-  modes,
-- `RHS_R` is the assembled `|R|`-vector of scalar right-hand sides.
+- `L` is `ROM × FOM` (rows `L_r`), kept only on resonant rows,
+- `C` is `ROM × ROM` (columns of `C_r` from the joint operator), masked on both axes,
+- `f` is the **full** `ROM`-vector of reduced-dynamics coefficients,
+- `RHS_R` is the assembled `ROM`-vector of scalar right-hand sides,
+- `τ = 1` on the non-resonant diagonal, turning row `r` into `f_r = 0`.
+
+The block size is therefore independent of how many modes are resonant, which is
+what allows the sparse cohomological solver to hold one sparsity pattern — and one
+cached symbolic factorisation — for the whole solve.  Masking loses nothing: the
+dropped `C` entries multiply coefficients that the trivial rows pin to zero.
 
 ---
 
@@ -163,9 +168,9 @@ where:
 | [`precompute_orthogonality_operator_coefficients`](@ref)   | Pre-compute `J_r` coefficient arrays for the orthogonality row operators `L_r(s)` |
 | [`precompute_orthogonality_column_polynomials`](@ref)      | Pre-compute `Q_r` coefficient arrays split into `C_coeffs` and `E_coeffs` |
 | [`evaluate_orthogonality_row_and_lower_order_rhs!`](@ref)  | Fused Horner pass for `L_r(s)` (row) + scalar lower-order RHS |
-| [`evaluate_orthogonality_column_row!`](@ref)               | Evaluate the resonant block of `C_r(s)` into one row of the `C` block |
+| [`evaluate_orthogonality_column_row!`](@ref)               | Evaluate `C_r(s)` into one row of the `C` block, masked by the resonance vector |
 | [`evaluate_orthogonality_external_rhs`](@ref)              | Compute the scalar external-forcing RHS for mode `r` |
-| [`assemble_orthogonality_matrix_and_rhs!`](@ref)           | Full block-matrix and RHS assembly for all resonant modes (in-place) |
+| [`assemble_orthogonality_matrix_and_rhs!`](@ref)           | Constant-size `ROM × (FOM+ROM)` block and RHS assembly (in-place) |
 """
 module MasterModeOrthogonality
 
@@ -192,8 +197,23 @@ export precompute_orthogonality_operator_coefficients,
 											external_dynamics) → nothing
 
 In-place variant: writes the orthogonality block and its RHS directly into the
-caller-supplied `M` (`nR × n_sys`) and `rhs` (length `nR`) buffers.  Returns
-immediately when `nR == 0` (non-resonant monomial).  No heap allocation occurs.
+caller-supplied `M` (`ROM × (FOM+ROM)`) and `rhs` (length `ROM`) buffers.  No heap
+allocation occurs.
+
+The block has **constant size** — one row per master mode, resonant or not — and the
+resonance vector selects each row's *content* rather than the block's dimensions:
+
+- resonant `r`: row `r` is the orthogonality condition
+  `Ĵ_r(s) W_α + Σ_m Ĉ_{rm}(s) R_{m,α} = g_{r,α}`, with the corner entries masked to
+  the resonant modes by [`evaluate_orthogonality_column_row!`](@ref);
+- non-resonant `r`: row `r` becomes the trivial equation `τ R_{r,α} = 0` — everything
+  zeroed except `M[r, FOM+r] = τ = 1` — which encodes the style choice that
+  non-resonant reduced-dynamics coefficients vanish.
+
+Keeping the width constant is what lets the sparse path reuse one symbolic
+factorisation across every monomial.  Note that `τ` is structural only: the solver
+never reads the trivial rows back out of the solution vector, it writes the hard
+zeros directly during unpacking.
 """
 function assemble_orthogonality_matrix_and_rhs!(
 	M::AbstractMatrix,
@@ -206,20 +226,24 @@ function assemble_orthogonality_matrix_and_rhs!(
 	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
 	external_dynamics::AbstractVector{T},
 ) where {T, ROM}
-	isempty(rhs) && return nothing
 	FOM = size(J_coeffs[1], 2)
-	nR = count(resonance)
-	row = 1
+	@assert size(M) == (ROM, FOM + ROM) "orthogonality block must be ROM×(FOM+ROM) = \
+		$((ROM, FOM + ROM)), got $(size(M))"
+	@assert length(rhs) == ROM "orthogonality rhs must have length ROM = $ROM, \
+		got $(length(rhs))"
 	for r in eachindex(resonance)
 		if resonance[r]
-			rhs[row] = evaluate_orthogonality_row_and_lower_order_rhs!(
-				view(M, row, 1:FOM), s, lower_order_couplings, J_coeffs[r],
+			rhs[r] = evaluate_orthogonality_row_and_lower_order_rhs!(
+				view(M, r, 1:FOM), s, lower_order_couplings, J_coeffs[r],
 			)
 			evaluate_orthogonality_column_row!(
-				view(M, row, (FOM+1):(FOM+nR)), s, r, C_coeffs, resonance,
+				view(M, r, (FOM+1):(FOM+ROM)), s, r, C_coeffs, resonance,
 			)
-			rhs[row] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
-			row += 1
+			rhs[r] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
+		else
+			fill!(view(M, r, 1:(FOM+ROM)), zero(T))
+			M[r, FOM+r] = one(T)   # τ: pins R[r, α] = 0
+			rhs[r] = zero(T)
 		end
 	end
 	return nothing

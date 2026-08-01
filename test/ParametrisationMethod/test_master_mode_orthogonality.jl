@@ -131,29 +131,65 @@ end
 		NVAR = ROM + N_EXT
 		s = master_eigenvalues[1]
 		resonance = SVector{ROM, Bool}(true, true)
-		nR = count(resonance)
 		W = randn(ComplexF64, FOM)
 		fc = randn(ComplexF64, NVAR)
 		ξ1 = randn(ComplexF64, FOM)
 		couplings = SVector{ORD, Vector{ComplexF64}}(ξ1, zeros(ComplexF64, FOM))
 		external_dynamics = ComplexF64[fc[ROM+e] for e in 1:N_EXT]
 
-		M = Matrix{ComplexF64}(undef, nR, FOM + nR)
-		rhs = zeros(ComplexF64, nR)
+		# Constant size: ROM rows and a ROM-wide border, independent of nR.
+		M = Matrix{ComplexF64}(undef, ROM, FOM + ROM)
+		rhs = zeros(ComplexF64, ROM)
 		assemble_orthogonality_matrix_and_rhs!(
 			M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
 			resonance, couplings, external_dynamics)
 
 		Y1 = hcat(right_blocks[:, 1, :], Φ_ext)
 		W2 = s .* W .+ Y1 * fc .+ ξ1
-		for (row_i, r) in enumerate(findall(collect(resonance)))
+		for r in 1:ROM
 			φ = vec(left_blocks[:, :, r])
 			truth = φ' * B_comp * vcat(W, W2)
-			lhs = transpose(M[row_i, 1:FOM]) * W +
-				  sum(M[row_i, FOM+m] * fc[m] for m in 1:nR)
-			# M·[W; f_res] − rhs = φᴴB𝒲  (rhs carries −E·f_e − G·ξ)
-			@test lhs - rhs[row_i] ≈ truth rtol = 1e-10
+			lhs = transpose(M[r, 1:FOM]) * W +
+				  sum(M[r, FOM+m] * fc[m] for m in 1:ROM)
+			# M·[W; f] − rhs = φᴴB𝒲  (rhs carries −E·f_e − G·ξ)
+			@test lhs - rhs[r] ≈ truth rtol = 1e-10
 		end
+	end
+
+	@testset "non-resonant rows become the trivial equation R[r] = 0" begin
+		NVAR = ROM + N_EXT
+		s = master_eigenvalues[1]
+		resonance = SVector{ROM, Bool}(true, false)   # mode 2 non-resonant
+		W = randn(ComplexF64, FOM)
+		fc = randn(ComplexF64, NVAR)
+		ξ1 = randn(ComplexF64, FOM)
+		couplings = SVector{ORD, Vector{ComplexF64}}(ξ1, zeros(ComplexF64, FOM))
+		external_dynamics = ComplexF64[fc[ROM+e] for e in 1:N_EXT]
+
+		# Garbage-fill: every entry must be overwritten, masked ones with hard zeros.
+		M = fill(ComplexF64(9, 4), ROM, FOM + ROM)
+		rhs = fill(ComplexF64(9, 4), ROM)
+		assemble_orthogonality_matrix_and_rhs!(
+			M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
+			resonance, couplings, external_dynamics)
+
+		# Row 2: all zeros except the τ = 1 pinning R[2] = 0, with zero RHS.
+		@test all(iszero, M[2, 1:FOM])
+		@test M[2, FOM+1] == 0
+		@test M[2, FOM+2] == 1
+		@test rhs[2] == 0
+
+		# Row 1 keeps the true orthogonality condition, but its corner entry for the
+		# masked mode 2 is dropped — lossless, since row 2 pins that coefficient to 0.
+		@test M[1, FOM+2] == 0
+		Y1 = hcat(right_blocks[:, 1, :], Φ_ext)
+		fc_masked = copy(fc)
+		fc_masked[2] = 0                       # what the trivial row enforces
+		W2 = s .* W .+ Y1 * fc_masked .+ ξ1
+		φ = vec(left_blocks[:, :, 1])
+		truth = φ' * B_comp * vcat(W, W2)
+		lhs = transpose(M[1, 1:FOM]) * W + sum(M[1, FOM+m] * fc_masked[m] for m in 1:ROM)
+		@test lhs - rhs[1] ≈ truth rtol = 1e-10
 	end
 end
 

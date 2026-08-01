@@ -253,19 +253,24 @@ function precompute_orthogonality_column_polynomials(
 end
 
 # =============================================================================
-# Resonant-column row evaluation: C_r(s) restricted to resonant modes
+# Corner-row evaluation: C_r(s) masked by the resonance vector
 # =============================================================================
 
 """
 	evaluate_orthogonality_column_row!(c, s, r, C_coeffs, resonance) -> c
 
-Evaluate the resonant block of the joint operator row `C_r(s)` in-place via
-Horner's method, overwriting the pre-allocated `|R|`-vector `c`.
+Evaluate the joint operator row `C_r(s)` in-place via Horner's method, overwriting
+the pre-allocated **length-`ROM`** vector `c`.
 
 `C_r(s) = Σ_{j=1}^{ORD-1} C_coeffs[r][j, :] · s^{j-1}` is a `1 × ROM` row
-polynomial; this function evaluates it at `s` and extracts only the `|R|` entries
-corresponding to resonant master modes (those with `resonance[j] == true`), in
-increasing-`j` order.
+polynomial.  Entry `c[j]` holds `C_r(s)[j]` when master mode `j` is resonant and
+`zero(T)` otherwise — i.e. the layout is **expanded and masked**, indexed by the
+mode `j` itself rather than compacted into resonant rank order.
+
+Masking rather than compacting is what keeps the bordered cohomological system at
+the constant size `FOM + ROM` for every monomial (one sparsity pattern, one cached
+symbolic factorisation).  Dropping the non-resonant entries is lossless: the
+matching orthogonality row pins `R_{j,α} = 0`, so those coefficients multiply zero.
 
 `c` may be a plain `Vector{T}` or a row view `view(M, row, col_range)`.
 
@@ -277,7 +282,7 @@ For each resonant column index `j` independently:
 val  ←  C_coeffs[r][ORD-1, j]
 for L = ORD-2, …, 1:
 	val ← val · s + C_coeffs[r][L, j]
-c[resonant_rank(j)] ← val
+c[j] ← val
 ```
 
 Column `j` of `C_coeffs[r]` is contiguous in memory (Julia is column-major),
@@ -285,8 +290,8 @@ so each per-column Horner pass is cache-friendly.
 
 ## Arguments
 
-- `c        :: AbstractVector{T}`           – output buffer (length `|R|`),
-  overwritten with the resonant entries of `C_r(s)`.
+- `c        :: AbstractVector{T}`           – output buffer (length `ROM`),
+  fully overwritten: resonant entries with `C_r(s)`, the rest with zero.
 - `s        :: T`                           – evaluation frequency.
 - `r        :: Int`                         – 1-based master-mode index for the
   row equation (`1 ≤ r ≤ ROM`).
@@ -317,15 +322,17 @@ function evaluate_orthogonality_column_row!(
 
 	# Evaluate each resonant column of Cr independently via a scalar Horner pass.
 	# Column j of Cr is C_coeffs[r][:, j], which is contiguous in memory.
-	col = 1
+	# Non-resonant modes are written as hard zeros, keeping the corner block masked
+	# rather than compacted.
 	for j in eachindex(resonance)
 		if resonance[j]
 			val = Cr[ORD_M1, j]                  # highest-degree coefficient
 			for L in (ORD_M1-1):-1:1
 				val = val * s + Cr[L, j]
 			end
-			c[col] = val
-			col += 1
+			c[j] = val
+		else
+			c[j] = zero(T)
 		end
 	end
 	return c

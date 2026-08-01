@@ -1,0 +1,1262 @@
+{
+  "ext/FEMUtility/AbaqusToGmsh.jl": {
+    "mtime": 1779313995.6409593,
+    "ast_hash": "6760158791fdfccb1761b17789c08d28",
+    "semantic_hash": "6760158791fdfccb1761b17789c08d28"
+  },
+  "ext/FEMUtility/ComsolToGmsh.jl": {
+    "mtime": 1780760293.5599124,
+    "ast_hash": "45511f7da98e0ac2b33f6171dd14b0f0",
+    "semantic_hash": "45511f7da98e0ac2b33f6171dd14b0f0"
+  },
+  "ext/FEMUtility/GmshToComsol.jl": {
+    "mtime": 1779313995.6434214,
+    "ast_hash": "99257c2f51666d5bfb6e2e27045d87fe",
+    "semantic_hash": "99257c2f51666d5bfb6e2e27045d87fe"
+  },
+  "ext/MORFEArpackExt.jl": {
+    "mtime": 1783502068.135147,
+    "ast_hash": "3e5c621a76809ac42d720580cee98d28",
+    "semantic_hash": ""
+  },
+  "ext/MORFEBifurcationKitExt.jl": {
+    "mtime": 1783451880.2764542,
+    "ast_hash": "2434c0c79dbb91b0a20d2a83260168a5",
+    "semantic_hash": ""
+  },
+  "ext/MORFEGmshExt.jl": {
+    "mtime": 1783451880.2970815,
+    "ast_hash": "98b98e051a638d5bf9883a6f55f17bbb",
+    "semantic_hash": ""
+  },
+  "ext/MORFEPardisoExt.jl": {
+    "mtime": 1785539694.4810886,
+    "ast_hash": "3b5e72b5b34eb4af4e9f321922fd7093",
+    "semantic_hash": ""
+  },
+  "ext/MORFEPlotsExt.jl": {
+    "mtime": 1783451880.3182473,
+    "ast_hash": "7c407fe5a35d80fb060d0dbb8cbe677e",
+    "semantic_hash": ""
+  },
+  "ext/MORFESymbolicsExt.jl": {
+    "mtime": 1783502063.189178,
+    "ast_hash": "6e38f52ff40c1ef69390fc90ca754459",
+    "semantic_hash": ""
+  },
+  "ext/MORFESymbolicsExt/external_system.jl": {
+    "mtime": 1783451880.3399172,
+    "ast_hash": "d5a962e7b1480760ba2507a67caf459a",
+    "semantic_hash": "d5a962e7b1480760ba2507a67caf459a"
+  },
+  "ext/MORFESymbolicsExt/extraction.jl": {
+    "mtime": 1783502063.18967,
+    "ast_hash": "670e0af51c7c16cd7fb8c3b115b47146",
+    "semantic_hash": ""
+  },
+  "ext/MORFESymbolicsExt/polarization.jl": {
+    "mtime": 1783502063.1901422,
+    "ast_hash": "359f6ad52677f33939b6dd0d8d5c20fc",
+    "semantic_hash": ""
+  },
+  "ext/MORFESymbolicsExt/toMultilinearMaps.jl": {
+    "mtime": 1783502063.1905968,
+    "ast_hash": "7f073aa669fdedfdc11a4b10ec51fe95",
+    "semantic_hash": ""
+  },
+  "ext/SDE_Python/sde_integrator.py": {
+    "mtime": 1780331521.149273,
+    "ast_hash": "302518276da2c708e0df909a9692485d",
+    "semantic_hash": "302518276da2c708e0df909a9692485d"
+  },
+  "ext/SpectralDecomposition/JordanChain.jl": {
+    "mtime": 1783451880.3850188,
+    "ast_hash": "546eac8d63ee5f0c9883fab6a5bc7863",
+    "semantic_hash": ""
+  },
+  "ext/SpectralDecomposition/PropagateEigenmodes.jl": {
+    "mtime": 1783451880.395237,
+    "ast_hash": "e13e466d6c0798017ded13a3a559404c",
+    "semantic_hash": ""
+  },
+  "src/BifurcationSolvers/BifurcationKitInterface.jl": {
+    "mtime": 1779839519.5668118,
+    "ast_hash": "e8b1b95ffc369e575979cfdffc478dda",
+    "semantic_hash": "e8b1b95ffc369e575979cfdffc478dda"
+  },
+  "src/FEMUtility.jl": {
+    "mtime": 1780778291.0092452,
+    "ast_hash": "a0c7c7eaad29fd4903f9c11eda5b4e8a",
+    "semantic_hash": "a0c7c7eaad29fd4903f9c11eda5b4e8a"
+  },
+  "src/FullOrderModel/ExternalSystems.jl": {
+    "mtime": 1785521130.4210768,
+    "ast_hash": "b4769e1a405bbe60a4a6ab32ae94787c",
+    "semantic_hash": ""
+  },
+  "src/FullOrderModel/FullOrderModel.jl": {
+    "mtime": 1785521130.4213662,
+    "ast_hash": "15538af151180ca629bb66b6668737aa",
+    "semantic_hash": "15538af151180ca629bb66b6668737aa"
+  },
+  "src/FullOrderModel/MultilinearMaps.jl": {
+    "mtime": 1785521130.4217188,
+    "ast_hash": "9e48b55db036bf996dd82107940bfd26",
+    "semantic_hash": ""
+  },
+  "src/MORFE.jl": {
+    "mtime": 1785521130.422054,
+    "ast_hash": "78b5052e67f9a2a7a7abc8ab8a25a6eb",
+    "semantic_hash": ""
+  },
+  "src/Multiindices.jl": {
+    "mtime": 1785521130.4223373,
+    "ast_hash": "75a7b6577fb7fa03f13348fd7ff29921",
+    "semantic_hash": "75a7b6577fb7fa03f13348fd7ff29921"
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl": {
+    "mtime": 1785521535.2303314,
+    "ast_hash": "84bcc4d00996b64781bcbad8d666852d",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/CohomologicalContext.jl": {
+    "mtime": 1785521130.4227526,
+    "ast_hash": "bab4c66886578e0d3aa0017b20373f7c",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl": {
+    "mtime": 1785521482.967827,
+    "ast_hash": "93db2b80425a88982ca7adab9cc1564e",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl": {
+    "mtime": 1785539645.1493564,
+    "ast_hash": "fd67bcd3fd881326266364bc0a4f8f37",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl": {
+    "mtime": 1785540609.4582927,
+    "ast_hash": "df95459ac6f47532feb238a1f62aa7d1",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/ConjugateSymmetry.jl": {
+    "mtime": 1785521130.4241488,
+    "ast_hash": "9117bc22baad89987ada40d6998345bc",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/OperatorData.jl": {
+    "mtime": 1785521130.4242706,
+    "ast_hash": "9a120a94abf6158df0c7cbcedca37ede",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl": {
+    "mtime": 1785539634.0214713,
+    "ast_hash": "ce34681927d7613758f567a235266c25",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl": {
+    "mtime": 1785521130.424868,
+    "ast_hash": "03f226cbccce23eddb0d63fc56477992",
+    "semantic_hash": "03f226cbccce23eddb0d63fc56477992"
+  },
+  "src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl": {
+    "mtime": 1785539555.7346432,
+    "ast_hash": "b68b629ed0f04f2c646c61e2f40fc79d",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl": {
+    "mtime": 1785521272.8326337,
+    "ast_hash": "10665f9a624327d8898bb297b6644604",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl": {
+    "mtime": 1785521313.1857607,
+    "ast_hash": "66f3af0f7a8e3a2ce8322d8b70a9ee33",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/MasterModeOrthogonality/HornerEvaluator.jl": {
+    "mtime": 1785521130.426467,
+    "ast_hash": "987b0767a643fbed8ae0bd141a908956",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl": {
+    "mtime": 1785532126.4954348,
+    "ast_hash": "190b173bb54edd95d21ac47933e05069",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/ParametrisationMethod.jl": {
+    "mtime": 1785521130.4271727,
+    "ast_hash": "c7784fa8746fe9c8836e3d7b8c6bac71",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/Resonance.jl": {
+    "mtime": 1785521130.4274304,
+    "ast_hash": "dfcb69e4635fc970cf67a88c7ae1a493",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl": {
+    "mtime": 1785521130.427926,
+    "ast_hash": "4f06fed424a75cbad25e419cfdf87ad9",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/RightHandSide/MultilinearTerms/CacheBuilder.jl": {
+    "mtime": 1785521130.4282656,
+    "ast_hash": "fdffab23ddf1b7867789ec2d2bbe2448",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/RightHandSide/MultilinearTerms/CachedEval.jl": {
+    "mtime": 1785521130.4285662,
+    "ast_hash": "eb2614b9358c2d6b42cce29e8106a804",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.jl": {
+    "mtime": 1785521130.4287195,
+    "ast_hash": "9c84d1ab61d3102277ad0ae37687f465",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/RightHandSide/MultilinearTerms/NonCachedEval.jl": {
+    "mtime": 1785521130.429038,
+    "ast_hash": "3e097f59f7fb5132a1e82a421863b1fd",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/RightHandSide/MultilinearTerms/Structs.jl": {
+    "mtime": 1785521130.4293642,
+    "ast_hash": "198b362982e42a0906a37ae1350db184",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/RightHandSide/MultilinearTerms/Symmetry.jl": {
+    "mtime": 1785521130.4295323,
+    "ast_hash": "59a8a570d0a1a72057771deeba12e486",
+    "semantic_hash": ""
+  },
+  "src/Polynomials.jl": {
+    "mtime": 1785521130.43021,
+    "ast_hash": "0fbb21e63740c424a16e460d6d043e36",
+    "semantic_hash": ""
+  },
+  "src/Realification.jl": {
+    "mtime": 1785521130.4305277,
+    "ast_hash": "53f0c01370812f6efeab588f0c3c1b31",
+    "semantic_hash": "53f0c01370812f6efeab588f0c3c1b31"
+  },
+  "src/SpectralDecomposition/Eigenproblems.jl": {
+    "mtime": 1785521130.4308321,
+    "ast_hash": "ffda76e86620b2acfefa28bec3933c23",
+    "semantic_hash": ""
+  },
+  "src/SpectralDecomposition/Eigensolvers.jl": {
+    "mtime": 1785521130.43108,
+    "ast_hash": "143477c79a8e53697054946d964cf5b4",
+    "semantic_hash": "143477c79a8e53697054946d964cf5b4"
+  },
+  "src/Validation/InvarianceError.jl": {
+    "mtime": 1785521130.4314158,
+    "ast_hash": "02e3ca637cb68d38c8620867fdea58fe",
+    "semantic_hash": "02e3ca637cb68d38c8620867fdea58fe"
+  },
+  "benchmark/ferrite/benchmark_ferrite.jl": {
+    "mtime": 1781706765.710366,
+    "ast_hash": "b371e74c7f41d5afdba606de684ac67a",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/benchmark_suite.jl": {
+    "mtime": 1781706765.9193435,
+    "ast_hash": "a274841f40177268e3da3e60551839ef",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/diagnose_operators.jl": {
+    "mtime": 1781706765.919687,
+    "ast_hash": "1429d9f73eb6220893229a58be0db53a",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/generate_beam_mesh.jl": {
+    "mtime": 1781706765.7114167,
+    "ast_hash": "44e7c4b39281a1bde14ae1c1347cca4c",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/generate_beam_meshes.jl": {
+    "mtime": 1781706765.9200194,
+    "ast_hash": "b2ab2133a7e42bb1f6f9614753aef61a",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/plot_comparison.py": {
+    "mtime": 1781706765.7120428,
+    "ast_hash": "0819f45af05a50a52ba801747df47240",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/plot_memory_cost_data.py": {
+    "mtime": 1781706765.7125523,
+    "ast_hash": "ec05f97733752439ebca9c041dfdd7d9",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/plot_time_cost_data.py": {
+    "mtime": 1781706765.7129166,
+    "ast_hash": "edac3e740d129e1e5326532516d553a5",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/run_single_benchmarks.jl": {
+    "mtime": 1781706765.9202745,
+    "ast_hash": "8e6f24d773427d1ef751974452096124",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/test_forces.jl": {
+    "mtime": 1781706765.9206295,
+    "ast_hash": "26d2ef75317b78f48e18c40f33d3555f",
+    "semantic_hash": ""
+  },
+  "benchmark/morfe2/beam_damp.jl": {
+    "mtime": 1781706766.5501783,
+    "ast_hash": "bfb1704c37f745b579b777dd841f664d",
+    "semantic_hash": ""
+  },
+  "benchmark/morfe2/benchmark_morfe2.jl": {
+    "mtime": 1781706766.8318858,
+    "ast_hash": "ac227393dd4d9d7c10ef4514655739d0",
+    "semantic_hash": ""
+  },
+  "benchmark/morfe2/benchmark_speedup.jl": {
+    "mtime": 1781706766.5505996,
+    "ast_hash": "12a8813a41a982a09e19997e52434738",
+    "semantic_hash": ""
+  },
+  "benchmark/morfe2/profile_after_opt.jl": {
+    "mtime": 1781706766.5508463,
+    "ast_hash": "c5822b651fec44681668ef00e0e84815",
+    "semantic_hash": ""
+  },
+  "benchmark/order4/benchmark_o4.jl": {
+    "mtime": 1781706765.9224217,
+    "ast_hash": "58cbf7e014ea93acc6be040f717aa3d9",
+    "semantic_hash": ""
+  },
+  "examples/02_clamped_beam_gridap/main.jl": {
+    "mtime": 1785540641.8900857,
+    "ast_hash": "316c1ce85c5e547282208041a64bb30b",
+    "semantic_hash": ""
+  },
+  "examples/02_clamped_beam_gridap/validate.jl": {
+    "mtime": 1781706766.4628656,
+    "ast_hash": "c67a54d0a9e43e620c26a1d7ecc4107c",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/config.jl": {
+    "mtime": 1781706766.9276478,
+    "ast_hash": "2ad3a3c01ffd8fffbd5266e8178282e5",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/fem/hermite_beam.jl": {
+    "mtime": 1781706766.928142,
+    "ast_hash": "568f9a2ffb44aa179af34d07a988f17a",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/main.jl": {
+    "mtime": 1783502068.1324694,
+    "ast_hash": "7146adcad40799048f43f87c774ca61d",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/model/bias.jl": {
+    "mtime": 1781706766.9289222,
+    "ast_hash": "7187d358b55e8bca91bca0b0db8ebf34",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/model/coupling_terms.jl": {
+    "mtime": 1781706768.2143874,
+    "ast_hash": "a9536368491b024892caabd12431bccf",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/numeric_mirror.py": {
+    "mtime": 1781706766.9295952,
+    "ast_hash": "fc8d2dccdc9a0b45167b7a325f2bb539",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/solver/eigensolver.jl": {
+    "mtime": 1783502068.132804,
+    "ast_hash": "884ee6e5e6f641d789861fd0ebd3a696",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/solver/rom_utils.jl": {
+    "mtime": 1781706766.9312851,
+    "ast_hash": "31b6b43e781508acd820d91e97d4606d",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/validation/compare_rom_fom.jl": {
+    "mtime": 1783502068.133189,
+    "ast_hash": "0daf7d1a8005fe8d77dc3ec15bb5d35e",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/validation/fom_reference.jl": {
+    "mtime": 1781706766.9321613,
+    "ast_hash": "b74057777934e6efac24d42ce42a01bf",
+    "semantic_hash": ""
+  },
+  "examples/common/results_io.jl": {
+    "mtime": 1781706766.340217,
+    "ast_hash": "48d0bd3e085dad0b850c7c5356b1f56d",
+    "semantic_hash": ""
+  },
+  "examples/internals/demo_multiindices_factorisations.jl": {
+    "mtime": 1781706766.3210375,
+    "ast_hash": "25d6a822308656f1971c11e5b6b0b47e",
+    "semantic_hash": ""
+  },
+  "examples/internals/demo_polynomials.jl": {
+    "mtime": 1781706765.5212424,
+    "ast_hash": "2335734a542492946ee987be25bdfd79",
+    "semantic_hash": ""
+  },
+  "examples/internals/demo_symbolics.jl": {
+    "mtime": 1781987527.7992315,
+    "ast_hash": "fa210e883bf4a2c6777ac05335043553",
+    "semantic_hash": ""
+  },
+  "examples/internals/eigensolver/demo_eigenproblem.jl": {
+    "mtime": 1783502068.1341085,
+    "ast_hash": "a6ae5f1875f67c59496f0bcd0b2aef09",
+    "semantic_hash": ""
+  },
+  "examples/internals/eigensolver/demo_eigensolver.jl": {
+    "mtime": 1781706765.6838462,
+    "ast_hash": "f451b514b12bc8630752f0c4d0f3c601",
+    "semantic_hash": ""
+  },
+  "examples/internals/full_order_model/demo_NDOrderModel.jl": {
+    "mtime": 1781706765.6875243,
+    "ast_hash": "d1c9871490a15921b1d67dd47dc92f2d",
+    "semantic_hash": ""
+  },
+  "examples/internals/full_order_model/demo_external_system.jl": {
+    "mtime": 1781706765.6879265,
+    "ast_hash": "fdb494e86858388d7c65c656c8b16306",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_invariance_equation.jl": {
+    "mtime": 1785518279.0421557,
+    "ast_hash": "f66af1ddcef39eb8cf724125d15565e4",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_lower_order_couplings.jl": {
+    "mtime": 1781706765.6887798,
+    "ast_hash": "f7e5247e085226ac341b259c89225864",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_master_mode_orthogonality.jl": {
+    "mtime": 1783502068.134536,
+    "ast_hash": "4bd1ae6b10a2b6cc39a3a16ec6ba7e21",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_multilinear_terms.jl": {
+    "mtime": 1781706765.6895683,
+    "ast_hash": "d45d040940048fdf10dbca15e54f19fc",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_parametrisation_method.jl": {
+    "mtime": 1783502068.1348143,
+    "ast_hash": "48402fddbf59a8dbcb1c9d178351e885",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_parametrisation_method.py": {
+    "mtime": 1781706765.6904213,
+    "ast_hash": "d4abe804c63ec0b9769e7e292a36bf4f",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_parametrisation_method_2.py": {
+    "mtime": 1783194671.177152,
+    "ast_hash": "a53447c5668297ddd0ea887aa7013b90",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/demo_resonances.jl": {
+    "mtime": 1781706765.6911864,
+    "ast_hash": "8f7b48b968489ace0791c49d4b5e8a4e",
+    "semantic_hash": ""
+  },
+  "examples/mesh_import/Abaqus/demo_abaqus_to_gmsh.jl": {
+    "mtime": 1781706766.4150722,
+    "ast_hash": "710a2c9d20266701342fa5e6e8213154",
+    "semantic_hash": ""
+  },
+  "examples/mesh_import/Comsol/demo_comsol_to_gmsh.jl": {
+    "mtime": 1781706766.4156935,
+    "ast_hash": "2b9911bfa10f2311ad325e29187bcd50",
+    "semantic_hash": ""
+  },
+  "notebooks/duffing_demo.jl": {
+    "mtime": 1780764040.814738,
+    "ast_hash": "2c3b2bff9626f83b61f210688dd80323",
+    "semantic_hash": ""
+  },
+  "notebooks/multilinear_terms_demo.jl": {
+    "mtime": 1779313995.626708,
+    "ast_hash": "b4d950a589fa2b8d9b8a38e9053db198",
+    "semantic_hash": ""
+  },
+  "test/Extensions/test_morfe_symbolics.jl": {
+    "mtime": 1783502063.1936855,
+    "ast_hash": "6cd10fbde30e8eb4b84ed3eeb1fb891d",
+    "semantic_hash": ""
+  },
+  "test/FEMUtility/test_gmsh_to_comsol.jl": {
+    "mtime": 1781706766.321604,
+    "ast_hash": "d574c3263d39a4ea8e9de0cb8009b8d4",
+    "semantic_hash": ""
+  },
+  "test/FullOrderModel/test_external_system.jl": {
+    "mtime": 1781706767.2398248,
+    "ast_hash": "b536be748e93ca0f0e90712987130498",
+    "semantic_hash": ""
+  },
+  "test/FullOrderModel/test_full_order_model.jl": {
+    "mtime": 1781706767.2401283,
+    "ast_hash": "ac1a4bed23a44bf8844d3c7ba59b149e",
+    "semantic_hash": ""
+  },
+  "test/FullOrderModel/test_multilinear_maps.jl": {
+    "mtime": 1781706767.2421384,
+    "ast_hash": "3c322d005c445b67e377f152ad6874ee",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_conjugate_symmetry.jl": {
+    "mtime": 1783502068.1379426,
+    "ast_hash": "42c3ef9dad2250ba1b3c642a207e4686",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_invariance_equation.jl": {
+    "mtime": 1785521161.3776987,
+    "ast_hash": "66bddf2d51cd0feaf652afb1501f43f2",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_noconj_debug.jl": {
+    "mtime": 1783502068.1386352,
+    "ast_hash": "e8c209aacec35b07774734ad558b44f5",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_parametrisation_method.jl": {
+    "mtime": 1781706767.2432637,
+    "ast_hash": "5daae1bb20e51336bbbb0c0d9c3dd411",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_resonances.jl": {
+    "mtime": 1781706767.2436733,
+    "ast_hash": "24fb6d8e007827292edcc612658094d3",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/Julia_Arpack.jl": {
+    "mtime": 1781706767.244802,
+    "ast_hash": "6d3d3a364aaa2bb06cdc7b2233a76b48",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/Julia_Krylov.jl": {
+    "mtime": 1781706767.245121,
+    "ast_hash": "4b09d97a0b3e2a0f977cebca3e56398d",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/Matlab_eigs.m": {
+    "mtime": 1781706767.3358223,
+    "ast_hash": "3e9171354520ed524df20dc82d1443c2",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/Python_Scipy.py": {
+    "mtime": 1781706767.33788,
+    "ast_hash": "eacbcac0e33a8b19f9092e6f18502aff",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/test_eigenproblems.jl": {
+    "mtime": 1783502068.1389563,
+    "ast_hash": "594f27400ce0ef2a19da2b84d6cda308",
+    "semantic_hash": ""
+  },
+  "test/Utils/test_multiindices.jl": {
+    "mtime": 1781706767.3413844,
+    "ast_hash": "ddcbd1be045ebfff28d4fc4bb828056a",
+    "semantic_hash": ""
+  },
+  "test/Utils/test_polynomials.jl": {
+    "mtime": 1783502063.1941037,
+    "ast_hash": "eaf43b6ed5921cc5a915119a42bf4db6",
+    "semantic_hash": ""
+  },
+  "test/Utils/test_realification.jl": {
+    "mtime": 1781706767.34201,
+    "ast_hash": "8d79c3402e0f4ca20e013d66200cece5",
+    "semantic_hash": ""
+  },
+  "test/runtests.jl": {
+    "mtime": 1785518381.664266,
+    "ast_hash": "eeb5def3fd8a3e037aec17adfbe27eb3",
+    "semantic_hash": ""
+  },
+  "website/assets/dpim-scheme.jsx": {
+    "mtime": 1779741385.1157722,
+    "ast_hash": "3675d225aaadf903ca21061c2a81f1bb",
+    "semantic_hash": ""
+  },
+  "website/assets/feat-grid.js": {
+    "mtime": 1779744547.926638,
+    "ast_hash": "3cffc25ed16b871a549b1ad2698ab1a8",
+    "semantic_hash": ""
+  },
+  "website/assets/manifold-bg.js": {
+    "mtime": 1778882477.0,
+    "ast_hash": "37491d7181d611a0e24d5c0a69de97dc",
+    "semantic_hash": ""
+  },
+  "website/assets/nav.js": {
+    "mtime": 1783213436.8173778,
+    "ast_hash": "5d5a67467ab52f680cc08676a8d89069",
+    "semantic_hash": ""
+  },
+  "website/assets/team-data.js": {
+    "mtime": 1780674417.5804465,
+    "ast_hash": "6b0b4c06b65e97e3a544387febf628c9",
+    "semantic_hash": ""
+  },
+  "website/assets/tweaks-panel.jsx": {
+    "mtime": 1778882477.0,
+    "ast_hash": "0b67b9bfbe4e2860262209d25beb3067",
+    "semantic_hash": ""
+  },
+  "website/docs/.documenter-siteinfo.json": {
+    "mtime": 1778890970.1517422,
+    "ast_hash": "797ebb5199143b57e69baaa072b0f401",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/documenter.js": {
+    "mtime": 1778890967.8207185,
+    "ast_hash": "96d214a940c32693855b7618e7dbf0a3",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/mermaid.js": {
+    "mtime": 1778890953.2642314,
+    "ast_hash": "9cb8439e29ff2cbebccef43c361fe8ff",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/nav-inject.js": {
+    "mtime": 1783213574.2280738,
+    "ast_hash": "9d006cb18b67a989ecda22f269e2f9fc",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/themeswap.js": {
+    "mtime": 1778890967.6109297,
+    "ast_hash": "3e1ebdf21f9e0b5a2869bc667105221d",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/warner.js": {
+    "mtime": 1778890967.6115475,
+    "ast_hash": "83f621a9bcf7d81c7bdbe675b240e69b",
+    "semantic_hash": ""
+  },
+  "website/docs/search_index.js": {
+    "mtime": 1778890970.1414504,
+    "ast_hash": "fd16ab676edff73e277de381d04521c7",
+    "semantic_hash": ""
+  },
+  "website/generate_api.jl": {
+    "mtime": 1784106985.301906,
+    "ast_hash": "b4f91f64d0cbf3575e1b79311bb325e4",
+    "semantic_hash": ""
+  },
+  ".github/workflows/Documentation.yml": {
+    "mtime": 1779741865.5590541,
+    "ast_hash": "8594184cc6b591154814706bf60d5898",
+    "semantic_hash": ""
+  },
+  ".github/workflows/tests.yml": {
+    "mtime": 1781706766.8215587,
+    "ast_hash": "3c0e451f2c5c9fb46f6c175558547c84",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1784107096.4824438,
+    "ast_hash": "6ac91447c296dba5d6a715a960c68a02",
+    "semantic_hash": ""
+  },
+  "analytic_performance_analysis.md": {
+    "mtime": 1779557579.083161,
+    "ast_hash": "8b82ae0fa953355ba8f287d6b7e36c5a",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/reduced_dynamics_ferrite.txt": {
+    "mtime": 1781706765.7131577,
+    "ast_hash": "5bc2fa50f0290650908815d4b59eb174",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/reduced_dynamics_legacy.txt": {
+    "mtime": 1781706765.7134268,
+    "ast_hash": "5991262b63a0b7095c017063c757da58",
+    "semantic_hash": ""
+  },
+  "examples/02_clamped_beam_gridap/README.md": {
+    "mtime": 1781706766.6942446,
+    "ast_hash": "19700769145d0e330955e85fdd5b86aa",
+    "semantic_hash": ""
+  },
+  "examples/02_clamped_beam_gridap/results/data/equations.txt": {
+    "mtime": 1785533535.570004,
+    "ast_hash": "f3f3288cb4b848ad4a6636993768344a",
+    "semantic_hash": ""
+  },
+  "examples/02_clamped_beam_gridap/results/summary.txt": {
+    "mtime": 1785533687.8650634,
+    "ast_hash": "2d52ccf4594ae65c9549aacf1ee1450c",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/README.md": {
+    "mtime": 1781706766.927241,
+    "ast_hash": "263798aac56e12cc8deff54148849402",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/bibliography.md": {
+    "mtime": 1781706766.3313084,
+    "ast_hash": "46f27c94426d9c2e82d785544a2252cb",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/physics_description.md": {
+    "mtime": 1781706766.9302466,
+    "ast_hash": "dd8dc70fd3843fc536e1f9251712ccce",
+    "semantic_hash": ""
+  },
+  "examples/README.md": {
+    "mtime": 1784107142.671891,
+    "ast_hash": "4b3061108e99bca0e921359dc73732cf",
+    "semantic_hash": ""
+  },
+  "examples/internals/README.md": {
+    "mtime": 1781706765.9249246,
+    "ast_hash": "28d5af427a15e12203cbe1c199ee38e4",
+    "semantic_hash": ""
+  },
+  "examples/mesh_import/README.md": {
+    "mtime": 1781706765.926087,
+    "ast_hash": "773a68bed608b64b968c945d17057d85",
+    "semantic_hash": ""
+  },
+  "multi_threaded_solve_analysis.md": {
+    "mtime": 1779044497.5763667,
+    "ast_hash": "d8d98bd05d8dc16dda68d9ec810add21",
+    "semantic_hash": ""
+  },
+  "next_steps.md": {
+    "mtime": 1779042587.7011704,
+    "ast_hash": "8567ebc6018073e83b935dd81ac33e87",
+    "semantic_hash": ""
+  },
+  "plan_conjugate.md": {
+    "mtime": 1778807811.8551776,
+    "ast_hash": "ee052b6be9ede7b748e8ce015e22ffd0",
+    "semantic_hash": ""
+  },
+  "profile_analysis.md": {
+    "mtime": 1778022664.565615,
+    "ast_hash": "f92561de2665f63dd835d866233d64e2",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/statement.md": {
+    "mtime": 1781706767.340222,
+    "ast_hash": "02bacadd7905522ded642f1b561c272b",
+    "semantic_hash": ""
+  },
+  "website/docs/api.html": {
+    "mtime": 1778890969.6860833,
+    "ast_hash": "366c84da4198d48416c534df91cabb29",
+    "semantic_hash": ""
+  },
+  "website/docs/api/cohomological_equations.html": {
+    "mtime": 1778890969.593882,
+    "ast_hash": "a377ce01d24703bbcc533890dcc41358",
+    "semantic_hash": ""
+  },
+  "website/docs/api/eigenproblems.html": {
+    "mtime": 1778890969.702532,
+    "ast_hash": "ad1ea8c5aa196073e4751abd001f32bf",
+    "semantic_hash": ""
+  },
+  "website/docs/api/eigensolvers.html": {
+    "mtime": 1778890970.140499,
+    "ast_hash": "963a8459595acc40bcf40b3b6c1f2bd8",
+    "semantic_hash": ""
+  },
+  "website/docs/api/external_systems.html": {
+    "mtime": 1778890969.4690337,
+    "ast_hash": "9136a6402e18601091ff8d0cd7cdf2c1",
+    "semantic_hash": ""
+  },
+  "website/docs/api/full_order_model.html": {
+    "mtime": 1778890970.137634,
+    "ast_hash": "240e1d00f787dc1b19d792bb6c100cb4",
+    "semantic_hash": ""
+  },
+  "website/docs/api/invariance_equation.html": {
+    "mtime": 1778890970.0197332,
+    "ast_hash": "715f8654e05409e0eb6fce44eaabe079",
+    "semantic_hash": ""
+  },
+  "website/docs/api/invariance_error.html": {
+    "mtime": 1778890969.7055254,
+    "ast_hash": "c6358a28267ca0f658f6935db2f82db9",
+    "semantic_hash": ""
+  },
+  "website/docs/api/jordan_chain.html": {
+    "mtime": 1778890969.575599,
+    "ast_hash": "921c0a45a22b3f0d9ca972decd8712de",
+    "semantic_hash": ""
+  },
+  "website/docs/api/lower_order_couplings.html": {
+    "mtime": 1778890969.6993,
+    "ast_hash": "c0b4a33c4a0debad57bfd746aee394e1",
+    "semantic_hash": ""
+  },
+  "website/docs/api/master_mode_orthogonality.html": {
+    "mtime": 1778890969.6783392,
+    "ast_hash": "c43d400ae26587f34bd3dc20adf536ff",
+    "semantic_hash": ""
+  },
+  "website/docs/api/multiindices.html": {
+    "mtime": 1778890969.6838088,
+    "ast_hash": "dfe94cf44a074fc57b0dec91c7c0a8c2",
+    "semantic_hash": ""
+  },
+  "website/docs/api/multilinear_maps.html": {
+    "mtime": 1778890969.708894,
+    "ast_hash": "9da68bf7103d35be98bb49419f6af1ec",
+    "semantic_hash": ""
+  },
+  "website/docs/api/multilinear_terms.html": {
+    "mtime": 1778890969.4378407,
+    "ast_hash": "3154bbf76e6848752455e566bae50818",
+    "semantic_hash": ""
+  },
+  "website/docs/api/parametrisation_method.html": {
+    "mtime": 1778890969.4480996,
+    "ast_hash": "cf5a302e9bd4a5d7a2f9503b65c6e78e",
+    "semantic_hash": ""
+  },
+  "website/docs/api/polynomials.html": {
+    "mtime": 1778890969.6740532,
+    "ast_hash": "0a44ff005199aef274494af25568a89e",
+    "semantic_hash": ""
+  },
+  "website/docs/api/propagate_eigenmodes.html": {
+    "mtime": 1778890969.6685376,
+    "ast_hash": "076d812cc151e172aecb4c501bf4dd32",
+    "semantic_hash": ""
+  },
+  "website/docs/api/realification.html": {
+    "mtime": 1778890970.0146263,
+    "ast_hash": "852d3b07af3d617c80f83ef3dbd3bd0b",
+    "semantic_hash": ""
+  },
+  "website/docs/api/resonance.html": {
+    "mtime": 1778890969.4665666,
+    "ast_hash": "78bc81df4f9e5b9f5ac08e5a25c96549",
+    "semantic_hash": ""
+  },
+  "website/docs/index.html": {
+    "mtime": 1784103281.8485541,
+    "ast_hash": "ffddc1a1216094181029a56d8ecfe10a",
+    "semantic_hash": ""
+  },
+  "website/docs/project-overview.html": {
+    "mtime": 1778890969.5889122,
+    "ast_hash": "17cbc24a6b4df5d7ea22674b3f1c7410",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/cohomological_equations.html": {
+    "mtime": 1778890969.5729234,
+    "ast_hash": "1c6827b82360e41da599e2a2b3cf193d",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/dpim.html": {
+    "mtime": 1784103281.84923,
+    "ast_hash": "7ef56539373a4cf5caf7366c6cd21ce2",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/multiindices.html": {
+    "mtime": 1778890970.0238936,
+    "ast_hash": "2e1c9de71a178e6852b38a789006dbd7",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/polynomials.html": {
+    "mtime": 1778890970.0265653,
+    "ast_hash": "c0c8ce9916bf2060744277573ab711c2",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/realification.html": {
+    "mtime": 1778890969.6635332,
+    "ast_hash": "b7bd3dfbc26caf8352983c7bdc1138ba",
+    "semantic_hash": ""
+  },
+  "website/docs/tutorials/multilinear_terms.html": {
+    "mtime": 1778890970.0101902,
+    "ast_hash": "a83df40ca28d0e00460575583f42e8cd",
+    "semantic_hash": ""
+  },
+  "website/dpim-preview.html": {
+    "mtime": 1783213453.4195921,
+    "ast_hash": "c1870f06384f5301cc58d728caa3e077",
+    "semantic_hash": ""
+  },
+  "website/features.html": {
+    "mtime": 1783213453.3896751,
+    "ast_hash": "6ae0a1810dc36c8148d98660e8bd4037",
+    "semantic_hash": ""
+  },
+  "website/gallery.html": {
+    "mtime": 1783213453.411351,
+    "ast_hash": "dc6d659ca96f321b8b50ee319a019d1c",
+    "semantic_hash": ""
+  },
+  "website/index.html": {
+    "mtime": 1784102990.17642,
+    "ast_hash": "2eb6ebfd43beb1042eb42dd441075156",
+    "semantic_hash": ""
+  },
+  "website/publications.html": {
+    "mtime": 1783213453.3951566,
+    "ast_hash": "9f838757a2b6e20f513f1618e62744b7",
+    "semantic_hash": ""
+  },
+  "website/team.html": {
+    "mtime": 1784103211.8728125,
+    "ast_hash": "9be3bd7730f53d88d18be729e67e1adf",
+    "semantic_hash": ""
+  },
+  "website/uploads/dpim-preview.html": {
+    "mtime": 1778882477.0,
+    "ast_hash": "a425501bb75690391e3f8af703a69f7d",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/results/archived/invariance_convergence_full.png": {
+    "mtime": 1781170192.1873755,
+    "ast_hash": "9df20538387ccbc26c454491323fb68f",
+    "semantic_hash": ""
+  },
+  "benchmark/ferrite/results/archived/invariance_convergence_master.png": {
+    "mtime": 1781170192.183913,
+    "ast_hash": "39bd3464b80c23328ca5b97ede5a790c",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/validation/figures/closure_comparison.png": {
+    "mtime": 1781780075.8357985,
+    "ast_hash": "e88cd116a58278678b57db053f1c7e04",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/validation/figures/frf.png": {
+    "mtime": 1781780083.624739,
+    "ast_hash": "0f0f7b0d19331a6e6dcc021adacf3787",
+    "semantic_hash": ""
+  },
+  "examples/06_dielectric_elastomer_actuator/validation/figures/rom_vs_fom_timehist.png": {
+    "mtime": 1781780076.8905122,
+    "ast_hash": "204494144d620220bd55c1b3389dec62",
+    "semantic_hash": ""
+  },
+  "examples/internals/eigensolver/results/archived/eigenpairs_complex_plane.png": {
+    "mtime": 1781170192.1034799,
+    "ast_hash": "e90bb2ce6183f78965236dc7bd697f4a",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/results/archived/invariance_convergence_full.png": {
+    "mtime": 1781170192.0973196,
+    "ast_hash": "9c232493293ceef3972fb02d60b409b7",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/results/archived/invariance_convergence_master.png": {
+    "mtime": 1781170192.0978491,
+    "ast_hash": "c599be8c824acf313be52dd41f68522d",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/results/invariance_convergence_full.png": {
+    "mtime": 1782915068.3628066,
+    "ast_hash": "9c232493293ceef3972fb02d60b409b7",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/results/invariance_convergence_master.png": {
+    "mtime": 1782915068.5543735,
+    "ast_hash": "c599be8c824acf313be52dd41f68522d",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/results/reference/invariance_convergence_full.png": {
+    "mtime": 1781706766.4491432,
+    "ast_hash": "9c232493293ceef3972fb02d60b409b7",
+    "semantic_hash": ""
+  },
+  "examples/internals/parametrisation_method/results/reference/invariance_convergence_master.png": {
+    "mtime": 1781706766.4504905,
+    "ast_hash": "c599be8c824acf313be52dd41f68522d",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/arpack_lm.png": {
+    "mtime": 1779229051.0582833,
+    "ast_hash": "9a82b40c27d48e9953925c06bacce4cd",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/arpack_zr.png": {
+    "mtime": 1779229051.058845,
+    "ast_hash": "13824ee172e16297934aed60f0287c4a",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/krylovkit_lm.png": {
+    "mtime": 1779229051.0597854,
+    "ast_hash": "c162ae3c7afccf39d3c78e252e771a43",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/python_cayley.png": {
+    "mtime": 1779229051.0610425,
+    "ast_hash": "af85f7aca7248a6aa84c14f0f03ee624",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/python_hybrid.png": {
+    "mtime": 1779229051.0619328,
+    "ast_hash": "8e71887e72868ce3382f2cd8a0811249",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/python_lm.png": {
+    "mtime": 1779229051.0637531,
+    "ast_hash": "6a35f07ce5beccb165f581b18ab95337",
+    "semantic_hash": ""
+  },
+  "test/SpectralDecomposition/EigensolverTestsFrancesco/python_zr.png": {
+    "mtime": 1779229051.0646577,
+    "ast_hash": "84bcf4692f7bcdcb75ec998cbbff33f7",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/alessandra-vizzaccaro.jpg": {
+    "mtime": 1778927927.2862647,
+    "ast_hash": "e8515449d51fef95da3a57c0e3053370",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/andre-stabile.jpg": {
+    "mtime": 1778928308.8697383,
+    "ast_hash": "0e6a2dc4c5734cf5cb790443b5540834",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/andrea-opreni.jpg": {
+    "mtime": 1778927927.286536,
+    "ast_hash": "7c41355470618200e61b61d708a265cf",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/attilio-frangi.jpg": {
+    "mtime": 1778927927.2903988,
+    "ast_hash": "e8808745a66fa273a32de66f108aeab1",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/cyril-touze.jpg": {
+    "mtime": 1778927927.2873857,
+    "ast_hash": "32ad1b7e2b1e103e4a8de3a5e4153040",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/florian-tuschner.jpg": {
+    "mtime": 1778929203.2904358,
+    "ast_hash": "def6e4355c4a33bfc059737cc342c42d",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/francesco-trainotti.jpg": {
+    "mtime": 1778975701.2167752,
+    "ast_hash": "18b6a73d53db4766fd89ac3a592fe2c6",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/giorgio-gobat.jpg": {
+    "mtime": 1778927927.2862697,
+    "ast_hash": "e9fa8fdf8b0d22dbefc6bcb17f1f861d",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/loic-salles.jpg": {
+    "mtime": 1778927926.8637085,
+    "ast_hash": "402be5beba9bec13508ae7747be01347",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/olivier-thomas.jpg": {
+    "mtime": 1778928308.869951,
+    "ast_hash": "075eb61d53067b37e33fc0a37ee7a331",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/tiago-martins.jpg": {
+    "mtime": 1779743337.34709,
+    "ast_hash": "e1bc085be6b8f429774536071cd46319",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/ulrich-roemer.jpg": {
+    "mtime": 1778975795.5055604,
+    "ast_hash": "ca352051dbf2cad610f08d2fb30cad2c",
+    "semantic_hash": ""
+  },
+  "website/assets/portraits/yichang-shen.jpg": {
+    "mtime": 1778928308.8643067,
+    "ast_hash": "c4ec3a895009821bd864e2a3dc87df8d",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/logo.svg": {
+    "mtime": 1778890953.2636194,
+    "ast_hash": "e2538e8f7032ee62a7efa2974102e102",
+    "semantic_hash": ""
+  },
+  "website/uploads/DPIM.svg": {
+    "mtime": 1778882477.0,
+    "ast_hash": "e54a4f200b0c7280fe4be1cb52337ef7",
+    "semantic_hash": ""
+  },
+  "website/uploads/LogoManifoldOrbits.svg": {
+    "mtime": 1781987527.806217,
+    "ast_hash": "3b5cd5c85893e2ca216feebaaa5c9334",
+    "semantic_hash": ""
+  },
+  "website/uploads/logo.svg": {
+    "mtime": 1778882477.0,
+    "ast_hash": "b28df3c67dd1eab4b5e0c119785df6d2",
+    "semantic_hash": ""
+  },
+  ".githooks/commit-msg": {
+    "mtime": 1783198209.9561448,
+    "ast_hash": "b36260eeb329a635ae4275ca399b0e66",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_master_mode_orthogonality.jl": {
+    "mtime": 1785518226.5866532,
+    "ast_hash": "47a37630a4792e854688c077d5afa0c1",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/generate_charts.py": {
+    "mtime": 1783251731.1590917,
+    "ast_hash": "cb226bea712fffbd31cfe4163a629ef1",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/generate_flow_anim.py": {
+    "mtime": 1783213518.0832427,
+    "ast_hash": "5cc5c8260d9a7f8ec87ab2527fc2ea6d",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/generate_thumb.py": {
+    "mtime": 1783213518.0840821,
+    "ast_hash": "0b4d5612f64db8e131532b6fb77d54f5",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/karman_flow.html": {
+    "mtime": 1783194671.2580047,
+    "ast_hash": "8b229278609c3140e1900f334c0818c4",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/lift_vs_Re.html": {
+    "mtime": 1783252849.8528566,
+    "ast_hash": "4bd1e475eff39a1139639592785d2f43",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/tke_vs_Re.html": {
+    "mtime": 1783252861.211898,
+    "ast_hash": "954a8f1a44b9ce54ccb285161576f0d0",
+    "semantic_hash": ""
+  },
+  "website/tutorials/index.html": {
+    "mtime": 1785245339.4447825,
+    "ast_hash": "e67cf2eab8983d5bedba9ce31d36e75e",
+    "semantic_hash": ""
+  },
+  "website/tutorials/karman.html": {
+    "mtime": 1785245130.991529,
+    "ast_hash": "f874fc4d28b8282d987ec9f9c2cf7357",
+    "semantic_hash": ""
+  },
+  "website/tutorials/micromirror.html": {
+    "mtime": 1785245175.1254022,
+    "ast_hash": "a6f5d6ee2b48a4019b0e1dcf4384f9a8",
+    "semantic_hash": ""
+  },
+  "website/tutorials/roadmap.html": {
+    "mtime": 1785245130.993806,
+    "ast_hash": "d22bd095863425769ff91036ff6e2ef7",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/karman/karman_thumb.svg": {
+    "mtime": 1783195783.0529232,
+    "ast_hash": "b664c7060306468ca395f62e2f8a9de7",
+    "semantic_hash": ""
+  },
+  "src/ParametrisationMethod/parametrise_entry.jl": {
+    "mtime": 1785521130.4299078,
+    "ast_hash": "b4748ed170175b2f192f700679af2750",
+    "semantic_hash": ""
+  },
+  "src/Export/RomIO.jl": {
+    "mtime": 1785521130.4207263,
+    "ast_hash": "8929b03b3a110789f63f3886269bb397",
+    "semantic_hash": ""
+  },
+  "src/Validation/RomComparison.jl": {
+    "mtime": 1785521130.431759,
+    "ast_hash": "e51ca6ae45e39dbdea2c34c78f1fed31",
+    "semantic_hash": ""
+  },
+  "test/Export/test_rom_io.jl": {
+    "mtime": 1784149923.5274177,
+    "ast_hash": "1024f6c0380c23b571dad1fb58e387d1",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_bordered_solver.jl": {
+    "mtime": 1785540569.666544,
+    "ast_hash": "79842f33bc8d2d61df10f519021255a6",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_parametrise_entry.jl": {
+    "mtime": 1784149969.8420787,
+    "ast_hash": "40f1d008097a5269f617fa1ebd0717ec",
+    "semantic_hash": ""
+  },
+  "test/Validation/test_rom_comparison.jl": {
+    "mtime": 1784149944.5416446,
+    "ast_hash": "8b2a35370b895f4f1145e92d7a42f46c",
+    "semantic_hash": ""
+  },
+  "website/generate_literate.jl": {
+    "mtime": 1785245252.3622773,
+    "ast_hash": "2dcfa536a0ca822c1b377a910336ad02",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/01_clamped_beam_ferrite.html": {
+    "mtime": 1785245268.9437199,
+    "ast_hash": "85689d607b605b421694a128f6f56b97",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/02_clamped_beam_gridap.html": {
+    "mtime": 1785245269.0112243,
+    "ast_hash": "4fab4422c615dd4db22e5b1adc704afb",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/03_arch_comsol_wedge.html": {
+    "mtime": 1785245269.0338898,
+    "ast_hash": "e446f533ea4d302af7b82fea9fc00532",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/04_parametric_clamped_beam.html": {
+    "mtime": 1785245269.0698962,
+    "ast_hash": "839dd1fb9631a0e34e1d2bf01c6950e1",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/05_karman_vortex_street.html": {
+    "mtime": 1785245269.0975976,
+    "ast_hash": "ca8a2e6b9569bb883b32c9f97cfcb120",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/06_dielectric_elastomer_actuator.html": {
+    "mtime": 1785245269.11815,
+    "ast_hash": "91ba068d2e216169485c1e970d1c35fc",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/07_parametric_arch.html": {
+    "mtime": 1785245269.1407971,
+    "ast_hash": "9bfc5f3f48878256f19dbf5bcd6dc44c",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/08_mems_micromirror.html": {
+    "mtime": 1785245269.1609495,
+    "ast_hash": "634844a2aeb26db3aee57494e2c3e016",
+    "semantic_hash": ""
+  },
+  "website/tutorials/parametric.html": {
+    "mtime": 1785245130.994215,
+    "ast_hash": "cecbe43071b33f4a6a7d23b8758a6ffb",
+    "semantic_hash": ""
+  },
+  "website/tutorials/structural_svk.html": {
+    "mtime": 1785245130.9944336,
+    "ast_hash": "b79c1040310562a1cff43b7ed44e7552",
+    "semantic_hash": ""
+  }
+}

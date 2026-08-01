@@ -88,148 +88,148 @@ using StaticArrays: SVector
         return C_ref, E_ref
     end
 
-    # @testset "HornerEvaluator.jl" begin
-    #     @testset "evaluate_system_matrix_and_lower_order_rhs - dense, real s" begin
-    #         for (FOM, ORD) in [(5, 3), (4, 1), (6, 5)]
-    #             ORDP1 = ORD + 1
-    #             linear_terms = ntuple(k -> randn(FOM, FOM), ORDP1)
-    #             lower_order_couplings = [randn(FOM) for _ in 1:ORD]
-    #             L = zeros(FOM, FOM)
-    #             L_naive = zeros(FOM, FOM)
-    #             rhs = zeros(FOM)
-    #             rhs_naive = zeros(FOM)
-    #             s = randn()
+    @testset "HornerEvaluator.jl" begin
+        @testset "evaluate_system_matrix_and_lower_order_rhs - dense, real s" begin
+            for (FOM, ORD) in [(5, 3), (4, 1), (6, 5)]
+                ORDP1 = ORD + 1
+                linear_terms = ntuple(k -> randn(FOM, FOM), ORDP1)
+                lower_order_couplings = [randn(FOM) for _ in 1:ORD]
+                L = zeros(FOM, FOM)
+                L_naive = zeros(FOM, FOM)
+                rhs = zeros(FOM)
+                rhs_naive = zeros(FOM)
+                s = randn()
 
-    #             evaluate_system_matrix_and_lower_order_rhs!(
-    #                 L,
-    #                 rhs,
-    #                 s,
-    #                 lower_order_couplings,
-    #                 linear_terms
-    #             )
+                evaluate_system_matrix_and_lower_order_rhs!(
+                    L,
+                    rhs,
+                    s,
+                    lower_order_couplings,
+                    linear_terms
+                )
 
-    #             # naive L 
-    #             L_naive = naive_matrix_poly(linear_terms, s)
-    #             #naive rhs
-    #             rhs_naive = naive_lower_order_rhs(linear_terms, lower_order_couplings, s)
-    #             @test norm(L - L_naive) <= 1e-10
-    #             @test norm(rhs - rhs_naive) <= 1e-10
-    #         end
-    #     end
-    #     @testset "evaluate_system_matrix_and_lower_order_rhs! – complex s" begin
-    #         FOM, ORD = 4, 3
-    #         ORDP1 = ORD + 1
-    #         linear_terms = ntuple(k -> randn(ComplexF64, FOM, FOM), ORDP1)
-    #         lower_order_couplings = [randn(ComplexF64, FOM) for _ in 1:ORD]
-    #         s = 2.0 + 3.0im
+                # naive L 
+                L_naive = naive_matrix_poly(linear_terms, s)
+                #naive rhs
+                rhs_naive = naive_lower_order_rhs(linear_terms, lower_order_couplings, s)
+                @test norm(L - L_naive) <= 1e-10
+                @test norm(rhs - rhs_naive) <= 1e-10
+            end
+        end
+        @testset "evaluate_system_matrix_and_lower_order_rhs! – complex s" begin
+            FOM, ORD = 4, 3
+            ORDP1 = ORD + 1
+            linear_terms = ntuple(k -> randn(ComplexF64, FOM, FOM), ORDP1)
+            lower_order_couplings = [randn(ComplexF64, FOM) for _ in 1:ORD]
+            s = 2.0 + 3.0im
 
-    #         L = zeros(ComplexF64, FOM, FOM)
-    #         rhs = zeros(ComplexF64, FOM)
-    #         evaluate_system_matrix_and_lower_order_rhs!(
-    #             L, rhs, s, lower_order_couplings, linear_terms)
+            L = zeros(ComplexF64, FOM, FOM)
+            rhs = zeros(ComplexF64, FOM)
+            evaluate_system_matrix_and_lower_order_rhs!(
+                L, rhs, s, lower_order_couplings, linear_terms)
 
-    #         @test norm(L - naive_matrix_poly(linear_terms, s)) ≤ 1e-10
-    #         @test norm(rhs -
-    #                    naive_lower_order_rhs(linear_terms, lower_order_couplings, s)) ≤
-    #               1e-10
-    #     end
-    #     @testset "evaluate_system_matrix_and_lower_order_rhs! – ORD=1" begin
-    #         # Minimal case: only B[1] and B[2]; L(s) = B[1] + B[2]*s
-    #         FOM = 3
-    #         B1 = randn(FOM, FOM)
-    #         B2 = randn(FOM, FOM)
-    #         xi1 = randn(FOM)
-    #         s = 1.7
+            @test norm(L - naive_matrix_poly(linear_terms, s)) ≤ 1e-10
+            @test norm(rhs -
+                       naive_lower_order_rhs(linear_terms, lower_order_couplings, s)) ≤
+                  1e-10
+        end
+        @testset "evaluate_system_matrix_and_lower_order_rhs! – ORD=1" begin
+            # Minimal case: only B[1] and B[2]; L(s) = B[1] + B[2]*s
+            FOM = 3
+            B1 = randn(FOM, FOM)
+            B2 = randn(FOM, FOM)
+            xi1 = randn(FOM)
+            s = 1.7
 
-    #         L = zeros(FOM, FOM)
-    #         rhs = zeros(FOM)
-    #         evaluate_system_matrix_and_lower_order_rhs!(
-    #             L, rhs, s, [xi1], (B1, B2))
+            L = zeros(FOM, FOM)
+            rhs = zeros(FOM)
+            evaluate_system_matrix_and_lower_order_rhs!(
+                L, rhs, s, [xi1], (B1, B2))
 
-    #         @test norm(L - (B1 .+ B2 .* s)) ≤ 1e-12
-    #         # L[1](s) = B[2], so rhs = -B2 * xi1
-    #         @test norm(rhs - (-B2 * xi1)) ≤ 1e-12
-    #     end
-    #     @testset "evaluate_system_matrix_and_lower_order_rhs! – zero couplings → zero rhs" begin
-    #         FOM, ORD = 4, 3
-    #         ORDP1 = ORD + 1
-    #         linear_terms = ntuple(k -> randn(FOM, FOM), ORDP1)
-    #         lower_order_couplings = [zeros(FOM) for _ in 1:ORD]
-    #         s = randn()
+            @test norm(L - (B1 .+ B2 .* s)) ≤ 1e-12
+            # L[1](s) = B[2], so rhs = -B2 * xi1
+            @test norm(rhs - (-B2 * xi1)) ≤ 1e-12
+        end
+        @testset "evaluate_system_matrix_and_lower_order_rhs! – zero couplings → zero rhs" begin
+            FOM, ORD = 4, 3
+            ORDP1 = ORD + 1
+            linear_terms = ntuple(k -> randn(FOM, FOM), ORDP1)
+            lower_order_couplings = [zeros(FOM) for _ in 1:ORD]
+            s = randn()
 
-    #         L = zeros(FOM, FOM)
-    #         rhs = zeros(FOM)
-    #         evaluate_system_matrix_and_lower_order_rhs!(
-    #             L, rhs, s, lower_order_couplings, linear_terms)
+            L = zeros(FOM, FOM)
+            rhs = zeros(FOM)
+            evaluate_system_matrix_and_lower_order_rhs!(
+                L, rhs, s, lower_order_couplings, linear_terms)
 
-    #         @test norm(rhs) ≤ 1e-15
-    #         @test norm(L - naive_matrix_poly(linear_terms, s)) ≤ 1e-10
-    #     end
+            @test norm(rhs) ≤ 1e-15
+            @test norm(L - naive_matrix_poly(linear_terms, s)) ≤ 1e-10
+        end
 
-    #     @testset "precompute_sparse_L_template" begin
-    #         @testset "precompute_sparse_L_template basic" begin
-    #             B1 = sparse([1, 2], [1, 2], [10.0, 20.0], 3, 3)
-    #             B2 = sparse([1, 3], [2, 3], [30.0, 40.0], 3, 3)
+        @testset "precompute_sparse_L_template" begin
+            @testset "precompute_sparse_L_template basic" begin
+                B1 = sparse([1, 2], [1, 2], [10.0, 20.0], 3, 3)
+                B2 = sparse([1, 3], [2, 3], [30.0, 40.0], 3, 3)
 
-    #             linear_terms = (B1, B2)
+                linear_terms = (B1, B2)
 
-    #             L_template, mappings = precompute_sparse_L_template(linear_terms)
+                L_template, mappings = precompute_sparse_L_template(linear_terms)
 
-    #             # --- 1. Check union sparsity pattern ---
-    #             union = (B1 .!= 0) .| (B2 .!= 0)
-    #             @test nnz(L_template) == count(!iszero, union)
+                # --- 1. Check union sparsity pattern ---
+                union = (B1 .!= 0) .| (B2 .!= 0)
+                @test nnz(L_template) == count(!iszero, union)
 
-    #             # --- 2. Check template has correct structure ---
-    #             @test size(L_template) == (3, 3)
+                # --- 2. Check template has correct structure ---
+                @test size(L_template) == (3, 3)
 
-    #             # --- 3. Check mapping correctness ---
-    #             for k in 1:2
-    #                 Bk = linear_terms[k]
-    #                 mapping_k = mappings[k]
+                # --- 3. Check mapping correctness ---
+                for k in 1:2
+                    Bk = linear_terms[k]
+                    mapping_k = mappings[k]
 
-    #                 for pos_k in 1:nnz(Bk)
-    #                     expected_val = Bk.nzval[pos_k]
-    #                     pos_L = mapping_k[pos_k]
+                    for pos_k in 1:nnz(Bk)
+                        expected_val = Bk.nzval[pos_k]
+                        pos_L = mapping_k[pos_k]
 
-    #                     @test L_template.nzval[pos_L] == 0.0 + 0im  # initially zero
-    #                 end
-    #             end
-    #         end
+                        @test L_template.nzval[pos_L] == 0.0 + 0im  # initially zero
+                    end
+                end
+            end
 
-    #         @testset "precompute_sparse_L_template – overlapping patterns" begin
-    #             # Both matrices have a nonzero at (1,1); the union should count it once.
-    #             B1 = sparse([1, 2], [1, 1], [1.0, 2.0], 3, 3)
-    #             B2 = sparse([1, 3], [1, 2], [3.0, 4.0], 3, 3)
-    #             L_tmpl, _ = precompute_sparse_L_template((B1, B2))
-    #             @test nnz(L_tmpl) == 3   # (1,1), (2,1), (3,2)
-    #         end
+            @testset "precompute_sparse_L_template – overlapping patterns" begin
+                # Both matrices have a nonzero at (1,1); the union should count it once.
+                B1 = sparse([1, 2], [1, 1], [1.0, 2.0], 3, 3)
+                B2 = sparse([1, 3], [1, 2], [3.0, 4.0], 3, 3)
+                L_tmpl, _ = precompute_sparse_L_template((B1, B2))
+                @test nnz(L_tmpl) == 3   # (1,1), (2,1), (3,2)
+            end
 
-    #         @testset "build_sparse_L_and_rhs! matches dense Horner" begin
-    #             FOM, ORD = 6, 3
-    #             ORDP1 = ORD + 1
-    #             # Random sparse matrices (~50 % density)
-    #             linear_terms_sparse = ntuple(
-    #                 k -> sprand(FOM, FOM, 0.5) .+ 1e-3 * sparse(I, FOM, FOM), ORDP1)
-    #             linear_terms_dense = ntuple(k -> Matrix(linear_terms_sparse[k]), ORDP1)
+            @testset "build_sparse_L_and_rhs! matches dense Horner" begin
+                FOM, ORD = 6, 3
+                ORDP1 = ORD + 1
+                # Random sparse matrices (~50 % density)
+                linear_terms_sparse = ntuple(
+                    k -> sprand(FOM, FOM, 0.5) .+ 1e-3 * sparse(I, FOM, FOM), ORDP1)
+                linear_terms_dense = ntuple(k -> Matrix(linear_terms_sparse[k]), ORDP1)
 
-    #             lower_order_couplings = [randn(ComplexF64, FOM) for _ in 1:ORD]
-    #             s = 1.2 + 0.5im
+                lower_order_couplings = [randn(ComplexF64, FOM) for _ in 1:ORD]
+                s = 1.2 + 0.5im
 
-    #             L_tmpl, maps = precompute_sparse_L_template(linear_terms_sparse)
-    #             rhs_sparse = zeros(ComplexF64, FOM)
-    #             build_sparse_L_and_rhs!(
-    #                 rhs_sparse, L_tmpl, maps, linear_terms_sparse, s, lower_order_couplings)
+                L_tmpl, maps = precompute_sparse_L_template(linear_terms_sparse)
+                rhs_sparse = zeros(ComplexF64, FOM)
+                build_sparse_L_and_rhs!(
+                    rhs_sparse, L_tmpl, maps, linear_terms_sparse, s, lower_order_couplings)
 
-    #             L_dense = zeros(ComplexF64, FOM, FOM)
-    #             rhs_dense = zeros(ComplexF64, FOM)
-    #             evaluate_system_matrix_and_lower_order_rhs!(
-    #                 L_dense, rhs_dense, s, lower_order_couplings, linear_terms_dense)
+                L_dense = zeros(ComplexF64, FOM, FOM)
+                rhs_dense = zeros(ComplexF64, FOM)
+                evaluate_system_matrix_and_lower_order_rhs!(
+                    L_dense, rhs_dense, s, lower_order_couplings, linear_terms_dense)
 
-    #             @test norm(Matrix(L_tmpl) - L_dense) ≤ 1e-10
-    #             @test norm(rhs_sparse - rhs_dense) ≤ 1e-10
-    #         end
-    #     end
-    # end #@testset HornerEvaluator.jl
+                @test norm(Matrix(L_tmpl) - L_dense) ≤ 1e-10
+                @test norm(rhs_sparse - rhs_dense) ≤ 1e-10
+            end
+        end
+    end #@testset HornerEvaluator.jl
 
     @testset "ColumnPolynomials.jl" begin
         @testset "precompute_column_polynomials – output dimensions" begin
@@ -478,10 +478,11 @@ using StaticArrays: SVector
 
         @testset "output dimensions" begin
             f = make_fixture()
-            (; FOM, nR, fom_matrices, C_coeffs, E_coeffs,
+            (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
             resonance, lower_order_couplings, external_dynamics, s) = f
 
-            n_sys = FOM + nR
+            # Constant width: the border is ROM columns wide regardless of nR.
+            n_sys = FOM + ROM
             M = zeros(ComplexF64, FOM, n_sys)
             rhs = zeros(ComplexF64, FOM)
             g = zeros(ComplexF64, FOM)
@@ -496,10 +497,10 @@ using StaticArrays: SVector
 
         @testset "left block M[:,1:FOM] equals L(s)" begin
             f = make_fixture()
-            (; FOM, nR, fom_matrices, C_coeffs, E_coeffs,
+            (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
             resonance, lower_order_couplings, external_dynamics, s) = f
 
-            M = zeros(ComplexF64, FOM, FOM + nR)
+            M = zeros(ComplexF64, FOM, FOM + ROM)
             rhs = zeros(ComplexF64, FOM)
             g = zeros(ComplexF64, FOM)
             assemble_cohomological_matrix_and_rhs!(
@@ -510,34 +511,36 @@ using StaticArrays: SVector
             @test norm(M[:, 1:FOM] - L_ref) ≤ 1e-10
         end
 
-        @testset "right block M[:,FOM+1:end] contains only resonant columns" begin
+        @testset "border column FOM+r is C_r(s) when resonant, zero otherwise" begin
             f = make_fixture()
-            (; FOM, ROM, nR, fom_matrices, C_coeffs, E_coeffs,
+            (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
             resonance, resonance_vec, lower_order_couplings, external_dynamics, s) = f
 
-            M = zeros(ComplexF64, FOM, FOM + nR)
+            # Pre-fill with garbage: the assembly must overwrite every border column,
+            # including the non-resonant ones it masks to zero.
+            M = fill(ComplexF64(7, -3), FOM, FOM + ROM)
             rhs = zeros(ComplexF64, FOM)
             g = zeros(ComplexF64, FOM)
             assemble_cohomological_matrix_and_rhs!(
                 M, rhs, s, fom_matrices, C_coeffs, E_coeffs,
                 resonance, lower_order_couplings, external_dynamics, g)
 
-            col = FOM + 1
             for r in 1:ROM
                 if resonance_vec[r]
                     c_ref = naive_evaluate_column(C_coeffs, r, s)
-                    @test norm(M[:, col] - c_ref) ≤ 1e-10
-                    col += 1
+                    @test norm(M[:, FOM + r] - c_ref) ≤ 1e-10
+                else
+                    @test all(iszero, M[:, FOM + r])
                 end
             end
         end
 
         @testset "rhs equals lower-order + external contributions" begin
             f = make_fixture()
-            (; FOM, nR, fom_matrices, C_coeffs, E_coeffs,
+            (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
             resonance, lower_order_couplings, external_dynamics, s) = f
 
-            M = zeros(ComplexF64, FOM, FOM + nR)
+            M = zeros(ComplexF64, FOM, FOM + ROM)
             rhs = zeros(ComplexF64, FOM)
             g = zeros(ComplexF64, FOM)
             assemble_cohomological_matrix_and_rhs!(
@@ -548,7 +551,7 @@ using StaticArrays: SVector
             rhs_ext = naive_external_rhs(E_coeffs, external_dynamics, s)
             @test norm(rhs - (rhs_lo .+ rhs_ext)) ≤ 1e-10
         end
-        @testset "no resonant modes → right block is empty, rhs still correct" begin
+        @testset "no resonant modes → border is all zeros, rhs still correct" begin
             FOM, ROM, N_EXT, ORD = 5, 3, 1, 2
             NVAR = ROM + N_EXT
             ORDP1 = ORD + 1
@@ -564,15 +567,16 @@ using StaticArrays: SVector
             external_dynamics = randn(T, N_EXT)
             s = 1.0 + 0.5im
 
-            M = zeros(T, FOM, FOM)   # n_sys = FOM + 0 = FOM
+            M = fill(T(1), FOM, FOM + ROM)   # width is ROM even at nR = 0
             rhs = zeros(T, FOM)
             g = zeros(T, FOM)
             assemble_cohomological_matrix_and_rhs!(
                 M, rhs, s, fom_matrices, C_coeffs, E_coeffs,
                 resonance, lower_order_couplings, external_dynamics, g)
 
-            @test size(M) == (FOM, FOM)
-            @test norm(M - naive_matrix_poly(fom_matrices, s)) ≤ 1e-10
+            @test size(M) == (FOM, FOM + ROM)
+            @test norm(M[:, 1:FOM] - naive_matrix_poly(fom_matrices, s)) ≤ 1e-10
+            @test all(iszero, M[:, (FOM + 1):(FOM + ROM)])
         end
         @testset "all modes resonant → right block has ROM columns" begin
             FOM, ROM, N_EXT, ORD = 4, 2, 1, 2
@@ -605,12 +609,12 @@ using StaticArrays: SVector
 
         @testset "idempotency – calling twice gives the same result" begin
             f = make_fixture()
-            (; FOM, nR, fom_matrices, C_coeffs, E_coeffs,
+            (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
             resonance, lower_order_couplings, external_dynamics, s) = f
 
-            M1 = zeros(ComplexF64, FOM, FOM + nR)
+            M1 = zeros(ComplexF64, FOM, FOM + ROM)
             rhs1 = zeros(ComplexF64, FOM)
-            M2 = zeros(ComplexF64, FOM, FOM + nR)
+            M2 = zeros(ComplexF64, FOM, FOM + ROM)
             rhs2 = zeros(ComplexF64, FOM)
             g = zeros(ComplexF64, FOM)
 

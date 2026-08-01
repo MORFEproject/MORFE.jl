@@ -17,6 +17,8 @@ end
 Pkg.instantiate()
 
 using MORFE
+using MORFE.InvarianceError: invariance_error_norms
+using Random: MersenneTwister
 
 using Gridap
 using GridapGmsh
@@ -352,6 +354,45 @@ end
 write_rdyn(Rr, joinpath(dirs.data, "equations.txt"))
 
 save_rom(dirs, W, R)
+
+# ---------------------------------------------------------------------------
+# A-posteriori check: does the computed manifold actually satisfy the invariance
+# equation ∂W/∂z·R(z) = F(W(z))?
+#
+# This is the validation that survives to sizes where there is no reference to
+# compare against — it evaluates the defining equation on the manifold itself.
+# Normalised by a representative term so the number is dimensionless and can be
+# compared across models.
+#
+# Seeded: the number goes into summary.txt, which is version-controlled, so it must
+# not change from run to run for reasons that have nothing to do with the model.
+# ---------------------------------------------------------------------------
+"""
+	invariance_residual(model, W, R, ROM; amplitude, n_samples, seed)
+		-> (absolute_rms, relative)
+
+Relative invariance-equation residual on a Gaussian point cloud of the given
+amplitude, normalised by ‖B₀·W₁(z)‖ over the same cloud.
+"""
+function invariance_residual(model, W, R, ROM;
+		amplitude = 1e-3, n_samples = 200, seed = 20260731)
+	rng = MersenneTwister(seed)
+	rms = invariance_error_norms(model, W, R; n_samples, amplitude, rng).rms
+	scale = 0.0
+	for _ in 1:n_samples
+		z = ComplexF64[complex(amplitude / sqrt(2) * randn(rng),
+			amplitude / sqrt(2) * randn(rng)) for _ in 1:ROM]
+		X = MORFE.Polynomials.evaluate(W.poly, z)
+		scale = max(scale, norm(model.linear_terms[1] * view(X, :, 1)))
+	end
+	return rms, rms / scale
+end
+
+_amp = 1e-3
+_res, _rel_res = invariance_residual(model, W, R, ROM; amplitude = _amp)
+println("\nInvariance residual (amplitude $_amp): ",
+	"absolute rms = $_res, relative = $_rel_res")
+
 write_summary(dirs, [
 	"example: 02_clamped_beam_gridap",
 	"model: clamped-clamped beam, St. Venant-Kirchhoff, Gridap backend",
@@ -362,5 +403,8 @@ write_summary(dirs, [
 	"parametrisation_order: $max_degree",
 	"n_monomials: $(length(mset))",
 	"cohomological_solve_time_s: $(_t_solve)",
+	"invariance_residual_amplitude: $_amp",
+	"invariance_residual_rms: $_res",
+	"invariance_residual_relative: $_rel_res",
 ])
 println("\nResults written to $(dirs.base)")

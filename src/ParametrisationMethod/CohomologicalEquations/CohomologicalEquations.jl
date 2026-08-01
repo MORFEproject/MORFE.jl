@@ -25,26 +25,38 @@ linear system per multi-index `α`.
 
 # System structure for multi-index `α`
 
-Let `s = ⟨λ, α⟩` be the superharmonic frequency and let `nR = |ℛ(α)|` be the
-number of master modes resonant at `α`.  The cohomological linear system is
+Let `s = ⟨λ, α⟩` be the superharmonic frequency and let `P = diag(ρ)` be the
+diagonal `0/1` matrix of the master modes resonant at `α`, `Q = I − P`.  The
+cohomological linear system is **bordered** and of **constant size** `FOM + ROM`:
 
 ```
-┌              ┐ ┌         ┐   ┌           ┐
-│  L(s)  C(s)  │ │  W[α]   │ = │  RHS_inv  │   FOM rows  (invariance)
-│  L̂(s)  Ĉ(s)  │ │  R_res  │   │  RHS_ort  │   nR  rows  (orthogonality)
-└              ┘ └         ┘   └           ┘
+┌                          ┐ ┌         ┐   ┌             ┐
+│  L(s)     C(s) P         │ │  W[α]   │ = │  RHS_inv    │   FOM rows  (invariance)
+│  P L̂(s)   P Ĉ(s) P + τQ  │ │  R[α]   │   │  P RHS_ort  │   ROM rows  (orthogonality)
+└                          ┘ └         ┘   └             ┘
 ```
 
 where:
 - `L(s)`  (`FOM × FOM`) is the parametrisation operator,
-- `C(s)`  (`FOM × nR`) acts on the unknown resonant reduced-dynamics coefficients,
-- `L̂(s)` (`nR × FOM`) is the orthogonality row operator,
-- `Ĉ(s)` (`nR × nR`) is the orthogonality joint operator,
+- `C(s)`  (`FOM × ROM`) acts on the unknown reduced-dynamics coefficients,
+- `L̂(s)` (`ROM × FOM`) is the orthogonality row operator,
+- `Ĉ(s)` (`ROM × ROM`) is the orthogonality joint operator,
 - `W[α] ∈ ℂᶠᵒᵐ` is the parametrisation coefficient,
-- `R_res ∈ ℂⁿᴿ` are the reduced-dynamics coefficients for resonant modes.
+- `R[α] ∈ ℂᴿᴼᴹ` are the master reduced-dynamics coefficients,
+- `τ = 1` on the non-resonant diagonal, so those rows read `R[r, α] = 0`.
 
-Non-resonant master modes are trivially zero and excluded from the system.
-External forcing modes are *known* and appear only on the right-hand side.
+Non-resonant master modes stay in the system as trivial equations rather than being
+compacted away.  That is what keeps the size — and on the sparse path the sparsity
+pattern — independent of `α`, so a single symbolic factorisation serves every
+monomial.  It costs nothing in accuracy: permuting the unknowns as
+`[W; R_res; R_non]` makes the matrix block triangular with an exactly decoupled `τI`
+block.  External forcing modes are *known* and appear only on the right-hand side.
+
+Solving the bordered system as a whole, rather than eliminating `L(s)` first, is a
+correctness requirement, not an optimisation: inner resonance is flagged by
+`|λ_r − s| < tol` while `det L(λ_r) = 0`, so `L(s_α)` is numerically singular at
+precisely the monomials that have a border to eliminate.  See the header comment of
+`CohomologicalSolver.jl`.
 
 ---
 
@@ -56,7 +68,7 @@ External forcing modes are *known* and appear only on the right-hand side.
 | [`OrthogonalityOperators`](@ref)    | Precomputed orthogonality-condition operator coefficients |
 | [`LowerOrderResources`](@ref)       | Lower-order coupling data and buffers |
 | [`CohomologicalBuffers`](@ref)      | Pre-allocated system-assembly scratch buffers |
-| [`SparseLinearSolverState`](@ref)   | Sparse-path solver handles and pre-allocated RHS buffer |
+| [`SparseLinearSolverState`](@ref)   | Sparse-path bordered template, index maps and solver handles |
 | [`CohomologicalContext`](@ref)      | Composed struct bundling all precomputed operators and resources |
 | [`solve_single_monomial!`](@ref)    | Solve the cohomological system for one multi-index |
 | [`solve_cohomological_equations!`](@ref) | Solve for all multi-indices in causal order |
@@ -77,6 +89,8 @@ using ..InvarianceEquation: assemble_cohomological_matrix_and_rhs!,
 	precompute_external_column_polynomials,
 	build_sparse_L_and_rhs!,
 	precompute_sparse_L_template,
+	precompute_sparse_bordered_template,
+	scatter_L_into_bordered!,
 	evaluate_column!,
 	evaluate_external_rhs!
 using ..MasterModeOrthogonality: assemble_orthogonality_matrix_and_rhs!,
@@ -89,15 +103,22 @@ using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
 using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using SparseArrays
-using KLU: klu, klu!
 using StaticArrays: SVector
 
 # Extension hooks: overridden by ext/MORFEPardisoExt.jl when Pardiso is loaded.
-_try_build_pardiso_solver(::Vararg{Any}) = nothing
-_pardiso_solve(args...; kwargs...) =
-    error("Pardiso solver object present but MORFEPardisoExt not active — internal error.")
+#
+# The split mirrors Pardiso's own phases so the symbolic analysis is computed once
+# and reused, which `Pardiso.solve` cannot do — it runs analysis + factorisation +
+# solve and then releases everything on every call.
+const _PARDISO_INACTIVE = "Pardiso solver object present but MORFEPardisoExt not active — internal error."
 
-export _try_build_pardiso_solver, _pardiso_solve
+_try_build_pardiso_solver(::Vararg{Any}) = nothing
+_pardiso_prepare!(args...) = error(_PARDISO_INACTIVE)          # configure + phase 11, once
+_pardiso_factorise_solve!(args...) = error(_PARDISO_INACTIVE)  # phases 22 + 33, per monomial
+_pardiso_release!(args...) = nothing                           # phase -1, on finalisation
+
+export _try_build_pardiso_solver, _pardiso_prepare!, _pardiso_factorise_solve!,
+	_pardiso_release!
 
 include("OperatorData.jl")
 include("SolverResources.jl")
@@ -291,22 +312,20 @@ function solve_single_monomial!(
 	compute_multilinear_terms!(ctx.buffers.ml_result, model, idx, W, ml_cache)
 
 	external_dynamics = view(R.poly.coefficients, (ROM+1):NVAR, idx)
-	nR = count(resonance)
-	n_sys = FOM + nR
+	n_sys = FOM + ROM
 
-	_solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+	_solve_monomial!(ctx, s, resonance, lower_order_couplings, external_dynamics)
 
 	sol = view(ctx.buffers.rhs, 1:n_sys)
 	W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
 
-	rr = 1
+	# Only resonant rows are read back.  `R[r, α] = 0` on non-resonant modes is the
+	# style choice that *defines* the parametrisation, not a computed quantity, so it
+	# is written directly rather than taken from the trivial rows of the solve — the
+	# hard zeros must not be able to pick up round-off from a pivot ordering, a row
+	# scaling, or a change of factoriser.
 	for r in 1:ROM
-		if resonance[r]
-			R.poly.coefficients[r, idx] = sol[FOM+rr]
-			rr += 1
-		else
-			R.poly.coefficients[r, idx] = zero(T)
-		end
+		R.poly.coefficients[r, idx] = resonance[r] ? sol[FOM+r] : zero(T)
 	end
 
 	compute_higher_derivative_coefficients!(

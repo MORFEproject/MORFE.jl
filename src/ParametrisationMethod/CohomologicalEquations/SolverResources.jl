@@ -47,26 +47,36 @@ end
 	CohomologicalBuffers{T}
 
 Pre-allocated scratch buffers for the cohomological system assembly and solve.
-Use `system_matrix` for dense and `system_matrix_rows`+ `system_matrix_columns` for sparse dispatch.
+
+Both paths solve the same constant-size `(FOM+ROM) × (FOM+ROM)` bordered system, but
+they materialise it differently, so only one of the two matrix buffers is allocated:
+
+- **dense path** uses `system_matrix`, the bordered matrix itself, LU'd in place;
+- **sparse path** uses `orthogonality_rows` as the staging area for the `ROM`
+  orthogonality rows, which are then scattered into the strided border positions of
+  the sparse template's `nzval` (the sparse bordered matrix lives in
+  [`SparseLinearSolverState`](@ref)).
+
+The unused buffer is a `0×0` placeholder.
 """
 struct CohomologicalBuffers{T}
-	system_matrix::Matrix{T}            # (FOM+ROM)×(FOM+ROM); dense bordered system or Schur workspace, for dense _solve_monomial
-	system_matrix_rows::Matrix{T}       # (FOM+ROM)×(ROM); dense bordered system or Schur workspace, for sparse _solve_monomial
-	system_matrix_columns::Matrix{T}    # (ROM)×(FOM+ROM); dense bordered system or Schur workspace, for sparse _solve_monomial
-	rhs::Vector{T}                      # length FOM+ROM; holds rhs then solution after ldiv!
-	external_rhs::Vector{T}             # length FOM; scratch for evaluate_external_rhs!
-	ml_result::Vector{T}                # length FOM; output of compute_multilinear_terms!
+	system_matrix::Matrix{T}       # (FOM+ROM)×(FOM+ROM); dense path only
+	orthogonality_rows::Matrix{T}  # ROM×(FOM+ROM); sparse path only — staged Ĵ(s) rows + corner
+	rhs::Vector{T}                 # length FOM+ROM; holds rhs then solution after ldiv!
+	external_rhs::Vector{T}        # length FOM; scratch for evaluate_external_rhs!
+	ml_result::Vector{T}           # length FOM; output of compute_multilinear_terms!
 end
 
 """
-	CohomologicalBuffers{T}(FOM, ROM) -> CohomologicalBuffers
+	CohomologicalBuffers(T, MT, FOM, ROM) -> CohomologicalBuffers
 
-Allocate all buffers for a system of full-order dimension `FOM` and `ROM` master modes.
+Allocate all buffers for a system of full-order dimension `FOM` and `ROM` master
+modes.  Dispatches on the FOM matrix type `MT`: `MT <: SparseMatrixCSC` selects the
+sparse layout, everything else the dense one.
 """
 function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int) where {T, MT}
 	return CohomologicalBuffers{T}(
 		Matrix{T}(undef, FOM + ROM, FOM + ROM),
-		Matrix{T}(undef, 0, 0),
 		Matrix{T}(undef, 0, 0),
 		Vector{T}(undef, FOM + ROM),
 		zeros(T, FOM),
@@ -76,7 +86,6 @@ end
 function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int) where {T, MT <: SparseMatrixCSC}
 	return CohomologicalBuffers{T}(
 		Matrix{T}(undef, 0, 0),
-		Matrix{T}(undef, FOM + ROM, ROM),
 		Matrix{T}(undef, ROM, FOM + ROM),
 		Vector{T}(undef, FOM + ROM),
 		zeros(T, FOM),
@@ -91,24 +100,41 @@ end
 """
 	SparseLinearSolverState{T}
 
-Sparse-path resources: the union-pattern `L(s)` template, its nzval index
-mappings, solver handles (Pardiso priority 1; KLU priority 2), and a
-pre-allocated bordered-RHS buffer that eliminates the per-monomial `hcat`
-allocation on the resonant sparse path.
+Sparse-path resources for the constant-size bordered cohomological system.
+
+`bordered` is the `(FOM+ROM) × (FOM+ROM)` matrix actually handed to the factoriser.
+Its `colptr`/`rowval` are fixed for the entire solve — only `nzval` is rewritten per
+monomial — so the symbolic factorisation cached in `fact` stays valid throughout.
+That invariant is the whole point of the constant-size formulation: the resonance
+mask changes the *values* of the border blocks, never their pattern.
+
+`L_template` is the separate square `FOM × FOM` workspace on which
+[`build_sparse_L_and_rhs!`](@ref) runs its fused Horner pass (it needs the transient
+intermediates `L[j](s)` to accumulate the lower-order RHS); the resulting `L(s)` is
+then block-copied into the `(1,1)` block of `bordered`, column by column.
+
+Solver priority: Pardiso when the extension is loaded, otherwise UMFPACK via
+`lu`/`lu!` — the latter reusing the cached symbolic analysis while redoing the
+numeric factorisation *with* partial pivoting on every monomial, which is what
+varying `s` requires.
 """
 struct SparseLinearSolverState{T}
-	L_template::SparseMatrixCSC{T}
-	L_mappings::Vector{Vector{Int}}
-	pardiso::Any   # Nothing, or an AbstractPardisoSolver when Pardiso ext is loaded
-	klu_cache::Ref{Any}                    # Ref(nothing) until first factorisation; always allocated
-	rhs_extended::Matrix{T}              # FOM × (ROM+1); avoids hcat per resonant monomial
+	bordered::SparseMatrixCSC{T}         # (FOM+ROM)²; constant pattern, per-monomial nzval
+	L_template::SparseMatrixCSC{T}       # FOM²; Horner workspace for L(s)
+	L_mappings::Vector{Vector{Int}}      # linear_terms[k].nzval → L_template.nzval
+	border_row_base::Vector{Int}         # length FOM; bordered[FOM+r, c] at base[c]+r-1
+	solve_scratch::Vector{T}             # length FOM+ROM; RHS copy, avoids ldiv!'s per-call copy
+	pardiso::Any                         # Nothing, or an AbstractPardisoSolver when the ext is loaded
+	pardiso_matrix::Ref{Any}             # Ref(nothing) until _pardiso_prepare! has run
+	fact::Ref{Any}                       # Ref(nothing) until the first successful factorisation
 end
 
 """
 	SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM) -> SparseLinearSolverState
 
-Initialise the sparse solver state.  Tries MKL Pardiso first, then
-open-source Pardiso, then falls back to KLU.
+Initialise the sparse solver state: build the constant-pattern bordered template
+around `L_template` and probe for Pardiso (MKL first, then open-source), falling
+back to UMFPACK.
 """
 function SparseLinearSolverState{T}(
 	L_template::SparseMatrixCSC{T},
@@ -117,7 +143,29 @@ function SparseLinearSolverState{T}(
 	ROM::Int,
 ) where {T}
 	ps = _try_build_pardiso_solver()
-	return SparseLinearSolverState{T}(
-		L_template, L_mappings, ps, Ref{Any}(nothing), Matrix{T}(undef, FOM, ROM + 1),
+	bordered, border_row_base = precompute_sparse_bordered_template(L_template, ROM)
+	state = SparseLinearSolverState{T}(
+		bordered, L_template, L_mappings, border_row_base,
+		Vector{T}(undef, FOM + ROM), ps, Ref{Any}(nothing), Ref{Any}(nothing),
 	)
+	# Pardiso's factorisation lives in C-side memory that the GC does not track, so it
+	# has to be released explicitly or every solve leaks one factorisation.
+	ps === nothing || finalizer(_release_pardiso!, state)
+	return state
+end
+
+"""
+	_release_pardiso!(state) -> nothing
+
+Finaliser: hand the Pardiso factorisation back. No-op on the UMFPACK path, and
+never allowed to throw — a finaliser that raises would be reported out of context.
+"""
+function _release_pardiso!(state::SparseLinearSolverState)
+	state.pardiso === nothing && return nothing
+	try
+		_pardiso_release!(state.pardiso, state.pardiso_matrix[])
+	catch
+		# Nothing useful to do during finalisation.
+	end
+	return nothing
 end

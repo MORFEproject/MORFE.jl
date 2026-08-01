@@ -44,22 +44,16 @@ function _timed_solve_single_monomial!(
 	rhs_r = @timed compute_multilinear_terms!(ctx.buffers.ml_result, model, idx, W, ml_cache)
 
 	external_dynamics = view(R.poly.coefficients, (ROM+1):NVAR, idx)
-	nR = count(resonance)
-	n_sys = FOM + nR
+	n_sys = FOM + ROM
 
-	solve_r = @timed _solve_monomial!(ctx, s, nR, resonance, lower_order_couplings, external_dynamics)
+	solve_r = @timed _solve_monomial!(ctx, s, resonance, lower_order_couplings, external_dynamics)
 
 	sol = view(ctx.buffers.rhs, 1:n_sys)
 	W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
 
-	rr = 1
+	# Mirrors solve_single_monomial!: only resonant rows are read back.
 	for r in 1:ROM
-		if resonance[r]
-			R.poly.coefficients[r, idx] = sol[FOM+rr]
-			rr += 1
-		else
-			R.poly.coefficients[r, idx] = zero(T)
-		end
+		R.poly.coefficients[r, idx] = resonance[r] ? sol[FOM+r] : zero(T)
 	end
 
 	compute_higher_derivative_coefficients!(

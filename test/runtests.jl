@@ -31,6 +31,7 @@ should_run(group) = GROUP == "all" || GROUP == group
             @testset "ParametriseEntry" begin
                 include("ParametrisationMethod/test_parametrise_entry.jl")
             end
+            include("ParametrisationMethod/test_bordered_solver.jl")
         end
     end
     if should_run("rom_io")

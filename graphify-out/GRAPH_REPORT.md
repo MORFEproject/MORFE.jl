@@ -1,16 +1,16 @@
-# Graph Report - MORFE_jl  (2026-07-14)
+# Graph Report - MORFE_jl  (2026-08-01)
 
 ## Corpus Check
-- 151 files · ~396,499 words
+- 158 files · ~417,893 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1206 nodes · 1221 edges · 148 communities (124 shown, 24 thin omitted)
+- 1273 nodes · 1286 edges · 155 communities (131 shown, 24 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a1eba307`
+- Built from commit: `750fc06e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,6 +28,7 @@
 - [[_COMMUNITY_Invariance Error Validation|Invariance Error Validation]]
 - [[_COMMUNITY_Gmsh Extensions|Gmsh Extensions]]
 - [[_COMMUNITY_Arpack Extension|Arpack Extension]]
+- [[_COMMUNITY_test_bordered_solver.jl|test_bordered_solver.jl]]
 - [[_COMMUNITY_BifurcationKit Extension|BifurcationKit Extension]]
 - [[_COMMUNITY_Plots Extension|Plots Extension]]
 - [[_COMMUNITY_Symbolic Extraction|Symbolic Extraction]]
@@ -37,9 +38,13 @@
 - [[_COMMUNITY_Multilinear RHS Terms|Multilinear RHS Terms]]
 - [[_COMMUNITY_Realification|Realification]]
 - [[_COMMUNITY_Gmsh-to-COMSOL Export|Gmsh-to-COMSOL Export]]
+- [[_COMMUNITY_test_parametrise_entry.jl|test_parametrise_entry.jl]]
+- [[_COMMUNITY_RomIO|RomIO]]
 - [[_COMMUNITY_Jordan Chain Solver|Jordan Chain Solver]]
+- [[_COMMUNITY_generate_literate.jl|generate_literate.jl]]
 - [[_COMMUNITY_Tensor Symmetry Types|Tensor Symmetry Types]]
 - [[_COMMUNITY_COMSOL-to-Gmsh Import|COMSOL-to-Gmsh Import]]
+- [[_COMMUNITY_RomComparison|RomComparison]]
 - [[_COMMUNITY_External Forcing Systems|External Forcing Systems]]
 - [[_COMMUNITY_Eigenpair Computation|Eigenpair Computation]]
 - [[_COMMUNITY_Pardiso Sparse Solver|Pardiso Sparse Solver]]
@@ -47,13 +52,16 @@
 - [[_COMMUNITY_Eigenmode Propagation|Eigenmode Propagation]]
 - [[_COMMUNITY_Invariance Equation|Invariance Equation]]
 - [[_COMMUNITY_FEM Cached RHS Replay|FEM Cached RHS Replay]]
+- [[_COMMUNITY_test_rom_comparison.jl|test_rom_comparison.jl]]
 - [[_COMMUNITY_Symbolic External System|Symbolic External System]]
+- [[_COMMUNITY_test_rom_io.jl|test_rom_io.jl]]
 - [[_COMMUNITY_Conjugate Symmetry|Conjugate Symmetry]]
 - [[_COMMUNITY_Master Mode Orthogonality|Master Mode Orthogonality]]
 - [[_COMMUNITY_Cached Split Structs|Cached Split Structs]]
 - [[_COMMUNITY_BifurcationKit Interface|BifurcationKit Interface]]
 - [[_COMMUNITY_Multilinear Maps|Multilinear Maps]]
 - [[_COMMUNITY_FEM Utility|FEM Utility]]
+- [[_COMMUNITY_Sparse Solve|Sparse Solve]]
 - [[_COMMUNITY_MORFE.jl — Next Steps|MORFE.jl — Next Steps]]
 - [[_COMMUNITY_Conjugate Symmetry Exploitation — Implementation Plan|Conjugate Symmetry Exploitation — Implementation Plan]]
 - [[_COMMUNITY_test_forces.jl|test_forces.jl]]
@@ -135,9 +143,9 @@
 - [[_COMMUNITY_validate.jl|validate.jl]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `CohomologicalEquations` - 22 edges
-2. `Eigenproblems` - 20 edges
-3. `MORFE` - 19 edges
+1. `CohomologicalEquations` - 23 edges
+2. `MORFE` - 21 edges
+3. `Eigenproblems` - 20 edges
 4. `Multiindices` - 18 edges
 5. `Resonance` - 18 edges
 6. `Conjugate Symmetry Exploitation — Implementation Plan` - 17 edges
@@ -151,27 +159,27 @@
   benchmark/morfe2/benchmark_speedup.jl → src/SpectralDecomposition/Eigenproblems.jl
 - `MechSolver` --inherits--> `AbstractEigensolver`  [EXTRACTED]
   benchmark/morfe2/profile_after_opt.jl → src/SpectralDecomposition/Eigenproblems.jl
-- `Mechanical_Problem_Solver` --inherits--> `AbstractEigensolver`  [EXTRACTED]
-  examples/02_clamped_beam_gridap/main.jl → src/SpectralDecomposition/Eigenproblems.jl
 - `MechSolver` --inherits--> `AbstractEigensolver`  [EXTRACTED]
   benchmark/order4/benchmark_o4.jl → src/SpectralDecomposition/Eigenproblems.jl
+- `Mechanical_Problem_Solver` --inherits--> `AbstractEigensolver`  [EXTRACTED]
+  examples/02_clamped_beam_gridap/main.jl → src/SpectralDecomposition/Eigenproblems.jl
 
 ## Import Cycles
 - None detected.
 
-## Communities (148 total, 24 thin omitted)
+## Communities (155 total, 24 thin omitted)
 
 ### Community 0 - "Eigensolvers"
-Cohesion: 0.07
-Nodes (29): Arpack, BenchmarkTools, Ferrite, Float64, Int, LinearAlgebra, LinearMaps, MORFE (+21 more)
+Cohesion: 0.06
+Nodes (32): Arpack, BenchmarkTools, Ferrite, Float64, Int, LinearAlgebra, LinearMaps, MORFE (+24 more)
 
 ### Community 1 - "Cohomological Equations"
 Cohesion: 0.09
-Nodes (20): KLU, CohomologicalEquations, Bool, FullOrderModel, Int, InvarianceEquation, LinearAlgebra, LowerOrderCouplings (+12 more)
+Nodes (19): CohomologicalEquations, Bool, FullOrderModel, Int, InvarianceEquation, LinearAlgebra, LowerOrderCouplings, MasterModeOrthogonality (+11 more)
 
 ### Community 2 - "MORFE Module Registry"
-Cohesion: 0.10
-Nodes (19): BifurcationKitInterface, CohomologicalEquations, FEMUtility, InvarianceError, Realification, Eigenproblems, Eigensolvers, ExternalSystems (+11 more)
+Cohesion: 0.09
+Nodes (21): BifurcationKitInterface, CohomologicalEquations, FEMUtility, InvarianceError, Realification, RomComparison, Eigenproblems, Eigensolvers (+13 more)
 
 ### Community 3 - "SDE Integrator"
 Cohesion: 0.15
@@ -209,6 +217,10 @@ Nodes (8): AbaqusToGmsh, ComsolToGmsh, Gmsh, GmshToComsol, MORFE, Printf, MORFEG
 Cohesion: 0.22
 Nodes (8): Arpack, LinearAlgebra, LinearMaps, MORFE, MORFE.Eigenproblems, MORFE.Eigensolvers, SparseArrays, MORFEArpackExt
 
+### Community 13 - "test_bordered_solver.jl"
+Cohesion: 0.12
+Nodes (11): LinearAlgebra, MORFE, MORFE.CohomologicalEquations, MORFE.Eigenproblems, MORFE.FullOrderModel, MORFE.InvarianceEquation, MORFE.InvarianceError, Random (+3 more)
+
 ### Community 14 - "BifurcationKit Extension"
 Cohesion: 0.25
 Nodes (7): BifurcationKit, LinearAlgebra, MORFE, MORFE.ParametrisationMethod, MORFE.Polynomials, MORFEBifurcationKitExt, MORFE.BifurcationKitInterface
@@ -245,9 +257,21 @@ Nodes (4): LinearAlgebra, Polynomials, StaticArrays, Realification
 Cohesion: 0.38
 Nodes (6): gmsh_to_comsol(), GmshToComsol, Gmsh, Printf, _write_elem_section(), _write_header()
 
+### Community 23 - "test_parametrise_entry.jl"
+Cohesion: 0.22
+Nodes (8): LinearAlgebra, MORFE, MORFE.CohomologicalEquations, MORFE.Eigenproblems, MORFE.FullOrderModel, MORFE.Multiindices, StaticArrays, Test
+
+### Community 24 - "RomIO"
+Cohesion: 0.33
+Nodes (5): ParametrisationMethod, Serialization, RomIO, save_rom(), write_rom_coefficients_csv()
+
 ### Community 25 - "Jordan Chain Solver"
 Cohesion: 0.29
 Nodes (4): LinearAlgebra, Printf, SparseArrays, JordanChain
+
+### Community 26 - "generate_literate.jl"
+Cohesion: 0.33
+Nodes (3): Literate, Markdown, Pkg
 
 ### Community 27 - "Tensor Symmetry Types"
 Cohesion: 0.57
@@ -256,6 +280,10 @@ Nodes (5): FullyAsymmetric, FullySymmetric, GroupwiseSymmetric, symmetry_type(),
 ### Community 28 - "COMSOL-to-Gmsh Import"
 Cohesion: 0.47
 Nodes (5): comsol_to_gmsh(), comsol_to_gmsh_linear(), ComsolToGmsh, Gmsh, _read_mesh()
+
+### Community 29 - "RomComparison"
+Cohesion: 0.47
+Nodes (5): compare_rom_coefficients(), _index(), RomIO, _load(), RomComparison
 
 ### Community 30 - "External Forcing Systems"
 Cohesion: 0.33
@@ -266,8 +294,8 @@ Cohesion: 0.33
 Nodes (3): Eigensolvers, LinearAlgebra, SparseArrays
 
 ### Community 32 - "Pardiso Sparse Solver"
-Cohesion: 0.40
-Nodes (4): MORFE, MORFE.CohomologicalEquations, MORFEPardisoExt, Pardiso
+Cohesion: 0.29
+Nodes (6): LinearAlgebra, MORFE, MORFE.CohomologicalEquations, SparseArrays, MORFEPardisoExt, Pardiso
 
 ### Community 33 - "Symbolics Extension"
 Cohesion: 0.40
@@ -285,6 +313,14 @@ Nodes (4): InvarianceEquation, LinearAlgebra, SparseArrays, StaticArrays
 Cohesion: 0.60
 Nodes (4): _accumulate_global_entries!(), _replay_all_fem_splits!(), _replay_split!(), _replay_term!()
 
+### Community 37 - "test_rom_comparison.jl"
+Cohesion: 0.40
+Nodes (4): MORFE.RomIO, MORFE, Random, Test
+
+### Community 39 - "test_rom_io.jl"
+Cohesion: 0.40
+Nodes (4): MORFE, MORFE.ParametrisationMethod, Random, Test
+
 ### Community 44 - "Master Mode Orthogonality"
 Cohesion: 0.50
 Nodes (3): LinearAlgebra, StaticArrays, MasterModeOrthogonality
@@ -292,6 +328,10 @@ Nodes (3): LinearAlgebra, StaticArrays, MasterModeOrthogonality
 ### Community 46 - "Cached Split Structs"
 Cohesion: 0.50
 Nodes (3): CachedSplit, Bool, Int
+
+### Community 52 - "Sparse Solve"
+Cohesion: 0.83
+Nodes (3): _bordered_solve!(), _refactorise!(), _singular_bordered_system()
 
 ### Community 64 - "MORFE.jl — Next Steps"
 Cohesion: 0.05
@@ -307,7 +347,7 @@ Nodes (28): a_g(), E_nl_g(), f2_gridap(), _f2_morfe!(), f2_naive(), _f2_naive_re
 
 ### Community 70 - "main.jl"
 Cohesion: 0.10
-Nodes (21): cubic_nonlinearity!(), E_nl(), g_quad(), h_cube(), Arpack, Float64, Gmsh, Gridap (+13 more)
+Nodes (20): cubic_nonlinearity!(), E_nl(), g_quad(), h_cube(), Arpack, Gmsh, Gridap, GridapGmsh (+12 more)
 
 ### Community 73 - "benchmark_speedup.jl"
 Cohesion: 0.08
@@ -538,24 +578,24 @@ Cohesion: 0.50
 Nodes (3): LinearAlgebra, MORFE.InvarianceEquation, StaticArrays
 
 ## Knowledge Gaps
-- **576 isolated node(s):** `Pkg`, `MORFE`, `Ferrite`, `FerriteGmsh`, `SparseArrays` (+571 more)
+- **614 isolated node(s):** `Pkg`, `MORFE`, `Ferrite`, `FerriteGmsh`, `SparseArrays` (+609 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AbstractEigensolver` connect `Eigensolvers` to `benchmark_speedup.jl`, `profile_after_opt.jl`, `main.jl`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **Why does `Mechanical_Problem_Solver` connect `main.jl` to `Eigensolvers`?**
+- **Why does `AbstractEigensolver` connect `Eigensolvers` to `benchmark_speedup.jl`, `profile_after_opt.jl`?**
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+- **Why does `Mechanical_Problem_Solver` connect `Eigensolvers` to `main.jl`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `Pkg`, `MORFE`, `Ferrite` to the rest of the system?**
-  _589 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _627 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Eigensolvers` be split into smaller, more focused modules?**
-  _Cohesion score 0.06543385490753911 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05975609756097561 - nodes in this community are weakly interconnected._
 - **Should `Cohomological Equations` be split into smaller, more focused modules?**
-  _Cohesion score 0.09 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08615384615384615 - nodes in this community are weakly interconnected._
 - **Should `MORFE Module Registry` be split into smaller, more focused modules?**
-  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
 - **Should `SDE Integrator` be split into smaller, more focused modules?**
   _Cohesion score 0.14736842105263157 - nodes in this community are weakly interconnected._

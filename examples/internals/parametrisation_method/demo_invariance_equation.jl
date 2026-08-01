@@ -80,8 +80,10 @@ external_dynamics = [-1000.0 + 0.0im]   # only one external mode
 # -------------------------------------------------------------------
 # 4.  Assemble the cohomological matrix and right‑hand side
 # -------------------------------------------------------------------
-nR = count(resonance)
-M = Matrix{ComplexF64}(undef, FOM, FOM + nR)
+# The border is ROM columns wide for every monomial — non-resonant modes get a zero
+# column rather than being compacted away, which is what keeps the sparsity pattern
+# (and hence the cached symbolic factorisation) constant across the whole solve.
+M = Matrix{ComplexF64}(undef, FOM, FOM + ROM)
 rhs = zeros(ComplexF64, FOM)
 g_buffer = zeros(ComplexF64, FOM)
 assemble_cohomological_matrix_and_rhs!(
@@ -90,7 +92,7 @@ assemble_cohomological_matrix_and_rhs!(
 )
 
 println("\n=== Assembled cohomological system ===")
-println("\nSystem matrix M (FOM × (FOM + nR)):\n", repr("text/plain", M))
+println("\nSystem matrix M (FOM × (FOM + ROM)):\n", repr("text/plain", M))
 println("\nRight‑hand side vector rhs:\n", rhs)
 
 # -------------------------------------------------------------------

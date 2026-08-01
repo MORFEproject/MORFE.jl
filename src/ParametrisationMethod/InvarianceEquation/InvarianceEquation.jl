@@ -187,7 +187,9 @@ export precompute_column_polynomials,
 	evaluate_external_rhs!,
 	assemble_cohomological_matrix_and_rhs!,
 	build_sparse_L_and_rhs!,
-	precompute_sparse_L_template
+	precompute_sparse_L_template,
+	precompute_sparse_bordered_template,
+	scatter_L_into_bordered!
 
 # =============================================================================
 # Full cohomological-matrix and RHS assembly (in-place only)
@@ -201,7 +203,12 @@ export precompute_column_polynomials,
 In-place variant: writes the invariance-equation system matrix and RHS directly into
 the caller-supplied `M` and `rhs` buffers.  No heap allocation occurs.
 
-`M`   must have size `FOM × n_sys` where `n_sys = FOM + nR`.
+`M`   must have size `FOM × (FOM + ROM)` — the border is **constant width** and the
+resonance mask selects its content rather than its size: column `FOM + r` holds
+`C_r(s)` when mode `r` is resonant and is zeroed otherwise.  The zeroed columns are
+harmless because the matching orthogonality row pins `R_{r,α} = 0`
+(see [`assemble_orthogonality_matrix_and_rhs!`](@ref)).
+
 `rhs` must have length `FOM`.  Both are overwritten on entry.
 `g_buffer` is the pre-allocated `FOM`-length scratch buffer for the external RHS.
 """
@@ -222,11 +229,12 @@ function assemble_cohomological_matrix_and_rhs!(
 	evaluate_system_matrix_and_lower_order_rhs!(
 		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
 	)
-	col = FOM + 1
 	for j in eachindex(resonance)
+		column = view(M, :, FOM + j)
 		if resonance[j]
-			evaluate_column!(view(M, :, col), s, j, C_coeffs)
-			col += 1
+			evaluate_column!(column, s, j, C_coeffs)
+		else
+			fill!(column, zero(eltype(M)))
 		end
 	end
 	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)

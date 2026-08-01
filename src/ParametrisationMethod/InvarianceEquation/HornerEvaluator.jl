@@ -154,6 +154,136 @@ function precompute_sparse_L_template(
 end
 
 """
+	precompute_sparse_bordered_template(L_template, ROM) -> (M, border_row_base)
+
+Allocate the constant-size `(FOM+ROM) × (FOM+ROM)` **bordered** cohomological matrix
+
+```
+	┌                              ┐
+	│  L(s)      C(s) P            │   FOM rows  (invariance)
+	│  P Ĵ(s)    P Ĉ(s) P + τ Q    │   ROM rows  (orthogonality / R_α = 0)
+	└                              ┘
+```
+
+whose sparsity pattern depends **only** on the union pattern of `L_template` and on
+`ROM` — never on the resonance mask `P = diag(ρ)` of the monomial being solved.
+Non-resonant border entries are carried as *numeric* zeros in structural positions,
+which is exactly what allows one symbolic factorisation to be reused for every
+monomial (see `_solve_monomial!`).
+
+Block layout, in CSC order:
+
+| block          | rows        | cols        | pattern                        |
+|:---------------|:------------|:------------|:-------------------------------|
+| `L`            | `1:FOM`     | `1:FOM`     | union pattern of `L_template`  |
+| `C P`          | `1:FOM`     | `FOM+1:end` | dense `FOM × ROM`              |
+| `P Ĵ`          | `FOM+1:end` | `1:FOM`     | dense `ROM × FOM`              |
+| `P Ĉ P + τ Q`  | `FOM+1:end` | `FOM+1:end` | dense `ROM × ROM`              |
+
+so `nnz(M) = nnz(L_template) + 2·FOM·ROM + ROM²`. Appending the border rows to each
+of the first `FOM` columns preserves sorted `rowval` because every union row index
+is `≤ FOM`.
+
+## Returns
+
+- `M :: SparseMatrixCSC` — the template; only `nzval` is ever written afterwards.
+- `border_row_base :: Vector{Int}` — length `FOM`; entry `M[FOM+r, c]` for `c ≤ FOM`
+  lives at `M.nzval[border_row_base[c] + r - 1]`.
+
+No `L → M` index table is returned or needed.  Because the `L` entries of column `c`
+are laid down as a contiguous *prefix* of that column, the map is affine within each
+column,
+
+```
+	L_template.nzval[p]  ↦  M.nzval[M.colptr[c] + (p - L_template.colptr[c])]
+```
+
+so [`scatter_L_into_bordered!`](@ref) is a per-column block copy rather than an
+indirect gather — which also saves an `nnz(L)`-length index vector.
+
+Border *column* positions need no table either: column `FOM+q` starts at
+`bq = M.colptr[FOM+q]`, so `C_q(s)` occupies the contiguous run
+`M.nzval[bq : bq+FOM-1]` and the corner entry `M[FOM+m, FOM+q]` sits at
+`bq + FOM + m - 1`.
+"""
+function precompute_sparse_bordered_template(
+	L_template::SparseMatrixCSC{Tv, Ti},
+	ROM::Int,
+) where {Tv, Ti}
+	FOM = size(L_template, 1)
+	N = FOM + ROM
+	nnz_M = nnz(L_template) + 2 * FOM * ROM + ROM^2
+
+	colptr = Vector{Ti}(undef, N + 1)
+	rowval = Vector{Ti}(undef, nnz_M)
+	border_row_base = Vector{Int}(undef, FOM)
+
+	colptr[1] = 1
+	for c in 1:FOM
+		lo = L_template.colptr[c]
+		hi = L_template.colptr[c+1] - 1
+		base = colptr[c]
+		# L entries first, as a contiguous prefix (all row indices ≤ FOM, already
+		# sorted) — this prefix layout is what makes the L → M map affine per column.
+		for (k, p) in enumerate(lo:hi)
+			rowval[base+k-1] = L_template.rowval[p]
+		end
+		# … then the ROM border rows, which keeps the column sorted.
+		b = base + (hi - lo + 1)
+		border_row_base[c] = b
+		for r in 1:ROM
+			rowval[b+r-1] = FOM + r
+		end
+		colptr[c+1] = b + ROM
+	end
+	for q in 1:ROM
+		base = colptr[FOM+q]
+		for i in 1:N
+			rowval[base+i-1] = i
+		end
+		colptr[FOM+q+1] = base + N
+	end
+
+	M = SparseMatrixCSC(N, N, colptr, rowval, zeros(Tv, nnz_M))
+	return M, border_row_base
+end
+
+"""
+	scatter_L_into_bordered!(M, L_template) -> M
+
+Copy the freshly evaluated `L(s)` from the standalone Horner workspace into the
+`(1,1)` block of the bordered template.
+
+`L`'s entries for column `c` sit contiguously in both matrices — at
+`L_template.colptr[c] …` and at `M.colptr[c] …` respectively (see
+[`precompute_sparse_bordered_template`](@ref)) — so each column is a single
+`copyto!` block move rather than an element-by-element gather through an index
+table.  Keeping this a separate step is what leaves [`build_sparse_L_and_rhs!`](@ref)
+untouched: it needs its own square workspace for the transient Horner intermediates
+`L[j](s)` that accumulate the lower-order RHS.
+"""
+function scatter_L_into_bordered!(M::SparseMatrixCSC, L_template::SparseMatrixCSC)
+	Mnz, Mcp = M.nzval, M.colptr
+	Lnz, Lcp = L_template.nzval, L_template.colptr
+	FOM = size(L_template, 1)
+	ROM = size(M, 1) - FOM
+	# Every column of M has exactly ROM more slots than the matching column of L, so a
+	# mismatched pair would still write *in bounds* — just into the wrong positions,
+	# silently. Check the identity that pins the layout instead of relying on bounds.
+	@assert ROM ≥ 0 && size(M, 2) == size(M, 1) "bordered matrix must be square and at \
+		least as large as L_template; got $(size(M)) against L $(size(L_template))"
+	@assert nnz(M) == nnz(L_template) + 2 * FOM * ROM + ROM^2 "bordered matrix was not \
+		built from this L_template: nnz(M) = $(nnz(M)) ≠ $(nnz(L_template) + 2 * FOM * ROM + ROM^2)"
+	@inbounds for c in 1:FOM
+		lo = Lcp[c]
+		n = Lcp[c+1] - lo
+		n == 0 && continue
+		copyto!(Mnz, Mcp[c], Lnz, lo, n)
+	end
+	return M
+end
+
+"""
 	build_sparse_L_and_rhs!(rhs, L_template, mappings, linear_terms, s, lower_order_couplings)
 	-> L_template
 
