@@ -79,7 +79,7 @@ function MORFE.CohomologicalEquations._try_build_pardiso_solver()
 	end
 	if ps === nothing
 		@warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
-			  "Falling back to UMFPACK (SuiteSparse) for the sparse cohomological solve."
+			  "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
 	end
 	return ps
 end
@@ -144,7 +144,7 @@ function MORFE.CohomologicalEquations._pardiso_factorise_solve!(
 		matrix type $(Pardiso.get_matrixtype(ps)). A large residual here points at the
 		configuration rather than the model — most likely the CSC/CSR transpose flag
 		(iparm[12]) or the matrix type. Load MORFE without Pardiso to fall back to
-		UMFPACK, which is exercised by the test suite.""")
+		KLU, which is exercised by the test suite.""")
 	end
 	return x
 end

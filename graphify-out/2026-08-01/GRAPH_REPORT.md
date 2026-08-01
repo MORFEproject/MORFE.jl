@@ -1,16 +1,16 @@
 # Graph Report - MORFE_jl  (2026-08-01)
 
 ## Corpus Check
-- 158 files · ~417,603 words
+- 158 files · ~418,171 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1273 nodes · 1286 edges · 155 communities (131 shown, 24 thin omitted)
+- 1274 nodes · 1287 edges · 155 communities (131 shown, 24 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `750fc06e`
+- Built from commit: `70cba046`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -143,7 +143,7 @@
 - [[_COMMUNITY_validate.jl|validate.jl]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `CohomologicalEquations` - 23 edges
+1. `CohomologicalEquations` - 24 edges
 2. `MORFE` - 21 edges
 3. `Eigenproblems` - 20 edges
 4. `Multiindices` - 18 edges
@@ -174,8 +174,8 @@ Cohesion: 0.06
 Nodes (32): Arpack, BenchmarkTools, Ferrite, Float64, Int, LinearAlgebra, LinearMaps, MORFE (+24 more)
 
 ### Community 1 - "Cohomological Equations"
-Cohesion: 0.09
-Nodes (19): CohomologicalEquations, Bool, FullOrderModel, Int, InvarianceEquation, LinearAlgebra, LowerOrderCouplings, MasterModeOrthogonality (+11 more)
+Cohesion: 0.08
+Nodes (20): KLU, CohomologicalEquations, Bool, FullOrderModel, Int, InvarianceEquation, LinearAlgebra, LowerOrderCouplings (+12 more)
 
 ### Community 2 - "MORFE Module Registry"
 Cohesion: 0.09
@@ -578,7 +578,7 @@ Cohesion: 0.50
 Nodes (3): LinearAlgebra, MORFE.InvarianceEquation, StaticArrays
 
 ## Knowledge Gaps
-- **614 isolated node(s):** `Pkg`, `MORFE`, `Ferrite`, `FerriteGmsh`, `SparseArrays` (+609 more)
+- **615 isolated node(s):** `Pkg`, `MORFE`, `Ferrite`, `FerriteGmsh`, `SparseArrays` (+610 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -586,15 +586,15 @@ Nodes (3): LinearAlgebra, MORFE.InvarianceEquation, StaticArrays
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AbstractEigensolver` connect `Eigensolvers` to `benchmark_speedup.jl`, `profile_after_opt.jl`?**
-  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Why does `Mechanical_Problem_Solver` connect `Eigensolvers` to `main.jl`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `Pkg`, `MORFE`, `Ferrite` to the rest of the system?**
-  _627 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _628 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Eigensolvers` be split into smaller, more focused modules?**
   _Cohesion score 0.05975609756097561 - nodes in this community are weakly interconnected._
 - **Should `Cohomological Equations` be split into smaller, more focused modules?**
-  _Cohesion score 0.08615384615384615 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08262108262108261 - nodes in this community are weakly interconnected._
 - **Should `MORFE Module Registry` be split into smaller, more focused modules?**
   _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
 - **Should `SDE Integrator` be split into smaller, more focused modules?**

@@ -169,7 +169,9 @@ whose sparsity pattern depends **only** on the union pattern of `L_template` and
 `ROM` — never on the resonance mask `P = diag(ρ)` of the monomial being solved.
 Non-resonant border entries are carried as *numeric* zeros in structural positions,
 which is exactly what allows one symbolic factorisation to be reused for every
-monomial (see `_solve_monomial!`).
+monomial. The system being represented is documented in the `CohomologicalEquations`
+module docstring; what follows is this function's own contract — where each block
+lands in the CSC arrays, which the assembly in `_solve_monomial!` writes to directly.
 
 Block layout, in CSC order:
 

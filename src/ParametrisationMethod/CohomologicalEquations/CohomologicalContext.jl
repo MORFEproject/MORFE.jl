@@ -10,7 +10,7 @@ every monomial.  The 22 flat fields of the previous design are composed into fiv
 named sub-structs, making data provenance explicit at every call site:
 
 ```
-ctx.invariance.C_coeffs      (was: ctx.invariance_C_coeffs)
+ctx.invariance.column_coeffs (was: ctx.invariance_C_coeffs)
 ctx.orthogonality.J_coeffs   (was: ctx.orthogonality_J_coeffs)
 ctx.buffers.rhs              (was: ctx.rhs_buffer)
 ctx.lower_order.buffer       (was: ctx.lower_order_buffer)

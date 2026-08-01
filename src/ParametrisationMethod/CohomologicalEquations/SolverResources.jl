@@ -100,33 +100,38 @@ end
 """
 	SparseLinearSolverState{T}
 
-Sparse-path resources for the constant-size bordered cohomological system.
+Sparse-path resources for the constant-size bordered cohomological system (see the
+[`CohomologicalEquations`](@ref) module docstring for the system itself).
 
 `bordered` is the `(FOM+ROM) × (FOM+ROM)` matrix actually handed to the factoriser.
-Its `colptr`/`rowval` are fixed for the entire solve — only `nzval` is rewritten per
-monomial — so the symbolic factorisation cached in `fact` stays valid throughout.
-That invariant is the whole point of the constant-size formulation: the resonance
-mask changes the *values* of the border blocks, never their pattern.
+**Its `colptr`/`rowval` are fixed for the entire solve — only `nzval` is rewritten
+per monomial** — which is what keeps the symbolic factorisation cached in `fact`
+valid throughout, and is the reason the border is masked rather than compacted.
 
 `L_template` is the separate square `FOM × FOM` workspace on which
 [`build_sparse_L_and_rhs!`](@ref) runs its fused Horner pass (it needs the transient
 intermediates `L[j](s)` to accumulate the lower-order RHS); the resulting `L(s)` is
 then block-copied into the `(1,1)` block of `bordered`, column by column.
 
-Solver priority: Pardiso when the extension is loaded, otherwise UMFPACK via
-`lu`/`lu!` — the latter reusing the cached symbolic analysis while redoing the
-numeric factorisation *with* partial pivoting on every monomial, which is what
-varying `s` requires.
+Solver priority: Pardiso when the extension is loaded, otherwise KLU via
+`klu`/`klu_factor!` — the latter reusing the cached symbolic analysis while redoing
+the numeric factorisation *with* partial pivoting on every monomial, which is what
+varying `s` requires.  Note `klu_factor!`, not the exported `klu!`: that one is
+`klu_refactor` and freezes the pivot sequence.
 """
-struct SparseLinearSolverState{T}
+# `mutable` is load-bearing, not incidental: the Pardiso branch attaches a finaliser
+# to release C-side memory, and Julia refuses to finalise an immutable object.
+mutable struct SparseLinearSolverState{T}
 	bordered::SparseMatrixCSC{T}         # (FOM+ROM)²; constant pattern, per-monomial nzval
 	L_template::SparseMatrixCSC{T}       # FOM²; Horner workspace for L(s)
 	L_mappings::Vector{Vector{Int}}      # linear_terms[k].nzval → L_template.nzval
 	border_row_base::Vector{Int}         # length FOM; bordered[FOM+r, c] at base[c]+r-1
-	solve_scratch::Vector{T}             # length FOM+ROM; RHS copy, avoids ldiv!'s per-call copy
+	solve_scratch::Vector{T}             # Pardiso only: RHS copy, since its solve needs
+	                                     # distinct in/out. Empty on the KLU path, whose
+	                                     # ldiv! is genuinely in-place.
 	pardiso::Any                         # Nothing, or an AbstractPardisoSolver when the ext is loaded
-	pardiso_matrix::Ref{Any}             # Ref(nothing) until _pardiso_prepare! has run
-	fact::Ref{Any}                       # Ref(nothing) until the first successful factorisation
+	pardiso_matrix::Any                  # nothing until _pardiso_prepare! has run
+	fact::Any                            # nothing until the first successful factorisation
 end
 
 """
@@ -134,7 +139,7 @@ end
 
 Initialise the sparse solver state: build the constant-pattern bordered template
 around `L_template` and probe for Pardiso (MKL first, then open-source), falling
-back to UMFPACK.
+back to KLU.
 """
 function SparseLinearSolverState{T}(
 	L_template::SparseMatrixCSC{T},
@@ -146,10 +151,14 @@ function SparseLinearSolverState{T}(
 	bordered, border_row_base = precompute_sparse_bordered_template(L_template, ROM)
 	state = SparseLinearSolverState{T}(
 		bordered, L_template, L_mappings, border_row_base,
-		Vector{T}(undef, FOM + ROM), ps, Ref{Any}(nothing), Ref{Any}(nothing),
+		ps === nothing ? T[] : Vector{T}(undef, FOM + ROM),
+		ps, nothing, nothing,
 	)
 	# Pardiso's factorisation lives in C-side memory that the GC does not track, so it
-	# has to be released explicitly or every solve leaks one factorisation.
+	# has to be released explicitly or every solve leaks one factorisation. This is
+	# also why the struct must stay `mutable` — Julia will not finalise an immutable
+	# object, and without Pardiso installed the guard below short-circuits, so nothing
+	# in CI reaches this line.
 	ps === nothing || finalizer(_release_pardiso!, state)
 	return state
 end
@@ -157,13 +166,13 @@ end
 """
 	_release_pardiso!(state) -> nothing
 
-Finaliser: hand the Pardiso factorisation back. No-op on the UMFPACK path, and
+Finaliser: hand the Pardiso factorisation back. No-op on the KLU path, and
 never allowed to throw — a finaliser that raises would be reported out of context.
 """
 function _release_pardiso!(state::SparseLinearSolverState)
 	state.pardiso === nothing && return nothing
 	try
-		_pardiso_release!(state.pardiso, state.pardiso_matrix[])
+		_pardiso_release!(state.pardiso, state.pardiso_matrix)
 	catch
 		# Nothing useful to do during finalisation.
 	end

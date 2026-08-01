@@ -103,6 +103,11 @@ using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
 using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using SparseArrays
+# `klu_factor!` is deliberately not the exported `klu!`. `klu!` maps to
+# `klu_refactor`, which reuses the pivot sequence from the first factorisation;
+# `klu_factor!` re-pivots while reusing the cached symbolic analysis, which is what a
+# value-varying `s` requires. See `_refactorise!`.
+using KLU: klu, klu_factor!
 using StaticArrays: SVector
 
 # Extension hooks: overridden by ext/MORFEPardisoExt.jl when Pardiso is loaded.

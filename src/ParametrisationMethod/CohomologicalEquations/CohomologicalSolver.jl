@@ -1,41 +1,39 @@
 # =============================================================================
-# The bordered cohomological system
+# Solving the bordered cohomological system
 #
-# Every monomial α is solved from the same constant-size system
+# The system itself — its block structure, the resonance masking, and why the
+# constant size is equivalent to the compacted one — is documented once, in the
+# `CohomologicalEquations` module docstring.  What follows is only what is specific
+# to *solving* it, and each point below is a trap someone will otherwise re-open.
 #
-#     ┌                            ┐ ┌     ┐   ┌       ┐
-#     │  L(s)      C(s) P          │ │ W_α │ = │  b_α  │   FOM rows  (invariance)
-#     │  P Ĵ(s)    P Ĉ(s) P + τ Q  │ │ R_α │   │ P g_α │   ROM rows  (orthogonality)
-#     └                            ┘ └     ┘   └       ┘
+# 1. Do not eliminate L(s) first.  Inner resonance is flagged by |λ_r − s| < tol
+#    while det L(λ_r) = 0, so "α is resonant" means precisely "L(s_α) is numerically
+#    singular" — and only resonant monomials have a border to eliminate.  Forming
+#    L(s)⁻¹b and L(s)⁻¹C (the bordering elimination method) therefore has backward
+#    error scaling with κ(L) → ∞ exactly where it would be used, and the two
+#    subsequent differences of large quantities cancel catastrophically.  Factorising
+#    the bordered matrix whole keeps the backward error at κ(M), which stays O(1)
+#    because the border spans L's near-null directions (Keller's bordering lemma;
+#    Govaerts, SIMAX 1991).
 #
-# with P = diag(resonance), Q = I − P and τ = 1.  Row FOM+r is the orthogonality
-# condition when mode r is resonant, and the trivial equation R[r, α] = 0 when it
-# is not.  Permuting the unknowns as [W; R_res; R_non] makes the system block
-# triangular with an exactly decoupled τI block, so this is equivalent to the
-# compacted (FOM+nR) system — but its size, and on the sparse path its sparsity
-# pattern, no longer depend on the monomial.
+# 2. The factorisation must re-pivot on every monomial.  Point 1 holds only if
+#    pivoting may move rows across the border, so a refactorisation that reuses a
+#    frozen pivot sequence (KLU's `klu!` = klu_refactor) degrades precisely at the
+#    resonances.  `_refactorise!` uses `klu_factor!`, which re-pivots while reusing
+#    the cached symbolic analysis.
 #
-# Why not eliminate L first.  Inner resonance is flagged by |λ_r − s| < tol, and
-# det L(λ_r) = 0, so "α is resonant" means precisely "L(s_α) is numerically
-# singular".  Forming L(s)⁻¹b and L(s)⁻¹C — the bordering elimination method —
-# therefore has backward error scaling with κ(L) → ∞ exactly on the monomials it
-# would be used for, and the two subsequent differences of large quantities cancel
-# catastrophically.  Factorising the bordered matrix as a whole instead keeps the
-# backward error at κ(M), which stays O(1) because the border spans L's near-null
-# directions (Keller's bordering lemma; Govaerts, SIMAX 1991).  Stability relies on
-# pivoting being free to swap rows across the border, so the numeric factorisation
-# must re-pivot on every monomial — see `_refactorise!`.
+# 3. Never *declare* symmetry to a backend — let each one decide.  The bordered
+#    pattern is structurally symmetric whenever the L union pattern is (the border
+#    contributes a dense row together with its matching dense column), which is the
+#    common FE case.  A solver told to exploit that symmetry constrains its
+#    permutation to preserve it, forfeiting the row interchange point 1 depends on.
+#    Given the choice, a general-purpose solver reaches the right conclusion by
+#    itself.  Do not force a strategy here, and do not declare a symmetric matrix
+#    type to Pardiso — see ext/MORFEPardisoExt.jl.
 #
-# A note on solver strategy, because it is easy to break by "helping".  The bordered
-# pattern is structurally symmetric whenever the L union pattern is — the border
-# contributes a dense row together with its matching dense column — which is the
-# common FE case.  A solver told to exploit that symmetry will constrain its
-# permutation to preserve it, and so forfeit the row interchange the border depends
-# on.  We therefore never *declare* symmetry to any backend; we let each one decide.
-# Measured: UMFPACK's AUTO strategy, handed a structurally symmetric bordered matrix,
-# selects the unsymmetric strategy (UMFPACK_STRATEGY_USED = 1, pivot tolerance 0.1),
-# i.e. it reaches the right conclusion on its own.  Do not force a strategy here, and
-# do not declare a symmetric matrix type to Pardiso — see ext/MORFEPardisoExt.jl.
+# The measurements behind points 2 and 3 — factoriser timings, fill, accuracy at a
+# genuine near-singularity — are recorded outside the source, where they can be
+# re-run and re-checked rather than silently ageing here.
 # =============================================================================
 
 # =============================================================================
@@ -43,50 +41,45 @@
 # =============================================================================
 
 """
-	_refactorise!(fact, A) -> factorisation object
+	_refactorise!(ss, A) -> factorisation object
 
-Return a factorisation of `A`, reusing the cached symbolic analysis in `fact` when
+Return a factorisation of `A`, reusing the symbolic analysis cached in `ss.fact` when
 one is present.
 
 The first call performs the full analysis and stores it; subsequent calls redo only
-the **numeric** factorisation, with partial pivoting, via `lu!`. That distinction
-matters: the bordered matrix changes value on every monomial and goes near-singular
-in its `(1,1)` block at resonances, so a frozen pivot sequence — what a pure
-refactorisation such as KLU's `klu_refactor` would reuse — degrades exactly where
-accuracy is needed. `lu!` reuses `F.symbolic` only.
+the **numeric** factorisation via `klu_factor!`, which re-pivots while reusing the
+cached symbolic analysis. That distinction is the whole point: the bordered matrix
+changes value on every monomial and goes near-singular in its `(1,1)` block at
+resonances, so a frozen pivot sequence degrades exactly where accuracy is needed.
+
+**Never use `klu!` here.** It maps to `klu_refactor`, which reuses the pivot sequence
+chosen at the first monomial — the latent defect this whole change exists to remove.
 
 `A`'s sparsity pattern must be identical on every call; `SparseLinearSolverState`
 guarantees this by construction (only `nzval` is ever written).
 
-On the first call the factorisation's value array is **aliased** to `A.nzval`, so the
-per-monomial assembly writes straight into what UMFPACK reads and no values have to
-be copied in afterwards.  At `nnz ≈ 1e7` that removes a ~160 MB memcpy from every
-monomial.  Only `nzval` is shared: `colptr`/`rowval` stay the factorisation's own
-copies, and they are invariant anyway, which is what keeps the cached analysis valid.
+`klu` takes `A.nzval` by reference rather than copying it, so the factorisation and
+the template share one value array and the per-monomial assembly writes straight into
+what KLU reads. Nothing has to be copied in afterwards, and no explicit aliasing step
+is needed. `colptr`/`rowval` remain KLU's own (0-based) copies, and they are invariant
+anyway, which is what keeps the cached analysis valid.
 """
-function _refactorise!(fact::Ref{Any}, A::SparseMatrixCSC)
-	F = fact[]
+function _refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
+	F = ss.fact
 	if F === nothing
 		# `check = false` so that a singular *first* monomial surfaces through the
-		# caller's `issuccess` test like every later one, rather than throwing a bare
-		# SingularException from a different code path.
-		F = lu(A; check = false)
-		# `lu` copies the values, so alias them back onto the template. Guarded
-		# because it relies on `UmfpackLU.nzval` being a plain, assignable field.
-		length(F.nzval) == nnz(A) || error(
-			"UMFPACK value array has length $(length(F.nzval)) but the bordered " *
-			"template has nnz = $(nnz(A)); cannot alias. This means `lu` no longer " *
-			"preserves the pattern verbatim (e.g. it dropped stored zeros), which " *
-			"would also invalidate symbolic-factorisation reuse.")
-		F.nzval = A.nzval
+		# caller's `issuccess` test like every later one, rather than throwing from a
+		# different code path. `allowsingular` keeps KLU from halting inside the
+		# factorisation so that `issuccess` is what decides.
+		F = klu(A; check = false, allowsingular = true)
 		# Only cache a factorisation that succeeded. A failed one is returned to the
 		# caller (which raises) but not kept: if that error is ever caught and the
 		# solve retried, the next call must redo the analysis rather than refactorise
 		# from a half-initialised object.
-		issuccess(F) && (fact[] = F)
+		issuccess(F) && (ss.fact = F)
 		return F
 	end
-	lu!(F; reuse_symbolic = true, check = false)
+	klu_factor!(F; check = false, allowsingular = true)
 	return F
 end
 
@@ -121,33 +114,31 @@ end
 	_bordered_solve!(ss, x, s) -> x
 
 Solve `bordered * x = x` in place, dispatching to Pardiso when available and to the
-cached UMFPACK factorisation otherwise.
+cached KLU factorisation otherwise.
 
-Both branches reuse a symbolic analysis computed once: UMFPACK through
+Both branches reuse a symbolic analysis computed once: KLU through
 [`_refactorise!`](@ref), Pardiso through its phase split (`_pardiso_prepare!` once,
 then numeric-factorise + solve per monomial).
 
-The solve is routed through `ss.solve_scratch` because `ldiv!(F, x)` on an
-`UmfpackLU` is defined as `ldiv!(x, F, copy(x))` — the two-argument form allocates a
-copy of the right-hand side on every monomial. The three-argument form with a
-persistent buffer does not.
+KLU's `ldiv!` is genuinely in-place, so the KLU branch needs no intermediate buffer.
+`ss.solve_scratch` exists for Pardiso, whose solve requires distinct input and output
+arrays.
 """
 function _bordered_solve!(ss::SparseLinearSolverState, x::AbstractVector, s)
 	if ss.pardiso !== nothing
-		if ss.pardiso_matrix[] === nothing
+		if ss.pardiso_matrix === nothing
 			# Configure and analyse once. The matrix handed back is whatever form
 			# Pardiso wants for the detected type; the pattern never changes after
 			# this, so the analysis stays valid for the whole solve.
-			ss.pardiso_matrix[] = _pardiso_prepare!(ss.pardiso, ss.bordered)
+			ss.pardiso_matrix = _pardiso_prepare!(ss.pardiso, ss.bordered)
 		end
 		copyto!(ss.solve_scratch, x)
-		_pardiso_factorise_solve!(ss.pardiso, ss.pardiso_matrix[], x, ss.solve_scratch)
+		_pardiso_factorise_solve!(ss.pardiso, ss.pardiso_matrix, x, ss.solve_scratch)
 		return x
 	end
-	F = _refactorise!(ss.fact, ss.bordered)
+	F = _refactorise!(ss, ss.bordered)
 	issuccess(F) || _singular_bordered_system(s)
-	copyto!(ss.solve_scratch, x)
-	ldiv!(x, F, ss.solve_scratch)
+	ldiv!(F, x)
 	return x
 end
 
@@ -179,7 +170,7 @@ function _assemble_bordered_system!(
 		view(ctx.buffers.system_matrix, 1:FOM, 1:n_sys),
 		view(ctx.buffers.rhs, 1:FOM),
 		s, ctx.linear_terms,
-		ctx.invariance.C_coeffs, ctx.invariance.E_coeffs,
+		ctx.invariance.column_coeffs, ctx.invariance.E_coeffs,
 		resonance, lower_order_couplings, external_dynamics,
 		ctx.buffers.external_rhs,
 	)
@@ -188,7 +179,7 @@ function _assemble_bordered_system!(
 		view(ctx.buffers.system_matrix, (FOM+1):n_sys, 1:n_sys),
 		view(ctx.buffers.rhs, (FOM+1):n_sys),
 		s, ctx.orthogonality.J_coeffs,
-		ctx.orthogonality.C_coeffs, ctx.orthogonality.E_coeffs,
+		ctx.orthogonality.corner_coeffs, ctx.orthogonality.E_coeffs,
 		resonance, lower_order_couplings, external_dynamics,
 	)
 	return
@@ -266,7 +257,7 @@ function _solve_monomial!(
 		base = M.colptr[FOM+r]
 		column = view(Mnz, base:(base+FOM-1))
 		if resonance[r]
-			evaluate_column!(column, s, r, ctx.invariance.C_coeffs)
+			evaluate_column!(column, s, r, ctx.invariance.column_coeffs)
 		else
 			fill!(column, zero(T))
 		end
@@ -277,7 +268,7 @@ function _solve_monomial!(
 	assemble_orthogonality_matrix_and_rhs!(
 		orth, view(ctx.buffers.rhs, (FOM+1):n_sys), s,
 		ctx.orthogonality.J_coeffs,
-		ctx.orthogonality.C_coeffs,
+		ctx.orthogonality.corner_coeffs,
 		ctx.orthogonality.E_coeffs,
 		resonance, lower_order_couplings, external_dynamics,
 	)

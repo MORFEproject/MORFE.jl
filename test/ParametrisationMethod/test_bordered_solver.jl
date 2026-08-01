@@ -271,12 +271,33 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
 		@test rms / scale ≤ 1e-6
 	end
 
-	# ── 7. The factorisation reads the template in place (O1) ────────────────
+	# ── 7. Solver state must be finalisable ──────────────────────────────────
+	# The Pardiso branch attaches a finaliser to release C-side memory, and Julia
+	# refuses to finalise an immutable object. Because `_try_build_pardiso_solver`
+	# returns `nothing` without Pardiso installed, the `ps === nothing ||` guard
+	# short-circuits and CI never reaches that line — which is exactly how a hard
+	# construction-time error shipped unnoticed. Check the property directly.
+	@testset "solver state is finalisable (Pardiso teardown path)" begin
+		n, ROM = 20, 2
+		K = spdiagm(-1 => -ones(n - 1), 0 => 2.0 * ones(n), 1 => -ones(n - 1))
+		Mass = spdiagm(0 => ones(n))
+		L_tmpl, L_maps = precompute_sparse_L_template(
+			(complex(K), complex(0.01 .* Mass), complex(Mass)))
+		ss = MORFE.CohomologicalEquations.SparseLinearSolverState{ComplexF64}(
+			L_tmpl, L_maps, n, ROM)
+		@test ismutable(ss)
+		# The call the Pardiso branch makes; on an immutable state this throws
+		# "cannot be finalized because they are not mutable".
+		@test (finalizer(_ -> nothing, ss); true)
+	end
+
+	# ── 7. The factorisation reads the template in place ─────────────────────
 	# Assembly writes into `ss.bordered.nzval` and never copies those values into the
-	# factorisation, which is only correct because the two share one array. Removing
-	# the alias does make the sparse ≡ dense testsets above fail — verified — but as
-	# an opaque numerical mismatch. This pins the invariant directly, and also covers
-	# the case where a rebind silently costs the copy back without breaking results.
+	# factorisation, which is only correct because the two share one array — `klu`
+	# takes `nzval` by reference. Breaking that does make the sparse ≡ dense testsets
+	# above fail (verified), but as an opaque numerical mismatch. This pins the
+	# invariant directly, and also covers a rebind that silently costs a copy back
+	# without changing results.
 	@testset "factorisation aliases the bordered template" begin
 		n, ROM = 40, 2
 		K = spdiagm(-1 => -ones(n - 1), 0 => 2.0 * ones(n), 1 => -ones(n - 1))
@@ -300,9 +321,10 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
 		end
 
 		fill_template!(0.3 + 1.1im)
-		F = MORFE.CohomologicalEquations._refactorise!(ss.fact, ss.bordered)
+		F = MORFE.CohomologicalEquations._refactorise!(ss, ss.bordered)
 		@test issuccess(F)
 		@test F.nzval === ss.bordered.nzval
+
 
 		# Behavioural form of the same invariant, independent of *why* it might break:
 		# refilling the template at a new s must change what a refactorisation sees.
@@ -312,7 +334,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
 		ldiv!(x_first, F, copy(b))
 
 		fill_template!(-2.7 + 0.4im)
-		F2 = MORFE.CohomologicalEquations._refactorise!(ss.fact, ss.bordered)
+		F2 = MORFE.CohomologicalEquations._refactorise!(ss, ss.bordered)
 		x_second = similar(b)
 		ldiv!(x_second, F2, copy(b))
 
