@@ -64,32 +64,32 @@ The scalar lower-order RHS accumulation
 `O(ORD · FOM)`, shared with the `Ĵ_r(s)` evaluation.
 """
 function evaluate_orthogonality_row_and_lower_order_rhs!(
-	row::AbstractVector{T},
-	s::T,
-	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
-	J_coeffs_r::AbstractMatrix{T},  # ORD × FOM,  ORD = ORD_M1 + 1
+        row::AbstractVector{T},
+        s::T,
+        lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+        J_coeffs_r::AbstractMatrix{T}  # ORD × FOM,  ORD = ORD_M1 + 1
 ) where {T}
-	ORD = length(lower_order_couplings)
+    ORD = length(lower_order_couplings)
 
-	copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
+    copyto!(row, view(J_coeffs_r, ORD, :))  # row ← J_r[ORD, :]  (highest degree)
 
-	scalar_rhs = zero(T)
-	for j in (ORD-1):-1:1
-		# row = Ĵ_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
-		# Accumulate bilinear contraction: scalar_rhs -= Σᵢ rowᵢ · ξ[j]ᵢ
-		# (no conjugation — the sesquilinear ᴴ is already baked into J_r; a
-		# conjugating dot() here would double-conjugate the row)
-		ξ = lower_order_couplings[j]
-		acc = zero(T)
-		@inbounds for i in eachindex(row)
-			acc += row[i] * ξ[i]
-		end
-		scalar_rhs -= acc
-		row .*= s
-		row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
-		# row = Ĵ_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
-	end
-	# On exit: row = Ĵ_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
+    scalar_rhs = zero(T)
+    for j in (ORD - 1):-1:1
+        # row = Ĵ_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
+        # Accumulate bilinear contraction: scalar_rhs -= Σᵢ rowᵢ · ξ[j]ᵢ
+        # (no conjugation — the sesquilinear ᴴ is already baked into J_r; a
+        # conjugating dot() here would double-conjugate the row)
+        ξ = lower_order_couplings[j]
+        acc = zero(T)
+        @inbounds for i in eachindex(row)
+            acc += row[i] * ξ[i]
+        end
+        scalar_rhs -= acc
+        row .*= s
+        row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
+        # row = Ĵ_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
+    end
+    # On exit: row = Ĵ_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
 
-	return scalar_rhs
+    return scalar_rhs
 end

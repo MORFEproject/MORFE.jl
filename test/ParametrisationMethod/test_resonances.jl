@@ -14,6 +14,7 @@ using MORFE.Multiindices: find_in_set
 
         # Everything must start false
         for k in 1:length(mset), t in 1:nmodes
+
             @test !is_resonant(rs, k, t)
         end
 

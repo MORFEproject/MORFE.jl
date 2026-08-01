@@ -11,17 +11,17 @@ using SparseArrays
 # ── generalised_eigenpairs ─────────────────────────────────────────────────────
 
 function MORFE.Eigensolvers.generalised_eigenpairs(
-    A::AbstractMatrix,
-    B::AbstractMatrix;
-    nev::Integer,
-    shift = nothing,
-    which::Symbol = :LR,
-    tol::Real = 0.0,
-    maxiter::Integer = 3000,
-    ncv::Union{Nothing, Integer} = nothing,
-    v0 = nothing,
-    ritzvec::Bool = true,
-    sort_largest_real::Bool = false,
+        A::AbstractMatrix,
+        B::AbstractMatrix;
+        nev::Integer,
+        shift = nothing,
+        which::Symbol = :LR,
+        tol::Real = 0.0,
+        maxiter::Integer = 3000,
+        ncv::Union{Nothing, Integer} = nothing,
+        v0 = nothing,
+        ritzvec::Bool = true,
+        sort_largest_real::Bool = false
 )
     n = size(A, 1)
     @assert size(A, 2) == n "A must be square"
@@ -42,7 +42,7 @@ function MORFE.Eigensolvers.generalised_eigenpairs(
         tol = Float64(tol),
         maxiter = Int(maxiter),
         ncv = ncv_eff,
-        ritzvec = ritzvec,
+        ritzvec = ritzvec
     )
     eigs_kwargs = isnothing(v0_eff) ? base_eigs_kwargs :
                   merge(base_eigs_kwargs, (v0 = v0_eff,))
@@ -83,15 +83,15 @@ function MORFE.Eigensolvers.generalised_eigenpairs(
         nconv = nconv,
         niter = niter,
         nmult = nmult,
-        resid = resid,
+        resid = resid
     )
 end
 
 # ── ArpackEigensolver.solve ────────────────────────────────────────────────────
 
 function MORFE.Eigenproblems.solve(
-    model::MORFE.FullOrderModel.NDOrderModel,
-    solver::MORFE.Eigenproblems.ArpackEigensolver,
+        model::MORFE.FullOrderModel.NDOrderModel,
+        solver::MORFE.Eigenproblems.ArpackEigensolver
 )
     A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
     FOM = size(model.linear_terms[1], 1)
@@ -112,8 +112,8 @@ end
 # Uses per-eigenvalue sigma-shifts — NOT a simple eigs(A', B'; which=:SM).
 
 function MORFE.Eigenproblems.solve_left(
-    model::MORFE.FullOrderModel.NDOrderModel,
-    solver::MORFE.Eigenproblems.ArpackEigensolver,
+        model::MORFE.FullOrderModel.NDOrderModel,
+        solver::MORFE.Eigenproblems.ArpackEigensolver
 )
     A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
     A_c = complex.(A)
@@ -129,7 +129,7 @@ function MORFE.Eigenproblems.solve_left(
         values, vectors = eigs(
             A_adjoint, B_adjoint,
             sigma = conj(solver.eigenvalues[i]),
-            which = :LM, nev = 1, ncv = 30,
+            which = :LM, nev = 1, ncv = 30
         )
         left_eigenvectors[:, :, i] = reshape(vectors[:, 1], FOM, ORD)
         eigenvalues[i] = conj(values[1])
@@ -141,9 +141,9 @@ end
 # The thin wrapper solve(model, solver) stays in core and delegates here.
 
 function MORFE.Eigenproblems.solve(
-    mass::AbstractMatrix{T},
-    stiffness::AbstractMatrix{T},
-    solver::MORFE.Eigenproblems.StructureModalDampingEigensolver,
+        mass::AbstractMatrix{T},
+        stiffness::AbstractMatrix{T},
+        solver::MORFE.Eigenproblems.StructureModalDampingEigensolver
 ) where {T}
     ω2, ϕ = eigs(stiffness, mass; nev = solver.nev, which = :LM, sigma = 0.0, check = 1)
     any(x -> abs(imag(x)) > 1e-12 * abs(real(x)), ω2) && error("Eigenvalues not real.")
@@ -161,22 +161,22 @@ function MORFE.Eigenproblems.solve(
         discriminant = real_part^2 - ω2i
         if discriminant < 0
             imag_part = sqrt(-discriminant)
-            λ[2*i-1] = complex(real_part, imag_part)
-            λ[2*i]   = complex(real_part, -imag_part)
+            λ[2 * i - 1] = complex(real_part, imag_part)
+            λ[2 * i] = complex(real_part, -imag_part)
         else
             delta = sqrt(discriminant)
-            λ[2*i-1] = complex(real_part + delta, 0.0)
-            λ[2*i]   = complex(real_part - delta, 0.0)
+            λ[2 * i - 1] = complex(real_part + delta, 0.0)
+            λ[2 * i] = complex(real_part - delta, 0.0)
         end
 
         ϕ_i = view(ϕ, :, i)
         norm_sq = dot(ϕ_i, mass, ϕ_i)
         ϕ_i ./= sqrt(norm_sq)
 
-        eigenvectors[:, 1, 2i-1] .= ϕ_i
-        eigenvectors[:, 1, 2i]   .= ϕ_i
-        eigenvectors[:, 2, 2i-1] .= λ[2i-1] * ϕ_i
-        eigenvectors[:, 2, 2i]   .= λ[2i] * ϕ_i
+        eigenvectors[:, 1, 2i - 1] .= ϕ_i
+        eigenvectors[:, 1, 2i] .= ϕ_i
+        eigenvectors[:, 2, 2i - 1] .= λ[2i - 1] * ϕ_i
+        eigenvectors[:, 2, 2i] .= λ[2i] * ϕ_i
     end
     return λ, eigenvectors
 end

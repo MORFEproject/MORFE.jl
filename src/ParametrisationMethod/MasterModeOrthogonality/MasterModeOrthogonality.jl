@@ -184,11 +184,11 @@ include("HornerEvaluator.jl")
 include("ColumnPolynomials.jl")
 
 export precompute_orthogonality_operator_coefficients,
-	precompute_orthogonality_column_polynomials,
-	evaluate_orthogonality_row_and_lower_order_rhs!,
-	evaluate_orthogonality_column_row!,
-	evaluate_orthogonality_external_rhs,
-	assemble_orthogonality_matrix_and_rhs!
+       precompute_orthogonality_column_polynomials,
+       evaluate_orthogonality_row_and_lower_order_rhs!,
+       evaluate_orthogonality_column_row!,
+       evaluate_orthogonality_external_rhs,
+       assemble_orthogonality_matrix_and_rhs!
 
 # =============================================================================
 # Full orthogonality matrix and RHS assembly (in-place only)
@@ -219,37 +219,37 @@ never reads the trivial rows back out of the solution vector, it writes the hard
 zeros directly during unpacking.
 """
 function assemble_orthogonality_matrix_and_rhs!(
-	M::AbstractMatrix,
-	rhs::AbstractVector,
-	s::T,
-	J_coeffs::AbstractVector{<:AbstractMatrix{T}},
-	C_coeffs::Vector{<:AbstractMatrix{T}},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
-	resonance::SVector{ROM, Bool},
-	lower_order_couplings::AbstractVector{<:AbstractVector{T}},
-	external_dynamics::AbstractVector{T},
+        M::AbstractMatrix,
+        rhs::AbstractVector,
+        s::T,
+        J_coeffs::AbstractVector{<:AbstractMatrix{T}},
+        C_coeffs::Vector{<:AbstractMatrix{T}},
+        E_coeffs::Vector{<:AbstractMatrix{T}},
+        resonance::SVector{ROM, Bool},
+        lower_order_couplings::AbstractVector{<:AbstractVector{T}},
+        external_dynamics::AbstractVector{T}
 ) where {T, ROM}
-	FOM = size(J_coeffs[1], 2)
-	@assert size(M) == (ROM, FOM + ROM) "orthogonality block must be ROM×(FOM+ROM) = \
-		$((ROM, FOM + ROM)), got $(size(M))"
-	@assert length(rhs) == ROM "orthogonality rhs must have length ROM = $ROM, \
-		got $(length(rhs))"
-	for r in eachindex(resonance)
-		if resonance[r]
-			rhs[r] = evaluate_orthogonality_row_and_lower_order_rhs!(
-				view(M, r, 1:FOM), s, lower_order_couplings, J_coeffs[r],
-			)
-			evaluate_orthogonality_column_row!(
-				view(M, r, (FOM+1):(FOM+ROM)), s, r, C_coeffs, resonance,
-			)
-			rhs[r] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
-		else
-			fill!(view(M, r, 1:(FOM+ROM)), zero(T))
-			M[r, FOM+r] = one(T)   # τ: pins R[r, α] = 0
-			rhs[r] = zero(T)
-		end
-	end
-	return nothing
+    FOM = size(J_coeffs[1], 2)
+    @assert size(M) == (ROM, FOM + ROM) "orthogonality block must be ROM×(FOM+ROM) = \
+      $((ROM, FOM + ROM)), got $(size(M))"
+    @assert length(rhs) == ROM "orthogonality rhs must have length ROM = $ROM, \
+      got $(length(rhs))"
+    for r in eachindex(resonance)
+        if resonance[r]
+            rhs[r] = evaluate_orthogonality_row_and_lower_order_rhs!(
+                view(M, r, 1:FOM), s, lower_order_couplings, J_coeffs[r]
+            )
+            evaluate_orthogonality_column_row!(
+                view(M, r, (FOM + 1):(FOM + ROM)), s, r, C_coeffs, resonance
+            )
+            rhs[r] += evaluate_orthogonality_external_rhs(s, r, external_dynamics, E_coeffs)
+        else
+            fill!(view(M, r, 1:(FOM + ROM)), zero(T))
+            M[r, FOM + r] = one(T)   # τ: pins R[r, α] = 0
+            rhs[r] = zero(T)
+        end
+    end
+    return nothing
 end
 
 end # module MasterModeOrthogonality

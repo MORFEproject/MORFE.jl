@@ -16,8 +16,8 @@ using SparseArrays
 export generalised_eigenpairs
 
 @inline function _sort_largest_real(vals, vecs)
-	p = sortperm(real.(vals); rev = true)
-	return vals[p], vecs[:, p]
+    p = sortperm(real.(vals); rev = true)
+    return vals[p], vecs[:, p]
 end
 
 """
@@ -30,10 +30,10 @@ Solve the generalised eigenproblem A x = lambda B x using Arpack.
 Requires Arpack.jl and LinearMaps.jl. Load them to activate the MORFE extension.
 """
 function generalised_eigenpairs(args...; kwargs...)
-	error(
-		"generalised_eigenpairs requires Arpack.jl and LinearMaps.jl.\n" *
-		"Load them with `using Arpack, LinearMaps` to activate the MORFE extension.",
-	)
+    error(
+        "generalised_eigenpairs requires Arpack.jl and LinearMaps.jl.\n" *
+        "Load them with `using Arpack, LinearMaps` to activate the MORFE extension.",
+    )
 end
 
 end

@@ -55,28 +55,28 @@ module MORFEPardisoExt
 
 using MORFE
 using MORFE.CohomologicalEquations: _try_build_pardiso_solver, _pardiso_prepare!,
-	_pardiso_factorise_solve!, _pardiso_release!
+                                    _pardiso_factorise_solve!, _pardiso_release!
 using Pardiso
 using SparseArrays
 using LinearAlgebra: norm
 
 function MORFE.CohomologicalEquations._try_build_pardiso_solver()
-	ps = nothing
-	try
-		ps = MKLPardisoSolver()
-	catch
-	end
-	if ps === nothing
-		try
-			ps = Pardiso.PardisoSolver()
-		catch
-		end
-	end
-	if ps === nothing
-		@warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
-			  "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
-	end
-	return ps
+    ps = nothing
+    try
+        ps = MKLPardisoSolver()
+    catch
+    end
+    if ps === nothing
+        try
+            ps = Pardiso.PardisoSolver()
+        catch
+        end
+    end
+    if ps === nothing
+        @warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
+              "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
+    end
+    return ps
 end
 
 # Intel's iparm indices are 0-based; Pardiso.jl's `set_iparm!` is 1-based, so each is
@@ -93,22 +93,22 @@ whatever form the chosen type requires; the caller holds it and passes it back t
 every subsequent `_pardiso_factorise_solve!`.
 """
 function MORFE.CohomologicalEquations._pardiso_prepare!(ps, A::SparseMatrixCSC)
-	# Unconditionally unsymmetric — see the module docstring. This is not a claim
-	# about A; it is the only complex type that leaves pivoting unrestricted, which
-	# the bordered solve requires at every resonant monomial. Pardiso still applies
-	# its own ordering and supernode detection, so real structure is still exploited.
-	Pardiso.set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM)
-	Pardiso.pardisoinit(ps)          # seeds iparm from the matrix type; must follow it
-	Pardiso.fix_iparm!(ps, :N)       # iparm[12]: Julia CSC handed over as Pardiso CSR
+    # Unconditionally unsymmetric — see the module docstring. This is not a claim
+    # about A; it is the only complex type that leaves pivoting unrestricted, which
+    # the bordered solve requires at every resonant monomial. Pardiso still applies
+    # its own ordering and supernode detection, so real structure is still exploited.
+    Pardiso.set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM)
+    Pardiso.pardisoinit(ps)          # seeds iparm from the matrix type; must follow it
+    Pardiso.fix_iparm!(ps, :N)       # iparm[12]: Julia CSC handed over as Pardiso CSR
 
-	# Restore the accuracy options Pardiso only defaults on for mtype 11/13.
-	Pardiso.set_iparm!(ps, IPARM_SCALING, 1)
-	Pardiso.set_iparm!(ps, IPARM_MATCHING, 1)
+    # Restore the accuracy options Pardiso only defaults on for mtype 11/13.
+    Pardiso.set_iparm!(ps, IPARM_SCALING, 1)
+    Pardiso.set_iparm!(ps, IPARM_MATCHING, 1)
 
-	A_pardiso = Pardiso.get_matrix(ps, A, :N)
-	Pardiso.set_phase!(ps, Pardiso.ANALYSIS)
-	Pardiso.pardiso(ps, A_pardiso, eltype(A)[])
-	return A_pardiso
+    A_pardiso = Pardiso.get_matrix(ps, A, :N)
+    Pardiso.set_phase!(ps, Pardiso.ANALYSIS)
+    Pardiso.pardiso(ps, A_pardiso, eltype(A)[])
+    return A_pardiso
 end
 
 """
@@ -122,26 +122,26 @@ so a silently misconfigured solver — the wrong matrix type, a transpose-flag
 mismatch — would otherwise surface as a quietly wrong ROM rather than an error.
 """
 function MORFE.CohomologicalEquations._pardiso_factorise_solve!(
-		ps, A_pardiso, x::AbstractVector, b::AbstractVector)
-	Pardiso.set_phase!(ps, Pardiso.NUM_FACT)
-	Pardiso.pardiso(ps, A_pardiso, eltype(b)[])
-	Pardiso.set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
-	Pardiso.pardiso(ps, x, A_pardiso, b)
+        ps, A_pardiso, x::AbstractVector, b::AbstractVector)
+    Pardiso.set_phase!(ps, Pardiso.NUM_FACT)
+    Pardiso.pardiso(ps, A_pardiso, eltype(b)[])
+    Pardiso.set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
+    Pardiso.pardiso(ps, x, A_pardiso, b)
 
-	if !_PARDISO_VERIFIED[]
-		_PARDISO_VERIFIED[] = true
-		residual = norm(A_pardiso * x - b) / max(norm(b), eps())
-		residual ≤ 1e-6 || error("""
-		Pardiso returned a bad solution on the first cohomological system:
-		relative residual ‖A·x − b‖/‖b‖ = $residual.
+    if !_PARDISO_VERIFIED[]
+        _PARDISO_VERIFIED[] = true
+        residual = norm(A_pardiso * x - b) / max(norm(b), eps())
+        residual ≤ 1e-6 || error("""
+          Pardiso returned a bad solution on the first cohomological system:
+          relative residual ‖A·x − b‖/‖b‖ = $residual.
 
-		The bordered solve is being driven through Pardiso's low-level phase API with
-		matrix type $(Pardiso.get_matrixtype(ps)). A large residual here points at the
-		configuration rather than the model — most likely the CSC/CSR transpose flag
-		(iparm[12]) or the matrix type. Load MORFE without Pardiso to fall back to
-		KLU, which is exercised by the test suite.""")
-	end
-	return x
+          The bordered solve is being driven through Pardiso's low-level phase API with
+          matrix type $(Pardiso.get_matrixtype(ps)). A large residual here points at the
+          configuration rather than the model — most likely the CSC/CSR transpose flag
+          (iparm[12]) or the matrix type. Load MORFE without Pardiso to fall back to
+          KLU, which is exercised by the test suite.""")
+    end
+    return x
 end
 
 """
@@ -152,10 +152,10 @@ Pardiso allocates C-side, outside the GC's view, so without this every solve lea
 factorisation.
 """
 function MORFE.CohomologicalEquations._pardiso_release!(ps, A_pardiso)
-	A_pardiso === nothing && return nothing
-	Pardiso.set_phase!(ps, Pardiso.RELEASE_ALL)
-	Pardiso.pardiso(ps, A_pardiso, eltype(A_pardiso)[])
-	return nothing
+    A_pardiso === nothing && return nothing
+    Pardiso.set_phase!(ps, Pardiso.RELEASE_ALL)
+    Pardiso.pardiso(ps, A_pardiso, eltype(A_pardiso)[])
+    return nothing
 end
 
 # One-shot flag for the first-solve residual check above.

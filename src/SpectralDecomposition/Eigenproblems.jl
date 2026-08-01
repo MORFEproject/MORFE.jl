@@ -50,10 +50,10 @@ using ..Eigensolvers
 using LinearAlgebra
 
 export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
-	StructureModalDampingEigensolver
+       StructureModalDampingEigensolver
 export solve, solve_left, sort_by_magnitude!, normalise_biorthogonal!
 export Eigenproblem, solve_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
-	select_master_modes_by_sorting, select_master_modes_by_target_frequency
+       select_master_modes_by_sorting, select_master_modes_by_target_frequency
 export left_eigenmode_orders_from_slice
 
 """
@@ -82,10 +82,10 @@ the blocks with [`left_eigenmode_orders_from_slice`](@ref).
 abstract type AbstractEigensolver end
 
 function solve(model::NDOrderModel, solver::AbstractEigensolver, args...)
-	error("solve not implemented for $(typeof(solver))")
+    error("solve not implemented for $(typeof(solver))")
 end
 function solve_left(model::NDOrderModel, solver::AbstractEigensolver, args...)
-	error("solve not implemented for $(typeof(solver))")
+    error("solve not implemented for $(typeof(solver))")
 end
 
 """
@@ -106,15 +106,15 @@ Let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 ```
 """
 function solve(model::NDOrderModel, solver::DefaultEigensolver)
-	A, B = linear_first_order_matrices(model)
-	FOM = size(model.linear_terms[1], 1)
-	ORD = length(model.linear_terms) - 1
-	eig_result = eigen(A, B)
+    A, B = linear_first_order_matrices(model)
+    FOM = size(model.linear_terms[1], 1)
+    ORD = length(model.linear_terms) - 1
+    eig_result = eigen(A, B)
 
-	# Reshape eigenvectors from (ORD*FOM) x (ORD*FOM) to (FOM x ORD x number of eigenvalues)
-	num_eigenvals = length(eig_result.values)
-	reshaped_eigenvectors = reshape(eig_result.vectors, FOM, ORD, num_eigenvals)
-	return eig_result.values, reshaped_eigenvectors
+    # Reshape eigenvectors from (ORD*FOM) x (ORD*FOM) to (FOM x ORD x number of eigenvalues)
+    num_eigenvals = length(eig_result.values)
+    reshaped_eigenvectors = reshape(eig_result.vectors, FOM, ORD, num_eigenvals)
+    return eig_result.values, reshaped_eigenvectors
 end
 
 """
@@ -127,15 +127,15 @@ let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 ```
 """
 function solve_left(model::NDOrderModel, solver::DefaultEigensolver)
-	A, B = linear_first_order_matrices(model)
-	FOM = size(model.linear_terms[1], 1)
-	ORD = length(model.linear_terms) - 1
-	eig_result = eigen(A', B')
+    A, B = linear_first_order_matrices(model)
+    FOM = size(model.linear_terms[1], 1)
+    ORD = length(model.linear_terms) - 1
+    eig_result = eigen(A', B')
 
-	# Reshape eigenvectors from (ORD*FOM) x (ORD*FOM) to (FOM x ORD x number of eigenvalues)
-	num_eigenvals = length(eig_result.values)
-	reshaped_eigenvectors = reshape(eig_result.vectors, FOM, ORD, num_eigenvals)
-	return conj(eig_result.values), reshaped_eigenvectors
+    # Reshape eigenvectors from (ORD*FOM) x (ORD*FOM) to (FOM x ORD x number of eigenvalues)
+    num_eigenvals = length(eig_result.values)
+    reshaped_eigenvectors = reshape(eig_result.vectors, FOM, ORD, num_eigenvals)
+    return conj(eig_result.values), reshaped_eigenvectors
 end
 
 """
@@ -145,17 +145,17 @@ Sparse eigensolver backed by `Arpack.eigs`. Computes `nev` smallest-magnitude
 eigenpairs. If `nev` is not specified, Arpack's default count is used.
 """
 mutable struct ArpackEigensolver <: AbstractEigensolver
-	nev::Union{Nothing, Int64}
-	eigenvalues::Union{Nothing, Vector{ComplexF64}}
+    nev::Union{Nothing, Int64}
+    eigenvalues::Union{Nothing, Vector{ComplexF64}}
 
-	function ArpackEigensolver()
-		@warn "Initialised ArpackEigensolver with no nev. Not recommended! Use DefaultEigensolver instead."
-		new(nothing)
-	end
-	function ArpackEigensolver(nev::Int64)
-		@assert nev>0 "nev must be greater than zero!"
-		new(nev)
-	end
+    function ArpackEigensolver()
+        @warn "Initialised ArpackEigensolver with no nev. Not recommended! Use DefaultEigensolver instead."
+        new(nothing)
+    end
+    function ArpackEigensolver(nev::Int64)
+        @assert nev>0 "nev must be greater than zero!"
+        new(nev)
+    end
 end
 
 """
@@ -168,17 +168,17 @@ shift = nothing -> uses standard eigs
 Computes nev eigenpairs.
 """
 mutable struct MorfeEigensolver <: AbstractEigensolver
-	nev::Union{Nothing, Int64}
-	shift::Union{Nothing, ComplexF64}
-	eigenvalues::Union{Nothing, Vector{ComplexF64}}
+    nev::Union{Nothing, Int64}
+    shift::Union{Nothing, ComplexF64}
+    eigenvalues::Union{Nothing, Vector{ComplexF64}}
 
-	function MorfeEigensolver()
-		new(nothing, nothing)
-	end
-	function MorfeEigensolver(nev::Int64, shift::ComplexF64)
-		@assert nev>0 "nev must be greater than zero!"
-		new(nev, shift)
-	end
+    function MorfeEigensolver()
+        new(nothing, nothing)
+    end
+    function MorfeEigensolver(nev::Int64, shift::ComplexF64)
+        @assert nev>0 "nev must be greater than zero!"
+        new(nev, shift)
+    end
 end
 
 """
@@ -191,19 +191,19 @@ Let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 ```
 """
 function solve(model::NDOrderModel, solver::MorfeEigensolver)
-	A, B = linear_first_order_matrices(model)
-	if solver.nev === nothing
-		solver.nev = size(A, 1)
-	end
-	eig_result = generalised_eigenpairs(A, B; solver.nev, shift = solver.shift)
+    A, B = linear_first_order_matrices(model)
+    if solver.nev === nothing
+        solver.nev = size(A, 1)
+    end
+    eig_result = generalised_eigenpairs(A, B; solver.nev, shift = solver.shift)
 
-	# Reshape eigenvectors from (ORD*FOM) x (number of eigenvalues) to (FOM x ORD x number of eigenvalues)
-	FOM = size(model.linear_terms[1], 1)
-	ORD = length(model.linear_terms) - 1
-	num_eigenvals = length(eig_result.values)
-	reshaped_eigenvectors = reshape(eig_result.vectors, FOM, ORD, num_eigenvals)
-	solver.eigenvalues = eig_result.values
-	return eig_result.values, reshaped_eigenvectors
+    # Reshape eigenvectors from (ORD*FOM) x (number of eigenvalues) to (FOM x ORD x number of eigenvalues)
+    FOM = size(model.linear_terms[1], 1)
+    ORD = length(model.linear_terms) - 1
+    num_eigenvals = length(eig_result.values)
+    reshaped_eigenvectors = reshape(eig_result.vectors, FOM, ORD, num_eigenvals)
+    solver.eigenvalues = eig_result.values
+    return eig_result.values, reshaped_eigenvectors
 end
 
 """
@@ -212,19 +212,19 @@ end
 Solves left eigenproblem using σ-shift to recover the correct eigenvalues.
 """
 function solve_left(model::NDOrderModel, solver::MorfeEigensolver)
-	A, B = linear_first_order_matrices(model)
-	@assert solver.nev == length(solver.eigenvalues)
-	FOM = size(model.linear_terms[1], 1)
-	ORD = length(model.linear_terms) - 1
-	left_eigenvectors = Array{ComplexF64}(undef, FOM, ORD, solver.nev)
-	eigenvalues = Vector{ComplexF64}(undef, solver.nev)
-	for i in 1:(solver.nev)
-		eig_results = generalised_eigenpairs(
-			A', B'; nev = 1, ncv = 30, shift = conj(solver.eigenvalues[i]))
-		left_eigenvectors[:, :, i] = reshape(eig_results.vectors[:, 1], FOM, ORD)
-		eigenvalues[i] = conj(eig_results.values[1])
-	end
-	return eigenvalues, left_eigenvectors
+    A, B = linear_first_order_matrices(model)
+    @assert solver.nev == length(solver.eigenvalues)
+    FOM = size(model.linear_terms[1], 1)
+    ORD = length(model.linear_terms) - 1
+    left_eigenvectors = Array{ComplexF64}(undef, FOM, ORD, solver.nev)
+    eigenvalues = Vector{ComplexF64}(undef, solver.nev)
+    for i in 1:(solver.nev)
+        eig_results = generalised_eigenpairs(
+            A', B'; nev = 1, ncv = 30, shift = conj(solver.eigenvalues[i]))
+        left_eigenvectors[:, :, i] = reshape(eig_results.vectors[:, 1], FOM, ORD)
+        eigenvalues[i] = conj(eig_results.values[1])
+    end
+    return eigenvalues, left_eigenvectors
 end
 
 """
@@ -244,15 +244,15 @@ The steps are:
 Calculates only the first `nev` eigenvectors.
 """
 mutable struct StructureModalDampingEigensolver <: AbstractEigensolver
-	eigenvalues::Union{Nothing, Vector}
-	nev::Int64
-	α::Float64
-	β::Float64
+    eigenvalues::Union{Nothing, Vector}
+    nev::Int64
+    α::Float64
+    β::Float64
 
-	function StructureModalDampingEigensolver(nev::Int64, α::Float64, β::Float64)
-		@assert nev>0 "nev must be greater than zero!"
-		new(nothing, nev, α, β)
-	end
+    function StructureModalDampingEigensolver(nev::Int64, α::Float64, β::Float64)
+        @assert nev>0 "nev must be greater than zero!"
+        new(nothing, nev, α, β)
+    end
 end
 
 """
@@ -269,14 +269,14 @@ Uses the relations:
 and assumes ``C = \\alpha*M + \\beta*K``.
 """
 function solve(
-	::AbstractMatrix,
-	::AbstractMatrix,
-	::StructureModalDampingEigensolver,
+        ::AbstractMatrix,
+        ::AbstractMatrix,
+        ::StructureModalDampingEigensolver
 )
-	error(
-		"StructureModalDampingEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
-		"Load them with `using Arpack, LinearMaps` to activate the MORFE extension.",
-	)
+    error(
+        "StructureModalDampingEigensolver requires Arpack.jl and LinearMaps.jl.\n" *
+        "Load them with `using Arpack, LinearMaps` to activate the MORFE extension.",
+    )
 end
 
 """
@@ -286,7 +286,7 @@ Thin wrapper: extracts `M = model.linear_terms[end]` and `K = model.linear_terms
 and delegates to `solve(M, K, solver)`.
 """
 function solve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
-	return solve(model.linear_terms[end], model.linear_terms[1], solver)
+    return solve(model.linear_terms[end], model.linear_terms[1], solver)
 end
 
 """
@@ -313,28 +313,29 @@ The slice may carry an arbitrary per-mode scale: the blocks scale with it, and
 the orthogonality equations are invariant under per-mode row scaling.
 """
 function left_eigenmode_orders_from_slice(
-	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
-	left_slice::AbstractMatrix,      # FOM × n
-	eigenvalues::AbstractVector,     # length n — reported (right) eigenvalues
+        linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+        left_slice::AbstractMatrix,      # FOM × n
+        eigenvalues::AbstractVector     # length n — reported (right) eigenvalues
 ) where {ORDP1}
-	ORD = ORDP1 - 1
-	FOM = size(left_slice, 1)
-	n = size(left_slice, 2)
-	@assert length(eigenvalues) == n "eigenvalues must match the number of slice columns"
-	blocks = Array{ComplexF64}(undef, FOM, ORD, n)
-	for k in 1:n
-		ℓ = view(left_slice, :, k)
-		ν = conj(eigenvalues[k])
-		blocks[:, ORD, k] .= ℓ
-		if ORD > 1
-			@views blocks[:, ORD-1, k] .= ν .* (linear_terms[ORDP1]' * ℓ) .+
-										  linear_terms[ORD]' * ℓ
-			for j in (ORD-2):-1:1
-				@views blocks[:, j, k] .= ν .* blocks[:, j+1, k] .+ linear_terms[j+1]' * ℓ
-			end
-		end
-	end
-	return blocks
+    ORD = ORDP1 - 1
+    FOM = size(left_slice, 1)
+    n = size(left_slice, 2)
+    @assert length(eigenvalues) == n "eigenvalues must match the number of slice columns"
+    blocks = Array{ComplexF64}(undef, FOM, ORD, n)
+    for k in 1:n
+        ℓ = view(left_slice, :, k)
+        ν = conj(eigenvalues[k])
+        blocks[:, ORD, k] .= ℓ
+        if ORD > 1
+            @views blocks[:, ORD - 1, k] .= ν .* (linear_terms[ORDP1]' * ℓ) .+
+                                            linear_terms[ORD]' * ℓ
+            for j in (ORD - 2):-1:1
+                @views blocks[:, j, k] .= ν .* blocks[:, j + 1, k] .+
+                                          linear_terms[j + 1]' * ℓ
+            end
+        end
+    end
+    return blocks
 end
 
 """
@@ -358,21 +359,21 @@ moderate-norm `M`, `C` instead of `K` (which amplifies eigensolver noise by
 damping makes the blocks analytic in `ϕ`.
 """
 function _structural_left_eigenmode_orders(
-	λ::AbstractVector,
-	Y::AbstractArray{<:Complex, 3},
-	mass::AbstractMatrix,
-	damping::AbstractMatrix,
+        λ::AbstractVector,
+        Y::AbstractArray{<:Complex, 3},
+        mass::AbstractMatrix,
+        damping::AbstractMatrix
 )
-	FOM = size(Y, 1)
-	n_eigs = size(Y, 3)
-	@assert size(Y, 2) == 2 "structural left blocks require a second-order model (ORD = 2)"
-	left = Array{ComplexF64}(undef, FOM, 2, n_eigs)
-	for k in 1:n_eigs
-		ϕ = view(Y, :, 1, k)
-		left[:, 2, k] .= ϕ
-		left[:, 1, k] .= conj(λ[k]) .* (mass * ϕ) .+ damping * ϕ
-	end
-	return left
+    FOM = size(Y, 1)
+    n_eigs = size(Y, 3)
+    @assert size(Y, 2) == 2 "structural left blocks require a second-order model (ORD = 2)"
+    left = Array{ComplexF64}(undef, FOM, 2, n_eigs)
+    for k in 1:n_eigs
+        ϕ = view(Y, :, 1, k)
+        left[:, 2, k] .= ϕ
+        left[:, 1, k] .= conj(λ[k]) .* (mass * ϕ) .+ damping * ϕ
+    end
+    return left
 end
 
 """
@@ -388,14 +389,14 @@ The optional `sorter!` kwarg has the same semantics as in the general
 natural ordering.
 """
 function solve_eigenproblem(
-	model::NDOrderModel,
-	solver::StructureModalDampingEigensolver;
-	sorter!::Function = sort_by_magnitude!)
-	λ, Y = solve(model, solver)
-	sorter!(λ, Y)
-	left = _structural_left_eigenmode_orders(λ, Y,
-		model.linear_terms[3], model.linear_terms[2])
-	return Eigenproblem(solver, λ, Y, left)
+        model::NDOrderModel,
+        solver::StructureModalDampingEigensolver;
+        sorter!::Function = sort_by_magnitude!)
+    λ, Y = solve(model, solver)
+    sorter!(λ, Y)
+    left = _structural_left_eigenmode_orders(λ, Y,
+        model.linear_terms[3], model.linear_terms[2])
+    return Eigenproblem(solver, λ, Y, left)
 end
 
 """
@@ -406,15 +407,15 @@ The Rayleigh damping matrix `C = αM + βK` is rebuilt from the solver parameter
 for the left eigenvector order-blocks.
 """
 function solve_eigenproblem(
-	stiffness::AbstractMatrix,
-	mass::AbstractMatrix,
-	solver::StructureModalDampingEigensolver;
-	sorter!::Function = sort_by_magnitude!)
-	λ, Y = solve(mass, stiffness, solver)
-	sorter!(λ, Y)
-	damping = solver.α * mass + solver.β * stiffness
-	left = _structural_left_eigenmode_orders(λ, Y, mass, damping)
-	return Eigenproblem(solver, λ, Y, left)
+        stiffness::AbstractMatrix,
+        mass::AbstractMatrix,
+        solver::StructureModalDampingEigensolver;
+        sorter!::Function = sort_by_magnitude!)
+    λ, Y = solve(mass, stiffness, solver)
+    sorter!(λ, Y)
+    damping = solver.α * mass + solver.β * stiffness
+    left = _structural_left_eigenmode_orders(λ, Y, mass, damping)
+    return Eigenproblem(solver, λ, Y, left)
 end
 
 """
@@ -446,51 +447,51 @@ reconstruct them.
 - `master_modes`: `Vector{Bool}` flagging master modes; `nothing` until set by a `select_master_modes_*` call
 """
 mutable struct Eigenproblem{T}
-	solver::AbstractEigensolver
-	eigenvalues::Array{Complex{T}}
-	eigenmodes::Array{Complex{T}}              # FOM × ORD × n_eigs
-	left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}  # FOM × n_eigs — physical-space (highest-order) slice
-	left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}  # FOM × ORD × n_eigs — full order-blocks
-	master_modes::Union{Nothing, Vector{Bool}}
-	external_modes::Union{Nothing, Vector{Bool}}
-	# Constructor from full 3-D left eigenvectors: retains the full order-block
-	# array (fed to MasterModeOrthogonality) and the highest-order
-	# (physical-space) slice [:, ORD, :].
-	function Eigenproblem(
-		solver::AbstractEigensolver,
-		eigenvalues::Array{Complex{T}},
-		eigenmodes::Array{Complex{T}},
-		left_eigenmodes::Array{Complex{T}}) where {T}
-		FOM = size(eigenmodes, 1)
-		ORD = size(eigenmodes, 2)
-		n_eigs = size(eigenmodes, 3)
-		@assert ndims(eigenmodes) == 3 "eigenmodes must be a 3-D array (FOM × ORD × n_eigs)"
-		@assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal size(eigenmodes, 3)"
-		@assert ndims(left_eigenmodes) == 3 "left_eigenmodes must be a 3-D array (FOM × ORD × n_eigs)"
-		@assert size(left_eigenmodes, 1) == FOM "left_eigenmodes dim 1 must equal FOM = $FOM"
-		@assert size(left_eigenmodes, 2) == ORD "left_eigenmodes dim 2 must equal ORD = $ORD"
-		@assert size(left_eigenmodes, 3) == n_eigs "left_eigenmodes dim 3 must equal n_eigs = $n_eigs"
-		left_orders = Array{Complex{T}, 3}(left_eigenmodes)
-		left_phys = Matrix{Complex{T}}(left_eigenmodes[:, ORD, :])
-		new{T}(solver, eigenvalues, eigenmodes, left_phys, left_orders, nothing, nothing)
-	end
+    solver::AbstractEigensolver
+    eigenvalues::Array{Complex{T}}
+    eigenmodes::Array{Complex{T}}              # FOM × ORD × n_eigs
+    left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}  # FOM × n_eigs — physical-space (highest-order) slice
+    left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}  # FOM × ORD × n_eigs — full order-blocks
+    master_modes::Union{Nothing, Vector{Bool}}
+    external_modes::Union{Nothing, Vector{Bool}}
+    # Constructor from full 3-D left eigenvectors: retains the full order-block
+    # array (fed to MasterModeOrthogonality) and the highest-order
+    # (physical-space) slice [:, ORD, :].
+    function Eigenproblem(
+            solver::AbstractEigensolver,
+            eigenvalues::Array{Complex{T}},
+            eigenmodes::Array{Complex{T}},
+            left_eigenmodes::Array{Complex{T}}) where {T}
+        FOM = size(eigenmodes, 1)
+        ORD = size(eigenmodes, 2)
+        n_eigs = size(eigenmodes, 3)
+        @assert ndims(eigenmodes) == 3 "eigenmodes must be a 3-D array (FOM × ORD × n_eigs)"
+        @assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal size(eigenmodes, 3)"
+        @assert ndims(left_eigenmodes) == 3 "left_eigenmodes must be a 3-D array (FOM × ORD × n_eigs)"
+        @assert size(left_eigenmodes, 1) == FOM "left_eigenmodes dim 1 must equal FOM = $FOM"
+        @assert size(left_eigenmodes, 2) == ORD "left_eigenmodes dim 2 must equal ORD = $ORD"
+        @assert size(left_eigenmodes, 3) == n_eigs "left_eigenmodes dim 3 must equal n_eigs = $n_eigs"
+        left_orders = Array{Complex{T}, 3}(left_eigenmodes)
+        left_phys = Matrix{Complex{T}}(left_eigenmodes[:, ORD, :])
+        new{T}(solver, eigenvalues, eigenmodes, left_phys, left_orders, nothing, nothing)
+    end
 
-	# Constructor accepting pre-extracted 2-D physical-space left eigenmodes
-	# (FOM × n_eigs).  Use when only the physical slice is known — e.g.
-	# Mechanical_Problem_Solver (2-D eigenmodes in first-order flat format,
-	# 2-D left eigenmodes). For the 3-D case the n_eigs axis is dim 3; for
-	# the 2-D (flat first-order) case it is dim 2. `left_eigenmodes_orders`
-	# is left as `nothing`; ORD > 1 orthogonality solves require the full blocks.
-	function Eigenproblem(
-		solver::AbstractEigensolver,
-		eigenvalues::Array{Complex{T}},
-		eigenmodes::Array{Complex{T}},
-		left_eigenmodes::Matrix{Complex{T}}) where {T}
-		n_eigs = ndims(eigenmodes) == 3 ? size(eigenmodes, 3) : size(eigenmodes, 2)
-		@assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal n_eigs = $n_eigs"
-		@assert size(left_eigenmodes, 2) == n_eigs "left_eigenmodes must have n_eigs = $n_eigs columns"
-		new{T}(solver, eigenvalues, eigenmodes, left_eigenmodes, nothing, nothing, nothing)
-	end
+    # Constructor accepting pre-extracted 2-D physical-space left eigenmodes
+    # (FOM × n_eigs).  Use when only the physical slice is known — e.g.
+    # Mechanical_Problem_Solver (2-D eigenmodes in first-order flat format,
+    # 2-D left eigenmodes). For the 3-D case the n_eigs axis is dim 3; for
+    # the 2-D (flat first-order) case it is dim 2. `left_eigenmodes_orders`
+    # is left as `nothing`; ORD > 1 orthogonality solves require the full blocks.
+    function Eigenproblem(
+            solver::AbstractEigensolver,
+            eigenvalues::Array{Complex{T}},
+            eigenmodes::Array{Complex{T}},
+            left_eigenmodes::Matrix{Complex{T}}) where {T}
+        n_eigs = ndims(eigenmodes) == 3 ? size(eigenmodes, 3) : size(eigenmodes, 2)
+        @assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal n_eigs = $n_eigs"
+        @assert size(left_eigenmodes, 2) == n_eigs "left_eigenmodes must have n_eigs = $n_eigs columns"
+        new{T}(solver, eigenvalues, eigenmodes, left_eigenmodes, nothing, nothing, nothing)
+    end
 end
 
 """
@@ -504,27 +505,27 @@ Computes left and right eigenpairs of the problem described in `model` by using 
 Additionally `sorter!` sorts the eigenpairs and `normaliser!` is used to normalise the eigenmodes.
 """
 function solve_eigenproblem(
-	model::NDOrderModel;
-	solver::AbstractEigensolver = DefaultEigensolver(),
-	sorter!::Function = sort_by_magnitude!,
-	normaliser!::Function = normalise_biorthogonal!)
+        model::NDOrderModel;
+        solver::AbstractEigensolver = DefaultEigensolver(),
+        sorter!::Function = sort_by_magnitude!,
+        normaliser!::Function = normalise_biorthogonal!)
 
-	#calculate right eigenmodes
-	(eigenvalues, eigenmodes) = solve(model, solver)
+    #calculate right eigenmodes
+    (eigenvalues, eigenmodes) = solve(model, solver)
 
-	#sort eigenpairs
-	sorter!(eigenvalues, eigenmodes)
+    #sort eigenpairs
+    sorter!(eigenvalues, eigenmodes)
 
-	#calculate left eigenmodes
-	(left_eigenvalues, left_eigenmodes) = solve_left(model, solver)
-	left_eigenvalues, left_eigenmodes = sort_left_eigenmodes(
-		eigenvalues, left_eigenvalues, left_eigenmodes)
+    #calculate left eigenmodes
+    (left_eigenvalues, left_eigenmodes) = solve_left(model, solver)
+    left_eigenvalues, left_eigenmodes = sort_left_eigenmodes(
+        eigenvalues, left_eigenvalues, left_eigenmodes)
 
-	# normalise eigenpairs
-	normaliser!(model, eigenmodes, left_eigenmodes)
+    # normalise eigenpairs
+    normaliser!(model, eigenmodes, left_eigenmodes)
 
-	# Construct Eigenproblem
-	return Eigenproblem(solver, eigenvalues, eigenmodes, left_eigenmodes)
+    # Construct Eigenproblem
+    return Eigenproblem(solver, eigenvalues, eigenmodes, left_eigenmodes)
 end
 
 """
@@ -535,9 +536,9 @@ Sorts eigenpairs to resemble the order:
 where λ=eigenvalues.
 """
 function sort_by_magnitude!(eigenvalues, eigenmodes)
-	idx = sortperm(eigenvalues; by = abs)
-	eigenvalues .= eigenvalues[idx]
-	eigenmodes .= eigenmodes[:, :, idx]
+    idx = sortperm(eigenvalues; by = abs)
+    eigenvalues .= eigenvalues[idx]
+    eigenmodes .= eigenmodes[:, :, idx]
 end
 
 """
@@ -547,37 +548,38 @@ Sorts the left eigenpairs to match right eigenpairs, by using the distance funct
 	dist(a, b) = abs(real(a - b)) + abs(imag(a - b))
 """
 function sort_left_eigenmodes(eigenvalues, left_eigenvalues, left_eigenmodes)
-	tol = 1e-8
-	n = length(eigenvalues)
-	n_left = length(left_eigenvalues)
-	@assert abs(n - n_left)<=1 "Number of left and right eigenvalues doesnt match (+-1)!"
-	perm = zeros(Int, n)
-	used = falses(n_left)
-	dist(a, b) = abs(real(a - b)) + abs(imag(a - b))
+    tol = 1e-8
+    n = length(eigenvalues)
+    n_left = length(left_eigenvalues)
+    @assert abs(n - n_left)<=1 "Number of left and right eigenvalues doesnt match (+-1)!"
+    perm = zeros(Int, n)
+    used = falses(n_left)
+    dist(a, b) = abs(real(a - b)) + abs(imag(a - b))
 
-	for i in 1:n
-		diffs = map(μj -> dist(μj, eigenvalues[i]), left_eigenvalues)
+    for i in 1:n
+        diffs = map(μj -> dist(μj, eigenvalues[i]), left_eigenvalues)
 
-		# ignore already used indices
-		for j in 1:n_left
-			if used[j]
-				diffs[j] = Inf
-			end
-		end
+        # ignore already used indices
+        for j in 1:n_left
+            if used[j]
+                diffs[j] = Inf
+            end
+        end
 
-		j = argmin(diffs)
+        j = argmin(diffs)
 
-		if diffs[j] > tol
-			@warn "No good match for eigenvalue $i (distance=$(diffs[j]))"
-			# println("Eigenvalues", eigenvalues)
-			# println("Left eigenvalues ", left_eigenvalues)
-		end
+        if diffs[j] > tol
+            @warn "No good match for eigenvalue $i (distance=$(diffs[j]))"
+            # println("Eigenvalues", eigenvalues)
+            # println("Left eigenvalues ", left_eigenvalues)
+        end
 
-		perm[i] = j
-		used[j] = true
-	end
-	reordered = ndims(left_eigenmodes) == 3 ? left_eigenmodes[:, :, perm] : left_eigenmodes[:, perm]
-	return left_eigenvalues[perm], reordered
+        perm[i] = j
+        used[j] = true
+    end
+    reordered = ndims(left_eigenmodes) == 3 ? left_eigenmodes[:, :, perm] :
+                left_eigenmodes[:, perm]
+    return left_eigenvalues[perm], reordered
 end
 
 """
@@ -594,26 +596,26 @@ eigenmode is divided by `s` and the left eigenmode by `conj(s)`, so the
 sesquilinear pairing becomes exactly 1.
 """
 function normalise_biorthogonal!(
-	model::NDOrderModel,
-	eigenmodes::Array{T},
-	left_eigenmodes::Array{T}) where {T}
-	@assert size(eigenmodes)==size(left_eigenmodes) "Size of left and right eigenmodes must be the same!"
+        model::NDOrderModel,
+        eigenmodes::Array{T},
+        left_eigenmodes::Array{T}) where {T}
+    @assert size(eigenmodes)==size(left_eigenmodes) "Size of left and right eigenmodes must be the same!"
 
-	(_, B) = linear_first_order_matrices(model)
-	n = ndims(eigenmodes)
-	n_eigs = size(eigenmodes, n)
-	for i in 1:n_eigs
-		ψ = n == 3 ? vec(@view eigenmodes[:, :, i]) : @view eigenmodes[:, i]
-		φ = n == 3 ? vec(@view left_eigenmodes[:, :, i]) : @view left_eigenmodes[:, i]
-		s = sqrt(φ' * B * ψ)
-		if n == 3
-			@views eigenmodes[:, :, i] ./= s
-			@views left_eigenmodes[:, :, i] ./= conj(s)
-		else
-			@views eigenmodes[:, i] ./= s
-			@views left_eigenmodes[:, i] ./= conj(s)
-		end
-	end
+    (_, B) = linear_first_order_matrices(model)
+    n = ndims(eigenmodes)
+    n_eigs = size(eigenmodes, n)
+    for i in 1:n_eigs
+        ψ = n == 3 ? vec(@view eigenmodes[:, :, i]) : @view eigenmodes[:, i]
+        φ = n == 3 ? vec(@view left_eigenmodes[:, :, i]) : @view left_eigenmodes[:, i]
+        s = sqrt(φ' * B * ψ)
+        if n == 3
+            @views eigenmodes[:, :, i] ./= s
+            @views left_eigenmodes[:, :, i] ./= conj(s)
+        else
+            @views eigenmodes[:, i] ./= s
+            @views left_eigenmodes[:, i] ./= conj(s)
+        end
+    end
 end
 
 """
@@ -622,7 +624,7 @@ end
 Returns eigenvalues, (right) eigenmodes and left eigenmodes of an Eigenproblem.
 """
 function get_eigenpairs(ep::Eigenproblem)
-	return (ep.eigenvalues, ep.eigenmodes, ep.left_eigenmodes)
+    return (ep.eigenvalues, ep.eigenmodes, ep.left_eigenmodes)
 end
 
 """
@@ -632,9 +634,9 @@ Define master_modes of Eigenproblem by passing a vector of booleans.
 	master_modes[i] = true  ===> eigen_modes[:,i] is a mastermode
 """
 function select_master_modes_by_hand(ep::Eigenproblem, mastermodes::Vector{Bool})
-	n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
-	@assert length(mastermodes) == n "mastermodes has wrong length!"
-	ep.master_modes = mastermodes
+    n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
+    @assert length(mastermodes) == n "mastermodes has wrong length!"
+    ep.master_modes = mastermodes
 end
 
 """
@@ -643,9 +645,9 @@ end
 Defines master_modes as the first nev eigenpairs. Sorting was done in solve_eigenproblem.
 """
 function select_master_modes_by_sorting(ep::Eigenproblem, nev::Int64)
-	@assert nev>0 "nev must be bigger then zero"
-	n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
-	ep.master_modes = [i <= nev for i in 1:n]
+    @assert nev>0 "nev must be bigger then zero"
+    n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
+    ep.master_modes = [i <= nev for i in 1:n]
 end
 
 """
@@ -657,37 +659,37 @@ Distance used:
 	dist(a, b) = abs(real(a - b)) + abs(imag(a - b)).
 """
 function select_master_modes_by_target_frequency(
-	ep::Eigenproblem,
-	target_frequencies::Vector,
-	tol::Float64)
-	n = length(ep.eigenvalues)
-	if length(target_frequencies) > n
-		@warn "target_frequencies has more entries than calculated eigenvalues. Everything after index $n is neglected!"
-	end
+        ep::Eigenproblem,
+        target_frequencies::Vector,
+        tol::Float64)
+    n = length(ep.eigenvalues)
+    if length(target_frequencies) > n
+        @warn "target_frequencies has more entries than calculated eigenvalues. Everything after index $n is neglected!"
+    end
 
-	dist(a, b) = abs(real(a - b)) + abs(imag(a - b))
-	master_modes = falses(n)
+    dist(a, b) = abs(real(a - b)) + abs(imag(a - b))
+    master_modes = falses(n)
 
-	for target_frequency in target_frequencies
-		dists = [dist(ep.eigenvalues[j], target_frequency) for j in 1:n]
-		tmp = 0
-		for j in 1:n
-			if dists[j] < tol
-				master_modes[j] = true
-				tmp += 1
-			end
-		end
-		if tmp == 0
-			j = argmin(dists)
-			@warn("No eigenvalue found for target $target_frequency. Closest distance = $(dists[j]) at eigenvalue $j")
-		end
-	end
-	println("Chosen mastermodes: ", master_modes)
-	ep.master_modes = master_modes
+    for target_frequency in target_frequencies
+        dists = [dist(ep.eigenvalues[j], target_frequency) for j in 1:n]
+        tmp = 0
+        for j in 1:n
+            if dists[j] < tol
+                master_modes[j] = true
+                tmp += 1
+            end
+        end
+        if tmp == 0
+            j = argmin(dists)
+            @warn("No eigenvalue found for target $target_frequency. Closest distance = $(dists[j]) at eigenvalue $j")
+        end
+    end
+    println("Chosen mastermodes: ", master_modes)
+    ep.master_modes = master_modes
 end
 
 function group_conjugate_pairs()
-	#TODO
+    #TODO
 end
 
 end # module

@@ -60,50 +60,50 @@ A `Vector{Matrix{T}}` of length `ROM`; entry `r` is the `ORD × FOM` matrix
 - Storage: `O(ROM · ORD · FOM)`
 """
 function precompute_orthogonality_operator_coefficients(
-	fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
-	left_eigenmodes::AbstractMatrix,
-	left_modes_derivatives::Union{Nothing, AbstractArray{<:Number, 3}} = nothing,
+        fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+        left_eigenmodes::AbstractMatrix,
+        left_modes_derivatives::Union{Nothing, AbstractArray{<:Number, 3}} = nothing
 ) where {ORDP1}
-	T = promote_type(eltype(fom_matrices[1]), eltype(left_eigenmodes))
-	if left_modes_derivatives !== nothing
-		T = promote_type(T, eltype(left_modes_derivatives))
-	end
-	ORD = ORDP1 - 1
-	FOM = size(first(fom_matrices), 1)
-	ROM = size(left_eigenmodes, 2)
+    T = promote_type(eltype(fom_matrices[1]), eltype(left_eigenmodes))
+    if left_modes_derivatives !== nothing
+        T = promote_type(T, eltype(left_modes_derivatives))
+    end
+    ORD = ORDP1 - 1
+    FOM = size(first(fom_matrices), 1)
+    ROM = size(left_eigenmodes, 2)
 
-	@assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
-	@assert ROM ≥ 1 "ROM must be ≥ 1."
-	@assert size(left_eigenmodes, 1) == FOM "left_eigenmodes must be FOM × ROM ($(FOM) × $(ROM))."
-	@assert ORD == 1 || left_modes_derivatives !== nothing """
-	left_modes_derivatives must be provided for ORD > 1 systems.
-	Supply a FOM × (ORD-1) × ROM array with the lower-order left eigenvector blocks
-	left_modes_derivatives[:, j, r] = φ_{r,j} (as returned by solve_left).
-	"""
-	if left_modes_derivatives !== nothing && ORD > 1
-		@assert size(left_modes_derivatives) == (FOM, ORD - 1, ROM) """
-		left_modes_derivatives must be FOM × (ORD-1) × ROM ($(FOM) × $(ORD-1) × $(ROM)).
-		"""
-	end
+    @assert ORD ≥ 1 "ODE order ORD = length(fom_matrices) - 1 must be ≥ 1."
+    @assert ROM ≥ 1 "ROM must be ≥ 1."
+    @assert size(left_eigenmodes, 1) == FOM "left_eigenmodes must be FOM × ROM ($(FOM) × $(ROM))."
+    @assert ORD == 1 || left_modes_derivatives !== nothing """
+     left_modes_derivatives must be provided for ORD > 1 systems.
+     Supply a FOM × (ORD-1) × ROM array with the lower-order left eigenvector blocks
+     left_modes_derivatives[:, j, r] = φ_{r,j} (as returned by solve_left).
+     """
+    if left_modes_derivatives !== nothing && ORD > 1
+        @assert size(left_modes_derivatives) == (FOM, ORD - 1, ROM) """
+          left_modes_derivatives must be FOM × (ORD-1) × ROM ($(FOM) × $(ORD-1) × $(ROM)).
+          """
+    end
 
-	result = Vector{Matrix{T}}(undef, ROM)
-	tmp = Vector{T}(undef, FOM)
-	for r in 1:ROM
-		ℓ = view(left_eigenmodes, :, r)
-		J_r = Matrix{T}(undef, ORD, FOM)
+    result = Vector{Matrix{T}}(undef, ROM)
+    tmp = Vector{T}(undef, FOM)
+    for r in 1:ROM
+        ℓ = view(left_eigenmodes, :, r)
+        J_r = Matrix{T}(undef, ORD, FOM)
 
-		# Highest degree: J_r[ORD, :] = conj(B_ORDᴴ · ℓ_r)  (= ℓ_rᴴ B_ORD as a bilinear row)
-		mul!(tmp, fom_matrices[ORDP1]', ℓ)
-		@views J_r[ORD, :] .= conj.(tmp)
+        # Highest degree: J_r[ORD, :] = conj(B_ORDᴴ · ℓ_r)  (= ℓ_rᴴ B_ORD as a bilinear row)
+        mul!(tmp, fom_matrices[ORDP1]', ℓ)
+        @views J_r[ORD, :] .= conj.(tmp)
 
-		# Lower degrees: J_r[j, :] = conj(φ_{r,j}) — the eigenvector order-blocks
-		for j in 1:(ORD-1)
-			@views J_r[j, :] .= conj.(left_modes_derivatives[:, j, r])
-		end
+        # Lower degrees: J_r[j, :] = conj(φ_{r,j}) — the eigenvector order-blocks
+        for j in 1:(ORD - 1)
+            @views J_r[j, :] .= conj.(left_modes_derivatives[:, j, r])
+        end
 
-		result[r] = J_r
-	end
-	return result
+        result[r] = J_r
+    end
+    return result
 end
 
 # =============================================================================
@@ -182,74 +182,74 @@ zero (the corresponding blocks are absent from the assembled system).
 - Storage: `O(ROM · ORD · NVAR)`
 """
 function precompute_orthogonality_column_polynomials(
-	J_coeffs::AbstractVector{<:AbstractMatrix},
-	right_master_blocks::AbstractArray{<:Number, 3},   # FOM × ORD × ROM
-	external_directions::AbstractMatrix,               # FOM × N_EXT
-	reduced_dynamics_linear::AbstractMatrix,           # NVAR × NVAR
+        J_coeffs::AbstractVector{<:AbstractMatrix},
+        right_master_blocks::AbstractArray{<:Number, 3},   # FOM × ORD × ROM
+        external_directions::AbstractMatrix,               # FOM × N_EXT
+        reduced_dynamics_linear::AbstractMatrix           # NVAR × NVAR
 )
-	T = promote_type(eltype(J_coeffs[1]), eltype(right_master_blocks),
-		eltype(external_directions), eltype(reduced_dynamics_linear))
-	ROM = length(J_coeffs)
-	ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
-	FOM = size(J_coeffs[1], 2)
-	N_EXT = size(external_directions, 2)
-	NVAR = ROM + N_EXT
+    T = promote_type(eltype(J_coeffs[1]), eltype(right_master_blocks),
+        eltype(external_directions), eltype(reduced_dynamics_linear))
+    ROM = length(J_coeffs)
+    ORD = size(J_coeffs[1], 1)    # J_coeffs[r] is ORD × FOM
+    FOM = size(J_coeffs[1], 2)
+    N_EXT = size(external_directions, 2)
+    NVAR = ROM + N_EXT
 
-	@assert size(right_master_blocks, 1) == FOM &&
-			size(right_master_blocks, 2) == ORD &&
-			size(right_master_blocks, 3) == ROM """
-	right_master_blocks must be FOM × ORD × ROM ($(FOM) × $(ORD) × $(ROM)).
-	"""
-	@assert size(external_directions, 1) == FOM "external_directions must have FOM = $(FOM) rows."
-	@assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
+    @assert size(right_master_blocks, 1) == FOM &&
+            size(right_master_blocks, 2) == ORD &&
+            size(right_master_blocks, 3) == ROM """
+             right_master_blocks must be FOM × ORD × ROM ($(FOM) × $(ORD) × $(ROM)).
+             """
+    @assert size(external_directions, 1) == FOM "external_directions must have FOM = $(FOM) rows."
+    @assert size(reduced_dynamics_linear) == (NVAR, NVAR) "reduced_dynamics_linear must be NVAR × NVAR."
 
-	# C_coeffs[r] : (ORD-1) × ROM   — row p = degree-(p-1) coeff of C_r(s)
-	# E_coeffs[r] : (ORD-1) × N_EXT — row p = degree-(p-1) coeff of E_r(s)
-	C_coeffs = [Matrix{T}(undef, ORD - 1, ROM) for _ in 1:ROM]
-	E_coeffs = [Matrix{T}(undef, ORD - 1, N_EXT) for _ in 1:ROM]
+    # C_coeffs[r] : (ORD-1) × ROM   — row p = degree-(p-1) coeff of C_r(s)
+    # E_coeffs[r] : (ORD-1) × N_EXT — row p = degree-(p-1) coeff of E_r(s)
+    C_coeffs = [Matrix{T}(undef, ORD - 1, ROM) for _ in 1:ROM]
+    E_coeffs = [Matrix{T}(undef, ORD - 1, N_EXT) for _ in 1:ROM]
 
-	ORD == 1 && return C_coeffs, E_coeffs
+    ORD == 1 && return C_coeffs, E_coeffs
 
-	# External order-blocks: Y_1^e = Φ_ext, Y_{k+1}^e = Y_k^e Λ_e + Y_k^m Λ_me.
-	Λ_me = view(reduced_dynamics_linear, 1:ROM, (ROM+1):NVAR)
-	Λ_e = view(reduced_dynamics_linear, (ROM+1):NVAR, (ROM+1):NVAR)
-	Ye = Vector{Matrix{T}}(undef, ORD - 1)
-	if N_EXT > 0
-		Ye[1] = Matrix{T}(external_directions)
-		for k in 1:(ORD-2)
-			Ye[k+1] = Ye[k] * Λ_e + view(right_master_blocks, :, k, :) * Λ_me
-		end
-	end
+    # External order-blocks: Y_1^e = Φ_ext, Y_{k+1}^e = Y_k^e Λ_e + Y_k^m Λ_me.
+    Λ_me = view(reduced_dynamics_linear, 1:ROM, (ROM + 1):NVAR)
+    Λ_e = view(reduced_dynamics_linear, (ROM + 1):NVAR, (ROM + 1):NVAR)
+    Ye = Vector{Matrix{T}}(undef, ORD - 1)
+    if N_EXT > 0
+        Ye[1] = Matrix{T}(external_directions)
+        for k in 1:(ORD - 2)
+            Ye[k + 1] = Ye[k] * Λ_e + view(right_master_blocks, :, k, :) * Λ_me
+        end
+    end
 
-	# Bilinear contractions of the row coefficients against the right blocks:
-	#   C_coeffs[r][p, m] = Σ_{k=1}^{ORD-p} J_r[p+k, :] · Y_k^m[:, m]
-	#   E_coeffs[r][p, e] = Σ_{k=1}^{ORD-p} J_r[p+k, :] · Y_k^e[:, e]
-	for r in 1:ROM
-		Jr = J_coeffs[r]
-		for p in 1:(ORD-1)
-			for m in 1:ROM
-				acc = zero(T)
-				for k in 1:(ORD-p)
-					@inbounds for i in 1:FOM
-						acc += Jr[p+k, i] * right_master_blocks[i, k, m]
-					end
-				end
-				C_coeffs[r][p, m] = acc
-			end
-			for e in 1:N_EXT
-				acc = zero(T)
-				for k in 1:(ORD-p)
-					Yk = Ye[k]
-					@inbounds for i in 1:FOM
-						acc += Jr[p+k, i] * Yk[i, e]
-					end
-				end
-				E_coeffs[r][p, e] = acc
-			end
-		end
-	end
+    # Bilinear contractions of the row coefficients against the right blocks:
+    #   C_coeffs[r][p, m] = Σ_{k=1}^{ORD-p} J_r[p+k, :] · Y_k^m[:, m]
+    #   E_coeffs[r][p, e] = Σ_{k=1}^{ORD-p} J_r[p+k, :] · Y_k^e[:, e]
+    for r in 1:ROM
+        Jr = J_coeffs[r]
+        for p in 1:(ORD - 1)
+            for m in 1:ROM
+                acc = zero(T)
+                for k in 1:(ORD - p)
+                    @inbounds for i in 1:FOM
+                        acc += Jr[p + k, i] * right_master_blocks[i, k, m]
+                    end
+                end
+                C_coeffs[r][p, m] = acc
+            end
+            for e in 1:N_EXT
+                acc = zero(T)
+                for k in 1:(ORD - p)
+                    Yk = Ye[k]
+                    @inbounds for i in 1:FOM
+                        acc += Jr[p + k, i] * Yk[i, e]
+                    end
+                end
+                E_coeffs[r][p, e] = acc
+            end
+        end
+    end
 
-	return C_coeffs, E_coeffs
+    return C_coeffs, E_coeffs
 end
 
 # =============================================================================
@@ -306,36 +306,36 @@ so each per-column Horner pass is cache-friendly.
 `O((ORD-1) · |R|)`, with no heap allocation.
 """
 function evaluate_orthogonality_column_row!(
-	c::AbstractVector{T},
-	s::T,
-	r::Int,
-	C_coeffs::Vector{<:AbstractMatrix{T}},
-	resonance::SVector{ROM, Bool},
+        c::AbstractVector{T},
+        s::T,
+        r::Int,
+        C_coeffs::Vector{<:AbstractMatrix{T}},
+        resonance::SVector{ROM, Bool}
 ) where {T, ROM}
-	Cr = C_coeffs[r]       # (ORD-1) × ROM
-	ORD_M1 = size(Cr, 1)      # ORD - 1
+    Cr = C_coeffs[r]       # (ORD-1) × ROM
+    ORD_M1 = size(Cr, 1)      # ORD - 1
 
-	if ORD_M1 == 0
-		fill!(c, zero(T))
-		return c
-	end
+    if ORD_M1 == 0
+        fill!(c, zero(T))
+        return c
+    end
 
-	# Evaluate each resonant column of Cr independently via a scalar Horner pass.
-	# Column j of Cr is C_coeffs[r][:, j], which is contiguous in memory.
-	# Non-resonant modes are written as hard zeros, keeping the corner block masked
-	# rather than compacted.
-	for j in eachindex(resonance)
-		if resonance[j]
-			val = Cr[ORD_M1, j]                  # highest-degree coefficient
-			for L in (ORD_M1-1):-1:1
-				val = val * s + Cr[L, j]
-			end
-			c[j] = val
-		else
-			c[j] = zero(T)
-		end
-	end
-	return c
+    # Evaluate each resonant column of Cr independently via a scalar Horner pass.
+    # Column j of Cr is C_coeffs[r][:, j], which is contiguous in memory.
+    # Non-resonant modes are written as hard zeros, keeping the corner block masked
+    # rather than compacted.
+    for j in eachindex(resonance)
+        if resonance[j]
+            val = Cr[ORD_M1, j]                  # highest-degree coefficient
+            for L in (ORD_M1 - 1):-1:1
+                val = val * s + Cr[L, j]
+            end
+            c[j] = val
+        else
+            c[j] = zero(T)
+        end
+    end
+    return c
 end
 
 # =============================================================================
@@ -396,40 +396,40 @@ The scalar `RHS_ext_r = -g(s)`.
 single Horner evaluation.
 """
 function evaluate_orthogonality_external_rhs(
-	s::T,
-	r::Int,
-	external_dynamics::AbstractVector{T},
-	E_coeffs::Vector{<:AbstractMatrix{T}},
+        s::T,
+        r::Int,
+        external_dynamics::AbstractVector{T},
+        E_coeffs::Vector{<:AbstractMatrix{T}}
 ) where {T}
-	Er = E_coeffs[r]
-	N_EXT = length(external_dynamics)
-	@assert size(Er, 2) == N_EXT "E_coeffs[r] must have N_EXT = $(N_EXT) columns."
+    Er = E_coeffs[r]
+    N_EXT = length(external_dynamics)
+    @assert size(Er, 2) == N_EXT "E_coeffs[r] must have N_EXT = $(N_EXT) columns."
 
-	ORD_M1 = size(Er, 1)   # ORD - 1
+    ORD_M1 = size(Er, 1)   # ORD - 1
 
-	ORD_M1 == 0 && return zero(T)
+    ORD_M1 == 0 && return zero(T)
 
-	# Check for all-zero external dynamics without allocating (replaces findall).
-	all_zero = true
-	for e in eachindex(external_dynamics)
-		!iszero(external_dynamics[e]) && (all_zero = false; break)
-	end
-	all_zero && return zero(T)
+    # Check for all-zero external dynamics without allocating (replaces findall).
+    all_zero = true
+    for e in eachindex(external_dynamics)
+        !iszero(external_dynamics[e]) && (all_zero = false; break)
+    end
+    all_zero && return zero(T)
 
-	# Combine active external contributions into a single scalar polynomial g(s),
-	# then evaluate via a single Horner pass.
-	g = zero(T)
-	for e in eachindex(external_dynamics)
-		iszero(external_dynamics[e]) && continue
-		g += Er[ORD_M1, e] * external_dynamics[e]
-	end
-	for L in (ORD_M1-1):-1:1
-		g *= s
-		for e in eachindex(external_dynamics)
-			iszero(external_dynamics[e]) && continue
-			g += Er[L, e] * external_dynamics[e]
-		end
-	end
+    # Combine active external contributions into a single scalar polynomial g(s),
+    # then evaluate via a single Horner pass.
+    g = zero(T)
+    for e in eachindex(external_dynamics)
+        iszero(external_dynamics[e]) && continue
+        g += Er[ORD_M1, e] * external_dynamics[e]
+    end
+    for L in (ORD_M1 - 1):-1:1
+        g *= s
+        for e in eachindex(external_dynamics)
+            iszero(external_dynamics[e]) && continue
+            g += Er[L, e] * external_dynamics[e]
+        end
+    end
 
-	return -g   # sign flip: term moved from LHS to RHS
+    return -g   # sign flip: term moved from LHS to RHS
 end

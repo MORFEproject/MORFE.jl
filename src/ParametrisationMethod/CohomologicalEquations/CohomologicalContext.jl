@@ -30,18 +30,18 @@ ctx.sparse_solver.pardiso    (was: ctx.pardiso_solver)
 | `MT`      | Matrix type; sparse path when `MT <: SparseMatrixCSC` |
 """
 struct CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT <: AbstractMatrix{LT}}
-	# ── Spectral / model data ─────────────────────────────────────────────────
-	linear_terms::NTuple{ORDP1, MT}
-	generalised_eigenmodes::Matrix{T}
-	lambda_diag::Vector{T}
-	# ── Precomputed operators ─────────────────────────────────────────────────
-	invariance::InvarianceOperators{T}
-	orthogonality::OrthogonalityOperators{T}
-	# ── Resonance bookkeeping ─────────────────────────────────────────────────
-	resonance_set::ResonanceSet
-	linear_monomial_skip_set::Set{Int}
-	# ── Compute resources ─────────────────────────────────────────────────────
-	lower_order::LowerOrderResources{NVAR, T}
-	buffers::CohomologicalBuffers{T}
-	sparse_solver::Union{Nothing, SparseLinearSolverState{T}}
+    # ── Spectral / model data ─────────────────────────────────────────────────
+    linear_terms::NTuple{ORDP1, MT}
+    generalised_eigenmodes::Matrix{T}
+    lambda_diag::Vector{T}
+    # ── Precomputed operators ─────────────────────────────────────────────────
+    invariance::InvarianceOperators{T}
+    orthogonality::OrthogonalityOperators{T}
+    # ── Resonance bookkeeping ─────────────────────────────────────────────────
+    resonance_set::ResonanceSet
+    linear_monomial_skip_set::Set{Int}
+    # ── Compute resources ─────────────────────────────────────────────────────
+    lower_order::LowerOrderResources{NVAR, T}
+    buffers::CohomologicalBuffers{T}
+    sparse_solver::Union{Nothing, SparseLinearSolverState{T}}
 end

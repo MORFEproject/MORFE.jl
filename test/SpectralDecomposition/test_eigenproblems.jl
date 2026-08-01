@@ -243,10 +243,10 @@ end
             # Must replicate the sort + match steps from solve_eigenproblem so
             # that left and right eigenvectors correspond index-by-index.
             solver = DefaultEigensolver()
-            λ, Y         = MORFE.Eigenproblems.solve(model, solver)
+            λ, Y = MORFE.Eigenproblems.solve(model, solver)
             sort_by_magnitude!(λ, Y)
-            λ_left, X    = MORFE.Eigenproblems.solve_left(model, solver)
-            _, X         = MORFE.Eigenproblems.sort_left_eigenmodes(λ, λ_left, X)
+            λ_left, X = MORFE.Eigenproblems.solve_left(model, solver)
+            _, X = MORFE.Eigenproblems.sort_left_eigenmodes(λ, λ_left, X)
 
             normalise_biorthogonal!(model, Y, X)
 

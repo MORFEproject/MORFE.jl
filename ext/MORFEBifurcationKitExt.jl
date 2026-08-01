@@ -20,16 +20,16 @@ The reduced ODE ż = R(z, p) is split into master-mode coordinates `z` (first
 `zeros(Float64, N_EXT)`.
 """
 function MORFE.BifurcationKitInterface.make_bk_problem(
-    R::ReducedDynamics{ROM, NVAR};
-    bifparam_index::Int = 1,
-    z0 = nothing,
-    p0 = nothing,
+        R::ReducedDynamics{ROM, NVAR};
+        bifparam_index::Int = 1,
+        z0 = nothing,
+        p0 = nothing
 ) where {ROM, NVAR}
     N_EXT = R.external_system_size
     @assert 1 <= bifparam_index <= N_EXT "bifparam_index=$bifparam_index out of range 1:$N_EXT"
 
     z0_ = isnothing(z0) ? zeros(ComplexF64, ROM) : complex.(float.(z0))
-    p0_ = isnothing(p0) ? zeros(Float64, N_EXT)  : float.(p0)
+    p0_ = isnothing(p0) ? zeros(Float64, N_EXT) : float.(p0)
 
     function F(z, p)
         zp = vcat(z, p)

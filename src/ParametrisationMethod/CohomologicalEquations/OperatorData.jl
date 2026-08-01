@@ -13,8 +13,8 @@ Precomputed column-polynomial coefficients for the invariance equation.
 different object — the two were both called `C_coeffs` and were easy to confuse.
 """
 struct InvarianceOperators{T}
-	column_coeffs::Vector{Matrix{T}}   # length ROM,   each FOM × ORD
-	E_coeffs::Vector{Matrix{T}}   # length N_EXT, each FOM × ORD
+    column_coeffs::Vector{Matrix{T}}   # length ROM,   each FOM × ORD
+    E_coeffs::Vector{Matrix{T}}   # length N_EXT, each FOM × ORD
 end
 
 """
@@ -28,7 +28,7 @@ Precomputed row and column-polynomial coefficients for the orthogonality conditi
 for the differently-shaped border columns.
 """
 struct OrthogonalityOperators{T}
-	J_coeffs::Vector{Matrix{T}}        # length ROM, each ORD × FOM
-	corner_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × ROM
-	E_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × N_EXT
+    J_coeffs::Vector{Matrix{T}}        # length ROM, each ORD × FOM
+    corner_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × ROM
+    E_coeffs::Vector{Matrix{T}}   # length ROM, each (ORD-1) × N_EXT
 end

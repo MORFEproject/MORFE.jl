@@ -64,17 +64,17 @@ Setting `fully_asymmetric = true` on any term overrides the `multiindex`-based
 classification and always returns `FullyAsymmetric`.
 """
 function symmetry_type(t::MultilinearMap)
-	t.fully_asymmetric === true && return FullyAsymmetric()
-	all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
-	count(>(0), t.multiindex) == 1 && return FullySymmetric()
-	return GroupwiseSymmetric()
+    t.fully_asymmetric === true && return FullyAsymmetric()
+    all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
+    count(>(0), t.multiindex) == 1 && return FullySymmetric()
+    return GroupwiseSymmetric()
 end
 
 function symmetry_type(t::AbstractMultilinearMap)
-	t.fully_asymmetric === true && return FullyAsymmetric()
-	all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
-	count(>(0), t.multiindex) == 1 && return FullySymmetric()
-	return GroupwiseSymmetric()
+    t.fully_asymmetric === true && return FullyAsymmetric()
+    all(x -> x <= 1, t.multiindex) && return FullyAsymmetric()
+    count(>(0), t.multiindex) == 1 && return FullySymmetric()
+    return GroupwiseSymmetric()
 end
 
 # -----------------------------------------------------------------------
@@ -88,12 +88,12 @@ Map each factor slot to its 1-based derivative index.
 Example: `multiindex = (2, 1)` → `(1, 1, 2)`.
 """
 function _derivative_orders(t::AbstractMultilinearMap)
-	deg = sum(t.multiindex)
-	return ntuple(deg) do slot
-		cumulative = 0
-		for (k, cnt) in enumerate(t.multiindex)
-			cumulative += cnt
-			slot <= cumulative && return k
-		end
-	end
+    deg = sum(t.multiindex)
+    return ntuple(deg) do slot
+        cumulative = 0
+        for (k, cnt) in enumerate(t.multiindex)
+            cumulative += cnt
+            slot <= cumulative && return k
+        end
+    end
 end

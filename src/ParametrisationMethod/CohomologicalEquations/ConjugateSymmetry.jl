@@ -42,10 +42,10 @@ a lower multiindex-set index) are marked in `skip_bits` and skipped in the
 outer solve loop; their coefficients are filled by `fill_conjugate_monomial!`.
 """
 struct ConjugateSymmetryData{CP}
-	permutation::CP
-	monomial_map::Vector{Int}
-	skip_bits::BitVector           # length L; true = skip this monomial (linears + secondaries)
-	primary_pairs::Vector{NTuple{2, Int}}  # (source_idx, conj_idx) where conj_idx > source_idx
+    permutation::CP
+    monomial_map::Vector{Int}
+    skip_bits::BitVector           # length L; true = skip this monomial (linears + secondaries)
+    primary_pairs::Vector{NTuple{2, Int}}  # (source_idx, conj_idx) where conj_idx > source_idx
 end
 
 # =============================================================================
@@ -60,18 +60,18 @@ Build the monomial conjugate map induced by the mode permutation `perm`.
 and `(P·γ)[k] = γ[perm[k]]`.  Returns `0` when `P·γ` is not in `mset`.
 """
 function _build_monomial_map(
-	mset::MultiindexSet{NVAR},
-	perm::SVector{NVAR, Int},
-	mdict::Dict{SVector{NVAR, Int}, Int},
+        mset::MultiindexSet{NVAR},
+        perm::SVector{NVAR, Int},
+        mdict::Dict{SVector{NVAR, Int}, Int}
 ) where {NVAR}
-	L = length(mset)
-	monomial_map = Vector{Int}(undef, L)
-	for i in 1:L
-		γ = mset[i]
-		Pγ = SVector{NVAR, Int}(ntuple(k -> γ[perm[k]], Val(NVAR)))
-		monomial_map[i] = Pγ == γ ? i : get(mdict, Pγ, 0)
-	end
-	return monomial_map
+    L = length(mset)
+    monomial_map = Vector{Int}(undef, L)
+    for i in 1:L
+        γ = mset[i]
+        Pγ = SVector{NVAR, Int}(ntuple(k -> γ[perm[k]], Val(NVAR)))
+        monomial_map[i] = Pγ == γ ? i : get(mdict, Pγ, 0)
+    end
+    return monomial_map
 end
 
 # =============================================================================
@@ -92,44 +92,45 @@ Factory for `ConjugateSymmetryData`.
   `ConjugateSymmetryData{SVector{NVAR,Int}}`.
 """
 function _build_conjugate_symmetry(::NoConjugatePermutation, linear_skip_set::Set{Int}, L::Int)
-	skip_bits = falses(L)
-	for i in linear_skip_set
-		skip_bits[i] = true
-	end
-	return ConjugateSymmetryData{NoConjugatePermutation}(NoConjugatePermutation(), Int[], skip_bits, NTuple{2, Int}[])
+    skip_bits = falses(L)
+    for i in linear_skip_set
+        skip_bits[i] = true
+    end
+    return ConjugateSymmetryData{NoConjugatePermutation}(
+        NoConjugatePermutation(), Int[], skip_bits, NTuple{2, Int}[])
 end
 
 # Active path: perm must be a proper involution with no zero entries.
 function _build_conjugate_symmetry(
-	perm::SVector{NVAR, Int},
-	linear_skip_set::Set{Int},
-	mset::MultiindexSet{NVAR},
-	mdict::Dict{SVector{NVAR, Int}, Int},
+        perm::SVector{NVAR, Int},
+        linear_skip_set::Set{Int},
+        mset::MultiindexSet{NVAR},
+        mdict::Dict{SVector{NVAR, Int}, Int}
 ) where {NVAR}
-	@assert all(i -> perm[i] > 0 && perm[perm[i]] == i, 1:NVAR) """
-	conjugate_permutation must be an involution (perm[perm[i]] == i) with no zero entries.
-	"""
+    @assert all(i -> perm[i] > 0 && perm[perm[i]] == i, 1:NVAR) """
+     conjugate_permutation must be an involution (perm[perm[i]] == i) with no zero entries.
+     """
 
-	monomial_map = _build_monomial_map(mset, perm, mdict)
+    monomial_map = _build_monomial_map(mset, perm, mdict)
 
-	skip_bits = falses(length(mset))
-	primary_pairs = NTuple{2, Int}[]
-	for i in linear_skip_set
-		skip_bits[i] = true
-	end
-	for i in eachindex(monomial_map)
-		skip_bits[i] && continue          # linear or already-marked secondary — skip
-		j = monomial_map[i]
-		if j > i
-			skip_bits[j] = true
-			push!(primary_pairs, (i, j))
-		end
-		j ∈ (0, i) && continue           # no partner (j=0) or self-symmetric (j=i)
-		@assert monomial_map[j] == i "conjugate map must be symmetric at i=$i"
-		@assert !(j in linear_skip_set) "conjugate of a non-linear must not be linear"
-	end
+    skip_bits = falses(length(mset))
+    primary_pairs = NTuple{2, Int}[]
+    for i in linear_skip_set
+        skip_bits[i] = true
+    end
+    for i in eachindex(monomial_map)
+        skip_bits[i] && continue          # linear or already-marked secondary — skip
+        j = monomial_map[i]
+        if j > i
+            skip_bits[j] = true
+            push!(primary_pairs, (i, j))
+        end
+        j ∈ (0, i) && continue           # no partner (j=0) or self-symmetric (j=i)
+        @assert monomial_map[j] == i "conjugate map must be symmetric at i=$i"
+        @assert !(j in linear_skip_set) "conjugate of a non-linear must not be linear"
+    end
 
-	return ConjugateSymmetryData{SVector{NVAR, Int}}(perm, monomial_map, skip_bits, primary_pairs)
+    return ConjugateSymmetryData{SVector{NVAR, Int}}(perm, monomial_map, skip_bits, primary_pairs)
 end
 
 # =============================================================================
@@ -153,22 +154,22 @@ has set them from the conjugate-symmetric external dynamics polynomial.
 of R at `source_idx` must be finalised before this is called.
 """
 function fill_conjugate_monomial!(
-	W::Parametrisation{ORD, NVAR, T},
-	R::ReducedDynamics{ROM, NVAR, T},
-	conj_idx::Int,
-	source_idx::Int,
-	sym::ConjugateSymmetryData{SVector{NVAR, Int}},
+        W::Parametrisation{ORD, NVAR, T},
+        R::ReducedDynamics{ROM, NVAR, T},
+        conj_idx::Int,
+        source_idx::Int,
+        sym::ConjugateSymmetryData{SVector{NVAR, Int}}
 ) where {ORD, NVAR, T, ROM}
-	Wc = W.poly.coefficients   # FOM × ORD × L
-	Rc = R.poly.coefficients   # NVAR × L
+    Wc = W.poly.coefficients   # FOM × ORD × L
+    Rc = R.poly.coefficients   # NVAR × L
 
-	@inbounds @views Wc[:, :, conj_idx] .= conj.(Wc[:, :, source_idx])
+    @inbounds @views Wc[:, :, conj_idx] .= conj.(Wc[:, :, source_idx])
 
-	perm = sym.permutation
-	@inbounds for r in 1:ROM
-		Rc[r, conj_idx] = conj(Rc[perm[r], source_idx])
-	end
-	return nothing
+    perm = sym.permutation
+    @inbounds for r in 1:ROM
+        Rc[r, conj_idx] = conj(Rc[perm[r], source_idx])
+    end
+    return nothing
 end
 
 # =============================================================================
@@ -211,25 +212,25 @@ Passing an incorrect permutation silently corrupts W and R.
 `nothing` otherwise.
 """
 function detect_conjugate_permutation(lambda::AbstractVector; atol::Real = 1e-8)
-	NVAR = length(lambda)
-	perm = zeros(Int, NVAR)
-	used = falses(NVAR)
-	for i in 1:NVAR
-		used[i] && continue
-		λi = lambda[i]
-		best_j = 0
-		for j in i:NVAR
-			used[j] && continue
-			if abs(lambda[j] - conj(λi)) < atol
-				best_j = j
-				break
-			end
-		end
-		best_j == 0 && return nothing
-		perm[i] = best_j
-		perm[best_j] = i
-		used[i] = true
-		used[best_j] = true
-	end
-	return perm
+    NVAR = length(lambda)
+    perm = zeros(Int, NVAR)
+    used = falses(NVAR)
+    for i in 1:NVAR
+        used[i] && continue
+        λi = lambda[i]
+        best_j = 0
+        for j in i:NVAR
+            used[j] && continue
+            if abs(lambda[j] - conj(λi)) < atol
+                best_j = j
+                break
+            end
+        end
+        best_j == 0 && return nothing
+        perm[i] = best_j
+        perm[best_j] = i
+        used[i] = true
+        used[best_j] = true
+    end
+    return perm
 end

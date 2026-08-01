@@ -19,7 +19,7 @@ B1 = 0.001 * B2
 
 term_cubic = MultilinearMap(
     (res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3),
-    (3, 0),
+    (3, 0)
 )
 
 _model = NDOrderModel((B0, B1, B2), (term_cubic,))
@@ -30,10 +30,10 @@ let
     global _eig = eigen(A_eig, B_eig)
 end
 
-_sorted_idx         = sortperm(abs.(_eig.values))
+_sorted_idx = sortperm(abs.(_eig.values))
 _master_eigenvalues = SVector{_ROM, ComplexF64}(_eig.values[_sorted_idx[1:_ROM]])
-_master_modes       = _eig.vectors[1:_FOM, _sorted_idx[1:_ROM]]
-_left_eigenmodes    = _master_modes
+_master_modes = _eig.vectors[1:_FOM, _sorted_idx[1:_ROM]]
+_left_eigenmodes = _master_modes
 
 _ORD_model = 2  # second-order system → ORD = 2
 _master_modes_derivatives = zeros(ComplexF64, _FOM, _ORD_model - 1, _ROM)
@@ -48,7 +48,7 @@ end
 # (real symmetric system → the position mode is a valid sesquilinear slice).
 _left_modes_derivatives = left_eigenmode_orders_from_slice(
     _model.linear_terms, _left_eigenmodes,
-    collect(_master_eigenvalues))[:, 1:(_ORD_model-1), :]
+    collect(_master_eigenvalues))[:, 1:(_ORD_model - 1), :]
 
 # ── Multiindex and resonance sets ─────────────────────────────────────────────
 const _max_degree = 5
@@ -91,23 +91,22 @@ _pairs, _self_conj = _build_pairs(_mset, _conj_perm)
 # ── Solve once per strategy ───────────────────────────────────────────────────
 _common_kwargs = (
     master_modes_derivatives = _master_modes_derivatives,
-    left_modes_derivatives = _left_modes_derivatives,
+    left_modes_derivatives = _left_modes_derivatives
 )
 
 W_nosym, R_nosym = solve_cohomological_problem(
     _model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, _resonance_set;
-    _common_kwargs...,
+    _common_kwargs...
 )
 
 W_expl, R_expl = solve_cohomological_problem(
     _model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, _resonance_set;
     conjugate_permutation = _conj_perm,
-    _common_kwargs...,
+    _common_kwargs...
 )
 
 # =============================================================================
 @testset "ConjugateSymmetry" begin
-
     @testset "W-symmetry: W[P·γ] = conj(W[γ])" begin
         Wc = W_expl.poly.coefficients   # FOM × ORD × L
         for (src, cj) in _pairs
@@ -138,6 +137,4 @@ W_expl, R_expl = solve_cohomological_problem(
         @test W_expl.poly.coefficients ≈ W_nosym.poly.coefficients rtol=1e-8
         @test R_expl.poly.coefficients ≈ R_nosym.poly.coefficients rtol=1e-8
     end
-
-
 end

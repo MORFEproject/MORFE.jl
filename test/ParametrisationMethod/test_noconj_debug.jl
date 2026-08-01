@@ -17,12 +17,12 @@ using MORFE
 # ─────────────────────────────────────────────────────────────────────────────
 # System parameters
 # ─────────────────────────────────────────────────────────────────────────────
-const _FOM        = 4
-const _ROM        = 2
-const _N_EXT      = 2
-const _NVAR       = _ROM + _N_EXT
+const _FOM = 4
+const _ROM = 2
+const _N_EXT = 2
+const _NVAR = _ROM + _N_EXT
 const _max_degree = 3
-const _ζ          = 0.01
+const _ζ = 0.01
 
 # Natural frequencies; first one is the master mode (conjugate pair λ₁, conj(λ₁))
 const _ω_nat = [1.0, 3.0, 5.0, 7.0]
@@ -77,10 +77,10 @@ const _Ω_force = imag(_λ₁)
 # Build model for a given f_vec
 # ─────────────────────────────────────────────────────────────────────────────
 function _make_model(f_vec::AbstractVector{ComplexF64})
-    f_vec_r      = real(f_vec)   # physical forcing is a real spatial vector
-    term_quad    = MultilinearMap((res, x, y) -> (res .+= x .* y), (2, 0))
+    f_vec_r = real(f_vec)   # physical forcing is a real spatial vector
+    term_quad = MultilinearMap((res, x, y) -> (res .+= x .* y), (2, 0))
     term_forcing = MultilinearMap((res, r) -> (res .+= f_vec_r * sum(r)), (0, 0), 1)
-    ext_sys      = ExternalSystem((im * _Ω_force, -im * _Ω_force))
+    ext_sys = ExternalSystem((im * _Ω_force, -im * _Ω_force))
     return NDOrderModel((_K, _C, _M), (term_quad, term_forcing), ext_sys)
 end
 
@@ -100,19 +100,19 @@ function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
     @printf "  f_vec = %s\n" repr(f_vec)
     println("─"^72)
 
-    model   = _make_model(f_vec)
+    model = _make_model(f_vec)
     res_set = _make_resonance()
-    shared  = (master_modes_derivatives = _master_modes_derivatives,
+    shared = (master_modes_derivatives = _master_modes_derivatives,
         left_modes_derivatives = _left_modes_derivatives, show_progress = false)
 
     W_conj, R_conj = solve_cohomological_problem(
         model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, res_set;
         conjugate_permutation = [2, 1, 4, 3],
-        shared...,
+        shared...
     )
     W_noconj, R_noconj = solve_cohomological_problem(
         model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, res_set;
-        shared...,
+        shared...
     )
 
     Wc1 = W_conj.poly.coefficients    # FOM × ORD × L
@@ -125,7 +125,7 @@ function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
 
     for (l, α) in enumerate(_mset.exponents)
         dW = norm(Wc1[:, :, l] - Wc2[:, :, l])
-        dR = norm(Rc1[:, l]    - Rc2[:, l])
+        dR = norm(Rc1[:, l] - Rc2[:, l])
         (dW > 1e-10 || dR > 1e-10) || continue
 
         n_diverge += 1
@@ -170,4 +170,5 @@ compare_paths("Case A — real f_vec (demo-like)", ComplexF64[1.0, 0.0, 0.0, 0.0
 # Case B: complex f_vec input, coerced to real(f_vec) inside _make_model.
 # Models a general eigensolver where mode shapes may be complex.
 # With real(f_vec) applied before building the forcing term, both paths must agree.
-compare_paths("Case B — complex input coerced to real(f_vec) (correct)", ComplexF64[1.0 + 0.3im, 0.0, 0.0, 0.0])
+compare_paths("Case B — complex input coerced to real(f_vec) (correct)", ComplexF64[
+    1.0 + 0.3im, 0.0, 0.0, 0.0])

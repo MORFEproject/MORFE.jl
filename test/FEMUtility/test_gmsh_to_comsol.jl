@@ -106,7 +106,8 @@ function inspect_comsol(mphtxt_file)
 end
 
 # ─── main ──────────────────────────────────────────────────────────────────
-beam_msh = joinpath(@__DIR__, "..", "..", "examples", "02_clamped_beam_gridap", "clamped_clamped_beam.msh")
+beam_msh = joinpath(
+    @__DIR__, "..", "..", "examples", "02_clamped_beam_gridap", "clamped_clamped_beam.msh")
 synth_msh = joinpath(tempdir(), "synthetic_p18q9.msh")
 comsol_out = joinpath(tempdir(), "out.mphtxt")
 gmsh2_out = joinpath(tempdir(), "roundtrip.msh")

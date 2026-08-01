@@ -46,6 +46,24 @@ function has_own_doc(mod, sym)
 	haskey(meta, binding) && !isempty(meta[binding].docs)
 end
 
+# Docstrings attached to one binding, in the order they were written.
+#
+# `MultiDoc.docs` is an IdDict, so iterating it yields an arbitrary order; a symbol
+# with several docstrings (a type plus its documented constructors) would get one of
+# them picked at random.  `MultiDoc.order` records definition order and, for a type,
+# always begins with the `Union{}` signature — the struct's own docstring, ahead of
+# any constructor.  Every reader of a binding's documentation goes through here so
+# the page can never link to, or lead with, a constructor in place of its type.
+function ordered_docstrs(md)
+	isempty(md.order) && return collect(values(md.docs))
+	out = Any[]
+	for sig in md.order
+		d = get(md.docs, sig, nothing)
+		d === nothing || push!(out, d)
+	end
+	return isempty(out) ? collect(values(md.docs)) : out
+end
+
 function item_kind(mod, sym)
 	startswith(string(sym), "@") && return "macro"
 	try

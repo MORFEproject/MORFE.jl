@@ -14,19 +14,24 @@ using .AbaqusToGmsh: abaqus_to_gmsh, abaqus_to_gmsh_linear
 using .ComsolToGmsh: comsol_to_gmsh, comsol_to_gmsh_linear
 using .GmshToComsol: gmsh_to_comsol
 
-MORFE.FEMUtility.abaqus_to_gmsh(args...; kwargs...) =
+function MORFE.FEMUtility.abaqus_to_gmsh(args...; kwargs...)
     AbaqusToGmsh.abaqus_to_gmsh(args...; kwargs...)
+end
 
-MORFE.FEMUtility.abaqus_to_gmsh_linear(args...; kwargs...) =
+function MORFE.FEMUtility.abaqus_to_gmsh_linear(args...; kwargs...)
     AbaqusToGmsh.abaqus_to_gmsh_linear(args...; kwargs...)
+end
 
-MORFE.FEMUtility.comsol_to_gmsh(args...; kwargs...) =
+function MORFE.FEMUtility.comsol_to_gmsh(args...; kwargs...)
     ComsolToGmsh.comsol_to_gmsh(args...; kwargs...)
+end
 
-MORFE.FEMUtility.comsol_to_gmsh_linear(args...; kwargs...) =
+function MORFE.FEMUtility.comsol_to_gmsh_linear(args...; kwargs...)
     ComsolToGmsh.comsol_to_gmsh_linear(args...; kwargs...)
+end
 
-MORFE.FEMUtility.gmsh_to_comsol(args...; kwargs...) =
+function MORFE.FEMUtility.gmsh_to_comsol(args...; kwargs...)
     GmshToComsol.gmsh_to_comsol(args...; kwargs...)
+end
 
 end # module MORFEGmshExt

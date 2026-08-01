@@ -479,7 +479,7 @@ using StaticArrays: SVector
         @testset "output dimensions" begin
             f = make_fixture()
             (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
-            resonance, lower_order_couplings, external_dynamics, s) = f
+                resonance, lower_order_couplings, external_dynamics, s) = f
 
             # Constant width: the border is ROM columns wide regardless of nR.
             n_sys = FOM + ROM
@@ -498,7 +498,7 @@ using StaticArrays: SVector
         @testset "left block M[:,1:FOM] equals L(s)" begin
             f = make_fixture()
             (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
-            resonance, lower_order_couplings, external_dynamics, s) = f
+                resonance, lower_order_couplings, external_dynamics, s) = f
 
             M = zeros(ComplexF64, FOM, FOM + ROM)
             rhs = zeros(ComplexF64, FOM)
@@ -514,7 +514,7 @@ using StaticArrays: SVector
         @testset "border column FOM+r is C_r(s) when resonant, zero otherwise" begin
             f = make_fixture()
             (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
-            resonance, resonance_vec, lower_order_couplings, external_dynamics, s) = f
+                resonance, resonance_vec, lower_order_couplings, external_dynamics, s) = f
 
             # Pre-fill with garbage: the assembly must overwrite every border column,
             # including the non-resonant ones it masks to zero.
@@ -538,7 +538,7 @@ using StaticArrays: SVector
         @testset "rhs equals lower-order + external contributions" begin
             f = make_fixture()
             (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
-            resonance, lower_order_couplings, external_dynamics, s) = f
+                resonance, lower_order_couplings, external_dynamics, s) = f
 
             M = zeros(ComplexF64, FOM, FOM + ROM)
             rhs = zeros(ComplexF64, FOM)
@@ -610,7 +610,7 @@ using StaticArrays: SVector
         @testset "idempotency – calling twice gives the same result" begin
             f = make_fixture()
             (; FOM, ROM, fom_matrices, C_coeffs, E_coeffs,
-            resonance, lower_order_couplings, external_dynamics, s) = f
+                resonance, lower_order_couplings, external_dynamics, s) = f
 
             M1 = zeros(ComplexF64, FOM, FOM + ROM)
             rhs1 = zeros(ComplexF64, FOM)
