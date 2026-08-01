@@ -1,7 +1,7 @@
 # Graph Report - MORFE_jl  (2026-08-01)
 
 ## Corpus Check
-- 158 files · ~418,171 words
+- 158 files · ~418,149 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

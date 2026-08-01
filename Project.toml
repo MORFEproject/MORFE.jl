@@ -4,7 +4,6 @@ version = "3.1.0"
 authors = ["MORFEproject <https://github.com/MORFE.jl>"]
 
 [deps]
-Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 KLU = "ef3ab10e-7fda-4108-b977-705223b18434"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -16,6 +15,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [weakdeps]
+Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 BifurcationKit = "0f109fa4-8a5d-4b75-95aa-f515264e7665"
 Gmsh = "705231aa-382f-11e9-3f0c-b7cb4346fdeb"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
@@ -41,13 +41,3 @@ Pardiso = "1.1.2"
 Plots = "1.41.6"
 StaticArrays = "1"
 julia = "1.10"
-
-[extras]
-Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
-LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Arpack", "BenchmarkTools", "HDF5", "LinearMaps", "Test"]

@@ -1,5 +1,11 @@
 # Analytic Performance Analysis — MORFE.jl Cohomological Solver
 
+> **Stale in detail.** Written against an earlier design in which the cached factorisation lived in
+> `klu_cache::Ref{Any}` and was refreshed with `klu!`. The field is now
+> `SparseLinearSolverState.fact`, and refactorisation goes through `klu_factor!` (`klu!` maps to
+> `klu_refactor`, which freezes the pivot sequence and is never used). The complexity analysis below
+> is unaffected; only the field and function names are out of date.
+
 ## Notation
 
 | Symbol | Meaning |

@@ -1,5 +1,9 @@
 # Multi-threaded cohomological solve — analysis
 
+> **Stale in detail.** The `ss.klu_cache` field referenced below is now
+> `SparseLinearSolverState.fact`, and refactorisation goes through `klu_factor!` rather than `klu!`.
+> The Pardiso-vs-KLU trade-off discussed here still holds.
+
 ## 1. What the change does
 
 `solve_cohomological_problem` iterates monomials in GrLex order (ascending total

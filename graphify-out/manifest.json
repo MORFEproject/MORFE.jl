@@ -30,8 +30,8 @@
     "semantic_hash": ""
   },
   "ext/MORFEPardisoExt.jl": {
-    "mtime": 1785581653.981418,
-    "ast_hash": "173ad775830527697ae209d6095882c9",
+    "mtime": 1785585419.931374,
+    "ast_hash": "1db67c801b288ea24f8a45a8f7a00c75",
     "semantic_hash": ""
   },
   "ext/MORFEPlotsExt.jl": {
@@ -68,16 +68,6 @@
     "mtime": 1780331521.149273,
     "ast_hash": "302518276da2c708e0df909a9692485d",
     "semantic_hash": "302518276da2c708e0df909a9692485d"
-  },
-  "ext/SpectralDecomposition/JordanChain.jl": {
-    "mtime": 1783451880.3850188,
-    "ast_hash": "546eac8d63ee5f0c9883fab6a5bc7863",
-    "semantic_hash": ""
-  },
-  "ext/SpectralDecomposition/PropagateEigenmodes.jl": {
-    "mtime": 1783451880.395237,
-    "ast_hash": "e13e466d6c0798017ded13a3a559404c",
-    "semantic_hash": ""
   },
   "src/BifurcationSolvers/BifurcationKitInterface.jl": {
     "mtime": 1779839519.5668118,
@@ -130,13 +120,13 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl": {
-    "mtime": 1785581135.6457765,
-    "ast_hash": "e7954b7109289cae79b5b6e7fed1c996",
+    "mtime": 1785585339.200333,
+    "ast_hash": "e443f4a5b187417ff26fc8b76d252a09",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl": {
-    "mtime": 1785583215.6655343,
-    "ast_hash": "2eff283368ca36c9cc9f9679136fffcd",
+    "mtime": 1785585307.1923604,
+    "ast_hash": "a23b3f2deb07d625a54cfabb768662ef",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/ConjugateSymmetry.jl": {
@@ -150,8 +140,8 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl": {
-    "mtime": 1785583742.2727337,
-    "ast_hash": "8fc1f554ba886b3f98c1956f6a47d51d",
+    "mtime": 1785585419.9322817,
+    "ast_hash": "2f0e7c40258e7a7eefb690e31c94909b",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl": {
@@ -175,13 +165,13 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/HornerEvaluator.jl": {
-    "mtime": 1785521130.426467,
-    "ast_hash": "987b0767a643fbed8ae0bd141a908956",
+    "mtime": 1785585371.4219675,
+    "ast_hash": "f1041f8a906f568fb1f1ea674e3cf622",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl": {
-    "mtime": 1785532126.4954348,
-    "ast_hash": "190b173bb54edd95d21ac47933e05069",
+    "mtime": 1785585395.4220874,
+    "ast_hash": "0c76547d517faf9000f4ac3cfbc5ceff",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/ParametrisationMethod.jl": {
@@ -670,8 +660,8 @@
     "semantic_hash": ""
   },
   "analytic_performance_analysis.md": {
-    "mtime": 1779557579.083161,
-    "ast_hash": "8b82ae0fa953355ba8f287d6b7e36c5a",
+    "mtime": 1785584477.0131476,
+    "ast_hash": "7ea6be5169630856b5f35f3872e57c51",
     "semantic_hash": ""
   },
   "benchmark/ferrite/reduced_dynamics_ferrite.txt": {
@@ -730,13 +720,13 @@
     "semantic_hash": ""
   },
   "multi_threaded_solve_analysis.md": {
-    "mtime": 1779044497.5763667,
-    "ast_hash": "d8d98bd05d8dc16dda68d9ec810add21",
+    "mtime": 1785584482.5990233,
+    "ast_hash": "e8a8020de874a9a07575304589237faf",
     "semantic_hash": ""
   },
   "next_steps.md": {
-    "mtime": 1779042587.7011704,
-    "ast_hash": "8567ebc6018073e83b935dd81ac33e87",
+    "mtime": 1785584488.9767447,
+    "ast_hash": "3d940bda6e41c9e47c1439cf631764ae",
     "semantic_hash": ""
   },
   "plan_conjugate.md": {
@@ -1190,8 +1180,8 @@
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_bordered_solver.jl": {
-    "mtime": 1785583022.2047822,
-    "ast_hash": "00ac090665ff64579cc6f1487757cd75",
+    "mtime": 1785585419.932942,
+    "ast_hash": "d40d7db307eae61017fecc474ea353a8",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_parametrise_entry.jl": {

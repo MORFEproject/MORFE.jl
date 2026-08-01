@@ -273,10 +273,9 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
 
 	# ── 7. Solver state must be finalisable ──────────────────────────────────
 	# The Pardiso branch attaches a finaliser to release C-side memory, and Julia
-	# refuses to finalise an immutable object. Because `_try_build_pardiso_solver`
-	# returns `nothing` without Pardiso installed, the `ps === nothing ||` guard
-	# short-circuits and CI never reaches that line — which is exactly how a hard
-	# construction-time error shipped unnoticed. Check the property directly.
+	# refuses to finalise an immutable object. Without Pardiso installed the
+	# `ps === nothing ||` guard short-circuits, so no test reaches that line by
+	# running a solve — the property has to be asserted directly.
 	@testset "solver state is finalisable (Pardiso teardown path)" begin
 		n, ROM = 20, 2
 		K = spdiagm(-1 => -ones(n - 1), 0 => 2.0 * ones(n), 1 => -ones(n - 1))
@@ -294,9 +293,9 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
 	# ── 7. The factorisation reads the template in place ─────────────────────
 	# Assembly writes into `ss.bordered.nzval` and never copies those values into the
 	# factorisation, which is only correct because the two share one array — `klu`
-	# takes `nzval` by reference. Breaking that does make the sparse ≡ dense testsets
-	# above fail (verified), but as an opaque numerical mismatch. This pins the
-	# invariant directly, and also covers a rebind that silently costs a copy back
+	# takes `nzval` by reference. Breaking that surfaces in the sparse ≡ dense
+	# testsets above, but only as an opaque numerical mismatch; this pins the
+	# invariant directly, and also catches a rebind that silently costs a copy back
 	# without changing results.
 	@testset "factorisation aliases the bordered template" begin
 		n, ROM = 40, 2

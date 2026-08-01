@@ -32,14 +32,14 @@ cohomological linear system is **bordered** and of **constant size** `FOM + ROM`
 ```
 ┌                          ┐ ┌         ┐   ┌             ┐
 │  L(s)     C(s) P         │ │  W[α]   │ = │  RHS_inv    │   FOM rows  (invariance)
-│  P L̂(s)   P Ĉ(s) P + τQ  │ │  R[α]   │   │  P RHS_ort  │   ROM rows  (orthogonality)
+│  P Ĵ(s)   P Ĉ(s) P + τQ  │ │  R[α]   │   │  P RHS_ort  │   ROM rows  (orthogonality)
 └                          ┘ └         ┘   └             ┘
 ```
 
 where:
 - `L(s)`  (`FOM × FOM`) is the parametrisation operator,
 - `C(s)`  (`FOM × ROM`) acts on the unknown reduced-dynamics coefficients,
-- `L̂(s)` (`ROM × FOM`) is the orthogonality row operator,
+- `Ĵ(s)` (`ROM × FOM`) is the orthogonality row operator, stacking the rows `Ĵ_r(s)`,
 - `Ĉ(s)` (`ROM × ROM`) is the orthogonality joint operator,
 - `W[α] ∈ ℂᶠᵒᵐ` is the parametrisation coefficient,
 - `R[α] ∈ ℂᴿᴼᴹ` are the master reduced-dynamics coefficients,
@@ -50,13 +50,24 @@ compacted away.  That is what keeps the size — and on the sparse path the spar
 pattern — independent of `α`, so a single symbolic factorisation serves every
 monomial.  It costs nothing in accuracy: permuting the unknowns as
 `[W; R_res; R_non]` makes the matrix block triangular with an exactly decoupled `τI`
-block.  External forcing modes are *known* and appear only on the right-hand side.
+block, and each trivial row is a singleton in both its row and its column.  External
+forcing modes are *known* and appear only on the right-hand side.
 
-Solving the bordered system as a whole, rather than eliminating `L(s)` first, is a
-correctness requirement, not an optimisation: inner resonance is flagged by
-`|λ_r − s| < tol` while `det L(λ_r) = 0`, so `L(s_α)` is numerically singular at
-precisely the monomials that have a border to eliminate.  See the header comment of
-`CohomologicalSolver.jl`.
+## Why the system is bordered rather than reduced
+
+The border is not an optimisation but a conditioning requirement.  Inner resonance is
+flagged by `|λ_r − s| < tol`, and `det L(λ_r) = 0` for every master eigenvalue, so
+"monomial `α` is resonant" means precisely "`L(s_α)` is numerically singular" — and a
+border is present only on exactly those monomials.  Eliminating `L(s)` first, by
+forming `L(s)⁻¹·RHS` and `L(s)⁻¹C(s)`, would therefore apply an inverse that does not
+usefully exist, with backward error growing like `κ(L(s_α)) → ∞`.
+
+Factorising the bordered matrix as a whole keeps the backward error at `κ` of the
+*bordered* matrix, which stays bounded because the border spans the near-null
+directions of `L(s)` (Keller's bordering lemma; Govaerts, *SIAM J. Matrix Anal.
+Appl.* 1991).  This is why the linear algebra in `CohomologicalSolver.jl` never
+inverts `L(s)` alone, and why its numeric factorisation must re-pivot on every
+monomial.
 
 ---
 

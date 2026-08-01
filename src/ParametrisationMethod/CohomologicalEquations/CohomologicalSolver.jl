@@ -2,38 +2,33 @@
 # Solving the bordered cohomological system
 #
 # The system itself — its block structure, the resonance masking, and why the
-# constant size is equivalent to the compacted one — is documented once, in the
-# `CohomologicalEquations` module docstring.  What follows is only what is specific
-# to *solving* it, and each point below is a trap someone will otherwise re-open.
+# constant size is equivalent to the compacted one — is documented in the
+# `CohomologicalEquations` module docstring.  What follows are the three properties
+# the *solve* depends on; each constrains how the linear algebra may be done.
 #
-# 1. Do not eliminate L(s) first.  Inner resonance is flagged by |λ_r − s| < tol
-#    while det L(λ_r) = 0, so "α is resonant" means precisely "L(s_α) is numerically
-#    singular" — and only resonant monomials have a border to eliminate.  Forming
-#    L(s)⁻¹b and L(s)⁻¹C (the bordering elimination method) therefore has backward
-#    error scaling with κ(L) → ∞ exactly where it would be used, and the two
-#    subsequent differences of large quantities cancel catastrophically.  Factorising
-#    the bordered matrix whole keeps the backward error at κ(M), which stays O(1)
-#    because the border spans L's near-null directions (Keller's bordering lemma;
-#    Govaerts, SIMAX 1991).
+# 1. The bordered matrix is factorised whole; L(s) is never inverted on its own.
+#    Inner resonance is flagged by |λ_r − s| < tol while det L(λ_r) = 0, so "α is
+#    resonant" means precisely "L(s_α) is numerically singular" — and only resonant
+#    monomials carry a border.  Forming L(s)⁻¹b and L(s)⁻¹C (bordering elimination)
+#    therefore has backward error scaling with κ(L) → ∞ exactly where it would be
+#    applied, and the two subsequent differences of large quantities cancel
+#    catastrophically.  Factorising the bordered matrix keeps the backward error at
+#    κ(M), which stays O(1) because the border spans L's near-null directions
+#    (Keller's bordering lemma; Govaerts, SIMAX 1991).
 #
-# 2. The factorisation must re-pivot on every monomial.  Point 1 holds only if
-#    pivoting may move rows across the border, so a refactorisation that reuses a
-#    frozen pivot sequence (KLU's `klu!` = klu_refactor) degrades precisely at the
-#    resonances.  `_refactorise!` uses `klu_factor!`, which re-pivots while reusing
-#    the cached symbolic analysis.
+# 2. The numeric factorisation re-pivots on every monomial.  Property 1 holds only
+#    if pivoting may move rows across the border, so a refactorisation that reuses a
+#    frozen pivot sequence degrades precisely at the resonances.  `_refactorise!`
+#    uses `klu_factor!`, which re-pivots while reusing the cached symbolic analysis;
+#    KLU's exported `klu!` is `klu_refactor` and freezes the pivots.
 #
-# 3. Never *declare* symmetry to a backend — let each one decide.  The bordered
-#    pattern is structurally symmetric whenever the L union pattern is (the border
-#    contributes a dense row together with its matching dense column), which is the
-#    common FE case.  A solver told to exploit that symmetry constrains its
-#    permutation to preserve it, forfeiting the row interchange point 1 depends on.
-#    Given the choice, a general-purpose solver reaches the right conclusion by
-#    itself.  Do not force a strategy here, and do not declare a symmetric matrix
-#    type to Pardiso — see ext/MORFEPardisoExt.jl.
-#
-# The measurements behind points 2 and 3 — factoriser timings, fill, accuracy at a
-# genuine near-singularity — are recorded outside the source, where they can be
-# re-run and re-checked rather than silently ageing here.
+# 3. No symmetry is declared to any backend.  The bordered pattern is structurally
+#    symmetric whenever the L union pattern is — the border contributes a dense row
+#    together with its matching dense column — which is the common FE case.  A
+#    solver told to exploit that symmetry constrains its permutation to preserve it,
+#    forfeiting the cross-border row interchange property 1 depends on.  Each
+#    backend is left to analyse the matrix itself: no strategy is forced here, and
+#    no symmetric matrix type is declared to Pardiso (see ext/MORFEPardisoExt.jl).
 # =============================================================================
 
 # =============================================================================
@@ -41,28 +36,40 @@
 # =============================================================================
 
 """
-	_refactorise!(ss, A) -> factorisation object
+	_refactorise!(ss, A) -> KLU factorisation of `A`
 
-Return a factorisation of `A`, reusing the symbolic analysis cached in `ss.fact` when
-one is present.
+Factorise the bordered matrix for the current monomial, reusing the symbolic analysis
+cached in `ss.fact`.
 
-The first call performs the full analysis and stores it; subsequent calls redo only
-the **numeric** factorisation via `klu_factor!`, which re-pivots while reusing the
-cached symbolic analysis. That distinction is the whole point: the bordered matrix
-changes value on every monomial and goes near-singular in its `(1,1)` block at
-resonances, so a frozen pivot sequence degrades exactly where accuracy is needed.
+The first call analyses and factorises; every later call redoes only the **numeric**
+factorisation. Splitting them this way is what makes the constant-size formulation
+pay off: the sparsity pattern is identical for every monomial, so the ordering and
+symbolic phase — the expensive part — are computed once for the whole solve.
 
-**Never use `klu!` here.** It maps to `klu_refactor`, which reuses the pivot sequence
-chosen at the first monomial — the latent defect this whole change exists to remove.
+## Why `klu_factor!` and not `klu!`
 
-`A`'s sparsity pattern must be identical on every call; `SparseLinearSolverState`
-guarantees this by construction (only `nzval` is ever written).
+The numeric phase must **re-pivot**. The bordered matrix changes value on every
+monomial and its `(1,1)` block is near-singular at every resonance, where stability
+depends on pivoting being free to exchange rows across the border. `klu_factor!`
+re-pivots while reusing the cached symbolic analysis. KLU's exported `klu!` maps to
+`klu_refactor`, which replays the pivot sequence chosen at the first monomial and so
+loses accuracy exactly where it is needed.
+
+## Preconditions and aliasing
+
+`A`'s sparsity pattern must be identical on every call — [`SparseLinearSolverState`](@ref)
+guarantees this by construction, since only `nzval` is ever written.
 
 `klu` takes `A.nzval` by reference rather than copying it, so the factorisation and
-the template share one value array and the per-monomial assembly writes straight into
-what KLU reads. Nothing has to be copied in afterwards, and no explicit aliasing step
-is needed. `colptr`/`rowval` remain KLU's own (0-based) copies, and they are invariant
-anyway, which is what keeps the cached analysis valid.
+the template share one value array: per-monomial assembly writes straight into what
+KLU reads, with no copy-in step. `colptr`/`rowval` stay KLU's own (0-based) copies,
+and are invariant in any case.
+
+A factorisation is cached only if it succeeded, so a caller that catches the
+singular-matrix error and retries gets a fresh analysis rather than a partially
+initialised object. Singularity is reported through `issuccess` rather than an
+exception (`check = false`, `allowsingular = true`) so that all monomials — including
+the first — surface it through the same path.
 """
 function _refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
 	F = ss.fact

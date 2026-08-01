@@ -16,8 +16,9 @@ a reduced-order modelling technique for high-dimensional dynamical systems.
 | NVAR    | `ROM + N_EXT` (total reduced variables) |
 | R       | Set of resonant master modes (`|R| ≤ ROM`) |
 
-Non-resonant master modes have trivial (zero) reduced dynamics and are excluded
-from the orthogonality equations.
+Non-resonant master modes have trivial (zero) reduced dynamics.  They are *not*
+dropped from the block: each contributes the trivial row `f_r = 0`, so the block
+keeps a constant `ROM × (FOM+ROM)` shape whatever the resonance pattern.
 
 ---
 
@@ -38,20 +39,21 @@ coefficient at **γ** (master part unknown, external part known forcing) and
 terms reduces the condition to a single row equation
 
 ```
-L_r(s) W + C_r(s) f_res = − E_r(s) f_ext − Σ_{k=1}^{ORD-1} G_{r,k}(s) ξ_k
+Ĵ_r(s) W + C_r(s) f_res = − E_r(s) f_ext − Σ_{k=1}^{ORD-1} G_{r,k}(s) ξ_k
 ```
 
 with
 
 ```
-L_r(s)   = Σ_{j=1}^{ORD} J_r[j] · s^{j-1}          (1 × FOM row on W)
-G_{r,k}(s) = Σ_{j=k+1}^{ORD} J_r[j] · s^{j-1-k}     (Horner tails of L_r)
+Ĵ_r(s)   = Σ_{j=1}^{ORD} J_r[j] · s^{j-1}          (1 × FOM row on W)
+G_{r,k}(s) = Σ_{j=k+1}^{ORD} J_r[j] · s^{j-1-k}     (Horner tails of Ĵ_r)
 C_r(s)   = Σ_{k=1}^{ORD-1} G_{r,k}(s) · Y_k^m       (coupling to unknown f_res)
 E_r(s)   = Σ_{k=1}^{ORD-1} G_{r,k}(s) · Y_k^e       (known forcing → RHS)
 ```
 
-Only the `|R|` resonant master columns of `C_r` are assembled; non-resonant
-master modes have identically-zero reduced dynamics at **γ**.
+Only the resonant master columns of `C_r` carry a value; the rest are written as
+zeros, since the matching trivial rows pin those reduced-dynamics coefficients to
+zero anyway.
 
 ---
 
@@ -82,9 +84,10 @@ matrix remains).
 `J_r`, `C_r` and `E_r` coefficients are pre-computed once per order. At
 assembly time, only a subset is used:
 
-- **LHS matrix** `[L_r  C_r]`: only the `|R|` columns of `C_r(s)` corresponding
-  to resonant master modes are included; non-resonant columns are omitted because
-  their reduced dynamics is identically zero.
+- **LHS matrix** `[Ĵ_r  Ĉ_r]`: the columns of `C_r(s)` for non-resonant master
+  modes are zeroed rather than omitted, which keeps the block shape independent of
+  the resonance pattern.  Nothing is lost — those coefficients are pinned to zero by
+  their own trivial rows.
 - **RHS scalar**: only the `N_EXT_active` non-zero external forcing entries of
   `E_r(s)` contribute; their values are multiplied by `external_dynamics` and
   accumulated into `RHS_r`.
@@ -97,21 +100,21 @@ assembly time, only a subset is used:
 
 ## Lower-order RHS
 
-During the Horner evaluation of `L_r(s)`, the intermediate row vectors
+During the Horner evaluation of `Ĵ_r(s)`, the intermediate row vectors
 
 ```
-L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k] · s^{k-(j+1)},   j = 1, …, ORD-1
+Ĵ_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k] · s^{k-(j+1)},   j = 1, …, ORD-1
 ```
 
 are naturally available. Dotting each with the pre-computed coupling vector
 `ξ[j]` gives a scalar contribution:
 
 ```
-RHS_lower_r = -Σ_{j=1}^{ORD-1} L_r[j](s) · ξ[j]
+RHS_lower_r = -Σ_{j=1}^{ORD-1} Ĵ_r[j](s) · ξ[j]
 ```
 
-This accumulation is performed **in the same Horner loop** that computes `L_r(s)`,
-avoiding recomputation of the `L_r[j]` intermediates.
+This accumulation is performed **in the same Horner loop** that computes `Ĵ_r(s)`,
+avoiding recomputation of the `Ĵ_r[j]` intermediates.
 
 ## External forcing RHS
 
@@ -144,12 +147,12 @@ RHS_r = RHS_lower_r + RHS_ext_r
 Stacking one row per master mode — resonant or not — yields the global linear system
 
 ```
-[ P L   P C P + τ Q ] · [ W; f ] = P · RHS_R,      P = diag(resonance), Q = I − P
+[ P Ĵ   P Ĉ P + τ Q ] · [ W; f ] = P · RHS_R,      P = diag(resonance), Q = I − P
 ```
 
 where:
-- `L` is `ROM × FOM` (rows `L_r`), kept only on resonant rows,
-- `C` is `ROM × ROM` (columns of `C_r` from the joint operator), masked on both axes,
+- `Ĵ` is `ROM × FOM` (rows `Ĵ_r`), kept only on resonant rows,
+- `Ĉ` is `ROM × ROM` (columns of `C_r` from the joint operator), masked on both axes,
 - `f` is the **full** `ROM`-vector of reduced-dynamics coefficients,
 - `RHS_R` is the assembled `ROM`-vector of scalar right-hand sides,
 - `τ = 1` on the non-resonant diagonal, turning row `r` into `f_r = 0`.
@@ -165,9 +168,9 @@ dropped `C` entries multiply coefficients that the trivial rows pin to zero.
 
 | Function | Description |
 |:---------|:------------|
-| [`precompute_orthogonality_operator_coefficients`](@ref)   | Pre-compute `J_r` coefficient arrays for the orthogonality row operators `L_r(s)` |
+| [`precompute_orthogonality_operator_coefficients`](@ref)   | Pre-compute `J_r` coefficient arrays for the orthogonality row operators `Ĵ_r(s)` |
 | [`precompute_orthogonality_column_polynomials`](@ref)      | Pre-compute `Q_r` coefficient arrays split into `C_coeffs` and `E_coeffs` |
-| [`evaluate_orthogonality_row_and_lower_order_rhs!`](@ref)  | Fused Horner pass for `L_r(s)` (row) + scalar lower-order RHS |
+| [`evaluate_orthogonality_row_and_lower_order_rhs!`](@ref)  | Fused Horner pass for `Ĵ_r(s)` (row) + scalar lower-order RHS |
 | [`evaluate_orthogonality_column_row!`](@ref)               | Evaluate `C_r(s)` into one row of the `C` block, masked by the resonance vector |
 | [`evaluate_orthogonality_external_rhs`](@ref)              | Compute the scalar external-forcing RHS for mode `r` |
 | [`assemble_orthogonality_matrix_and_rhs!`](@ref)           | Constant-size `ROM × (FOM+ROM)` block and RHS assembly (in-place) |

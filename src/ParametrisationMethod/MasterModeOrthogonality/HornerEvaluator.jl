@@ -1,5 +1,5 @@
 # =============================================================================
-# Fused Horner pass: orthogonality row L_r(s) and scalar lower-order RHS
+# Fused Horner pass: orthogonality row Ĵ_r(s) and scalar lower-order RHS
 # =============================================================================
 
 """
@@ -8,7 +8,7 @@
 													J_coeffs_r)
 	-> scalar_rhs :: T
 
-Evaluate the orthogonality row operator `L_r(s)` **and** compute the scalar
+Evaluate the orthogonality row operator `Ĵ_r(s)` **and** compute the scalar
 lower-order right-hand-side contribution for mode `r` in a **single Horner
 pass**, reusing the transient intermediate row vectors.
 
@@ -18,14 +18,14 @@ At step `j` of the Horner recurrence (before the scalar multiply by `s`),
 the intermediate row vector
 
 ```
-L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
+Ĵ_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
 ```
 
 is available.  Contracting **bilinearly** with the pre-computed coupling vector
 `ξ[j]` gives the scalar contribution of lower-order solution terms at step `j`:
 
 ```
-contribution[j] = -L_r[j](s) · ξ[j] = -Σᵢ L_r[j](s)ᵢ · ξ[j]ᵢ
+contribution[j] = -Ĵ_r[j](s) · ξ[j] = -Σᵢ Ĵ_r[j](s)ᵢ · ξ[j]ᵢ
 ```
 
 The contraction must not conjugate: the sesquilinear conjugation of the
@@ -36,32 +36,32 @@ arises because these terms originate from the left-hand side of the
 cohomological equation.  Summed over `j = 1, …, ORD-1`:
 
 ```
-RHS_lower_r = -Σ_{j=1}^{ORD-1} L_r[j](s) · ξ[j]
+RHS_lower_r = -Σ_{j=1}^{ORD-1} Ĵ_r[j](s) · ξ[j]
 ```
 
 The sum runs to `ORD-1` (one fewer than in [`InvarianceEquation`](@ref)) because
 the joint operator `Q_r` has one fewer degree.  Sharing the loop with the
-`L_r(s)` evaluation avoids recomputing the `L_r[j]` intermediates.
+`Ĵ_r(s)` evaluation avoids recomputing the `Ĵ_r[j]` intermediates.
 
 ## Arguments
 
 - `row                  :: AbstractVector{T}` – output buffer (length `FOM`),
-  overwritten with `L_r(s) = Σ_{j=1}^{ORD} J_r[j, :] · s^{j-1}`.
+  overwritten with `Ĵ_r(s) = Σ_{j=1}^{ORD} J_r[j, :] · s^{j-1}`.
 - `s                    :: T` – evaluation superharmonic.
 - `lower_order_couplings :: SVector{ORD_M1, <:AbstractVector{T}}` – coupling
   vectors `ξ[j]` for `j = 1, …, ORD-1`; each is a length-`FOM` vector.
 - `J_coeffs_r           :: AbstractMatrix{T}` – `ORD × FOM` matrix; row `j`
-  is `J_r[j, :]`, the degree-`(j-1)` coefficient of `L_r`.  Obtained from
+  is `J_r[j, :]`, the degree-`(j-1)` coefficient of `Ĵ_r`.  Obtained from
   [`precompute_orthogonality_operator_coefficients`](@ref).
 
 ## Returns
 
 The scalar lower-order RHS accumulation
-`RHS_lower_r = -Σ_{j=1}^{ORD-1} L_r[j](s) · ξ[j]`.
+`RHS_lower_r = -Σ_{j=1}^{ORD-1} Ĵ_r[j](s) · ξ[j]`.
 
 ## Complexity
 
-`O(ORD · FOM)`, shared with the `L_r(s)` evaluation.
+`O(ORD · FOM)`, shared with the `Ĵ_r(s)` evaluation.
 """
 function evaluate_orthogonality_row_and_lower_order_rhs!(
 	row::AbstractVector{T},
@@ -75,7 +75,7 @@ function evaluate_orthogonality_row_and_lower_order_rhs!(
 
 	scalar_rhs = zero(T)
 	for j in (ORD-1):-1:1
-		# row = L_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
+		# row = Ĵ_r[j](s) = Σ_{k=j+1}^{ORD} J_r[k, :] · s^{k-(j+1)}
 		# Accumulate bilinear contraction: scalar_rhs -= Σᵢ rowᵢ · ξ[j]ᵢ
 		# (no conjugation — the sesquilinear ᴴ is already baked into J_r; a
 		# conjugating dot() here would double-conjugate the row)
@@ -87,9 +87,9 @@ function evaluate_orthogonality_row_and_lower_order_rhs!(
 		scalar_rhs -= acc
 		row .*= s
 		row .+= view(J_coeffs_r, j, :)   # row ← row · s + J_r[j, :]
-		# row = L_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
+		# row = Ĵ_r[j-1](s) = Σ_{k=j}^{ORD} J_r[k, :] · s^{k-j}
 	end
-	# On exit: row = L_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
+	# On exit: row = Ĵ_r(s) = Σ_{k=1}^{ORD} J_r[k, :] · s^{k-1}
 
 	return scalar_rhs
 end

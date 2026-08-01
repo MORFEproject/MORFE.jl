@@ -6,6 +6,9 @@
 	LowerOrderResources{NVAR, T}
 
 Data needed to compute lower-order coupling vectors `ξ[j]` on every monomial.
+
+Bundled into one struct so the per-monomial buffers and the multiindex lookup are
+allocated once for the whole solve rather than per call.
 """
 struct LowerOrderResources{NVAR, T}
 	multiindex_dict::Dict{SVector{NVAR, Int}, Int}
@@ -18,8 +21,11 @@ end
 	LowerOrderResources{NVAR, T}(mset, ORD, FOM) -> LowerOrderResources
 
 Build the lower-order coupling resources for a multiindex set of `NVAR` variables,
-ODE order `ORD`, and full-order dimension `FOM`.  Absorbs the `candidate_indices`
-loop previously inlined in `solve_cohomological_problem`.
+ODE order `ORD`, and full-order dimension `FOM`.
+
+`candidate_indices` is precomputed here, once per monomial position: it lists the
+multiindices that can contribute a lower-order coupling to that monomial, which is a
+pure function of the multiindex set and so need not be recomputed during the solve.
 """
 function LowerOrderResources{NVAR, T}(
 	mset::MultiindexSet{NVAR}, ORD::Int, FOM::Int,
@@ -154,11 +160,10 @@ function SparseLinearSolverState{T}(
 		ps === nothing ? T[] : Vector{T}(undef, FOM + ROM),
 		ps, nothing, nothing,
 	)
-	# Pardiso's factorisation lives in C-side memory that the GC does not track, so it
-	# has to be released explicitly or every solve leaks one factorisation. This is
-	# also why the struct must stay `mutable` — Julia will not finalise an immutable
-	# object, and without Pardiso installed the guard below short-circuits, so nothing
-	# in CI reaches this line.
+	# Pardiso's factorisation lives in C-side memory the GC does not track, so it has
+	# to be released explicitly or every solve leaks one factorisation. This is also
+	# why the struct is `mutable`: Julia will not attach a finaliser to an immutable
+	# object.
 	ps === nothing || finalizer(_release_pardiso!, state)
 	return state
 end

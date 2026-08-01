@@ -1,5 +1,9 @@
 # MORFE.jl — Next Steps
 
+> **Stale in detail.** The `ss.klu_cache` field referenced in the threading section is now
+> `SparseLinearSolverState.fact`, and refactorisation goes through `klu_factor!` rather than `klu!`.
+> The `PropagateEigenmodes` item refers to a module that has since been deleted as dead code.
+
 ## Context and scaling assumptions
 
 These plans are written with the following regime in mind:

@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>API Reference</span></div>
   <h1>API Reference</h1>
-  <p class="lede">18 modules · 193 documented entries · generated 15 July 2026</p>
+  <p class="lede">18 modules · 198 documented entries · generated 1 August 2026</p>
 
   <div id="Multiindices" class="api-module-h">Multiindices</div>
   <div class="api-module-desc" data-module="Multiindices"><div class="markdown"><p>Module <code>Multiindices</code> — graded-lexicographic multiindex sets and combinatorial utilities.</p>
@@ -334,14 +334,14 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-find_in_set">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L330" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L330" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L292" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L292" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::NTuple&#123;N,Int&#125;&#41; where N -&gt; Union&#123;Int, Nothing&#125;</code></pre>
-<p>Tuple version – avoids allocating a vector for the exponent.</p>
-</div><div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::AbstractVector&#123;Int&#125;&#41; -&gt; Union&#123;Int, Nothing&#125;</code></pre>
+<div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::AbstractVector&#123;Int&#125;&#41; -&gt; Union&#123;Int, Nothing&#125;</code></pre>
 <p>Return the column index of <code>exp</code> in <code>set.exponents</code> using binary search, exploiting the fact that the set is sorted according to Grlex. Returns <code>nothing</code> if <code>exp</code> is not present.</p>
+</div><div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::NTuple&#123;N,Int&#125;&#41; where N -&gt; Union&#123;Int, Nothing&#125;</code></pre>
+<p>Tuple version – avoids allocating a vector for the exponent.</p>
 </div>
   </div>
 </div>
@@ -362,15 +362,11 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-indices_in_box_with_bounded_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L423" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L423" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64, allowed_indices::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L385" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L385" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64, allowed_indices::AbstractVector{Int64}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>indices_in_box_with_bounded_degree&#40;set::MultiindexSet, box_upper::AbstractVector&#123;Int&#125;,
-								   degree_lower_bound::Int, total_deg_upper::Int,
-								   allowed_indices::AbstractVector&#123;Int&#125;&#41; -&gt; Vector&#123;Int&#125;</code></pre>
-<p>Same as the 4‑argument version, but the search is restricted to the indices listed in <code>allowed_indices</code> &#40;which must be sorted&#41;. Only those indices that also satisfy the componentwise bound are returned.</p>
-</div><div class="markdown"><pre><code>indices_in_box_with_bounded_degree&#40;set::MultiindexSet, box_upper::AbstractVector&#123;Int&#125;,
 								   degree_lower_bound::Int, total_deg_upper::Int&#41; -&gt; Vector&#123;Int&#125;</code></pre>
 <p>Return the column indices of all multiindices <code>v</code> in <code>set</code> such that</p>
 <ul>
@@ -380,6 +376,10 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 </ul>
 <p>Uses the degree bounds to limit the search to relevant columns.</p>
+</div><div class="markdown"><pre><code>indices_in_box_with_bounded_degree&#40;set::MultiindexSet, box_upper::AbstractVector&#123;Int&#125;,
+								   degree_lower_bound::Int, total_deg_upper::Int,
+								   allowed_indices::AbstractVector&#123;Int&#125;&#41; -&gt; Vector&#123;Int&#125;</code></pre>
+<p>Same as the 4‑argument version, but the search is restricted to the indices listed in <code>allowed_indices</code> &#40;which must be sorted&#41;. Only those indices that also satisfy the componentwise bound are returned.</p>
 </div>
   </div>
 </div>
@@ -467,13 +467,13 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-type" id="Polynomials-DensePolynomial">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L154" target="_blank" rel="noopener">DensePolynomial</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L117" target="_blank" rel="noopener">DensePolynomial</a></code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>DensePolynomial&#40;dict::Dict&#123;Vector&#123;Int&#125;, SVector&#123;K,T&#125;&#125;&#41; where &#123;K,T&#125;</code></pre>
-<p>Vector-valued polynomial from an <code>exponent → SVector</code> dictionary. Coefficients are laid out column-by-column &#40;parallel fill&#41;.</p>
-</div><div class="markdown"><pre><code>DensePolynomial&#40;coeff_vec::Vector&#123;SVector&#123;K,T&#125;&#125;, mset&#41;</code></pre>
+<div class="markdown"><pre><code>DensePolynomial&#40;coeff_vec::Vector&#123;SVector&#123;K,T&#125;&#125;, mset&#41;</code></pre>
 <p>Vector-valued polynomial from the old <code>Vector&#123;SVector&#125;</code> layout. Converts to a contiguous <code>&#40;K × L&#41;</code> matrix, filling columns in parallel.</p>
+</div><div class="markdown"><pre><code>DensePolynomial&#40;dict::Dict&#123;Vector&#123;Int&#125;, SVector&#123;K,T&#125;&#125;&#41; where &#123;K,T&#125;</code></pre>
+<p>Vector-valued polynomial from an <code>exponent → SVector</code> dictionary. Coefficients are laid out column-by-column &#40;parallel fill&#41;.</p>
 </div><div class="markdown"><pre><code>DensePolynomial&#40;dict::Dict&#123;Vector&#123;Int&#125;, T&#125;&#41; where T&lt;:Number</code></pre>
 <p>Scalar polynomial from an <code>exponent → coefficient</code> dictionary.</p>
 </div><div class="markdown"><pre><code>DensePolynomial&#123;T, NVAR, N, A&#125;</code></pre>
@@ -558,22 +558,22 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Polynomials-evaluate">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, N, A} where A&lt;:AbstractArray{T, N}, vals::AbstractVector{&lt;:Number}) where {T, NVAR, N}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L392" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}, component::Int64) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L374" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L374" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L374" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, N, A} where A&lt;:AbstractArray{T, N}, vals::AbstractVector{&lt;:Number}) where {T, NVAR, N}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L374" target="_blank" rel="noopener">evaluate</a>(poly::DensePolynomial{T, NVAR, 2, A} where A&lt;:AbstractMatrix{T}, vals::AbstractVector{&lt;:Number}, component::Int64) where {T, NVAR}</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, vals&#41; -&gt; Vector&#123;T&#125;</code></pre>
-<p>Vector-valued polynomial evaluation via BLAS <code>gemv</code>:</p>
-<pre><code>result &#61; coefficients  &#40;K × L&#41;  *  m  &#40;L,&#41;  →  &#40;K,&#41;</code></pre>
-<p>A single BLAS call, no per-term allocation.</p>
+<div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,1&#125;, vals&#41; -&gt; T</code></pre>
+<p>Scalar polynomial evaluation: <code>sum&#40;c_i * m_i&#41;</code> without conjugation.</p>
 </div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,N&#125;, vals&#41; -&gt; Array</code></pre>
 <p>General tensor-valued case: reshape to &#40;prod&#40;leading_dims&#41;, L&#41;, gemv, reshape back.</p>
 </div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, vals, component::Int&#41; -&gt; T</code></pre>
 <p>Evaluate a single component of a vector-valued polynomial without allocating a full output vector.</p>
-</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,1&#125;, vals&#41; -&gt; T</code></pre>
-<p>Scalar polynomial evaluation: <code>sum&#40;c_i * m_i&#41;</code> without conjugation.</p>
+</div><div class="markdown"><pre><code>evaluate&#40;poly::DensePolynomial&#123;T,NVAR,2&#125;, vals&#41; -&gt; Vector&#123;T&#125;</code></pre>
+<p>Vector-valued polynomial evaluation via BLAS <code>gemv</code>:</p>
+<pre><code>result &#61; coefficients  &#40;K × L&#41;  *  m  &#40;L,&#41;  →  &#40;K,&#41;</code></pre>
+<p>A single BLAS call, no per-term allocation.</p>
 </div>
   </div>
 </div>
@@ -1078,12 +1078,15 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <div class="api api-function" id="FullOrderModel-linear_first_order_matrices">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L195" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:(SparseMatrixCSC{T})}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L195" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:AbstractMatrix{T}}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L195" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::FirstOrderModel)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L364" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:(SparseMatrixCSC{T})}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L364" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:AbstractMatrix{T}}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L364" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::FirstOrderModel)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>linear_first_order_matrices&#40;model::NDOrderModel&#41;</code></pre>
+<div class="markdown"><pre><code>linear_first_order_matrices&#40;model::FirstOrderModel&#41;</code></pre>
+<p>Return the matrices <code>&#40;A, B&#41;</code> of the equivalent linear first‑order system <code>B Ẋ &#61; A X</code>.  Because the model is already first order, <code>X &#61; x</code> and</p>
+<pre><code>A &#61; -B₀,    B &#61; B₁.</code></pre>
+</div><div class="markdown"><pre><code>linear_first_order_matrices&#40;model::NDOrderModel&#41;</code></pre>
 <p>Construct the matrices A and B of the equivalent linear first-order system:</p>
 <pre><code>B Ẋ &#61; A X</code></pre>
 <p>obtained from the ORD-th order model</p>
@@ -1101,9 +1104,6 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 	  ⋮       ⋱
 	 -B₀ -B₁ -B₂ ⋯ -B_&#123;ORD-1&#125; &#93;</code></pre>
 <p>where <code>I</code> is the <code>n_fom × n_fom</code> identity matrix.</p>
-</div><div class="markdown"><pre><code>linear_first_order_matrices&#40;model::FirstOrderModel&#41;</code></pre>
-<p>Return the matrices <code>&#40;A, B&#41;</code> of the equivalent linear first‑order system <code>B Ẋ &#61; A X</code>.  Because the model is already first order, <code>X &#61; x</code> and</p>
-<pre><code>A &#61; -B₀,    B &#61; B₁.</code></pre>
 </div>
   </div>
 </div>
@@ -1356,14 +1356,19 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Eigenproblems-solve">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L184" target="_blank" rel="noopener">solve</a>(::AbstractMatrix, ::AbstractMatrix, ::StructureModalDampingEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L282" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L282" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L282" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L282" target="_blank" rel="noopener">solve</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L282" target="_blank" rel="noopener">solve</a>(::AbstractMatrix, ::AbstractMatrix, ::StructureModalDampingEigensolver)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
+<div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver&#41;</code></pre>
+<p>Thin wrapper: extracts <code>M &#61; model.linear_terms&#91;end&#93;</code> and <code>K &#61; model.linear_terms&#91;1&#93;</code> and delegates to <code>solve&#40;M, K, solver&#41;</code>.</p>
+</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
+<p>Solves right eigenproblem using <code>eigen</code> from LinearAlgebra.  Let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
+&#36;	&#40;A-\lambda_k B&#41;y_k &#61; 0&#36;
+</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
 <p>Solves right eigenproblem using <code>generalised_eigenpairs</code> from <code>MORFE.Eigensolvers</code>.  Let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
 &#36;	&#40;A-\lambda_k B&#41;y_k &#61; 0&#36;
 </div><div class="markdown"><pre><code>solve&#40;mass::AbstractMatrix, stiffness::AbstractMatrix, solver::StructureModalDampingEigensolver&#41;</code></pre>
@@ -1371,49 +1376,44 @@ Works only for sparse matrices</code></pre>
 &#36;	&#40;K-\omega_k^2*M&#41;\y_&#123;k,U&#125;&#61;0 &#36;
 &#36;	y_&#123;k,V&#125;&#61;\lambda_k y_&#123;k,U&#125; &#36;
 <p>and assumes &#36;C &#61; \alpha*M &#43; \beta*K&#36;.</p>
-</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver&#41;</code></pre>
-<p>Thin wrapper: extracts <code>M &#61; model.linear_terms&#91;end&#93;</code> and <code>K &#61; model.linear_terms&#91;1&#93;</code> and delegates to <code>solve&#40;M, K, solver&#41;</code>.</p>
-</div><div class="markdown"><pre><code>solve&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
-<p>Solves right eigenproblem using <code>eigen</code> from LinearAlgebra.  Let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
-&#36;	&#40;A-\lambda_k B&#41;y_k &#61; 0&#36;
 </div>
   </div>
 </div>
 <div class="api api-function" id="Eigenproblems-solve_eigenproblem">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L496" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L496" target="_blank" rel="noopener">solve_eigenproblem</a>(stiffness::AbstractMatrix, mass::AbstractMatrix, solver::StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L496" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel; solver, sorter!, normaliser!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L378" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L378" target="_blank" rel="noopener">solve_eigenproblem</a>(stiffness::AbstractMatrix, mass::AbstractMatrix, solver::StructureModalDampingEigensolver; sorter!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L378" target="_blank" rel="noopener">solve_eigenproblem</a>(model::NDOrderModel; solver, sorter!, normaliser!)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>solve_eigenproblem&#40;
+<div class="markdown"><pre><code>solve_eigenproblem&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
+<p>Specialised path for <code>StructureModalDampingEigensolver</code>: mass-normalisation is built into <code>solve</code>, and the left eigenvector order-blocks are analytic in the position mode &#40;see <a href="@ref"><code>_structural_left_eigenmode_orders</code></a>&#41;.  No adjoint solve or biorthogonal normalisation is needed.</p>
+<p>The optional <code>sorter&#33;</code> kwarg has the same semantics as in the general <code>solve_eigenproblem</code>: pass <code>&#40;args...&#41; -&gt; nothing</code> to preserve the solver&#39;s natural ordering.</p>
+</div><div class="markdown"><pre><code>solve_eigenproblem&#40;stiffness, mass, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
+<p>Convenience overload: pass <code>K</code> and <code>M</code> directly without constructing an <code>NDOrderModel</code>. The Rayleigh damping matrix <code>C &#61; αM &#43; βK</code> is rebuilt from the solver parameters for the left eigenvector order-blocks.</p>
+</div><div class="markdown"><pre><code>solve_eigenproblem&#40;
 	model::NDOrderModel;
 	solver::AbstractEigensolver &#61; DefaultEigensolver&#40;&#41;,
 	sorter&#33;::Function &#61; sort_by_magnitude&#33;,
 	normaliser&#33;::Function &#61; normalise_biorthogonal&#33;&#41;</code></pre>
 <p>Computes left and right eigenpairs of the problem described in <code>model</code> by using the defined <code>solver</code>. Additionally <code>sorter&#33;</code> sorts the eigenpairs and <code>normaliser&#33;</code> is used to normalise the eigenmodes.</p>
-</div><div class="markdown"><pre><code>solve_eigenproblem&#40;stiffness, mass, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
-<p>Convenience overload: pass <code>K</code> and <code>M</code> directly without constructing an <code>NDOrderModel</code>. The Rayleigh damping matrix <code>C &#61; αM &#43; βK</code> is rebuilt from the solver parameters for the left eigenvector order-blocks.</p>
-</div><div class="markdown"><pre><code>solve_eigenproblem&#40;model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
-<p>Specialised path for <code>StructureModalDampingEigensolver</code>: mass-normalisation is built into <code>solve</code>, and the left eigenvector order-blocks are analytic in the position mode &#40;see <a href="@ref"><code>_structural_left_eigenmode_orders</code></a>&#41;.  No adjoint solve or biorthogonal normalisation is needed.</p>
-<p>The optional <code>sorter&#33;</code> kwarg has the same semantics as in the general <code>solve_eigenproblem</code>: pass <code>&#40;args...&#41; -&gt; nothing</code> to preserve the solver&#39;s natural ordering.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="Eigenproblems-solve_left">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L209" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L209" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L209" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L120" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::DefaultEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L120" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::MorfeEigensolver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigenproblems.jl#L120" target="_blank" rel="noopener">solve_left</a>(model::NDOrderModel, solver::AbstractEigensolver, args...)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
-<p>Solves left eigenproblem using σ-shift to recover the correct eigenvalues.</p>
-</div><div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
+<div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::DefaultEigensolver&#41;</code></pre>
 <p>Solves left eigenproblem using <code>eigen</code> from LinearAlgebra.  let <code>A</code> and <code>B</code> be the first order matrices of <code>model</code>. Then it returns the eigenpairs</p>
 &#36;	x_k^H&#40;A-\lambda_k B&#41; &#61; 0&#36;
+</div><div class="markdown"><pre><code>solve_left&#40;model::NDOrderModel, solver::MorfeEigensolver&#41;</code></pre>
+<p>Solves left eigenproblem using σ-shift to recover the correct eigenvalues.</p>
 </div>
   </div>
 </div>
@@ -1735,10 +1735,11 @@ Works only for sparse matrices</code></pre>
 <div class="api api-function" id="Resonance-build_resonance_set">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L641" target="_blank" rel="noopener">build_resonance_set</a>(model::NDOrderModel, style::Symbol, mset::MultiindexSet, eigenproblem::Eigenproblem, tol::Float64, conjugacy_map::Union{Nothing, Vector{Int64}})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L641" target="_blank" rel="noopener">build_resonance_set</a>(model::NDOrderModel, style::Symbol, mset::MultiindexSet, eigenproblem::Eigenproblem, tol::Float64, conjugacy_map::Union{Nothing, Vector{Int64}}; external_eigenvalues)</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>build_resonance_set&#40;model, style, mset, eigenproblem, tol, conjugacy_map&#41;</code></pre>
+<div class="markdown"><pre><code>build_resonance_set&#40;model, style, mset, eigenproblem, tol, conjugacy_map;
+                    external_eigenvalues &#61; nothing&#41;</code></pre>
 <p>Build a <code>ResonanceSet</code> from a solved <code>Eigenproblem</code> according to the chosen parametrisation <code>style</code>. Accepted styles:</p>
 <ul>
 <li><p><code>:graph</code></p>
@@ -1748,6 +1749,7 @@ Works only for sparse matrices</code></pre>
 <li><p><code>:real_normal_form</code> &#40;requires <code>conjugacy_map</code>&#41;</p>
 </li>
 </ul>
+<p><code>external_eigenvalues</code> overrides the eigenvalues of the external system used in resonance detection &#40;default: taken from <code>model.external_system</code>&#41;.</p>
 </div>
   </div>
 </div>
@@ -1825,11 +1827,13 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <div class="api api-function" id="Resonance-resonance_set_from_graph_style">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L447" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_eigenvalues::Vector{ComplexF64}, tol::Union{Float64, Vector{Vector{Float64}}}) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L447" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_condition::MORFE.Resonance.OuterResonanceCondition) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L609" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_eigenvalues::Vector{ComplexF64}, tol::Union{Float64, Vector{Vector{Float64}}}) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L609" target="_blank" rel="noopener">resonance_set_from_graph_style</a>(multiindices::MultiindexSet{NVAR}, master_eigenvalues::Vector{ComplexF64}, external_eigenvalues::Vector{ComplexF64}, outer_condition::MORFE.Resonance.OuterResonanceCondition) where NVAR</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>resonance_set_from_graph_style&#40;
+<div class="markdown"><pre><code>resonance_set_from_graph_style&#40;multiindices, master_eigenvalues, external_eigenvalues, outer_condition&#41;</code></pre>
+<p>Advanced overload that accepts a pre-built <code>OuterResonanceCondition</code> for the outer rows. <code>outer_condition.target_indices</code> must use <strong>local</strong> indices <code>1:n_out</code>. <code>n_out</code> is inferred as <code>maximum&#40;outer_condition.target_indices&#41;</code> &#40;or 0 if empty&#41;.</p>
+</div><div class="markdown"><pre><code>resonance_set_from_graph_style&#40;
 	multiindices, master_eigenvalues, external_eigenvalues,
 	outer_eigenvalues, tol&#41;</code></pre>
 <p>Build a <code>ResonanceSet</code> using the <strong>graph style</strong>: every monomial of total degree ≥ 2 is marked resonant with all <code>ROM</code> master modes.  Outer targets are flagged by eigenvalue proximity <code>|λⱼ - s| &lt; tol</code>.</p>
@@ -1841,8 +1845,6 @@ is_resonant&#40;rs, mi, target&#41;  -&gt; Bool</code></pre>
 <li><p><code>outer_eigenvalues</code>: outer targets &#40;eigenvalues not included in <code>master_eigenvalues</code>, tested for near-resonance&#41;. Pass <code>ComplexF64&#91;&#93;</code> when there are no outer targets.</p>
 </li>
 </ul>
-</div><div class="markdown"><pre><code>resonance_set_from_graph_style&#40;multiindices, master_eigenvalues, external_eigenvalues, outer_condition&#41;</code></pre>
-<p>Advanced overload that accepts a pre-built <code>OuterResonanceCondition</code> for the outer rows. <code>outer_condition.target_indices</code> must use <strong>local</strong> indices <code>1:n_out</code>. <code>n_out</code> is inferred as <code>maximum&#40;outer_condition.target_indices&#41;</code> &#40;or 0 if empty&#41;.</p>
 </div>
   </div>
 </div>
@@ -1971,21 +1973,22 @@ set_resonance&#33;&#40;rs, target, mi, value&#41;  -&gt; rs</code></pre>
 <div class="api api-function" id="InvarianceEquation-assemble_cohomological_matrix_and_rhs!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl#L196" target="_blank" rel="noopener">assemble_cohomological_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::Number, linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:(AbstractMatrix), C_coeffs::Vector{&lt;:AbstractMatrix}, E_coeffs::Vector{&lt;:AbstractMatrix}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector}, external_dynamics::AbstractVector, g_buffer::AbstractVector) where {ROM, ORDP1}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl#L198" target="_blank" rel="noopener">assemble_cohomological_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::Number, linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:(AbstractMatrix), C_coeffs::Vector{&lt;:AbstractMatrix}, E_coeffs::Vector{&lt;:AbstractMatrix}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector}, external_dynamics::AbstractVector, g_buffer::AbstractVector) where {ROM, ORDP1}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>assemble_cohomological_matrix_and_rhs&#33;&#40;M, rhs, s, linear_terms, C_coeffs, E_coeffs,
 										resonance, lower_order_couplings,
 										external_dynamics, g_buffer&#41; → nothing</code></pre>
 <p>In-place variant: writes the invariance-equation system matrix and RHS directly into the caller-supplied <code>M</code> and <code>rhs</code> buffers.  No heap allocation occurs.</p>
-<p><code>M</code>   must have size <code>FOM × n_sys</code> where <code>n_sys &#61; FOM &#43; nR</code>. <code>rhs</code> must have length <code>FOM</code>.  Both are overwritten on entry. <code>g_buffer</code> is the pre-allocated <code>FOM</code>-length scratch buffer for the external RHS.</p>
+<p><code>M</code>   must have size <code>FOM × &#40;FOM &#43; ROM&#41;</code> — the border is <strong>constant width</strong> and the resonance mask selects its content rather than its size: column <code>FOM &#43; r</code> holds <code>C_r&#40;s&#41;</code> when mode <code>r</code> is resonant and is zeroed otherwise.  The zeroed columns are harmless because the matching orthogonality row pins <code>R_&#123;r,α&#125; &#61; 0</code> &#40;see <a href="@ref"><code>assemble_orthogonality_matrix_and_rhs&#33;</code></a>&#41;.</p>
+<p><code>rhs</code> must have length <code>FOM</code>.  Both are overwritten on entry. <code>g_buffer</code> is the pre-allocated <code>FOM</code>-length scratch buffer for the external RHS.</p>
 </div>
   </div>
 </div>
 <div class="api api-function" id="InvarianceEquation-build_sparse_L_and_rhs!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L156" target="_blank" rel="noopener">build_sparse_L_and_rhs!</a>(rhs::AbstractVector, L_template::SparseArrays.SparseMatrixCSC, mappings::Vector{Vector{Int64}}, linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:SparseArrays.SparseMatrixCSC, s, lower_order_couplings::AbstractVector{&lt;:AbstractVector}) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L288" target="_blank" rel="noopener">build_sparse_L_and_rhs!</a>(rhs::AbstractVector, L_template::SparseArrays.SparseMatrixCSC, mappings::Vector{Vector{Int64}}, linear_terms::NTuple{ORDP1, var"#s226"} where var"#s226"&lt;:SparseArrays.SparseMatrixCSC, s, lower_order_couplings::AbstractVector{&lt;:AbstractVector}) where ORDP1</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>build_sparse_L_and_rhs&#33;&#40;rhs, L_template, mappings, linear_terms, s, lower_order_couplings&#41;
@@ -2213,24 +2216,66 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 </div>
   </div>
 </div>
+<div class="api api-function" id="InvarianceEquation-precompute_sparse_bordered_template">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L156" target="_blank" rel="noopener">precompute_sparse_bordered_template</a>(L_template::SparseArrays.SparseMatrixCSC{Tv, Ti}, ROM::Int64) where {Tv, Ti}</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>precompute_sparse_bordered_template&#40;L_template, ROM&#41; -&gt; &#40;M, border_row_base&#41;</code></pre>
+<p>Allocate the constant-size <code>&#40;FOM&#43;ROM&#41; × &#40;FOM&#43;ROM&#41;</code> <strong>bordered</strong> cohomological matrix</p>
+<pre><code>	┌                              ┐
+	│  L&#40;s&#41;      C&#40;s&#41; P            │   FOM rows  &#40;invariance&#41;
+	│  P Ĵ&#40;s&#41;    P Ĉ&#40;s&#41; P &#43; τ Q    │   ROM rows  &#40;orthogonality / R_α &#61; 0&#41;
+	└                              ┘</code></pre>
+<p>whose sparsity pattern depends <strong>only</strong> on the union pattern of <code>L_template</code> and on <code>ROM</code> — never on the resonance mask <code>P &#61; diag&#40;ρ&#41;</code> of the monomial being solved. Non-resonant border entries are carried as <em>numeric</em> zeros in structural positions, which is exactly what allows one symbolic factorisation to be reused for every monomial. The system being represented is documented in the <code>CohomologicalEquations</code> module docstring; what follows is this function&#39;s own contract — where each block lands in the CSC arrays, which the assembly in <code>_solve_monomial&#33;</code> writes to directly.</p>
+<p>Block layout, in CSC order:</p>
+<table><tr><th align="left">block</th><th align="left">rows</th><th align="left">cols</th><th align="left">pattern</th></tr><tr><td align="left"><code>L</code></td><td align="left"><code>1:FOM</code></td><td align="left"><code>1:FOM</code></td><td align="left">union pattern of <code>L_template</code></td></tr><tr><td align="left"><code>C P</code></td><td align="left"><code>1:FOM</code></td><td align="left"><code>FOM&#43;1:end</code></td><td align="left">dense <code>FOM × ROM</code></td></tr><tr><td align="left"><code>P Ĵ</code></td><td align="left"><code>FOM&#43;1:end</code></td><td align="left"><code>1:FOM</code></td><td align="left">dense <code>ROM × FOM</code></td></tr><tr><td align="left"><code>P Ĉ P &#43; τ Q</code></td><td align="left"><code>FOM&#43;1:end</code></td><td align="left"><code>FOM&#43;1:end</code></td><td align="left">dense <code>ROM × ROM</code></td></tr></table>
+<p>so <code>nnz&#40;M&#41; &#61; nnz&#40;L_template&#41; &#43; 2·FOM·ROM &#43; ROM²</code>. Appending the border rows to each of the first <code>FOM</code> columns preserves sorted <code>rowval</code> because every union row index is <code>≤ FOM</code>.</p>
+<h2>Returns</h2>
+<ul>
+<li><p><code>M :: SparseMatrixCSC</code> — the template; only <code>nzval</code> is ever written afterwards.</p>
+</li>
+<li><p><code>border_row_base :: Vector&#123;Int&#125;</code> — length <code>FOM</code>; entry <code>M&#91;FOM&#43;r, c&#93;</code> for <code>c ≤ FOM</code> lives at <code>M.nzval&#91;border_row_base&#91;c&#93; &#43; r - 1&#93;</code>.</p>
+</li>
+</ul>
+<p>No <code>L → M</code> index table is returned or needed.  Because the <code>L</code> entries of column <code>c</code> are laid down as a contiguous <em>prefix</em> of that column, the map is affine within each column,</p>
+<pre><code>	L_template.nzval&#91;p&#93;  ↦  M.nzval&#91;M.colptr&#91;c&#93; &#43; &#40;p - L_template.colptr&#91;c&#93;&#41;&#93;</code></pre>
+<p>so <a href="@ref"><code>scatter_L_into_bordered&#33;</code></a> is a per-column block copy rather than an indirect gather — which also saves an <code>nnz&#40;L&#41;</code>-length index vector.</p>
+<p>Border <em>column</em> positions need no table either: column <code>FOM&#43;q</code> starts at <code>bq &#61; M.colptr&#91;FOM&#43;q&#93;</code>, so <code>C_q&#40;s&#41;</code> occupies the contiguous run <code>M.nzval&#91;bq : bq&#43;FOM-1&#93;</code> and the corner entry <code>M&#91;FOM&#43;m, FOM&#43;q&#93;</code> sits at <code>bq &#43; FOM &#43; m - 1</code>.</p>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="InvarianceEquation-scatter_L_into_bordered!">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl#L253" target="_blank" rel="noopener">scatter_L_into_bordered!</a>(M::SparseArrays.SparseMatrixCSC, L_template::SparseArrays.SparseMatrixCSC)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>scatter_L_into_bordered&#33;&#40;M, L_template&#41; -&gt; M</code></pre>
+<p>Copy the freshly evaluated <code>L&#40;s&#41;</code> from the standalone Horner workspace into the <code>&#40;1,1&#41;</code> block of the bordered template.</p>
+<p><code>L</code>&#39;s entries for column <code>c</code> sit contiguously in both matrices — at <code>L_template.colptr&#91;c&#93; …</code> and at <code>M.colptr&#91;c&#93; …</code> respectively &#40;see <a href="@ref"><code>precompute_sparse_bordered_template</code></a>&#41; — so each column is a single <code>copyto&#33;</code> block move rather than an element-by-element gather through an index table.  Keeping this a separate step is what leaves <a href="@ref"><code>build_sparse_L_and_rhs&#33;</code></a> untouched: it needs its own square workspace for the transient Horner intermediates <code>L&#91;j&#93;&#40;s&#41;</code> that accumulate the lower-order RHS.</p>
+</div>
+  </div>
+</div>
   <div id="MasterModeOrthogonality" class="api-module-h">MasterModeOrthogonality</div>
   <div class="api-module-desc" data-module="MasterModeOrthogonality"><div class="markdown"><p>Assemble the orthogonality conditions that arise in the parametrisation method, a reduced-order modelling technique for high-dimensional dynamical systems.</p>
 <hr />
 <h1>Nomenclature</h1>
 <table><tr><th align="left">Symbol</th><th align="left">Meaning</th></tr><tr><td align="left">FOM</td><td align="left">Full-order model dimension</td></tr><tr><td align="left">ROM</td><td align="left">Number of master modes &#40;reduced coordinates&#41;</td></tr><tr><td align="left">N_EXT</td><td align="left">Number of external forcing modes</td></tr><tr><td align="left">NVAR</td><td align="left"><code>ROM &#43; N_EXT</code> &#40;total reduced variables&#41;</td></tr><tr><td align="left">R</td><td align="left">Set of resonant master modes &#40;&#96;</td></tr></table>
-<p>Non-resonant master modes have trivial &#40;zero&#41; reduced dynamics and are excluded from the orthogonality equations.</p>
+<p>Non-resonant master modes have trivial &#40;zero&#41; reduced dynamics.  They are <em>not</em> dropped from the block: each contributes the trivial row <code>f_r &#61; 0</code>, so the block keeps a constant <code>ROM × &#40;FOM&#43;ROM&#41;</code> shape whatever the resonance pattern.</p>
 <hr />
 <h1>Mathematical origin: sesquilinear B-orthogonality</h1>
 <p>For each multi-index <strong>γ</strong> with superharmonic <code>s &#61; Σᵢ γᵢ λᵢ</code>, the condition for master mode <code>r</code> is the sesquilinear B-orthogonality of the companion left eigenvector <code>φ_r &#61; &#91;φ_&#123;r,1&#125;; …; φ_&#123;r,ORD&#125;&#93;</code> &#40;solving <code>φ_rᴴ &#40;λ_r B − A&#41; &#61; 0</code>&#41; against the first-order state <code>𝒲</code> of the monomial:</p>
 <pre><code>φ_rᴴ B 𝒲 &#61; 0,     𝒲 &#61; &#91;W_1; …; W_ORD&#93;,   W_1 &#61; W,   W_&#123;j&#43;1&#125; &#61; s W_j &#43; Y_j f &#43; ξ_j</code></pre>
 <p>Here <code>Y_j</code> are the right eigenmode order-blocks, <code>f</code> the reduced-dynamics coefficient at <strong>γ</strong> &#40;master part unknown, external part known forcing&#41; and <code>ξ_j</code> the known lower-order couplings. Solving the recurrence and collecting terms reduces the condition to a single row equation</p>
-<pre><code>L_r&#40;s&#41; W &#43; C_r&#40;s&#41; f_res &#61; − E_r&#40;s&#41; f_ext − Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; ξ_k</code></pre>
+<pre><code>Ĵ_r&#40;s&#41; W &#43; C_r&#40;s&#41; f_res &#61; − E_r&#40;s&#41; f_ext − Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; ξ_k</code></pre>
 <p>with</p>
-<pre><code>L_r&#40;s&#41;   &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_r&#91;j&#93; · s^&#123;j-1&#125;          &#40;1 × FOM row on W&#41;
-G_&#123;r,k&#125;&#40;s&#41; &#61; Σ_&#123;j&#61;k&#43;1&#125;^&#123;ORD&#125; J_r&#91;j&#93; · s^&#123;j-1-k&#125;     &#40;Horner tails of L_r&#41;
+<pre><code>Ĵ_r&#40;s&#41;   &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_r&#91;j&#93; · s^&#123;j-1&#125;          &#40;1 × FOM row on W&#41;
+G_&#123;r,k&#125;&#40;s&#41; &#61; Σ_&#123;j&#61;k&#43;1&#125;^&#123;ORD&#125; J_r&#91;j&#93; · s^&#123;j-1-k&#125;     &#40;Horner tails of Ĵ_r&#41;
 C_r&#40;s&#41;   &#61; Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; · Y_k^m       &#40;coupling to unknown f_res&#41;
 E_r&#40;s&#41;   &#61; Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&#40;s&#41; · Y_k^e       &#40;known forcing → RHS&#41;</code></pre>
-<p>Only the <code>|R|</code> resonant master columns of <code>C_r</code> are assembled; non-resonant master modes have identically-zero reduced dynamics at <strong>γ</strong>.</p>
+<p>Only the resonant master columns of <code>C_r</code> carry a value; the rest are written as zeros, since the matching trivial rows pin those reduced-dynamics coefficients to zero anyway.</p>
 <hr />
 <h1>Coefficients from eigenvector order-blocks &#40;no eigenvalue folding&#41;</h1>
 <p>The row coefficients are read directly off the &#40;conjugated&#41; left eigenvector order-blocks — no eigenvalue appears:</p>
@@ -2242,7 +2287,7 @@ J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
 <h1>Precomputation and assembly</h1>
 <p><code>J_r</code>, <code>C_r</code> and <code>E_r</code> coefficients are pre-computed once per order. At assembly time, only a subset is used:</p>
 <ul>
-<li><p><strong>LHS matrix</strong> <code>&#91;L_r  C_r&#93;</code>: only the <code>|R|</code> columns of <code>C_r&#40;s&#41;</code> corresponding to resonant master modes are included; non-resonant columns are omitted because their reduced dynamics is identically zero.</p>
+<li><p><strong>LHS matrix</strong> <code>&#91;Ĵ_r  Ĉ_r&#93;</code>: the columns of <code>C_r&#40;s&#41;</code> for non-resonant master modes are zeroed rather than omitted, which keeps the block shape independent of the resonance pattern.  Nothing is lost — those coefficients are pinned to zero by their own trivial rows.</p>
 </li>
 <li><p><strong>RHS scalar</strong>: only the <code>N_EXT_active</code> non-zero external forcing entries of <code>E_r&#40;s&#41;</code> contribute; their values are multiplied by <code>external_dynamics</code> and accumulated into <code>RHS_r</code>.</p>
 </li>
@@ -2251,11 +2296,11 @@ J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
 <h1>Right-hand-side assembly</h1>
 <p><code>RHS_r</code> is the sum of two scalar contributions:</p>
 <h2>Lower-order RHS</h2>
-<p>During the Horner evaluation of <code>L_r&#40;s&#41;</code>, the intermediate row vectors</p>
-<pre><code>L_r&#91;j&#93;&#40;s&#41; &#61; Σ_&#123;k&#61;j&#43;1&#125;^&#123;ORD&#125; J_r&#91;k&#93; · s^&#123;k-&#40;j&#43;1&#41;&#125;,   j &#61; 1, …, ORD-1</code></pre>
+<p>During the Horner evaluation of <code>Ĵ_r&#40;s&#41;</code>, the intermediate row vectors</p>
+<pre><code>Ĵ_r&#91;j&#93;&#40;s&#41; &#61; Σ_&#123;k&#61;j&#43;1&#125;^&#123;ORD&#125; J_r&#91;k&#93; · s^&#123;k-&#40;j&#43;1&#41;&#125;,   j &#61; 1, …, ORD-1</code></pre>
 <p>are naturally available. Dotting each with the pre-computed coupling vector <code>ξ&#91;j&#93;</code> gives a scalar contribution:</p>
-<pre><code>RHS_lower_r &#61; -Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; L_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code></pre>
-<p>This accumulation is performed <strong>in the same Horner loop</strong> that computes <code>L_r&#40;s&#41;</code>, avoiding recomputation of the <code>L_r&#91;j&#93;</code> intermediates.</p>
+<pre><code>RHS_lower_r &#61; -Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; Ĵ_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code></pre>
+<p>This accumulation is performed <strong>in the same Horner loop</strong> that computes <code>Ĵ_r&#40;s&#41;</code>, avoiding recomputation of the <code>Ĵ_r&#91;j&#93;</code> intermediates.</p>
 <h2>External forcing RHS</h2>
 <p>For external forcing modes <code>e &#61; 1, …, N_EXT</code>, the scalar-valued polynomial</p>
 <pre><code>E_r_e&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; E_coeffs&#91;r&#93;&#91;j, e&#93; · s^&#123;j-1&#125;</code></pre>
@@ -2266,33 +2311,44 @@ J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
 <pre><code>RHS_r &#61; RHS_lower_r &#43; RHS_ext_r</code></pre>
 <hr />
 <h1>Full system assembly</h1>
-<p>Stacking the per-mode conditions for all <code>r ∈ R</code> yields the global linear system</p>
-<pre><code>&#91; L   C &#93; · &#91; W; f_res &#93; &#61; RHS_R</code></pre>
+<p>Stacking one row per master mode — resonant or not — yields the global linear system</p>
+<pre><code>&#91; P Ĵ   P Ĉ P &#43; τ Q &#93; · &#91; W; f &#93; &#61; P · RHS_R,      P &#61; diag&#40;resonance&#41;, Q &#61; I − P</code></pre>
 <p>where:</p>
 <ul>
-<li><p><code>L</code> is <code>|R| × FOM</code> &#40;rows <code>L_r</code>&#41;,</p>
+<li><p><code>Ĵ</code> is <code>ROM × FOM</code> &#40;rows <code>Ĵ_r</code>&#41;, kept only on resonant rows,</p>
 </li>
-<li><p><code>C</code> is <code>|R| × |R|</code> &#40;resonant columns of <code>C_r</code> from the joint operator&#41;,</p>
+<li><p><code>Ĉ</code> is <code>ROM × ROM</code> &#40;columns of <code>C_r</code> from the joint operator&#41;, masked on both axes,</p>
 </li>
-<li><p><code>f_res</code> is the vector of unknown reduced-dynamics coefficients for the resonant modes,</p>
+<li><p><code>f</code> is the <strong>full</strong> <code>ROM</code>-vector of reduced-dynamics coefficients,</p>
 </li>
-<li><p><code>RHS_R</code> is the assembled <code>|R|</code>-vector of scalar right-hand sides.</p>
+<li><p><code>RHS_R</code> is the assembled <code>ROM</code>-vector of scalar right-hand sides,</p>
+</li>
+<li><p><code>τ &#61; 1</code> on the non-resonant diagonal, turning row <code>r</code> into <code>f_r &#61; 0</code>.</p>
 </li>
 </ul>
+<p>The block size is therefore independent of how many modes are resonant, which is what allows the sparse cohomological solver to hold one sparsity pattern — and one cached symbolic factorisation — for the whole solve.  Masking loses nothing: the dropped <code>C</code> entries multiply coefficients that the trivial rows pin to zero.</p>
 <hr />
 <h1>Module contents</h1>
-<table><tr><th align="left">Function</th><th align="left">Description</th></tr><tr><td align="left"><a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a></td><td align="left">Pre-compute <code>J_r</code> coefficient arrays for the orthogonality row operators <code>L_r&#40;s&#41;</code></td></tr><tr><td align="left"><a href="@ref"><code>precompute_orthogonality_column_polynomials</code></a></td><td align="left">Pre-compute <code>Q_r</code> coefficient arrays split into <code>C_coeffs</code> and <code>E_coeffs</code></td></tr><tr><td align="left"><a href="@ref"><code>evaluate_orthogonality_row_and_lower_order_rhs&#33;</code></a></td><td align="left">Fused Horner pass for <code>L_r&#40;s&#41;</code> &#40;row&#41; &#43; scalar lower-order RHS</td></tr><tr><td align="left"><a href="@ref"><code>evaluate_orthogonality_column_row&#33;</code></a></td><td align="left">Evaluate the resonant block of <code>C_r&#40;s&#41;</code> into one row of the <code>C</code> block</td></tr><tr><td align="left"><a href="@ref"><code>evaluate_orthogonality_external_rhs</code></a></td><td align="left">Compute the scalar external-forcing RHS for mode <code>r</code></td></tr><tr><td align="left"><a href="@ref"><code>assemble_orthogonality_matrix_and_rhs&#33;</code></a></td><td align="left">Full block-matrix and RHS assembly for all resonant modes &#40;in-place&#41;</td></tr></table>
+<table><tr><th align="left">Function</th><th align="left">Description</th></tr><tr><td align="left"><a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a></td><td align="left">Pre-compute <code>J_r</code> coefficient arrays for the orthogonality row operators <code>Ĵ_r&#40;s&#41;</code></td></tr><tr><td align="left"><a href="@ref"><code>precompute_orthogonality_column_polynomials</code></a></td><td align="left">Pre-compute <code>Q_r</code> coefficient arrays split into <code>C_coeffs</code> and <code>E_coeffs</code></td></tr><tr><td align="left"><a href="@ref"><code>evaluate_orthogonality_row_and_lower_order_rhs&#33;</code></a></td><td align="left">Fused Horner pass for <code>Ĵ_r&#40;s&#41;</code> &#40;row&#41; &#43; scalar lower-order RHS</td></tr><tr><td align="left"><a href="@ref"><code>evaluate_orthogonality_column_row&#33;</code></a></td><td align="left">Evaluate <code>C_r&#40;s&#41;</code> into one row of the <code>C</code> block, masked by the resonance vector</td></tr><tr><td align="left"><a href="@ref"><code>evaluate_orthogonality_external_rhs</code></a></td><td align="left">Compute the scalar external-forcing RHS for mode <code>r</code></td></tr><tr><td align="left"><a href="@ref"><code>assemble_orthogonality_matrix_and_rhs&#33;</code></a></td><td align="left">Constant-size <code>ROM × &#40;FOM&#43;ROM&#41;</code> block and RHS assembly &#40;in-place&#41;</td></tr></table>
 </div></div>
 <div class="api api-function" id="MasterModeOrthogonality-assemble_orthogonality_matrix_and_rhs!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl#L189" target="_blank" rel="noopener">assemble_orthogonality_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::T, J_coeffs::AbstractVector{&lt;:AbstractMatrix{T}}, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}, external_dynamics::AbstractVector{T}) where {T, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl#L197" target="_blank" rel="noopener">assemble_orthogonality_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::T, J_coeffs::AbstractVector{&lt;:AbstractMatrix{T}}, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}, external_dynamics::AbstractVector{T}) where {T, ROM}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>assemble_orthogonality_matrix_and_rhs&#33;&#40;M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
 										resonance, lower_order_couplings,
 										external_dynamics&#41; → nothing</code></pre>
-<p>In-place variant: writes the orthogonality block and its RHS directly into the caller-supplied <code>M</code> &#40;<code>nR × n_sys</code>&#41; and <code>rhs</code> &#40;length <code>nR</code>&#41; buffers.  Returns immediately when <code>nR &#61;&#61; 0</code> &#40;non-resonant monomial&#41;.  No heap allocation occurs.</p>
+<p>In-place variant: writes the orthogonality block and its RHS directly into the caller-supplied <code>M</code> &#40;<code>ROM × &#40;FOM&#43;ROM&#41;</code>&#41; and <code>rhs</code> &#40;length <code>ROM</code>&#41; buffers.  No heap allocation occurs.</p>
+<p>The block has <strong>constant size</strong> — one row per master mode, resonant or not — and the resonance vector selects each row&#39;s <em>content</em> rather than the block&#39;s dimensions:</p>
+<ul>
+<li><p>resonant <code>r</code>: row <code>r</code> is the orthogonality condition <code>Ĵ_r&#40;s&#41; W_α &#43; Σ_m Ĉ_&#123;rm&#125;&#40;s&#41; R_&#123;m,α&#125; &#61; g_&#123;r,α&#125;</code>, with the corner entries masked to the resonant modes by <a href="@ref"><code>evaluate_orthogonality_column_row&#33;</code></a>;</p>
+</li>
+<li><p>non-resonant <code>r</code>: row <code>r</code> becomes the trivial equation <code>τ R_&#123;r,α&#125; &#61; 0</code> — everything zeroed except <code>M&#91;r, FOM&#43;r&#93; &#61; τ &#61; 1</code> — which encodes the style choice that non-resonant reduced-dynamics coefficients vanish.</p>
+</li>
+</ul>
+<p>Keeping the width constant is what lets the sparse path reuse one symbolic factorisation across every monomial.  Note that <code>τ</code> is structural only: the solver never reads the trivial rows back out of the solution vector, it writes the hard zeros directly during unpacking.</p>
 </div>
   </div>
 </div>
@@ -2303,19 +2359,20 @@ J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>evaluate_orthogonality_column_row&#33;&#40;c, s, r, C_coeffs, resonance&#41; -&gt; c</code></pre>
-<p>Evaluate the resonant block of the joint operator row <code>C_r&#40;s&#41;</code> in-place via Horner&#39;s method, overwriting the pre-allocated <code>|R|</code>-vector <code>c</code>.</p>
-<p><code>C_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; C_coeffs&#91;r&#93;&#91;j, :&#93; · s^&#123;j-1&#125;</code> is a <code>1 × ROM</code> row polynomial; this function evaluates it at <code>s</code> and extracts only the <code>|R|</code> entries corresponding to resonant master modes &#40;those with <code>resonance&#91;j&#93; &#61;&#61; true</code>&#41;, in increasing-<code>j</code> order.</p>
+<p>Evaluate the joint operator row <code>C_r&#40;s&#41;</code> in-place via Horner&#39;s method, overwriting the pre-allocated <strong>length-<code>ROM</code></strong> vector <code>c</code>.</p>
+<p><code>C_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; C_coeffs&#91;r&#93;&#91;j, :&#93; · s^&#123;j-1&#125;</code> is a <code>1 × ROM</code> row polynomial.  Entry <code>c&#91;j&#93;</code> holds <code>C_r&#40;s&#41;&#91;j&#93;</code> when master mode <code>j</code> is resonant and <code>zero&#40;T&#41;</code> otherwise — i.e. the layout is <strong>expanded and masked</strong>, indexed by the mode <code>j</code> itself rather than compacted into resonant rank order.</p>
+<p>Masking rather than compacting is what keeps the bordered cohomological system at the constant size <code>FOM &#43; ROM</code> for every monomial &#40;one sparsity pattern, one cached symbolic factorisation&#41;.  Dropping the non-resonant entries is lossless: the matching orthogonality row pins <code>R_&#123;j,α&#125; &#61; 0</code>, so those coefficients multiply zero.</p>
 <p><code>c</code> may be a plain <code>Vector&#123;T&#125;</code> or a row view <code>view&#40;M, row, col_range&#41;</code>.</p>
 <h2>Horner recurrence &#40;column-wise, no allocation&#41;</h2>
 <p>For each resonant column index <code>j</code> independently:</p>
 <pre><code>val  ←  C_coeffs&#91;r&#93;&#91;ORD-1, j&#93;
 for L &#61; ORD-2, …, 1:
 	val ← val · s &#43; C_coeffs&#91;r&#93;&#91;L, j&#93;
-c&#91;resonant_rank&#40;j&#41;&#93; ← val</code></pre>
+c&#91;j&#93; ← val</code></pre>
 <p>Column <code>j</code> of <code>C_coeffs&#91;r&#93;</code> is contiguous in memory &#40;Julia is column-major&#41;, so each per-column Horner pass is cache-friendly.</p>
 <h2>Arguments</h2>
 <ul>
-<li><p><code>c        :: AbstractVector&#123;T&#125;</code>           – output buffer &#40;length <code>|R|</code>&#41;, overwritten with the resonant entries of <code>C_r&#40;s&#41;</code>.</p>
+<li><p><code>c        :: AbstractVector&#123;T&#125;</code>           – output buffer &#40;length <code>ROM</code>&#41;, fully overwritten: resonant entries with <code>C_r&#40;s&#41;</code>, the rest with zero.</p>
 </li>
 <li><p><code>s        :: T</code>                           – evaluation frequency.</p>
 </li>
@@ -2334,7 +2391,7 @@ c&#91;resonant_rank&#40;j&#41;&#93; ← val</code></pre>
 <div class="api api-function" id="MasterModeOrthogonality-evaluate_orthogonality_external_rhs">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L338" target="_blank" rel="noopener">evaluate_orthogonality_external_rhs</a>(s::T, r::Int64, external_dynamics::AbstractVector{T}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L345" target="_blank" rel="noopener">evaluate_orthogonality_external_rhs</a>(s::T, r::Int64, external_dynamics::AbstractVector{T}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}) where T</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>evaluate_orthogonality_external_rhs&#40;s, r, external_dynamics, E_coeffs&#41; -&gt; T</code></pre>
@@ -2376,30 +2433,30 @@ c&#91;resonant_rank&#40;j&#41;&#93; ← val</code></pre>
 												lower_order_couplings,
 												J_coeffs_r&#41;
 -&gt; scalar_rhs :: T</code></pre>
-<p>Evaluate the orthogonality row operator <code>L_r&#40;s&#41;</code> <strong>and</strong> compute the scalar lower-order right-hand-side contribution for mode <code>r</code> in a <strong>single Horner pass</strong>, reusing the transient intermediate row vectors.</p>
+<p>Evaluate the orthogonality row operator <code>Ĵ_r&#40;s&#41;</code> <strong>and</strong> compute the scalar lower-order right-hand-side contribution for mode <code>r</code> in a <strong>single Horner pass</strong>, reusing the transient intermediate row vectors.</p>
 <h2>Mathematical context</h2>
 <p>At step <code>j</code> of the Horner recurrence &#40;before the scalar multiply by <code>s</code>&#41;, the intermediate row vector</p>
-<pre><code>L_r&#91;j&#93;&#40;s&#41; &#61; Σ_&#123;k&#61;j&#43;1&#125;^&#123;ORD&#125; J_r&#91;k, :&#93; · s^&#123;k-&#40;j&#43;1&#41;&#125;</code></pre>
+<pre><code>Ĵ_r&#91;j&#93;&#40;s&#41; &#61; Σ_&#123;k&#61;j&#43;1&#125;^&#123;ORD&#125; J_r&#91;k, :&#93; · s^&#123;k-&#40;j&#43;1&#41;&#125;</code></pre>
 <p>is available.  Contracting <strong>bilinearly</strong> with the pre-computed coupling vector <code>ξ&#91;j&#93;</code> gives the scalar contribution of lower-order solution terms at step <code>j</code>:</p>
-<pre><code>contribution&#91;j&#93; &#61; -L_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93; &#61; -Σᵢ L_r&#91;j&#93;&#40;s&#41;ᵢ · ξ&#91;j&#93;ᵢ</code></pre>
+<pre><code>contribution&#91;j&#93; &#61; -Ĵ_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93; &#61; -Σᵢ Ĵ_r&#91;j&#93;&#40;s&#41;ᵢ · ξ&#91;j&#93;ᵢ</code></pre>
 <p>The contraction must not conjugate: the sesquilinear conjugation of the orthogonality condition is already baked into the row coefficients <code>J_r</code> &#40;see <a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a>&#41;, so <code>row</code> holds the Horner tail <code>G_&#123;r,j&#125;&#40;s&#41;</code> with the <code>ᴴ</code> applied. The negative sign arises because these terms originate from the left-hand side of the cohomological equation.  Summed over <code>j &#61; 1, …, ORD-1</code>:</p>
-<pre><code>RHS_lower_r &#61; -Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; L_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code></pre>
-<p>The sum runs to <code>ORD-1</code> &#40;one fewer than in <a href="@ref"><code>InvarianceEquation</code></a>&#41; because the joint operator <code>Q_r</code> has one fewer degree.  Sharing the loop with the <code>L_r&#40;s&#41;</code> evaluation avoids recomputing the <code>L_r&#91;j&#93;</code> intermediates.</p>
+<pre><code>RHS_lower_r &#61; -Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; Ĵ_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code></pre>
+<p>The sum runs to <code>ORD-1</code> &#40;one fewer than in <a href="@ref"><code>InvarianceEquation</code></a>&#41; because the joint operator <code>Q_r</code> has one fewer degree.  Sharing the loop with the <code>Ĵ_r&#40;s&#41;</code> evaluation avoids recomputing the <code>Ĵ_r&#91;j&#93;</code> intermediates.</p>
 <h2>Arguments</h2>
 <ul>
-<li><p><code>row                  :: AbstractVector&#123;T&#125;</code> – output buffer &#40;length <code>FOM</code>&#41;, overwritten with <code>L_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_r&#91;j, :&#93; · s^&#123;j-1&#125;</code>.</p>
+<li><p><code>row                  :: AbstractVector&#123;T&#125;</code> – output buffer &#40;length <code>FOM</code>&#41;, overwritten with <code>Ĵ_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD&#125; J_r&#91;j, :&#93; · s^&#123;j-1&#125;</code>.</p>
 </li>
 <li><p><code>s                    :: T</code> – evaluation superharmonic.</p>
 </li>
 <li><p><code>lower_order_couplings :: SVector&#123;ORD_M1, &lt;:AbstractVector&#123;T&#125;&#125;</code> – coupling vectors <code>ξ&#91;j&#93;</code> for <code>j &#61; 1, …, ORD-1</code>; each is a length-<code>FOM</code> vector.</p>
 </li>
-<li><p><code>J_coeffs_r           :: AbstractMatrix&#123;T&#125;</code> – <code>ORD × FOM</code> matrix; row <code>j</code> is <code>J_r&#91;j, :&#93;</code>, the degree-<code>&#40;j-1&#41;</code> coefficient of <code>L_r</code>.  Obtained from <a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a>.</p>
+<li><p><code>J_coeffs_r           :: AbstractMatrix&#123;T&#125;</code> – <code>ORD × FOM</code> matrix; row <code>j</code> is <code>J_r&#91;j, :&#93;</code>, the degree-<code>&#40;j-1&#41;</code> coefficient of <code>Ĵ_r</code>.  Obtained from <a href="@ref"><code>precompute_orthogonality_operator_coefficients</code></a>.</p>
 </li>
 </ul>
 <h2>Returns</h2>
-<p>The scalar lower-order RHS accumulation <code>RHS_lower_r &#61; -Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; L_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code>.</p>
+<p>The scalar lower-order RHS accumulation <code>RHS_lower_r &#61; -Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; Ĵ_r&#91;j&#93;&#40;s&#41; · ξ&#91;j&#93;</code>.</p>
 <h2>Complexity</h2>
-<p><code>O&#40;ORD · FOM&#41;</code>, shared with the <code>L_r&#40;s&#41;</code> evaluation.</p>
+<p><code>O&#40;ORD · FOM&#41;</code>, shared with the <code>Ĵ_r&#40;s&#41;</code> evaluation.</p>
 </div>
   </div>
 </div>
@@ -3108,7 +3165,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
   <div id="LowerOrderCouplings" class="api-module-h">LowerOrderCouplings</div>
   <div class="api-module-desc" data-module="LowerOrderCouplings"><div class="markdown"><p>Module <code>LowerOrderCouplings</code> — computation of lower-order coupling vectors <code>ξ&#91;α&#93;</code>.</p>
 <p>For each monomial <code>α</code> the cohomological right-hand side includes a coupling term</p>
-<pre><code>ξ&#91;α&#93; &#61; Σ_&#123;β&#43;γ&#61;α, |β|≥1&#125; R_β · &#40;|γ₁| W_&#123;γ&#43;e₁&#125; &#43; … &#43; |γₙ| W_&#123;γ&#43;eₙ&#125;&#41;</code></pre>
+<pre><code>ξ&#91;α&#93; &#61; Σ_&#123;β&#43;γ&#61;α, β after e_i in GrLex&#125; R_β · &#40;|γ₁| W_&#123;γ&#43;e₁&#125; &#43; … &#43; |γₙ| W_&#123;γ&#43;eₙ&#125;&#41;</code></pre>
 <p>that links the current monomial to all lower-degree coefficients of <code>W</code> and <code>R</code> already computed.  <code>compute_lower_order_couplings</code> evaluates this sum efficiently using a precomputed dictionary and candidate index list.</p>
 </div></div>
 <div class="api api-function" id="LowerOrderCouplings-_is_zero_coeff">
@@ -3176,41 +3233,54 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <p>such that the reduced dynamics <code>ż &#61; R&#40;z&#41;</code> is simpler.  Expanding both <code>W</code> and <code>R</code> as dense polynomials in the <code>NVAR &#61; ROM &#43; N_EXT</code> reduced variables &#40;ROM master-mode amplitudes plus N_EXT external forcing amplitudes&#41; and matching coefficients monomial by monomial yields the <strong>cohomological equations</strong>: one linear system per multi-index <code>α</code>.</p>
 <hr />
 <h1>System structure for multi-index <code>α</code></h1>
-<p>Let <code>s &#61; ⟨λ, α⟩</code> be the superharmonic frequency and let <code>nR &#61; |ℛ&#40;α&#41;|</code> be the number of master modes resonant at <code>α</code>.  The cohomological linear system is</p>
-<pre><code>┌              ┐ ┌         ┐   ┌           ┐
-│  L&#40;s&#41;  C&#40;s&#41;  │ │  W&#91;α&#93;   │ &#61; │  RHS_inv  │   FOM rows  &#40;invariance&#41;
-│  L̂&#40;s&#41;  Ĉ&#40;s&#41;  │ │  R_res  │   │  RHS_ort  │   nR  rows  &#40;orthogonality&#41;
-└              ┘ └         ┘   └           ┘</code></pre>
+<p>Let <code>s &#61; ⟨λ, α⟩</code> be the superharmonic frequency and let <code>P &#61; diag&#40;ρ&#41;</code> be the diagonal <code>0/1</code> matrix of the master modes resonant at <code>α</code>, <code>Q &#61; I − P</code>.  The cohomological linear system is <strong>bordered</strong> and of <strong>constant size</strong> <code>FOM &#43; ROM</code>:</p>
+<pre><code>┌                          ┐ ┌         ┐   ┌             ┐
+│  L&#40;s&#41;     C&#40;s&#41; P         │ │  W&#91;α&#93;   │ &#61; │  RHS_inv    │   FOM rows  &#40;invariance&#41;
+│  P Ĵ&#40;s&#41;   P Ĉ&#40;s&#41; P &#43; τQ  │ │  R&#91;α&#93;   │   │  P RHS_ort  │   ROM rows  &#40;orthogonality&#41;
+└                          ┘ └         ┘   └             ┘</code></pre>
 <p>where:</p>
 <ul>
 <li><p><code>L&#40;s&#41;</code>  &#40;<code>FOM × FOM</code>&#41; is the parametrisation operator,</p>
 </li>
-<li><p><code>C&#40;s&#41;</code>  &#40;<code>FOM × nR</code>&#41; acts on the unknown resonant reduced-dynamics coefficients,</p>
+<li><p><code>C&#40;s&#41;</code>  &#40;<code>FOM × ROM</code>&#41; acts on the unknown reduced-dynamics coefficients,</p>
 </li>
-<li><p><code>L̂&#40;s&#41;</code> &#40;<code>nR × FOM</code>&#41; is the orthogonality row operator,</p>
+<li><p><code>Ĵ&#40;s&#41;</code> &#40;<code>ROM × FOM</code>&#41; is the orthogonality row operator, stacking the rows <code>Ĵ_r&#40;s&#41;</code>,</p>
 </li>
-<li><p><code>Ĉ&#40;s&#41;</code> &#40;<code>nR × nR</code>&#41; is the orthogonality joint operator,</p>
+<li><p><code>Ĉ&#40;s&#41;</code> &#40;<code>ROM × ROM</code>&#41; is the orthogonality joint operator,</p>
 </li>
 <li><p><code>W&#91;α&#93; ∈ ℂᶠᵒᵐ</code> is the parametrisation coefficient,</p>
 </li>
-<li><p><code>R_res ∈ ℂⁿᴿ</code> are the reduced-dynamics coefficients for resonant modes.</p>
+<li><p><code>R&#91;α&#93; ∈ ℂᴿᴼᴹ</code> are the master reduced-dynamics coefficients,</p>
+</li>
+<li><p><code>τ &#61; 1</code> on the non-resonant diagonal, so those rows read <code>R&#91;r, α&#93; &#61; 0</code>.</p>
 </li>
 </ul>
-<p>Non-resonant master modes are trivially zero and excluded from the system. External forcing modes are <em>known</em> and appear only on the right-hand side.</p>
+<p>Non-resonant master modes stay in the system as trivial equations rather than being compacted away.  That is what keeps the size — and on the sparse path the sparsity pattern — independent of <code>α</code>, so a single symbolic factorisation serves every monomial.  It costs nothing in accuracy: permuting the unknowns as <code>&#91;W; R_res; R_non&#93;</code> makes the matrix block triangular with an exactly decoupled <code>τI</code> block, and each trivial row is a singleton in both its row and its column.  External forcing modes are <em>known</em> and appear only on the right-hand side.</p>
+<h2>Why the system is bordered rather than reduced</h2>
+<p>The border is not an optimisation but a conditioning requirement.  Inner resonance is flagged by <code>|λ_r − s| &lt; tol</code>, and <code>det L&#40;λ_r&#41; &#61; 0</code> for every master eigenvalue, so &quot;monomial <code>α</code> is resonant&quot; means precisely &quot;<code>L&#40;s_α&#41;</code> is numerically singular&quot; — and a border is present only on exactly those monomials.  Eliminating <code>L&#40;s&#41;</code> first, by forming <code>L&#40;s&#41;⁻¹·RHS</code> and <code>L&#40;s&#41;⁻¹C&#40;s&#41;</code>, would therefore apply an inverse that does not usefully exist, with backward error growing like <code>κ&#40;L&#40;s_α&#41;&#41; → ∞</code>.</p>
+<p>Factorising the bordered matrix as a whole keeps the backward error at <code>κ</code> of the <em>bordered</em> matrix, which stays bounded because the border spans the near-null directions of <code>L&#40;s&#41;</code> &#40;Keller&#39;s bordering lemma; Govaerts, <em>SIAM J. Matrix Anal. Appl.</em> 1991&#41;.  This is why the linear algebra in <code>CohomologicalSolver.jl</code> never inverts <code>L&#40;s&#41;</code> alone, and why its numeric factorisation must re-pivot on every monomial.</p>
 <hr />
 <h1>Module contents</h1>
-<table><tr><th align="left">Symbol</th><th align="left">Description</th></tr><tr><td align="left"><a href="@ref"><code>InvarianceOperators</code></a></td><td align="left">Precomputed invariance-equation operator coefficients</td></tr><tr><td align="left"><a href="@ref"><code>OrthogonalityOperators</code></a></td><td align="left">Precomputed orthogonality-condition operator coefficients</td></tr><tr><td align="left"><a href="@ref"><code>LowerOrderResources</code></a></td><td align="left">Lower-order coupling data and buffers</td></tr><tr><td align="left"><a href="@ref"><code>CohomologicalBuffers</code></a></td><td align="left">Pre-allocated system-assembly scratch buffers</td></tr><tr><td align="left"><a href="@ref"><code>SparseLinearSolverState</code></a></td><td align="left">Sparse-path solver handles and pre-allocated RHS buffer</td></tr><tr><td align="left"><a href="@ref"><code>CohomologicalContext</code></a></td><td align="left">Composed struct bundling all precomputed operators and resources</td></tr><tr><td align="left"><a href="@ref"><code>solve_single_monomial&#33;</code></a></td><td align="left">Solve the cohomological system for one multi-index</td></tr><tr><td align="left"><a href="@ref"><code>solve_cohomological_equations&#33;</code></a></td><td align="left">Solve for all multi-indices in causal order</td></tr><tr><td align="left"><a href="@ref"><code>solve_cohomological_problem</code></a></td><td align="left">High-level driver: precompute everything and solve</td></tr></table>
+<table><tr><th align="left">Symbol</th><th align="left">Description</th></tr><tr><td align="left"><a href="@ref"><code>InvarianceOperators</code></a></td><td align="left">Precomputed invariance-equation operator coefficients</td></tr><tr><td align="left"><a href="@ref"><code>OrthogonalityOperators</code></a></td><td align="left">Precomputed orthogonality-condition operator coefficients</td></tr><tr><td align="left"><a href="@ref"><code>LowerOrderResources</code></a></td><td align="left">Lower-order coupling data and buffers</td></tr><tr><td align="left"><a href="@ref"><code>CohomologicalBuffers</code></a></td><td align="left">Pre-allocated system-assembly scratch buffers</td></tr><tr><td align="left"><a href="@ref"><code>SparseLinearSolverState</code></a></td><td align="left">Sparse-path bordered template, index maps and solver handles</td></tr><tr><td align="left"><a href="@ref"><code>CohomologicalContext</code></a></td><td align="left">Composed struct bundling all precomputed operators and resources</td></tr><tr><td align="left"><a href="@ref"><code>solve_single_monomial&#33;</code></a></td><td align="left">Solve the cohomological system for one multi-index</td></tr><tr><td align="left"><a href="@ref"><code>solve_cohomological_equations&#33;</code></a></td><td align="left">Solve for all multi-indices in causal order</td></tr><tr><td align="left"><a href="@ref"><code>solve_cohomological_problem</code></a></td><td align="left">High-level driver: precompute everything and solve</td></tr></table>
 </div></div>
 <div class="api api-type" id="CohomologicalEquations-CohomologicalBuffers">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L61" target="_blank" rel="noopener">CohomologicalBuffers</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L76" target="_blank" rel="noopener">CohomologicalBuffers</a></code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>CohomologicalBuffers&#123;T&#125;&#40;FOM, ROM&#41; -&gt; CohomologicalBuffers</code></pre>
-<p>Allocate all buffers for a system of full-order dimension <code>FOM</code> and <code>ROM</code> master modes.</p>
+<div class="markdown"><pre><code>CohomologicalBuffers&#40;T, MT, FOM, ROM&#41; -&gt; CohomologicalBuffers</code></pre>
+<p>Allocate all buffers for a system of full-order dimension <code>FOM</code> and <code>ROM</code> master modes.  Dispatches on the FOM matrix type <code>MT</code>: <code>MT &lt;: SparseMatrixCSC</code> selects the sparse layout, everything else the dense one.</p>
 </div><div class="markdown"><pre><code>CohomologicalBuffers&#123;T&#125;</code></pre>
-<p>Pre-allocated scratch buffers for the cohomological system assembly and solve. Use <code>system_matrix</code> for dense and <code>system_matrix_rows</code>&#43; <code>system_matrix_columns</code> for sparse dispatch.</p>
+<p>Pre-allocated scratch buffers for the cohomological system assembly and solve.</p>
+<p>Both paths solve the same constant-size <code>&#40;FOM&#43;ROM&#41; × &#40;FOM&#43;ROM&#41;</code> bordered system, but they materialise it differently, so only one of the two matrix buffers is allocated:</p>
+<ul>
+<li><p><strong>dense path</strong> uses <code>system_matrix</code>, the bordered matrix itself, LU&#39;d in place;</p>
+</li>
+<li><p><strong>sparse path</strong> uses <code>orthogonality_rows</code> as the staging area for the <code>ROM</code> orthogonality rows, which are then scattered into the strided border positions of the sparse template&#39;s <code>nzval</code> &#40;the sparse bordered matrix lives in <a href="@ref"><code>SparseLinearSolverState</code></a>&#41;.</p>
+</li>
+</ul>
+<p>The unused buffer is a <code>0×0</code> placeholder.</p>
 </div>
   </div>
 </div>
@@ -3222,7 +3292,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
   <div class="api-body">
 <div class="markdown"><pre><code>CohomologicalContext&#123;T, ORD, ORDP1, NVAR, FOM, LT, MT&#125;</code></pre>
 <p>Bundles all precomputed data required to solve the cohomological equations for every monomial.  The 22 flat fields of the previous design are composed into five named sub-structs, making data provenance explicit at every call site:</p>
-<pre><code>ctx.invariance.C_coeffs      &#40;was: ctx.invariance_C_coeffs&#41;
+<pre><code>ctx.invariance.column_coeffs &#40;was: ctx.invariance_C_coeffs&#41;
 ctx.orthogonality.J_coeffs   &#40;was: ctx.orthogonality_J_coeffs&#41;
 ctx.buffers.rhs              &#40;was: ctx.rhs_buffer&#41;
 ctx.lower_order.buffer       &#40;was: ctx.lower_order_buffer&#41;
@@ -3253,20 +3323,23 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>InvarianceOperators&#123;T&#125;</code></pre>
-<p>Precomputed column-polynomial coefficients for the invariance equation. <code>C_coeffs&#91;r&#93;</code> is <code>FOM × ORD</code>; <code>E_coeffs&#91;e&#93;</code> is <code>FOM × ORD</code>.</p>
+<p>Precomputed column-polynomial coefficients for the invariance equation.</p>
+<p><code>column_coeffs&#91;r&#93;</code> is the <code>FOM × ORD</code> coefficient matrix of the border <em>column</em> <code>C_r&#40;s&#41;</code>; <code>E_coeffs&#91;e&#93;</code> is <code>FOM × ORD</code>.  Note the deliberate contrast with <a href="@ref"><code>OrthogonalityOperators</code></a><code>.corner_coeffs</code>, which is a different shape and a different object — the two were both called <code>C_coeffs</code> and were easy to confuse.</p>
 </div>
   </div>
 </div>
 <div class="api api-type" id="CohomologicalEquations-LowerOrderResources">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L17" target="_blank" rel="noopener">LowerOrderResources</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L5" target="_blank" rel="noopener">LowerOrderResources</a></code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>LowerOrderResources&#123;NVAR, T&#125;&#40;mset, ORD, FOM&#41; -&gt; LowerOrderResources</code></pre>
-<p>Build the lower-order coupling resources for a multiindex set of <code>NVAR</code> variables, ODE order <code>ORD</code>, and full-order dimension <code>FOM</code>.  Absorbs the <code>candidate_indices</code> loop previously inlined in <code>solve_cohomological_problem</code>.</p>
-</div><div class="markdown"><pre><code>LowerOrderResources&#123;NVAR, T&#125;</code></pre>
+<div class="markdown"><pre><code>LowerOrderResources&#123;NVAR, T&#125;</code></pre>
 <p>Data needed to compute lower-order coupling vectors <code>ξ&#91;j&#93;</code> on every monomial.</p>
+<p>Bundled into one struct so the per-monomial buffers and the multiindex lookup are allocated once for the whole solve rather than per call.</p>
+</div><div class="markdown"><pre><code>LowerOrderResources&#123;NVAR, T&#125;&#40;mset, ORD, FOM&#41; -&gt; LowerOrderResources</code></pre>
+<p>Build the lower-order coupling resources for a multiindex set of <code>NVAR</code> variables, ODE order <code>ORD</code>, and full-order dimension <code>FOM</code>.</p>
+<p><code>candidate_indices</code> is precomputed here, once per monomial position: it lists the multiindices that can contribute a lower-order coupling to that monomial, which is a pure function of the multiindex set and so need not be recomputed during the solve.</p>
 </div>
   </div>
 </div>
@@ -3284,31 +3357,30 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-type" id="CohomologicalEquations-OrthogonalityOperators">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/OperatorData.jl#L16" target="_blank" rel="noopener">OrthogonalityOperators</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/OperatorData.jl#L20" target="_blank" rel="noopener">OrthogonalityOperators</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>OrthogonalityOperators&#123;T&#125;</code></pre>
-<p>Precomputed row and column-polynomial coefficients for the orthogonality conditions. <code>J_coeffs&#91;r&#93;</code> is <code>ORD × FOM</code>; <code>C_coeffs&#91;r&#93;</code> is <code>&#40;ORD-1&#41; × ROM</code>; <code>E_coeffs&#91;r&#93;</code> is <code>&#40;ORD-1&#41; × N_EXT</code>.</p>
+<p>Precomputed row and column-polynomial coefficients for the orthogonality conditions.</p>
+<p><code>J_coeffs&#91;r&#93;</code> is the <code>ORD × FOM</code> row operator <code>Ĵ_r&#40;s&#41;</code>; <code>corner_coeffs&#91;r&#93;</code> is the <code>&#40;ORD-1&#41; × ROM</code> block landing in the bordered matrix&#39;s <code>ROM × ROM</code> <em>corner</em>; <code>E_coeffs&#91;r&#93;</code> is <code>&#40;ORD-1&#41; × N_EXT</code>.  See <a href="@ref"><code>InvarianceOperators</code></a><code>.column_coeffs</code> for the differently-shaped border columns.</p>
 </div>
   </div>
 </div>
 <div class="api api-type" id="CohomologicalEquations-SparseLinearSolverState">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L107" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L143" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>SparseLinearSolverState&#123;T&#125;&#40;L_template, L_mappings, FOM, ROM&#41; -&gt; SparseLinearSolverState</code></pre>
-<p>Initialise the sparse solver state.  Tries MKL Pardiso first, then open-source Pardiso, then falls back to KLU.</p>
-</div><div class="markdown"><pre><code>SparseLinearSolverState&#123;T&#125;</code></pre>
-<p>Sparse-path resources: the union-pattern <code>L&#40;s&#41;</code> template, its nzval index mappings, solver handles &#40;Pardiso priority 1; KLU priority 2&#41;, and a pre-allocated bordered-RHS buffer that eliminates the per-monomial <code>hcat</code> allocation on the resonant sparse path.</p>
+<p>Initialise the sparse solver state: build the constant-pattern bordered template around <code>L_template</code> and probe for Pardiso &#40;MKL first, then open-source&#41;, falling back to KLU.</p>
 </div>
   </div>
 </div>
 <div class="api api-type" id="CohomologicalEquations-_SimpleProgress">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L128" target="_blank" rel="noopener">_SimpleProgress</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L165" target="_blank" rel="noopener">_SimpleProgress</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_SimpleProgress</code></pre>
@@ -3319,18 +3391,31 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_assemble_bordered_system!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L34" target="_blank" rel="noopener">_assemble_bordered_system!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, nR, resonance, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L156" target="_blank" rel="noopener">_assemble_bordered_system!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM}</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>_assemble_bordered_system&#33;&#40;ctx, s, nR, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
-<p>Assemble the <code>&#40;FOM&#43;nR&#41; × &#40;FOM&#43;nR&#41;</code> bordered cohomological system into <code>ctx.buffers.system_matrix</code> and <code>ctx.buffers.rhs</code>.</p>
+<div class="markdown"><pre><code>_assemble_bordered_system&#33;&#40;ctx, s, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
+<p>Assemble the <code>&#40;FOM&#43;ROM&#41; × &#40;FOM&#43;ROM&#41;</code> bordered cohomological system into <code>ctx.buffers.system_matrix</code> and <code>ctx.buffers.rhs</code>.</p>
 <ul>
 <li><p>The first <code>FOM</code> rows come from the invariance equation &#40;operator &#43; nonlinear RHS&#41;.</p>
 </li>
-<li><p>The next <code>nR</code> rows come from the orthogonality conditions.</p>
+<li><p>The last <code>ROM</code> rows come from the orthogonality conditions, with non-resonant modes contributing the trivial row <code>R&#91;r, α&#93; &#61; 0</code>.</p>
 </li>
 </ul>
-<p>Called by both the dense-path <code>_solve_monomial&#33;</code> overloads.</p>
+<p>Called by the dense-path <code>_solve_monomial&#33;</code>.</p>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="CohomologicalEquations-_bordered_solve!">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L120" target="_blank" rel="noopener">_bordered_solve!</a>(ss::SparseLinearSolverState, x::AbstractVector, s)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>_bordered_solve&#33;&#40;ss, x, s&#41; -&gt; x</code></pre>
+<p>Solve <code>bordered * x &#61; x</code> in place, dispatching to Pardiso when available and to the cached KLU factorisation otherwise.</p>
+<p>Both branches reuse a symbolic analysis computed once: KLU through <a href="@ref"><code>_refactorise&#33;</code></a>, Pardiso through its phase split &#40;<code>_pardiso_prepare&#33;</code> once, then numeric-factorise &#43; solve per monomial&#41;.</p>
+<p>KLU&#39;s <code>ldiv&#33;</code> is genuinely in-place, so the KLU branch needs no intermediate buffer. <code>ss.solve_scratch</code> exists for Pardiso, whose solve requires distinct input and output arrays.</p>
 </div>
   </div>
 </div>
@@ -3355,7 +3440,7 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_build_context">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L99" target="_blank" rel="noopener">_build_context</a>(linear_terms::NTuple{ORDP1, MT}, generalised_eigenmodes::Matrix{T}, lambda_diag::Vector{T}, inv_ops::InvarianceOperators{T}, orth_ops::OrthogonalityOperators{T}, resonance_set::ResonanceSet, linear_skip_set::Set{Int64}, lower_order::LowerOrderResources{NVAR, T}, buffers::CohomologicalBuffers{T}, sparse_solver) where {ORDP1, MT, T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L100" target="_blank" rel="noopener">_build_context</a>(linear_terms::NTuple{ORDP1, MT}, generalised_eigenmodes::Matrix{T}, lambda_diag::Vector{T}, inv_ops::InvarianceOperators{T}, orth_ops::OrthogonalityOperators{T}, resonance_set::ResonanceSet, linear_skip_set::Set{Int64}, lower_order::LowerOrderResources{NVAR, T}, buffers::CohomologicalBuffers{T}, sparse_solver) where {ORDP1, MT, T, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_build_context&#40;linear_terms, generalised_eigenmodes, lambda_diag,
@@ -3379,7 +3464,7 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_embed_external_dynamics!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L181" target="_blank" rel="noopener">_embed_external_dynamics!</a>(R::ReducedDynamics{ROM, NVAR, T}, ext_poly::DensePolynomial{T, N_EXT, 2, A} where A&lt;:AbstractMatrix{T}, mset::MultiindexSet{NVAR}) where {ROM, NVAR, T, N_EXT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L218" target="_blank" rel="noopener">_embed_external_dynamics!</a>(R::ReducedDynamics{ROM, NVAR, T}, ext_poly::DensePolynomial{T, N_EXT, 2, A} where A&lt;:AbstractMatrix{T}, mset::MultiindexSet{NVAR}) where {ROM, NVAR, T, N_EXT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_embed_external_dynamics&#33;&#40;R, ext_poly, mset&#41;</code></pre>
@@ -3409,7 +3494,7 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_linear_monomial_indices">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L208" target="_blank" rel="noopener">_linear_monomial_indices</a>(mset::MultiindexSet{NVAR}) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L245" target="_blank" rel="noopener">_linear_monomial_indices</a>(mset::MultiindexSet{NVAR}) where NVAR</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_linear_monomial_indices&#40;mset&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -3420,7 +3505,7 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_make_progress">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L140" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L177" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_make_progress&#40;n_total, show_progress&#41; -&gt; _SimpleProgress</code></pre>
@@ -3443,7 +3528,7 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_progress_done!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L165" target="_blank" rel="noopener">_progress_done!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L202" target="_blank" rel="noopener">_progress_done!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_progress_done&#33;&#40;p, n_done&#41;</code></pre>
@@ -3454,7 +3539,7 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_progress_tick!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L150" target="_blank" rel="noopener">_progress_tick!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64, degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L187" target="_blank" rel="noopener">_progress_tick!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64, degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_progress_tick&#33;&#40;p, n_done, degree&#41;</code></pre>
@@ -3462,14 +3547,56 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 </div>
   </div>
 </div>
+<div class="api api-function" id="CohomologicalEquations-_refactorise!">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L38" target="_blank" rel="noopener">_refactorise!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>_refactorise&#33;&#40;ss, A&#41; -&gt; KLU factorisation of &#96;A&#96;</code></pre>
+<p>Factorise the bordered matrix for the current monomial, reusing the symbolic analysis cached in <code>ss.fact</code>.</p>
+<p>The first call analyses and factorises; every later call redoes only the <strong>numeric</strong> factorisation. Splitting them this way is what makes the constant-size formulation pay off: the sparsity pattern is identical for every monomial, so the ordering and symbolic phase — the expensive part — are computed once for the whole solve.</p>
+<h2>Why <code>klu_factor&#33;</code> and not <code>klu&#33;</code></h2>
+<p>The numeric phase must <strong>re-pivot</strong>. The bordered matrix changes value on every monomial and its <code>&#40;1,1&#41;</code> block is near-singular at every resonance, where stability depends on pivoting being free to exchange rows across the border. <code>klu_factor&#33;</code> re-pivots while reusing the cached symbolic analysis. KLU&#39;s exported <code>klu&#33;</code> maps to <code>klu_refactor</code>, which replays the pivot sequence chosen at the first monomial and so loses accuracy exactly where it is needed.</p>
+<h2>Preconditions and aliasing</h2>
+<p><code>A</code>&#39;s sparsity pattern must be identical on every call — <a href="@ref"><code>SparseLinearSolverState</code></a> guarantees this by construction, since only <code>nzval</code> is ever written.</p>
+<p><code>klu</code> takes <code>A.nzval</code> by reference rather than copying it, so the factorisation and the template share one value array: per-monomial assembly writes straight into what KLU reads, with no copy-in step. <code>colptr</code>/<code>rowval</code> stay KLU&#39;s own &#40;0-based&#41; copies, and are invariant in any case.</p>
+<p>A factorisation is cached only if it succeeded, so a caller that catches the singular-matrix error and retries gets a fresh analysis rather than a partially initialised object. Singularity is reported through <code>issuccess</code> rather than an exception &#40;<code>check &#61; false</code>, <code>allowsingular &#61; true</code>&#41; so that all monomials — including the first — surface it through the same path.</p>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="CohomologicalEquations-_release_pardiso!">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L171" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>_release_pardiso&#33;&#40;state&#41; -&gt; nothing</code></pre>
+<p>Finaliser: hand the Pardiso factorisation back. No-op on the KLU path, and never allowed to throw — a finaliser that raises would be reported out of context.</p>
+</div>
+  </div>
+</div>
 <div class="api api-function" id="CohomologicalEquations-_resonance_vector">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L226" target="_blank" rel="noopener">_resonance_vector</a>(resonance_set::ResonanceSet, monomial_idx::Int64, ::Val{ROM}) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L263" target="_blank" rel="noopener">_resonance_vector</a>(resonance_set::ResonanceSet, monomial_idx::Int64, ::Val{ROM}) where ROM</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_resonance_vector&#40;resonance_set, monomial_idx, ::Val&#123;ROM&#125;&#41; -&gt; SVector&#123;ROM, Bool&#125;</code></pre>
 <p>Return a compile-time-sized boolean vector indicating which of the <code>ROM</code> master modes are resonant with the monomial at position <code>monomial_idx</code> in the multiindex set.  Using <code>Val&#123;ROM&#125;</code> enables the compiler to emit a fully unrolled ntuple loop.</p>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="CohomologicalEquations-_singular_bordered_system">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L93" target="_blank" rel="noopener">_singular_bordered_system</a>(s)</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>_singular_bordered_system&#40;s&#41;</code></pre>
+<p>Throw an informative error for a singular bordered cohomological matrix.</p>
+<p>Bordering regularises <code>L&#40;s&#41;</code> only along the <em>master</em> directions.  When <code>s</code> sits on a <strong>non-master</strong> eigenvalue of the full-order model — an outer resonance — <code>L&#40;s&#41;</code> is singular in a direction the border does not span, and the bordered matrix is singular too.  That is a property of the reduction, not of the solve: the invariant manifold is not normally hyperbolic at that monomial and the master set is too small.  Enlarging the master set to include the offending mode is the fix.</p>
+<p><code>ResonanceSet.outer_resonances</code> records exactly these monomials at construction time.</p>
 </div>
   </div>
 </div>
@@ -3489,43 +3616,16 @@ ctx.sparse_solver.pardiso    &#40;was: ctx.pardiso_solver&#41;</code></pre>
 <div class="api api-function" id="CohomologicalEquations-_solve_monomial!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L97" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, nR, resonance, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L97" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, nR, resonance, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L199" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L199" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM}</code>
   </div>
   <div class="api-body">
-<div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, nR, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
-<p><strong>Sparse path</strong> &#40;dispatched when <code>MT &lt;: SparseMatrixCSC</code>&#41;. Builds <code>L&#40;s&#41;</code> as a <code>SparseMatrixCSC</code> from the union-pattern template, then:</p>
-<ul>
-<li><p><strong>Non-resonant</strong> &#40;<code>nR &#61;&#61; 0</code>&#41;: solves <code>L&#40;s&#41; W_α &#61; rhs</code> directly via <code>_sparse_solve</code>.</p>
-</li>
-<li><p><strong>Resonant</strong> &#40;<code>nR &gt; 0</code>&#41;: performs one sparse factorisation with <code>&#40;1 &#43; nR&#41;</code> right-hand sides &#40;the RHS vector plus the <code>C_r</code> columns&#41;, then eliminates the resonant reduced-dynamics block via a dense Schur complement.</p>
-</li>
-</ul>
-<p>Results are written into <code>ctx.buffers.rhs&#91;1:FOM&#43;nR&#93;</code>.</p>
-</div><div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, nR, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
-<p><strong>Dense path.</strong> Assemble the <code>&#40;FOM&#43;nR&#41;</code> bordered system via <code>_assemble_bordered_system&#33;</code>, then solve it in-place with <code>lu&#33;</code> &#43; <code>ldiv&#33;</code>. The solution is written into <code>ctx.buffers.rhs&#91;1:FOM&#43;nR&#93;</code>.</p>
-</div>
-  </div>
-</div>
-<div class="api api-function" id="CohomologicalEquations-_sparse_solve">
-  <div class="api-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L5" target="_blank" rel="noopener">_sparse_solve</a>(::Nothing, klu_cache::Ref{Any}, A::SparseArrays.SparseMatrixCSC, B)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L5" target="_blank" rel="noopener">_sparse_solve</a>(::Nothing, ::Nothing, A, B)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl#L5" target="_blank" rel="noopener">_sparse_solve</a>(ps, ::Any, A, B)</code>
-  </div>
-  <div class="api-body">
-<div class="markdown"><pre><code>_sparse_solve&#40;pardiso, klu_cache, A, B&#41; -&gt; X</code></pre>
-<p>Solve <code>A * X &#61; B</code> using the best available sparse factoriser.</p>
-<p>Dispatch priority:</p>
-<ol>
-<li><p><strong>Pardiso</strong> — used when an <code>AbstractPardisoSolver</code> is available &#40;MKL or open-source&#41;.</p>
-</li>
-<li><p><strong>KLU</strong> — uses SuiteSparse KLU with lazy symbolic caching: symbolic factorisation is computed once on the first call and reused via <code>klu&#33;&#40;F, A&#41;</code> on subsequent calls.</p>
-</li>
-<li><p><strong>UMFPACK</strong> &#40;fallback&#41; — plain <code>lu&#40;A&#41; \ B</code> when <code>klu_cache</code> is <code>nothing</code>.</p>
-</li>
-</ol>
+<div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
+<p><strong>Dense path.</strong> Assemble the <code>&#40;FOM&#43;ROM&#41;</code> bordered system via <code>_assemble_bordered_system&#33;</code>, then solve it in-place with <code>lu&#33;</code> &#43; <code>ldiv&#33;</code>. The solution is written into <code>ctx.buffers.rhs&#91;1:FOM&#43;ROM&#93;</code>.</p>
+</div><div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
+<p><strong>Sparse path</strong> &#40;dispatched when <code>MT &lt;: SparseMatrixCSC</code>&#41;. Writes the bordered matrix into the constant-pattern template held by <code>ctx.sparse_solver</code> and solves it with a single factorisation.</p>
+<p>The <code>&#40;1,1&#41;</code> block is evaluated by the untouched <code>build_sparse_L_and_rhs&#33;</code> Horner pass on its own workspace — it needs the transient intermediates <code>L&#91;j&#93;&#40;s&#41;</code> to accumulate the lower-order RHS — and is then scattered into the template. The border blocks are staged in <code>ctx.buffers.orthogonality_rows</code> by the same assembly routine the dense path uses, then scattered into their strided positions in <code>nzval</code>.</p>
+<p>Results are written into <code>ctx.buffers.rhs&#91;1:FOM&#43;ROM&#93;</code>.</p>
 </div>
   </div>
 </div>
@@ -3593,9 +3693,9 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_cohomological_equations!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L325" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L325" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L325" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L360" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L360" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L360" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_cohomological_equations&#33;&#40;W, R, ctx, model, ml_cache&#41; -&gt; nothing</code></pre>
@@ -3606,8 +3706,8 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_cohomological_equations_benchmarked!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl#L138" target="_blank" rel="noopener">solve_cohomological_equations_benchmarked!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl#L138" target="_blank" rel="noopener">solve_cohomological_equations_benchmarked!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl#L132" target="_blank" rel="noopener">solve_cohomological_equations_benchmarked!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl#L132" target="_blank" rel="noopener">solve_cohomological_equations_benchmarked!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_cohomological_equations_benchmarked&#33;&#40;W, R, ctx, sym, model, ml_cache;
@@ -3619,7 +3719,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_cohomological_problem">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L134" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, master_eigenvalues::StaticArraysCore.SVector{ROM, ComplexF64}, master_modes::Matrix{ComplexF64}, left_eigenmodes::AbstractMatrix{ComplexF64}, resonance_set::ResonanceSet; initial_W, initial_R, master_modes_derivatives, left_modes_derivatives, conjugate_permutation, show_progress, benchmark_dir) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L135" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, master_eigenvalues::StaticArraysCore.SVector{ROM, ComplexF64}, master_modes::Matrix{ComplexF64}, left_eigenmodes::AbstractMatrix{ComplexF64}, resonance_set::ResonanceSet; initial_W, initial_R, master_modes_derivatives, left_modes_derivatives, conjugate_permutation, show_progress, benchmark_dir) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_cohomological_problem&#40;
@@ -3677,8 +3777,8 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_single_monomial!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L251" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, model, ml_cache)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L251" target="_blank" rel="noopener">solve_single_monomial!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L288" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, model, ml_cache)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L288" target="_blank" rel="noopener">solve_single_monomial!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_single_monomial&#33;&#40;W, R, idx, ctx, model, ml_cache&#41; -&gt; nothing</code></pre>
@@ -3871,7 +3971,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 	</div>
 	<div style="display:flex;justify-content:space-between;align-items:center;margin-top:48px;padding-top:24px;border-top:1px solid var(--hair);color:var(--ink-3);font-size:12px;">
 	  <div>© MORFE contributors · MIT license</div>
-	  <div class="mono">generated · 15 July 2026 · julia 1.11</div>
+	  <div class="mono">generated · 1 August 2026 · julia 1.11</div>
 	</div>
   </div>
 </footer>

@@ -38,11 +38,6 @@ is the type that leaves Pardiso free to pivot. Its analysis still applies its ow
 fill-reducing ordering and supernode detection, so structure that is there is still
 exploited — the optimisation is left to the solver rather than asserted by us.
 
-This matches what the general-purpose solver concludes when given the choice:
-UMFPACK's `AUTO` strategy, on a bordered matrix whose pattern *is* structurally
-symmetric, selects the **unsymmetric** strategy (`UMFPACK_STRATEGY_USED = 1`) — the
-dense border makes it the right call there too.
-
 ## Robustness on a near-singular matrix
 
 The bordered matrix is near-singular in its `(1,1)` block at every resonant monomial
@@ -51,9 +46,9 @@ numbering) and weighted matching (`iparm[12]`) are what keep such a system solva
 Pardiso enables both by default for `mtype` 13, but they are set explicitly here so
 the behaviour does not depend on a default.
 
-**Untested.** Pardiso is a weak dependency and is absent from CI, so none of this
-runs in the test suite. `_pardiso_prepare!` therefore verifies the first solve
-against its own residual and raises if it is wrong, rather than letting a
+Pardiso is a weak dependency, so this backend is unreachable from the test suite.
+`_pardiso_factorise_solve!` therefore checks its own first solve against the
+residual `‖A·x − b‖/‖b‖` and raises on a bad answer, rather than letting a
 misconfigured solver return plausible-looking numbers.
 """
 module MORFEPardisoExt
