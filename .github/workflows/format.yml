@@ -1,0 +1,32 @@
+name: Format
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+
+      - name: Cache packages
+        uses: julia-actions/cache@v2
+
+      - name: Install formatter
+        run: julia --project=format -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Check formatting
+        run: julia --project=format format/format.jl
+
+      - name: Show required changes
+        if: failure()
+        run: git diff

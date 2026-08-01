@@ -1,1 +1,11 @@
 **/*.html linguist-detectable=false
+
+# Julia sources are stored and checked out with LF, whatever the contributor's
+# core.autocrlf happens to be. Without this the repo drifts back to mixed line
+# endings, and the formatter (which always writes LF) turns every file it
+# touches into a whole-file diff.
+*.jl text eol=lf
+
+# Serialised results and meshes are binary; never apply EOL conversion to them.
+*.jls binary
+*.msh binary

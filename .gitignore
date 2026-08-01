@@ -9,7 +9,9 @@
 *.exe
 Manifest.toml
 docs/Manifest.toml
-.JuliaFormatter.toml
+# The formatter environment is pinned on purpose, so that everyone and CI
+# produce byte-identical formatting.
+!format/Manifest.toml
 
 # Package artifacts (stores downloaded dependencies)
 /artifacts/
