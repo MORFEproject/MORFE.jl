@@ -469,11 +469,16 @@ One result from a factorisation function: an ordered list of multiindex-set
 indices (one per factor slot) together with the number of distinct ordered
 arrangements of that combination.
 
-- `factor_indices` — indices into the multiindex set, one per factor slot.
-- `multiplier`     — number of distinct orderings (permutations) of this combination.  Always 1 for `factorisations_asymmetric`, which enumerates each ordering as a separate entry.
-
 All three factorisation functions return `Vector{FactorisationEntry}`, so
 call sites do not need to know which variant produced the data.
+
+# Fields
+
+- `factor_indices::Vector{Int}` — indices into the multiindex set, one per factor
+  slot.
+- `multiplier::Int` — number of distinct orderings (permutations) of this
+  combination.  Always 1 for `factorisations_asymmetric`, which enumerates each
+  ordering as a separate entry instead of folding it into a count.
 """
 struct FactorisationEntry
     factor_indices::Vector{Int}

@@ -81,10 +81,16 @@ where:
 
 # Fields
 
-- `n_fom`: dimension of the full‑order state vector x.
-- `linear_terms`: tuple of linear coefficient matrices (B_0, …, B_ORD).
-- `nonlinear_terms`: tuple of `MultilinearMap` representing nonlinear contributions.
-- `external_system`: object of type `ExternalSystem` defining the external dynamics.
+- `n_fom::Int` — dimension of the full‑order state vector `x`.
+- `linear_terms::NTuple{ORDP1, MT}` — the linear coefficient matrices
+  `(B_0, …, B_ORD)`, all of identical size.
+- `nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}}` — the nonlinear
+  contributions, each a [`MultilinearMap`](@ref) or [`FEMMultilinearMap`](@ref).
+- `external_system::Union{Nothing, ExternalSystem{N_EXT}}` — the external dynamics,
+  or `nothing` for an unforced model.
+- `max_nl_degree::Int` — the largest combined degree over `nonlinear_terms`, cached
+  at construction.  It bounds the polynomial order at which anything nonlinear can
+  still contribute, and drives the progress indicator's work estimate.
 
 # Representation
 
@@ -109,15 +115,14 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     max_nl_degree::Int
 
     """
-    	NDOrderModel(linear_terms, nonlinear_terms, external_dynamics = DensePolynomial{...}())
+    		NDOrderModel(linear_terms, nonlinear_terms, external_system::ExternalSystem)
 
-    	Construct an `NDOrderModel` with external system.
+    		Construct an `NDOrderModel` from an `ExternalSystem` object directly.
 
-    	# Checks performed
-    	- Correct relationship between `ORD` and `ORDP1`.
-    	- All matrices in `linear_terms` must be adequately sized.
-    	"""
-    # Constructor accepting an ExternalSystem object directly
+    		# Checks performed
+    		- Correct relationship between `ORD` and `ORDP1`.
+    		- All matrices in `linear_terms` must be adequately sized.
+    		"""
     function NDOrderModel(
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
@@ -318,9 +323,13 @@ Optimised representation of a first‑order dynamical system
 where `F(x)` is a polynomial/multilinear function of `x`.
 
 # Fields
-- `n_fom`: dimension of the full‑order state vector x.
-- `B0`, `B1`: the linear coefficient matrices.
-- `nonlinear_terms`: tuple of `MultilinearMap{1}` representing nonlinear contributions.
+
+- `n_fom::Int` — dimension of the full‑order state vector `x`.
+- `B0::MT` — the zeroth-order linear coefficient matrix.
+- `B1::MT` — the first-order linear coefficient matrix; same size as `B0`, checked
+  at construction.
+- `nonlinear_terms::NTuple{N_NL, MultilinearMap{1}}` — the nonlinear contributions
+  `F(x)`.  Fixed at order 1, so no derivative bookkeeping is needed.
 
 # Construction
 	FirstOrderModel((B0, B1), nonlinear_terms)

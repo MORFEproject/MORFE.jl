@@ -40,12 +40,26 @@ Compile-time dispatch on `CP` eliminates secondary-monomial bookkeeping when
 inactive.  When active, secondary monomials (those whose conjugate partner has
 a lower multiindex-set index) are marked in `skip_bits` and skipped in the
 outer solve loop; their coefficients are filled by `fill_conjugate_monomial!`.
+
+# Fields
+
+- `permutation::CP` — the involutory mode permutation `P` swapping conjugate pairs,
+  or [`NoConjugatePermutation`](@ref) when the optimisation is off.
+- `monomial_map::Vector{Int}` — `monomial_map[i]` is the position of the conjugate
+  monomial `P·γ` for `γ = mset[i]`, or `0` when it falls outside the multiindex set.
+- `skip_bits::BitVector` — length `L`; `true` marks a monomial the outer loop must
+  not solve.  Covers both the linear monomials (already known from eigenvectors) and
+  the secondary monomials obtained by conjugation, so the loop needs one test rather
+  than two.
+- `primary_pairs::Vector{NTuple{2, Int}}` — `(source, conjugate)` position pairs
+  with `conjugate > source`, in ascending `source` order.  Ordering lets the solve
+  loop walk them with a single advancing pointer instead of searching.
 """
 struct ConjugateSymmetryData{CP}
     permutation::CP
     monomial_map::Vector{Int}
-    skip_bits::BitVector           # length L; true = skip this monomial (linears + secondaries)
-    primary_pairs::Vector{NTuple{2, Int}}  # (source_idx, conj_idx) where conj_idx > source_idx
+    skip_bits::BitVector                   # length L
+    primary_pairs::Vector{NTuple{2, Int}}  # (source_idx, conj_idx), conj_idx > source_idx
 end
 
 # =============================================================================

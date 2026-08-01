@@ -68,16 +68,24 @@ export ResonanceSet,
 Boolean look-up table recording which monomials are resonant with which master-mode
 or outer-mode targets.
 
-- `multiindices`: the `MultiindexSet` over which resonances are defined (NVAR = ROM + N_EXT).
-- `inner_resonances`: `ROM × NMON` `BitMatrix`; row `r`, column `k` is `true` when
-  monomial `k` is resonant with master mode `r`.
-- `outer_resonances`: `n_out × NMON` `BitMatrix` for outer (forcing) targets, or
-  `nothing` when there are no outer targets.
-
 Type parameters: `ROM` = number of master modes, `N_EXT` = external system size,
 `M` = matrix type (typically `BitMatrix`).
 
+Resonance decides, per monomial, whether the cohomological system gets a border on a
+given master row — so this table is consulted once per monomial per master mode, and
+is precomputed as bits rather than re-tested against tolerances during the solve.
+
 Use one of the `resonance_set_from_*` constructors rather than building this directly.
+
+# Fields
+
+- `multiindices::MultiindexSet` — the set over which resonances are defined; its
+  `NVAR` must equal `ROM + N_EXT`, which the constructor enforces.
+- `inner_resonances::M` — `ROM × NMON`; entry `(r, k)` is `true` when monomial `k`
+  is resonant with master mode `r`.
+- `outer_resonances::Union{Nothing, M}` — `n_out × NMON` for outer (non-master)
+  targets, or `nothing` when there are none.  Outer resonance is not something the
+  border can absorb; it signals that the master set is too small.
 """
 struct ResonanceSet{ROM, N_EXT, M <: AbstractMatrix{Bool}}
     multiindices::MultiindexSet               # NVAR = ROM + N_EXT, enforced at construction
@@ -283,9 +291,13 @@ abstract type OuterResonanceCondition end
 
 Flags a monomial as resonant when `|λⱼ - s| < tol`.
 
-- `eigenvalues`: target eigenvalues (local indexing).
-- `tol`: scalar tolerance, or `Vector{Vector{Float64}}` for per-monomial per-target.
-- `target_indices`: local target indices this condition applies to (typically `1:n`).
+# Fields
+
+- `eigenvalues::Vector{ComplexF64}` — the target eigenvalues, in local indexing.
+- `tol::Union{Float64, Vector{Vector{Float64}}}` — a scalar tolerance, or a
+  per-monomial, per-target table when the threshold has to vary.
+- `target_indices::Vector{Int}` — which local targets this condition applies to,
+  typically `1:n`.  Kept explicit so several conditions can cover disjoint targets.
 """
 struct EigenvalueCondition <: OuterResonanceCondition
     eigenvalues::Vector{ComplexF64}
@@ -302,8 +314,15 @@ end
 Flags a monomial as resonant when `|λⱼ - s| < tol` **or** `|λ_{conj(j)} - s| < tol`,
 so that conjugate eigenvalue pairs share the resonance flag.
 
-- `conjugacy_map`: local index map; `conjugacy_map[i]` is the local index of the
-  conjugate of eigenvalue `i`.
+# Fields
+
+- `eigenvalues::Vector{ComplexF64}` — the target eigenvalues, in local indexing.
+- `conjugacy_map::Vector{Int}` — `conjugacy_map[i]` is the local index of the
+  conjugate of eigenvalue `i`.  Pairing them keeps the flags symmetric, which a
+  real-valued full-order model requires.
+- `tol::Union{Float64, Vector{Vector{Float64}}}` — a scalar tolerance, or a
+  per-monomial, per-target table.
+- `target_indices::Vector{Int}` — which local targets this condition applies to.
 """
 struct RealEigenvalueCondition <: OuterResonanceCondition
     eigenvalues::Vector{ComplexF64}
@@ -322,10 +341,22 @@ Flags a monomial as resonant using the criterion:
 
 	|λⱼ - s| * max_cond < spectral_radius * κ(λⱼ)
 
-- `spectral_radius`: spectral radius of the full-order system.
-- `condition_numbers`: per-target eigenvalue condition numbers `κ(λⱼ)`.
-- `max_cond`: maximum acceptable condition number for the cohomological operator.
-- `conjugacy_map`: optional local conjugacy map.
+Scaling the test by the spectral radius and by each eigenvalue's own conditioning
+makes the criterion dimensionless, so it transfers across models without retuning a
+raw distance tolerance.
+
+# Fields
+
+- `eigenvalues::Vector{ComplexF64}` — the target eigenvalues, in local indexing.
+- `spectral_radius::Float64` — spectral radius of the full-order system, setting the
+  scale against which `|λⱼ - s|` is judged.
+- `condition_numbers::Vector{Float64}` — per-target eigenvalue condition numbers
+  `κ(λⱼ)`.
+- `max_cond::Float64` — the largest condition number tolerated for the cohomological
+  operator before the monomial counts as resonant.
+- `target_indices::Vector{Int}` — which local targets this condition applies to.
+- `conjugacy_map::Union{Nothing, Vector{Int}}` — optional local conjugacy map, used
+  as in [`RealEigenvalueCondition`](@ref); `nothing` when pairing is not wanted.
 """
 struct ConditionNumberEstimateCondition <: OuterResonanceCondition
     eigenvalues::Vector{ComplexF64}

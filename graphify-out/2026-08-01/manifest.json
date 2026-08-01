@@ -15,69 +15,59 @@
     "semantic_hash": "99257c2f51666d5bfb6e2e27045d87fe"
   },
   "ext/MORFEArpackExt.jl": {
-    "mtime": 1783502068.135147,
-    "ast_hash": "3e5c621a76809ac42d720580cee98d28",
+    "mtime": 1785600151.3097408,
+    "ast_hash": "f8c41e47f3d3965b4a6bf9a4bb95f852",
     "semantic_hash": ""
   },
   "ext/MORFEBifurcationKitExt.jl": {
-    "mtime": 1783451880.2764542,
-    "ast_hash": "2434c0c79dbb91b0a20d2a83260168a5",
+    "mtime": 1785600151.311508,
+    "ast_hash": "8c691f51e68ee0e49d542923222b0d18",
     "semantic_hash": ""
   },
   "ext/MORFEGmshExt.jl": {
-    "mtime": 1783451880.2970815,
-    "ast_hash": "98b98e051a638d5bf9883a6f55f17bbb",
+    "mtime": 1785600151.3127885,
+    "ast_hash": "5dfc7a7ab0aabfcec2a38444265ace27",
     "semantic_hash": ""
   },
   "ext/MORFEPardisoExt.jl": {
-    "mtime": 1785581653.981418,
-    "ast_hash": "173ad775830527697ae209d6095882c9",
+    "mtime": 1785600151.316929,
+    "ast_hash": "dbf300a3274f2319aeaef1599faab8bf",
     "semantic_hash": ""
   },
   "ext/MORFEPlotsExt.jl": {
-    "mtime": 1783451880.3182473,
-    "ast_hash": "7c407fe5a35d80fb060d0dbb8cbe677e",
+    "mtime": 1785600151.3241851,
+    "ast_hash": "f5d2e670f0e8d85a1a59d1ee4dac21ae",
     "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt.jl": {
-    "mtime": 1783502063.189178,
-    "ast_hash": "6e38f52ff40c1ef69390fc90ca754459",
+    "mtime": 1785600151.3582976,
+    "ast_hash": "1c910b816e45448b5d973f9cf242dd52",
     "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt/external_system.jl": {
-    "mtime": 1783451880.3399172,
-    "ast_hash": "d5a962e7b1480760ba2507a67caf459a",
-    "semantic_hash": "d5a962e7b1480760ba2507a67caf459a"
+    "mtime": 1785600151.3271797,
+    "ast_hash": "e9263221582963ebe2a256ad109e8bda",
+    "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt/extraction.jl": {
-    "mtime": 1783502063.18967,
-    "ast_hash": "670e0af51c7c16cd7fb8c3b115b47146",
+    "mtime": 1785600151.3399985,
+    "ast_hash": "04a220de27f7000657326ad59dc03448",
     "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt/polarization.jl": {
-    "mtime": 1783502063.1901422,
-    "ast_hash": "359f6ad52677f33939b6dd0d8d5c20fc",
+    "mtime": 1785600151.3532815,
+    "ast_hash": "6e89fd702d03333c52ba96230b309896",
     "semantic_hash": ""
   },
   "ext/MORFESymbolicsExt/toMultilinearMaps.jl": {
-    "mtime": 1783502063.1905968,
-    "ast_hash": "7f073aa669fdedfdc11a4b10ec51fe95",
+    "mtime": 1785600151.3555734,
+    "ast_hash": "eac89434f56d1287232cbf0de58d9f91",
     "semantic_hash": ""
   },
   "ext/SDE_Python/sde_integrator.py": {
     "mtime": 1780331521.149273,
     "ast_hash": "302518276da2c708e0df909a9692485d",
     "semantic_hash": "302518276da2c708e0df909a9692485d"
-  },
-  "ext/SpectralDecomposition/JordanChain.jl": {
-    "mtime": 1783451880.3850188,
-    "ast_hash": "546eac8d63ee5f0c9883fab6a5bc7863",
-    "semantic_hash": ""
-  },
-  "ext/SpectralDecomposition/PropagateEigenmodes.jl": {
-    "mtime": 1783451880.395237,
-    "ast_hash": "e13e466d6c0798017ded13a3a559404c",
-    "semantic_hash": ""
   },
   "src/BifurcationSolvers/BifurcationKitInterface.jl": {
     "mtime": 1779839519.5668118,
@@ -90,169 +80,169 @@
     "semantic_hash": "a0c7c7eaad29fd4903f9c11eda5b4e8a"
   },
   "src/FullOrderModel/ExternalSystems.jl": {
-    "mtime": 1785521130.4210768,
-    "ast_hash": "b4769e1a405bbe60a4a6ab32ae94787c",
+    "mtime": 1785600150.679177,
+    "ast_hash": "003fb0a59d33c5c5757e87f6ac1ff04c",
     "semantic_hash": ""
   },
   "src/FullOrderModel/FullOrderModel.jl": {
-    "mtime": 1785521130.4213662,
-    "ast_hash": "15538af151180ca629bb66b6668737aa",
-    "semantic_hash": "15538af151180ca629bb66b6668737aa"
+    "mtime": 1785600150.8722763,
+    "ast_hash": "51921f7140400dc6035360f3f621a021",
+    "semantic_hash": ""
   },
   "src/FullOrderModel/MultilinearMaps.jl": {
-    "mtime": 1785521130.4217188,
-    "ast_hash": "9e48b55db036bf996dd82107940bfd26",
+    "mtime": 1785600150.8863277,
+    "ast_hash": "b9bb07d87e21e90de8ad7105334a0f7b",
     "semantic_hash": ""
   },
   "src/MORFE.jl": {
-    "mtime": 1785521130.422054,
-    "ast_hash": "78b5052e67f9a2a7a7abc8ab8a25a6eb",
+    "mtime": 1785600150.8914459,
+    "ast_hash": "c8db3eeb406c633fc0c226e397b46444",
     "semantic_hash": ""
   },
   "src/Multiindices.jl": {
-    "mtime": 1785521130.4223373,
-    "ast_hash": "75a7b6577fb7fa03f13348fd7ff29921",
-    "semantic_hash": "75a7b6577fb7fa03f13348fd7ff29921"
+    "mtime": 1785600150.9259734,
+    "ast_hash": "865c7401729108c25690a195126b9a7d",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl": {
-    "mtime": 1785521535.2303314,
-    "ast_hash": "84bcc4d00996b64781bcbad8d666852d",
+    "mtime": 1785600150.9638143,
+    "ast_hash": "5d499c57bfabdca289d2f2ccac83ee9e",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalContext.jl": {
-    "mtime": 1785583215.6658945,
-    "ast_hash": "1482fa0bfcdca236135b10e35a330ab6",
+    "mtime": 1785600150.9665675,
+    "ast_hash": "ba4b592232ff465bca7dc2f1abcc947f",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl": {
-    "mtime": 1785521482.967827,
-    "ast_hash": "93db2b80425a88982ca7adab9cc1564e",
+    "mtime": 1785600150.9843946,
+    "ast_hash": "90a7c6d7e7184d13699496a29502aa20",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl": {
-    "mtime": 1785581135.6457765,
-    "ast_hash": "e7954b7109289cae79b5b6e7fed1c996",
+    "mtime": 1785600150.9919596,
+    "ast_hash": "06c754268f59e104128e6f46c39df213",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl": {
-    "mtime": 1785583215.6655343,
-    "ast_hash": "2eff283368ca36c9cc9f9679136fffcd",
+    "mtime": 1785600150.9982855,
+    "ast_hash": "08c48cb1b36946e6bf3a8534e157f3d6",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/ConjugateSymmetry.jl": {
-    "mtime": 1785521130.4241488,
-    "ast_hash": "9117bc22baad89987ada40d6998345bc",
+    "mtime": 1785600151.0089595,
+    "ast_hash": "aba5e0343eb20bd39584196b3bf49456",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/OperatorData.jl": {
-    "mtime": 1785583215.6652393,
-    "ast_hash": "3dffd3948fefe750a18aaa425ca3021f",
+    "mtime": 1785600151.0098922,
+    "ast_hash": "7e7ac7c53a695294be0cb649f94a43a0",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl": {
-    "mtime": 1785583742.2727337,
-    "ast_hash": "8fc1f554ba886b3f98c1956f6a47d51d",
+    "mtime": 1785600151.0130532,
+    "ast_hash": "cc94006e7bc2f1c802466aabc77d3bb0",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/ColumnPolynomials.jl": {
-    "mtime": 1785521130.424868,
-    "ast_hash": "03f226cbccce23eddb0d63fc56477992",
-    "semantic_hash": "03f226cbccce23eddb0d63fc56477992"
+    "mtime": 1785600151.0488641,
+    "ast_hash": "5d4dfdd1622ac88fc48bff3430042dab",
+    "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl": {
-    "mtime": 1785583128.9675038,
-    "ast_hash": "41141f92b158a40f10b3a0fc59e5c58e",
+    "mtime": 1785600151.0554547,
+    "ast_hash": "6709646ce9185b2206087102ec000cb5",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl": {
-    "mtime": 1785521272.8326337,
-    "ast_hash": "10665f9a624327d8898bb297b6644604",
+    "mtime": 1785600151.057795,
+    "ast_hash": "ec4c7ce0cce160e29c6f3d8add85728c",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl": {
-    "mtime": 1785521313.1857607,
-    "ast_hash": "66f3af0f7a8e3a2ce8322d8b70a9ee33",
+    "mtime": 1785600151.0675597,
+    "ast_hash": "5dd66b6351dd8ea4658421e0e4f680c8",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/HornerEvaluator.jl": {
-    "mtime": 1785521130.426467,
-    "ast_hash": "987b0767a643fbed8ae0bd141a908956",
+    "mtime": 1785600151.073514,
+    "ast_hash": "a2a9e1ebd42de19539731b76bec24969",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl": {
-    "mtime": 1785532126.4954348,
-    "ast_hash": "190b173bb54edd95d21ac47933e05069",
+    "mtime": 1785600151.077421,
+    "ast_hash": "92019cf03f41105923ff13c1c8ba245d",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/ParametrisationMethod.jl": {
-    "mtime": 1785521130.4271727,
-    "ast_hash": "c7784fa8746fe9c8836e3d7b8c6bac71",
+    "mtime": 1785600151.0832493,
+    "ast_hash": "85e91378356b075846d73d46b6df2ca6",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/Resonance.jl": {
-    "mtime": 1785521130.4274304,
-    "ast_hash": "dfcb69e4635fc970cf67a88c7ae1a493",
+    "mtime": 1785600151.1219409,
+    "ast_hash": "7e6271c17af6a61fc7945eec0742fa7e",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl": {
-    "mtime": 1785521130.427926,
-    "ast_hash": "4f06fed424a75cbad25e419cfdf87ad9",
+    "mtime": 1785600151.1295009,
+    "ast_hash": "13fe752cda0c4624de572758696e6748",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/CacheBuilder.jl": {
-    "mtime": 1785521130.4282656,
-    "ast_hash": "fdffab23ddf1b7867789ec2d2bbe2448",
+    "mtime": 1785600151.1547906,
+    "ast_hash": "48b955da7303402f402b391283bd906b",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/CachedEval.jl": {
-    "mtime": 1785521130.4285662,
-    "ast_hash": "eb2614b9358c2d6b42cce29e8106a804",
+    "mtime": 1785600151.1655297,
+    "ast_hash": "293b7969d9d86bbe7d6b5e18779987dc",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.jl": {
-    "mtime": 1785521130.4287195,
-    "ast_hash": "9c84d1ab61d3102277ad0ae37687f465",
+    "mtime": 1785600151.1668463,
+    "ast_hash": "dad22a477e4f20488b4bebfc9a66976a",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/NonCachedEval.jl": {
-    "mtime": 1785521130.429038,
-    "ast_hash": "3e097f59f7fb5132a1e82a421863b1fd",
+    "mtime": 1785600151.1701384,
+    "ast_hash": "e8a6dc1a074d33051fbd562a703fbbfd",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/Structs.jl": {
-    "mtime": 1785521130.4293642,
-    "ast_hash": "198b362982e42a0906a37ae1350db184",
+    "mtime": 1785600151.1720347,
+    "ast_hash": "ea8ca74be3ee5f84e5029b34a3abbe1c",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/Symmetry.jl": {
-    "mtime": 1785521130.4295323,
-    "ast_hash": "59a8a570d0a1a72057771deeba12e486",
+    "mtime": 1785600151.173739,
+    "ast_hash": "ca2942ca00af42d6240f451356b53775",
     "semantic_hash": ""
   },
   "src/Polynomials.jl": {
-    "mtime": 1785521130.43021,
-    "ast_hash": "0fbb21e63740c424a16e460d6d043e36",
+    "mtime": 1785600151.2100627,
+    "ast_hash": "4be27a92cabf9cb12c210686486cad2d",
     "semantic_hash": ""
   },
   "src/Realification.jl": {
-    "mtime": 1785521130.4305277,
-    "ast_hash": "53f0c01370812f6efeab588f0c3c1b31",
-    "semantic_hash": "53f0c01370812f6efeab588f0c3c1b31"
+    "mtime": 1785600151.2231934,
+    "ast_hash": "b56d91f2c72686a9f128c82c0e165231",
+    "semantic_hash": ""
   },
   "src/SpectralDecomposition/Eigenproblems.jl": {
-    "mtime": 1785521130.4308321,
-    "ast_hash": "ffda76e86620b2acfefa28bec3933c23",
+    "mtime": 1785600151.2507784,
+    "ast_hash": "2993e654c04ce3431670df24aa9d12ea",
     "semantic_hash": ""
   },
   "src/SpectralDecomposition/Eigensolvers.jl": {
-    "mtime": 1785521130.43108,
-    "ast_hash": "143477c79a8e53697054946d964cf5b4",
-    "semantic_hash": "143477c79a8e53697054946d964cf5b4"
+    "mtime": 1785600151.251871,
+    "ast_hash": "af61da76f62ac928a43d76081d09a4c3",
+    "semantic_hash": ""
   },
   "src/Validation/InvarianceError.jl": {
-    "mtime": 1785521130.4314158,
-    "ast_hash": "02e3ca637cb68d38c8620867fdea58fe",
-    "semantic_hash": "02e3ca637cb68d38c8620867fdea58fe"
+    "mtime": 1785600151.2664526,
+    "ast_hash": "d7822525b8657b3ff793f699fd6f71dc",
+    "semantic_hash": ""
   },
   "benchmark/ferrite/benchmark_ferrite.jl": {
     "mtime": 1781706765.710366,
@@ -490,63 +480,63 @@
     "semantic_hash": ""
   },
   "test/Extensions/test_morfe_symbolics.jl": {
-    "mtime": 1783502063.1936855,
-    "ast_hash": "6cd10fbde30e8eb4b84ed3eeb1fb891d",
+    "mtime": 1785600151.6216803,
+    "ast_hash": "2864f20d4bb71bf249f297b3eb2a24cb",
     "semantic_hash": ""
   },
   "test/FEMUtility/test_gmsh_to_comsol.jl": {
-    "mtime": 1781706766.321604,
-    "ast_hash": "d574c3263d39a4ea8e9de0cb8009b8d4",
+    "mtime": 1785600151.629613,
+    "ast_hash": "2efa2cd87a4651de3554b69921a9cd38",
     "semantic_hash": ""
   },
   "test/FullOrderModel/test_external_system.jl": {
-    "mtime": 1781706767.2398248,
-    "ast_hash": "b536be748e93ca0f0e90712987130498",
+    "mtime": 1785600151.6974444,
+    "ast_hash": "2b736b2b9f31c06c02a9c05564efe50b",
     "semantic_hash": ""
   },
   "test/FullOrderModel/test_full_order_model.jl": {
-    "mtime": 1781706767.2401283,
-    "ast_hash": "ac1a4bed23a44bf8844d3c7ba59b149e",
+    "mtime": 1785600151.7155344,
+    "ast_hash": "0ea8a5e9735adb75849139e74a5b89f9",
     "semantic_hash": ""
   },
   "test/FullOrderModel/test_multilinear_maps.jl": {
-    "mtime": 1781706767.2421384,
-    "ast_hash": "3c322d005c445b67e377f152ad6874ee",
+    "mtime": 1785600151.7470582,
+    "ast_hash": "9a792e4148c16cfd0f13a602151ccae9",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_conjugate_symmetry.jl": {
-    "mtime": 1783502068.1379426,
-    "ast_hash": "42c3ef9dad2250ba1b3c642a207e4686",
+    "mtime": 1785600151.934774,
+    "ast_hash": "a96378d009296c54f172186693bd1775",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_invariance_equation.jl": {
-    "mtime": 1785521161.3776987,
-    "ast_hash": "66bddf2d51cd0feaf652afb1501f43f2",
+    "mtime": 1785600152.021155,
+    "ast_hash": "7ba535983212a5489ea0a74bb133f5b5",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_noconj_debug.jl": {
-    "mtime": 1783502068.1386352,
-    "ast_hash": "e8c209aacec35b07774734ad558b44f5",
+    "mtime": 1785600152.0704076,
+    "ast_hash": "dde23a10ae1d22f70d9e2eef25fa50db",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_parametrisation_method.jl": {
-    "mtime": 1781706767.2432637,
-    "ast_hash": "5daae1bb20e51336bbbb0c0d9c3dd411",
+    "mtime": 1785600152.076207,
+    "ast_hash": "dc2bf9dd740bc685b2a984558e65a53a",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_resonances.jl": {
-    "mtime": 1781706767.2436733,
-    "ast_hash": "24fb6d8e007827292edcc612658094d3",
+    "mtime": 1785600152.0985513,
+    "ast_hash": "c219585aaa51858ff9afdc6a11792988",
     "semantic_hash": ""
   },
   "test/SpectralDecomposition/EigensolverTestsFrancesco/Julia_Arpack.jl": {
-    "mtime": 1781706767.244802,
-    "ast_hash": "6d3d3a364aaa2bb06cdc7b2233a76b48",
+    "mtime": 1785600152.130707,
+    "ast_hash": "36626f5cb5699d6b2ad409fda8d07ffc",
     "semantic_hash": ""
   },
   "test/SpectralDecomposition/EigensolverTestsFrancesco/Julia_Krylov.jl": {
-    "mtime": 1781706767.245121,
-    "ast_hash": "4b09d97a0b3e2a0f977cebca3e56398d",
+    "mtime": 1785600152.1449943,
+    "ast_hash": "920a469486f8dbe071f52266a56ff67e",
     "semantic_hash": ""
   },
   "test/SpectralDecomposition/EigensolverTestsFrancesco/Matlab_eigs.m": {
@@ -560,28 +550,28 @@
     "semantic_hash": ""
   },
   "test/SpectralDecomposition/test_eigenproblems.jl": {
-    "mtime": 1783502068.1389563,
-    "ast_hash": "594f27400ce0ef2a19da2b84d6cda308",
+    "mtime": 1785600152.1657922,
+    "ast_hash": "120b582caaad3889982d7e6e4d3eec51",
     "semantic_hash": ""
   },
   "test/Utils/test_multiindices.jl": {
-    "mtime": 1781706767.3413844,
-    "ast_hash": "ddcbd1be045ebfff28d4fc4bb828056a",
+    "mtime": 1785600152.1776981,
+    "ast_hash": "415c7cf4442bfe5a5b3b6cec2f3fedba",
     "semantic_hash": ""
   },
   "test/Utils/test_polynomials.jl": {
-    "mtime": 1783502063.1941037,
-    "ast_hash": "eaf43b6ed5921cc5a915119a42bf4db6",
+    "mtime": 1785600152.1997516,
+    "ast_hash": "f7f73a907bee04a346cd704f089e5e08",
     "semantic_hash": ""
   },
   "test/Utils/test_realification.jl": {
-    "mtime": 1781706767.34201,
-    "ast_hash": "8d79c3402e0f4ca20e013d66200cece5",
+    "mtime": 1785600152.3278203,
+    "ast_hash": "eb08034742d4f691d44b40fe817cc9c6",
     "semantic_hash": ""
   },
   "test/runtests.jl": {
-    "mtime": 1785518381.664266,
-    "ast_hash": "eeb5def3fd8a3e037aec17adfbe27eb3",
+    "mtime": 1785600152.334102,
+    "ast_hash": "ec5a2f5b59b0b17792d374a210234e68",
     "semantic_hash": ""
   },
   "website/assets/dpim-scheme.jsx": {
@@ -650,8 +640,8 @@
     "semantic_hash": ""
   },
   "website/generate_api.jl": {
-    "mtime": 1784106985.301906,
-    "ast_hash": "b4f91f64d0cbf3575e1b79311bb325e4",
+    "mtime": 1785600324.3830333,
+    "ast_hash": "f7b37a6d2923856636d27a12b354bc87",
     "semantic_hash": ""
   },
   ".github/workflows/Documentation.yml": {
@@ -670,8 +660,8 @@
     "semantic_hash": ""
   },
   "analytic_performance_analysis.md": {
-    "mtime": 1779557579.083161,
-    "ast_hash": "8b82ae0fa953355ba8f287d6b7e36c5a",
+    "mtime": 1785584477.0131476,
+    "ast_hash": "7ea6be5169630856b5f35f3872e57c51",
     "semantic_hash": ""
   },
   "benchmark/ferrite/reduced_dynamics_ferrite.txt": {
@@ -730,13 +720,13 @@
     "semantic_hash": ""
   },
   "multi_threaded_solve_analysis.md": {
-    "mtime": 1779044497.5763667,
-    "ast_hash": "d8d98bd05d8dc16dda68d9ec810add21",
+    "mtime": 1785584482.5990233,
+    "ast_hash": "e8a8020de874a9a07575304589237faf",
     "semantic_hash": ""
   },
   "next_steps.md": {
-    "mtime": 1779042587.7011704,
-    "ast_hash": "8567ebc6018073e83b935dd81ac33e87",
+    "mtime": 1785584488.9767447,
+    "ast_hash": "3d940bda6e41c9e47c1439cf631764ae",
     "semantic_hash": ""
   },
   "plan_conjugate.md": {
@@ -1110,8 +1100,8 @@
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_master_mode_orthogonality.jl": {
-    "mtime": 1785518226.5866532,
-    "ast_hash": "47a37630a4792e854688c077d5afa0c1",
+    "mtime": 1785600152.054904,
+    "ast_hash": "5c22d9f290cc12bc248fd12f92c5c395",
     "semantic_hash": ""
   },
   "website/tutorials/assets/karman/generate_charts.py": {
@@ -1170,18 +1160,18 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/parametrise_entry.jl": {
-    "mtime": 1785521130.4299078,
-    "ast_hash": "b4748ed170175b2f192f700679af2750",
+    "mtime": 1785600151.1779087,
+    "ast_hash": "08d72a60b8b6c6bb84d134ffde9cb108",
     "semantic_hash": ""
   },
   "src/Export/RomIO.jl": {
-    "mtime": 1785521130.4207263,
-    "ast_hash": "8929b03b3a110789f63f3886269bb397",
+    "mtime": 1785600150.4508908,
+    "ast_hash": "6ca466b15a1b64d3c42e62ef5aef6f49",
     "semantic_hash": ""
   },
   "src/Validation/RomComparison.jl": {
-    "mtime": 1785521130.431759,
-    "ast_hash": "e51ca6ae45e39dbdea2c34c78f1fed31",
+    "mtime": 1785600151.2725468,
+    "ast_hash": "ce57b663b59ed0806ce8e876aa3b88fa",
     "semantic_hash": ""
   },
   "test/Export/test_rom_io.jl": {
@@ -1190,13 +1180,13 @@
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_bordered_solver.jl": {
-    "mtime": 1785583022.2047822,
-    "ast_hash": "00ac090665ff64579cc6f1487757cd75",
+    "mtime": 1785600151.7922764,
+    "ast_hash": "2bc26db0b6fc915702f58615b9948acc",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_parametrise_entry.jl": {
-    "mtime": 1784149969.8420787,
-    "ast_hash": "40f1d008097a5269f617fa1ebd0717ec",
+    "mtime": 1785600152.079784,
+    "ast_hash": "c4340ce26ccec7430533c96f4626c8eb",
     "semantic_hash": ""
   },
   "test/Validation/test_rom_comparison.jl": {
@@ -1257,6 +1247,16 @@
   "website/tutorials/structural_svk.html": {
     "mtime": 1785245130.9944336,
     "ast_hash": "b79c1040310562a1cff43b7ed44e7552",
+    "semantic_hash": ""
+  },
+  "format/format.jl": {
+    "mtime": 1785600032.8097928,
+    "ast_hash": "8bc1f9601fd2da99c0279f4c87fddc8e",
+    "semantic_hash": ""
+  },
+  ".github/workflows/format.yml": {
+    "mtime": 1785600041.1439996,
+    "ast_hash": "c9a2f71d49749e53026c6f006eb19258",
     "semantic_hash": ""
   }
 }

@@ -143,6 +143,16 @@ end
 
 Sparse eigensolver backed by `Arpack.eigs`. Computes `nev` smallest-magnitude
 eigenpairs. If `nev` is not specified, Arpack's default count is used.
+
+# Fields
+
+- `nev::Union{Nothing, Int64}` — number of eigenpairs to compute.  `nothing` means
+  "not chosen yet"; the zero-argument constructor warns, because leaving the count
+  to Arpack on a large model is rarely what the caller wants.
+- `eigenvalues::Union{Nothing, Vector{ComplexF64}}` — the eigenvalues from the most
+  recent [`solve`](@ref), cached so the left problem can reuse them.  Left
+  **undefined** by the constructors, not set to `nothing`: guard with `isdefined`
+  before reading it.
 """
 mutable struct ArpackEigensolver <: AbstractEigensolver
     nev::Union{Nothing, Int64}
@@ -159,13 +169,23 @@ mutable struct ArpackEigensolver <: AbstractEigensolver
 end
 
 """
-struct MorfeEigensolver <: AbstractEigensolver
-	nev::Union{Nothing, Int64}
-end
+	MorfeEigensolver <: AbstractEigensolver
 
-Solves shifted eigenproblem using Arpack eigs for sparse matrices. 
-shift = nothing -> uses standard eigs
-Computes nev eigenpairs.
+Sparse eigensolver for the *shifted* eigenproblem, backed by `Arpack.eigs` through
+[`generalised_eigenpairs`](@ref).  Shifting targets the eigenvalues nearest a chosen
+point in the complex plane, which is how master modes around a given frequency are
+picked out of a large spectrum.
+
+# Fields
+
+- `nev::Union{Nothing, Int64}` — number of eigenpairs to compute.  `nothing` is
+  resolved to the full problem size on the first [`solve`](@ref).
+- `shift::Union{Nothing, ComplexF64}` — the shift point.  `nothing` falls back to
+  the unshifted `eigs`.
+- `eigenvalues::Union{Nothing, Vector{ComplexF64}}` — eigenvalues from the most
+  recent [`solve`](@ref), cached so the left problem can reuse them.  Left
+  **undefined** by the constructors, not set to `nothing`: guard with `isdefined`
+  before reading it.
 """
 mutable struct MorfeEigensolver <: AbstractEigensolver
     nev::Union{Nothing, Int64}
@@ -242,6 +262,16 @@ The steps are:
 3) calculate eigenvalues: \$\\lambda_k = -\\xi_k*\\omega_k \\sqrt{1-\\xi_k^2}\$
 
 Calculates only the first `nev` eigenvectors.
+
+# Fields
+
+- `eigenvalues::Union{Nothing, Vector}` — eigenvalues from the most recent
+  [`solve`](@ref), `nothing` before the first one.  Cached so the left problem can
+  reuse them instead of re-running Arpack.
+- `nev::Int64` — number of modes to compute, counted in the second-order problem
+  (so `nev` frequencies `ωₖ`, not `2·nev` first-order eigenvalues).
+- `α::Float64` — mass-proportional damping coefficient in `C = αM + βK`.
+- `β::Float64` — stiffness-proportional damping coefficient in `C = αM + βK`.
 """
 mutable struct StructureModalDampingEigensolver <: AbstractEigensolver
     eigenvalues::Union{Nothing, Vector}
@@ -419,32 +449,36 @@ function solve_eigenproblem(
 end
 
 """
-mutable struct Eigenproblem{T}
-	solver::AbstractEigensolver
-	eigenvalues::Array{Complex{T}}
-	eigenmodes::Array{Complex{T}}
-	left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}
-	left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}
-	master_modes::Union{Nothing, Vector{Bool}}
-	external_modes::Union{Nothing, Vector{Bool}}
+	Eigenproblem{T}
 
 Stores sorted and biorthogonally normalised left/right eigenpairs of the
 generalised eigenproblem `A x = λ B x`, together with a master-mode selector.
-Right eigenmodes are stored as a 3D array `FOM × ORD × n_eigs`.
-Left eigenmodes are stored both as the full order-block array
-`FOM × ORD × n_eigs` (`left_eigenmodes_orders`) and as the physical-space
-(highest-order) slice `FOM × n_eigs` (`left_eigenmodes`). The full blocks feed
-the orthogonality row operators directly — no eigenvalue folding is needed to
-reconstruct them.
+
+Left eigenmodes are kept in two forms: the full order-block array and the
+physical-space (highest-order) slice of it.  The full blocks feed the orthogonality
+row operators directly, so no eigenvalue folding is needed to reconstruct them; the
+slice is what physical-space post-processing and export want.
+
+Fields become populated in stages — the solver fills the eigenpairs, then a
+`select_master_modes_*` call marks the masters — which is why the selectors are
+nullable rather than empty.
 
 # Fields
-- `solver`: the `AbstractEigensolver` used to compute eigenpairs
-- `eigenvalues`: sorted eigenvalues `λ`
-- `eigenmodes`: right eigenvectors, sorted to match `eigenvalues`
-- `left_eigenmodes`: physical-space left eigenvectors (FOM × n_eigs); `nothing` until set
-- `left_eigenmodes_orders`: full left eigenvector order-blocks (FOM × ORD × n_eigs);
-  `nothing` when the solver supplied only the physical slice
-- `master_modes`: `Vector{Bool}` flagging master modes; `nothing` until set by a `select_master_modes_*` call
+
+- `solver::AbstractEigensolver` — the solver that computed the eigenpairs, retained
+  so downstream code can query how they were obtained.
+- `eigenvalues::Array{Complex{T}}` — sorted eigenvalues `λ`.
+- `eigenmodes::Array{Complex{T}}` — right eigenvectors as `FOM × ORD × n_eigs`,
+  sorted to match `eigenvalues`.
+- `left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}` — physical-space left
+  eigenvectors, `FOM × n_eigs`; `nothing` until set.
+- `left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}` — full left
+  eigenvector order-blocks, `FOM × ORD × n_eigs`; `nothing` when the solver supplied
+  only the physical slice.
+- `master_modes::Union{Nothing, Vector{Bool}}` — flags the master modes spanning the
+  invariant manifold; `nothing` until a `select_master_modes_*` call sets it.
+- `external_modes::Union{Nothing, Vector{Bool}}` — flags modes driven by external
+  forcing rather than solved for; `nothing` when the model has no forcing.
 """
 mutable struct Eigenproblem{T}
     solver::AbstractEigensolver

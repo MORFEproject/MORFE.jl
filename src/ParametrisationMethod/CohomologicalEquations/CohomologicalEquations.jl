@@ -64,10 +64,9 @@ usefully exist, with backward error growing like `κ(L(s_α)) → ∞`.
 
 Factorising the bordered matrix as a whole keeps the backward error at `κ` of the
 *bordered* matrix, which stays bounded because the border spans the near-null
-directions of `L(s)` (Keller's bordering lemma; Govaerts, *SIAM J. Matrix Anal.
-Appl.* 1991).  This is why the linear algebra in `CohomologicalSolver.jl` never
-inverts `L(s)` alone, and why its numeric factorisation must re-pivot on every
-monomial.
+directions of `L(s)` (Keller's bordering lemma).  This is why the linear algebra 
+in `CohomologicalSolver.jl` never inverts `L(s)` alone, and why its numeric 
+factorisation must re-pivot on every monomial.
 
 ---
 
@@ -166,7 +165,17 @@ export CohomologicalContext,
 	_SimpleProgress
 
 Lightweight progress state for the `\r`-based terminal progress indicator.
-`enabled` is set to `false` when `stderr` is not a TTY so that CI logs stay clean.
+
+# Fields
+
+- `n_total::Int` — number of monomials that will actually be solved, which is fewer
+  than the multiindex-set size whenever linear or conjugate-secondary monomials are
+  skipped.  The reported fraction is against this, not against the set size.
+- `enabled::Bool` — `false` when `stderr` is not a TTY, so CI logs stay clean
+  without every call site having to test for it.
+- `max_nl_degree::Int` — highest nonlinearity degree in the model.  Work per
+  monomial grows with degree, so the fraction is raised to this power to make the
+  displayed percentage track elapsed time rather than monomial count.
 """
 struct _SimpleProgress
     n_total::Int

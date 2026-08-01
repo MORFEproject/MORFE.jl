@@ -8,12 +8,26 @@
 Data needed to compute lower-order coupling vectors `ξ[j]` on every monomial.
 
 Bundled into one struct so the per-monomial buffers and the multiindex lookup are
-allocated once for the whole solve rather than per call.
+allocated once for the whole solve rather than per call.  Everything here is a pure
+function of the multiindex set, so none of it changes as the solve progresses.
+
+# Fields
+
+- `multiindex_dict::Dict{SVector{NVAR, Int}, Int}` — maps an exponent vector to its
+  position in the multiindex set, turning the coupling lookup into a hash rather
+  than a scan.
+- `buffer::Vector{Vector{T}}` — `ORD` vectors of length `FOM` holding the coupling
+  terms `ξ[j]`.  Reused across monomials and zeroed by the caller before each use.
+- `candidate_indices::Vector{Vector{Int}}` — for each of the `L` monomial positions,
+  the multiindices that can contribute a coupling to it.  Degree-1 monomials get an
+  empty list, since a coupling needs two factors of degree ≥ 1.
+- `unit_vectors::Vector{SVector{NVAR, Int}}` — the `NVAR` unit exponent vectors
+  `eᵣ`, materialised once because the coupling recurrence subtracts them constantly.
 """
 struct LowerOrderResources{NVAR, T}
     multiindex_dict::Dict{SVector{NVAR, Int}, Int}
-    buffer::Vector{Vector{T}}               # length ORD, each FOM; zeroed before each call
-    candidate_indices::Vector{Vector{Int}}  # length L; precomputed per monomial
+    buffer::Vector{Vector{T}}               # length ORD, each FOM
+    candidate_indices::Vector{Vector{Int}}  # length L
     unit_vectors::Vector{SVector{NVAR, Int}}
 end
 
@@ -64,13 +78,27 @@ they materialise it differently, so only one of the two matrix buffers is alloca
   [`SparseLinearSolverState`](@ref)).
 
 The unused buffer is a `0×0` placeholder.
+
+# Fields
+
+- `system_matrix::Matrix{T}` — the `(FOM+ROM) × (FOM+ROM)` bordered matrix on the
+  dense path, factorised in place by `lu!`.  `0×0` on the sparse path.
+- `orthogonality_rows::Matrix{T}` — `ROM × (FOM+ROM)` staging area on the sparse
+  path, holding the evaluated `Ĵ(s)` rows and corner before they are scattered into
+  the template.  `0×0` on the dense path.
+- `rhs::Vector{T}` — length `FOM+ROM`.  Holds the right-hand side on entry and, in
+  the same memory, the solution after the solve; the unpacking step reads `W[α]`
+  from its first `FOM` entries and the resonant `R[α]` from the rest.
+- `external_rhs::Vector{T}` — length `FOM` scratch for `evaluate_external_rhs!`.
+- `ml_result::Vector{T}` — length `FOM`, receiving the nonlinear (multilinear-term)
+  contribution from `compute_multilinear_terms!`.
 """
 struct CohomologicalBuffers{T}
-    system_matrix::Matrix{T}       # (FOM+ROM)×(FOM+ROM); dense path only
-    orthogonality_rows::Matrix{T}  # ROM×(FOM+ROM); sparse path only — staged Ĵ(s) rows + corner
-    rhs::Vector{T}                 # length FOM+ROM; holds rhs then solution after ldiv!
-    external_rhs::Vector{T}        # length FOM; scratch for evaluate_external_rhs!
-    ml_result::Vector{T}           # length FOM; output of compute_multilinear_terms!
+    system_matrix::Matrix{T}       # (FOM+ROM)²; dense path only
+    orthogonality_rows::Matrix{T}  # ROM×(FOM+ROM); sparse path only
+    rhs::Vector{T}                 # length FOM+ROM; rhs in, solution out
+    external_rhs::Vector{T}        # length FOM
+    ml_result::Vector{T}           # length FOM
 end
 
 """
@@ -125,20 +153,41 @@ Solver priority: Pardiso when the extension is loaded, otherwise KLU via
 the numeric factorisation *with* partial pivoting on every monomial, which is what
 varying `s` requires.  Note `klu_factor!`, not the exported `klu!`: that one is
 `klu_refactor` and freezes the pivot sequence.
+
+# Fields
+
+- `bordered::SparseMatrixCSC{T}` — the `(FOM+ROM)²` matrix handed to the factoriser.
+  Its `colptr`/`rowval` never change; only `nzval` is rewritten per monomial.
+- `L_template::SparseMatrixCSC{T}` — `FOM × FOM` workspace carrying the union
+  sparsity pattern of all `linear_terms`, on which `L(s)` is built.
+- `L_mappings::Vector{Vector{Int}}` — for each `linear_terms[k]`, the position in
+  `L_template.nzval` of each of its stored entries, so accumulating `s^k B_k` is an
+  indexed scatter with no pattern search.
+- `border_row_base::Vector{Int}` — length `FOM`; `bordered[FOM+r, c]` lives at
+  `nzval[border_row_base[c] + r - 1]`.  The border rows are contiguous within each
+  column, which is what makes writing them a strided copy.
+- `solve_scratch::Vector{T}` — length `FOM+ROM` RHS copy for Pardiso, whose solve
+  needs distinct input and output vectors.  Empty on the KLU path, where `ldiv!` is
+  genuinely in-place.
+- `pardiso::Any` — an `AbstractPardisoSolver` when the extension is loaded,
+  otherwise `nothing`.  Untyped because the type only exists with the weak
+  dependency present.
+- `pardiso_matrix::Any` — the matrix handed to Pardiso's analysis phase; `nothing`
+  until `_pardiso_prepare!` has run.
+- `fact::Any` — the cached factorisation; `nothing` until the first successful one.
+
+`mutable` is load-bearing, not incidental: the Pardiso branch attaches a finaliser to
+release C-side memory, and Julia refuses to finalise an immutable object.
 """
-# `mutable` is load-bearing, not incidental: the Pardiso branch attaches a finaliser
-# to release C-side memory, and Julia refuses to finalise an immutable object.
 mutable struct SparseLinearSolverState{T}
-    bordered::SparseMatrixCSC{T}         # (FOM+ROM)²; constant pattern, per-monomial nzval
-    L_template::SparseMatrixCSC{T}       # FOM²; Horner workspace for L(s)
+    bordered::SparseMatrixCSC{T}         # (FOM+ROM)²; constant pattern
+    L_template::SparseMatrixCSC{T}       # FOM²; workspace for L(s)
     L_mappings::Vector{Vector{Int}}      # linear_terms[k].nzval → L_template.nzval
-    border_row_base::Vector{Int}         # length FOM; bordered[FOM+r, c] at base[c]+r-1
-    solve_scratch::Vector{T}             # Pardiso only: RHS copy, since its solve needs
-    # distinct in/out. Empty on the KLU path, whose
-    # ldiv! is genuinely in-place.
-    pardiso::Any                         # Nothing, or an AbstractPardisoSolver when the ext is loaded
+    border_row_base::Vector{Int}         # length FOM
+    solve_scratch::Vector{T}             # Pardiso only; empty on the KLU path
+    pardiso::Any                         # nothing, or an AbstractPardisoSolver
     pardiso_matrix::Any                  # nothing until _pardiso_prepare! has run
-    fact::Any                            # nothing until the first successful factorisation
+    fact::Any                            # nothing until the first factorisation
 end
 
 """

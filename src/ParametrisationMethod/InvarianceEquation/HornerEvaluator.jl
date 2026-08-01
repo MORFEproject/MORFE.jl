@@ -3,10 +3,7 @@
 # =============================================================================
 
 """
-	evaluate_system_matrix_and_lower_order_rhs!(parametrisation_operator,
-												lower_order_rhs,
-												s, lower_order_couplings,
-												linear_terms)
+	evaluate_system_matrix_and_lower_order_rhs!(parametrisation_operator, lower_order_rhs, s, lower_order_couplings, linear_terms)
 	-> parametrisation_operator
 
 Evaluate the parametrisation operator `L(s)` **and** accumulate the lower-order
@@ -36,8 +33,7 @@ the cohomological equation and are transposed to the right-hand side.
 Summed over `j = 1, …, ORD`, the full lower-order RHS is
 
 ```
-lower_order_rhs = -Σ_{j=1}^{ORD} L[j](s) · ξ[j]
-				= -Σ_{j=1}^{ORD} ( Σ_{k=j+1}^{ORD+1} B[k] · s^{k-(j+1)} ) · ξ[j]
+lower_order_rhs = -Σ_{j=1}^{ORD} L[j](s) · ξ[j] = -Σ_{j=1}^{ORD} ( Σ_{k=j+1}^{ORD+1} B[k] · s^{k-(j+1)} ) · ξ[j]
 ```
 
 This computation **must** share the Horner loop with `L(s)`: the `L[j]`
@@ -66,31 +62,31 @@ lower-order multi-indices associated with each Horner step.
 `O(ORD · FOM²)`, shared with the `L(s)` evaluation.
 """
 function evaluate_system_matrix_and_lower_order_rhs!(
-        parametrisation_operator::AbstractMatrix,
-        lower_order_rhs::AbstractVector,
-        s::Number,
-        lower_order_couplings::AbstractVector{<:AbstractVector},
-        linear_terms::NTuple{ORDP1, <:AbstractMatrix}
+	parametrisation_operator::AbstractMatrix,
+	lower_order_rhs::AbstractVector,
+	s::Number,
+	lower_order_couplings::AbstractVector{<:AbstractVector},
+	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
 ) where {ORDP1}
-    T = eltype(parametrisation_operator)  # output type set by the caller's buffer
-    ORD = ORDP1 - 1
-    @assert length(lower_order_couplings) == ORD "length(lower_order_couplings) must equal ORD = length(linear_terms) - 1."
+	T = eltype(parametrisation_operator)  # output type set by the caller's buffer
+	ORD = ORDP1 - 1
+	@assert length(lower_order_couplings) == ORD "length(lower_order_couplings) must equal ORD = length(linear_terms) - 1."
 
-    copyto!(parametrisation_operator, linear_terms[ORDP1]) # L ← B[ORD+1]
+	copyto!(parametrisation_operator, linear_terms[ORDP1]) # L ← B[ORD+1]
 
-    for j in ORD:-1:1
-        # Here: parametrisation_operator = L[j](s) = Σ_{k=j+1}^{ORD+1} B[k] · s^{k-(j+1)}.
-        # Accumulate: lower_order_rhs -= L[j](s) · ξ[j].
-        # mul!(y, M, x, -1, 1) computes y = y - M·x without allocation.
-        mul!(lower_order_rhs, parametrisation_operator,
-            lower_order_couplings[j], -one(T), one(T))
+	for j in ORD:-1:1
+		# Here: parametrisation_operator = L[j](s) = Σ_{k=j+1}^{ORD+1} B[k] · s^{k-(j+1)}.
+		# Accumulate: lower_order_rhs -= L[j](s) · ξ[j].
+		# mul!(y, M, x, -1, 1) computes y = y - M·x without allocation.
+		mul!(lower_order_rhs, parametrisation_operator,
+			lower_order_couplings[j], -one(T), one(T))
 
-        rmul!(parametrisation_operator, s)             # L ← L · s
-        parametrisation_operator .+= linear_terms[j]   # L ← L + B[j]
-        # Here: parametrisation_operator = L_{j-1}(s) = Σ_{k=j}^{ORD+1} B[k] · s^{k-j}.
-    end
-    # On exit: parametrisation_operator = L_0(s) = Σ_{k=1}^{ORD+1} B[k] · s^{k-1} = L(s).
-    return parametrisation_operator
+		rmul!(parametrisation_operator, s)             # L ← L · s
+		parametrisation_operator .+= linear_terms[j]   # L ← L + B[j]
+		# Here: parametrisation_operator = L_{j-1}(s) = Σ_{k=j}^{ORD+1} B[k] · s^{k-j}.
+	end
+	# On exit: parametrisation_operator = L_0(s) = Σ_{k=1}^{ORD+1} B[k] · s^{k-1} = L(s).
+	return parametrisation_operator
 end
 
 # =============================================================================
@@ -114,43 +110,43 @@ arithmetic allocations even when the input matrices do not share a common patter
 entries that cancel to exactly zero).
 """
 function precompute_sparse_L_template(
-        linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
+	linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
 ) where {ORDP1}
-    n = size(linear_terms[1], 1)
+	n = size(linear_terms[1], 1)
 
-    # Build union pattern by summing all-ones matrices — positive values cannot
-    # cancel, so every structural nonzero from every Bk is preserved.
-    L_ones = spzeros(Int, n, n)
-    for Bk in linear_terms
-        L_ones = L_ones + SparseMatrixCSC(
-            Bk.m, Bk.n, copy(Bk.colptr), copy(Bk.rowval), ones(Int, nnz(Bk))
-        )
-    end
+	# Build union pattern by summing all-ones matrices — positive values cannot
+	# cancel, so every structural nonzero from every Bk is preserved.
+	L_ones = spzeros(Int, n, n)
+	for Bk in linear_terms
+		L_ones = L_ones + SparseMatrixCSC(
+			Bk.m, Bk.n, copy(Bk.colptr), copy(Bk.rowval), ones(Int, nnz(Bk)),
+		)
+	end
 
-    # Allocate template: union pattern, zero ComplexF64 nzval (overwritten per monomial).
-    L_template = SparseMatrixCSC(
-        n, n, copy(L_ones.colptr), copy(L_ones.rowval), zeros(ComplexF64, nnz(L_ones))
-    )
+	# Allocate template: union pattern, zero ComplexF64 nzval (overwritten per monomial).
+	L_template = SparseMatrixCSC(
+		n, n, copy(L_ones.colptr), copy(L_ones.rowval), zeros(ComplexF64, nnz(L_ones)),
+	)
 
-    # For each term Bk, map its nzval positions into L_template.nzval positions.
-    mappings = Vector{Vector{Int}}(undef, ORDP1)
-    for k in 1:ORDP1
-        Bk = linear_terms[k]
-        mapping_k = Vector{Int}(undef, nnz(Bk))
-        for col in 1:n
-            for pos_k in Bk.colptr[col]:(Bk.colptr[col + 1] - 1)
-                row = Bk.rowval[pos_k]
-                lo = L_template.colptr[col]
-                hi = L_template.colptr[col + 1] - 1
-                pos_L = searchsortedfirst(
-                    L_template.rowval, row, lo, hi, Base.Order.Forward)
-                mapping_k[pos_k] = pos_L
-            end
-        end
-        mappings[k] = mapping_k
-    end
+	# For each term Bk, map its nzval positions into L_template.nzval positions.
+	mappings = Vector{Vector{Int}}(undef, ORDP1)
+	for k in 1:ORDP1
+		Bk = linear_terms[k]
+		mapping_k = Vector{Int}(undef, nnz(Bk))
+		for col in 1:n
+			for pos_k in Bk.colptr[col]:(Bk.colptr[col+1]-1)
+				row = Bk.rowval[pos_k]
+				lo = L_template.colptr[col]
+				hi = L_template.colptr[col+1] - 1
+				pos_L = searchsortedfirst(
+					L_template.rowval, row, lo, hi, Base.Order.Forward)
+				mapping_k[pos_k] = pos_L
+			end
+		end
+		mappings[k] = mapping_k
+	end
 
-    return L_template, mappings
+	return L_template, mappings
 end
 
 """
@@ -209,45 +205,45 @@ Border *column* positions need no table either: column `FOM+q` starts at
 `bq + FOM + m - 1`.
 """
 function precompute_sparse_bordered_template(
-        L_template::SparseMatrixCSC{Tv, Ti},
-        ROM::Int
+	L_template::SparseMatrixCSC{Tv, Ti},
+	ROM::Int,
 ) where {Tv, Ti}
-    FOM = size(L_template, 1)
-    N = FOM + ROM
-    nnz_M = nnz(L_template) + 2 * FOM * ROM + ROM^2
+	FOM = size(L_template, 1)
+	N = FOM + ROM
+	nnz_M = nnz(L_template) + 2 * FOM * ROM + ROM^2
 
-    colptr = Vector{Ti}(undef, N + 1)
-    rowval = Vector{Ti}(undef, nnz_M)
-    border_row_base = Vector{Int}(undef, FOM)
+	colptr = Vector{Ti}(undef, N + 1)
+	rowval = Vector{Ti}(undef, nnz_M)
+	border_row_base = Vector{Int}(undef, FOM)
 
-    colptr[1] = 1
-    for c in 1:FOM
-        lo = L_template.colptr[c]
-        hi = L_template.colptr[c + 1] - 1
-        base = colptr[c]
-        # L entries first, as a contiguous prefix (all row indices ≤ FOM, already
-        # sorted) — this prefix layout is what makes the L → M map affine per column.
-        for (k, p) in enumerate(lo:hi)
-            rowval[base + k - 1] = L_template.rowval[p]
-        end
-        # … then the ROM border rows, which keeps the column sorted.
-        b = base + (hi - lo + 1)
-        border_row_base[c] = b
-        for r in 1:ROM
-            rowval[b + r - 1] = FOM + r
-        end
-        colptr[c + 1] = b + ROM
-    end
-    for q in 1:ROM
-        base = colptr[FOM + q]
-        for i in 1:N
-            rowval[base + i - 1] = i
-        end
-        colptr[FOM + q + 1] = base + N
-    end
+	colptr[1] = 1
+	for c in 1:FOM
+		lo = L_template.colptr[c]
+		hi = L_template.colptr[c+1] - 1
+		base = colptr[c]
+		# L entries first, as a contiguous prefix (all row indices ≤ FOM, already
+		# sorted) — this prefix layout is what makes the L → M map affine per column.
+		for (k, p) in enumerate(lo:hi)
+			rowval[base+k-1] = L_template.rowval[p]
+		end
+		# … then the ROM border rows, which keeps the column sorted.
+		b = base + (hi - lo + 1)
+		border_row_base[c] = b
+		for r in 1:ROM
+			rowval[b+r-1] = FOM + r
+		end
+		colptr[c+1] = b + ROM
+	end
+	for q in 1:ROM
+		base = colptr[FOM+q]
+		for i in 1:N
+			rowval[base+i-1] = i
+		end
+		colptr[FOM+q+1] = base + N
+	end
 
-    M = SparseMatrixCSC(N, N, colptr, rowval, zeros(Tv, nnz_M))
-    return M, border_row_base
+	M = SparseMatrixCSC(N, N, colptr, rowval, zeros(Tv, nnz_M))
+	return M, border_row_base
 end
 
 """
@@ -265,24 +261,24 @@ untouched: it needs its own square workspace for the transient Horner intermedia
 `L[j](s)` that accumulate the lower-order RHS.
 """
 function scatter_L_into_bordered!(M::SparseMatrixCSC, L_template::SparseMatrixCSC)
-    Mnz, Mcp = M.nzval, M.colptr
-    Lnz, Lcp = L_template.nzval, L_template.colptr
-    FOM = size(L_template, 1)
-    ROM = size(M, 1) - FOM
-    # Every column of M has exactly ROM more slots than the matching column of L, so a
-    # mismatched pair would still write *in bounds* — just into the wrong positions,
-    # silently. Check the identity that pins the layout instead of relying on bounds.
-    @assert ROM ≥ 0 && size(M, 2) == size(M, 1) "bordered matrix must be square and at \
-      least as large as L_template; got $(size(M)) against L $(size(L_template))"
-    @assert nnz(M) == nnz(L_template) + 2 * FOM * ROM + ROM^2 "bordered matrix was not \
-      built from this L_template: nnz(M) = $(nnz(M)) ≠ $(nnz(L_template) + 2 * FOM * ROM + ROM^2)"
-    @inbounds for c in 1:FOM
-        lo = Lcp[c]
-        n = Lcp[c + 1] - lo
-        n == 0 && continue
-        copyto!(Mnz, Mcp[c], Lnz, lo, n)
-    end
-    return M
+	Mnz, Mcp = M.nzval, M.colptr
+	Lnz, Lcp = L_template.nzval, L_template.colptr
+	FOM = size(L_template, 1)
+	ROM = size(M, 1) - FOM
+	# Every column of M has exactly ROM more slots than the matching column of L, so a
+	# mismatched pair would still write *in bounds* — just into the wrong positions,
+	# silently. Check the identity that pins the layout instead of relying on bounds.
+	@assert ROM ≥ 0 && size(M, 2) == size(M, 1) "bordered matrix must be square and at \
+least as large as L_template; got $(size(M)) against L $(size(L_template))"
+	@assert nnz(M) == nnz(L_template) + 2 * FOM * ROM + ROM^2 "bordered matrix was not \
+	  built from this L_template: nnz(M) = $(nnz(M)) ≠ $(nnz(L_template) + 2 * FOM * ROM + ROM^2)"
+	@inbounds for c in 1:FOM
+		lo = Lcp[c]
+		n = Lcp[c+1] - lo
+		n == 0 && continue
+		copyto!(Mnz, Mcp[c], Lnz, lo, n)
+	end
+	return M
 end
 
 """
@@ -297,34 +293,34 @@ Avoids ALL per-monomial sparse arithmetic allocations regardless of whether the
 on each call; its `colptr`/`rowval` are never modified.
 """
 function build_sparse_L_and_rhs!(
-        rhs::AbstractVector,
-        L_template::SparseMatrixCSC,
-        mappings::Vector{Vector{Int}},
-        linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
-        s,
-        lower_order_couplings::AbstractVector{<:AbstractVector}
+	rhs::AbstractVector,
+	L_template::SparseMatrixCSC,
+	mappings::Vector{Vector{Int}},
+	linear_terms::NTuple{ORDP1, <:SparseMatrixCSC},
+	s,
+	lower_order_couplings::AbstractVector{<:AbstractVector},
 ) where {ORDP1}
-    T = eltype(rhs)
-    T_L = eltype(L_template)
-    ORD = ORDP1 - 1
+	T = eltype(rhs)
+	T_L = eltype(L_template)
+	ORD = ORDP1 - 1
 
-    # Horner init: L_template ← linear_terms[ORDP1], mapped into union positions.
-    fill!(L_template.nzval, zero(T_L))
-    nzval_last = linear_terms[ORDP1].nzval
-    map_last = mappings[ORDP1]
-    @inbounds for i in eachindex(nzval_last)
-        L_template.nzval[map_last[i]] = T_L(nzval_last[i])
-    end
+	# Horner init: L_template ← linear_terms[ORDP1], mapped into union positions.
+	fill!(L_template.nzval, zero(T_L))
+	nzval_last = linear_terms[ORDP1].nzval
+	map_last = mappings[ORDP1]
+	@inbounds for i in eachindex(nzval_last)
+		L_template.nzval[map_last[i]] = T_L(nzval_last[i])
+	end
 
-    @inbounds for j in ORD:-1:1
-        mul!(rhs, L_template, lower_order_couplings[j], -one(T), one(T))  # rhs -= L · ξ[j]
-        L_template.nzval .*= s                                              # L ← L · s
-        nzval_j = linear_terms[j].nzval
-        map_j = mappings[j]
-        for i in eachindex(nzval_j)
-            L_template.nzval[map_j[i]] += T_L(nzval_j[i])                  # L ← L + B[j]
-        end
-    end
+	@inbounds for j in ORD:-1:1
+		mul!(rhs, L_template, lower_order_couplings[j], -one(T), one(T))  # rhs -= L · ξ[j]
+		L_template.nzval .*= s                                              # L ← L · s
+		nzval_j = linear_terms[j].nzval
+		map_j = mappings[j]
+		for i in eachindex(nzval_j)
+			L_template.nzval[map_j[i]] += T_L(nzval_j[i])                  # L ← L + B[j]
+		end
+	end
 
-    return L_template
+	return L_template
 end

@@ -43,6 +43,15 @@ Represents a parametrisation mapping from reduced coordinates and forcing variab
 
 Layout: `coefficients[:, ord, l]` is the full‑state vector (length FOM) for the
 `ord`-th time derivative of the `l`-th monomial coefficient.
+
+# Fields
+
+- `poly::DensePolynomial{T, NVAR, 3, Array{T, 3}}` — the coefficient array in the
+  layout above, together with the multiindex set it is aligned to.
+- `external_system_size::Int` — how many of the `NVAR` variables are external
+  forcing amplitudes rather than reduced coordinates.  The reduced dimension is the
+  remainder, so this is what separates the master block from the forcing block when
+  slicing the coefficients.
 """
 struct Parametrisation{ORD, NVAR, T}
     poly::DensePolynomial{T, NVAR, 3, Array{T, 3}}
@@ -70,8 +79,15 @@ Represents the reduced dynamics on a manifold of dimension `ROM`.
 - `NVAR`: total number of variables = ROM + external_system_size.
 - `T`: numeric type.
 
-The polynomial is stored in `poly`, and `external_system_size` gives the number of forcing variables.
 The dynamics are: ż = R(z, r), where r are the forcing variables.
+
+# Fields
+
+- `poly::DensePolynomial{T, NVAR, 2, Matrix{T}}` — coefficients as a `NVAR × L`
+  matrix aligned to the multiindex set.  Rows `1:ROM` are solved for; the trailing
+  `external_system_size` rows hold the known forcing amplitudes.
+- `external_system_size::Int` — number of forcing variables, fixing where the
+  master rows end and `ROM = NVAR - external_system_size`.
 """
 struct ReducedDynamics{ROM, NVAR, T}
     poly::DensePolynomial{T, NVAR, 2, Matrix{T}}

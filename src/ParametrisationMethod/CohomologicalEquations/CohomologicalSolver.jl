@@ -14,7 +14,7 @@
 #    applied, and the two subsequent differences of large quantities cancel
 #    catastrophically.  Factorising the bordered matrix keeps the backward error at
 #    κ(M), which stays O(1) because the border spans L's near-null directions
-#    (Keller's bordering lemma; Govaerts, SIMAX 1991).
+#    (Keller's bordering lemma).
 #
 # 2. The numeric factorisation re-pivots on every monomial.  Property 1 holds only
 #    if pivoting may move rows across the border, so a refactorisation that reuses a
@@ -106,22 +106,22 @@ the master set to include the offending mode is the fix.
 """
 function _singular_bordered_system(s)
     error("""
-     Singular bordered cohomological system at superharmonic s = $s.
+      Singular bordered cohomological system at superharmonic s = $s.
 
-     The border regularises L(s) only along master directions, so this means s lies on
-     a non-master eigenvalue of the full-order model — an outer resonance.  The
-     reduction itself is ill-posed at this monomial, not just the linear solve.
+      The border regularises L(s) only along master directions, so this means s lies on
+      a non-master eigenvalue of the full-order model — an outer resonance.  The
+      reduction itself is ill-posed at this monomial, not just the linear solve.
 
-     Enlarge the master set to include the resonant mode (check the `outer_resonances`
-     field of the ResonanceSet, which flags these monomials), or lower the order so the
-     offending monomial is not reached.""")
+      Enlarge the master set to include the resonant mode (check the `outer_resonances`
+      field of the ResonanceSet, which flags these monomials), or lower the order so the
+      offending monomial is not reached.""")
 end
 
 """
 	_bordered_solve!(ss, x, s) -> x
 
-Solve `bordered * x = x` in place, dispatching to Pardiso when available and to the
-cached KLU factorisation otherwise.
+Solve `bordered * y = x` for `y`, overwriting `x` with the solution, and dispatching
+to Pardiso when available and to the cached KLU factorisation otherwise.
 
 Both branches reuse a symbolic analysis computed once: KLU through
 [`_refactorise!`](@ref), Pardiso through its phase split (`_pardiso_prepare!` once,

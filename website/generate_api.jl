@@ -97,10 +97,12 @@ function get_source_url(mod, sym, kind)
 	try
 		# Prefer the docstring's own line number (opening """) so the GitHub
 		# view lands at the top of the docstring rather than the function body.
+		# `ordered_docstrs` puts the type's own docstring first, so a struct with
+		# a documented constructor links to the struct, not the constructor.
 		binding = Base.Docs.Binding(mod, sym)
 		meta    = Base.Docs.meta(mod)
 		if haskey(meta, binding)
-			for (_, docstr) in meta[binding].docs
+			for docstr in ordered_docstrs(meta[binding])
 				path = get(docstr.data, :path, nothing)
 				line = get(docstr.data, :linenumber, nothing)
 				(path === nothing || line === nothing) && continue
@@ -152,7 +154,7 @@ function get_doc_html(mod, sym)
 	haskey(meta, binding) || return ""
 	multidoc = meta[binding]
 	isempty(multidoc.docs) && return ""
-	html = mapreduce(_docstr_html, *, values(multidoc.docs); init = "")
+	html = mapreduce(_docstr_html, *, ordered_docstrs(multidoc); init = "")
 	# Strip the "@ Module /path/to/file.jl:line" source-location paragraphs
 	# that Julia's Docs renderer appends to each method docstring.
 	html = replace(html, r"<p>@ \S+ [^\n<]*:\d+\s*</p>" => "")
@@ -178,7 +180,7 @@ function get_module_doc_html(mod)
 		binding = Base.Docs.Binding(mod, nameof(mod))
 		meta    = Base.Docs.meta(mod)
 		haskey(meta, binding) && !isempty(meta[binding].docs) || return ""
-		html = mapreduce(_docstr_html, *, values(meta[binding].docs); init = "")
+		html = mapreduce(_docstr_html, *, ordered_docstrs(meta[binding]); init = "")
 		# Strip the tab-indented module name rendered as a leading code block
 		html = replace(html, r"^(<div class=\"markdown\">)<pre><code[^>]*>[^<]+</code></pre>\n?" => s"\1")
 		html = replace(html, r"<p>@ \S+ [^\n<]*:\d+\s*</p>" => "")
@@ -208,6 +210,96 @@ function extract_all()
 		@info "  → $(length(entries)) entries"
 	end
 	return result
+end
+
+# ── Cross-reference resolution ────────────────────────────────────────────────
+# Docstrings link with Documenter's `[`name`](@ref)`, which Documenter resolves
+# when building docs/. This generator renders the same markdown with plain
+# `Markdown.parse`, which knows nothing about `@ref` and emits a literal
+# `href="@ref"` — a dead link on every cross-reference. The page already gives
+# every entry the anchor `"$(modlabel)-$(name)"` and every module its label as an
+# id, so the targets exist; they just need to be looked up after rendering.
+
+# Recover a ref target from the rendered link body: drop the `<code>` wrapper and
+# undo the entity escaping Julia's Markdown writer applies (it emits `&#33;` for
+# `!`, so `solve_single_monomial&#33;` has to map back to the `!`-bearing anchor).
+function ref_target_text(body::AbstractString)
+	text = replace(String(body), r"<[^>]*>" => "")
+	text = replace(text, r"&#(\d+);" => m -> string(Char(parse(Int, match(r"\d+", m).match))))
+	text = replace(text, "&amp;" => "&", "&lt;" => "<", "&gt;" => ">", "&quot;" => "\"")
+	return strip(text)
+end
+
+# name => [(module label, anchor)]; module labels map to their own heading id.
+function build_ref_index(mods::Vector{ModData})
+	index = Dict{String, Vector{Tuple{String, String}}}()
+	for md in mods
+		push!(get!(index, md.label, Tuple{String, String}[]), (md.label, md.label))
+		for e in md.entries
+			push!(get!(index, e.name, Tuple{String, String}[]), (md.label, "$(md.label)-$(e.name)"))
+		end
+	end
+	return index
+end
+
+function lookup_ref(target::AbstractString, modlabel::String, index)
+	# `Mod.name` names its module deliberately: honour it or fail, rather than
+	# silently linking to a same-named symbol somewhere else.
+	if occursin('.', target)
+		parts   = rsplit(target, '.'; limit = 2)
+		modpart = String(parts[1])
+		cands   = get(index, String(parts[2]), nothing)
+		cands === nothing && return nothing
+		for (lbl, anchor) in cands
+			lbl == modpart && return anchor
+		end
+		return nothing
+	end
+	cands = get(index, String(target), nothing)
+	cands === nothing && return nothing
+	# A target in the module being rendered wins over a same-named one elsewhere.
+	for (lbl, anchor) in cands
+		lbl == modlabel && return anchor
+	end
+	return first(cands)[2]
+end
+
+const REF_LINK_RE = r"<a href=\"@ref(?<target>[^\"]*)\">(?<body>.*?)</a>"s
+
+# Unresolvable refs lose the `<a>` and keep their body: plain text reads better
+# than a link that goes nowhere, and the caller warns so the ref gets fixed.
+function resolve_refs(html::String, modlabel::String, index, unresolved::Vector{String})
+	isempty(html) && return html
+	return replace(html, REF_LINK_RE => function (m)
+		mm     = match(REF_LINK_RE, m)
+		body   = mm[:body]
+		target = strip(String(mm[:target]))
+		isempty(target) && (target = ref_target_text(body))
+		anchor = lookup_ref(target, modlabel, index)
+		anchor === nothing || return "<a href=\"#$(anchor)\">$(body)</a>"
+		push!(unresolved, String(target))
+		return String(body)
+	end)
+end
+
+function resolve_all_refs(mods::Vector{ModData})
+	index      = build_ref_index(mods)
+	unresolved = String[]
+	resolved   = ModData[]
+	for md in mods
+		entries = [Entry(
+			e.name, e.kind, e.signatures,
+			resolve_refs(e.doc_html, md.label, index, unresolved), e.source_url,
+		) for e in md.entries]
+		desc = resolve_refs(md.desc_html, md.label, index, unresolved)
+		push!(resolved, ModData(md.label, desc, entries))
+	end
+	if isempty(unresolved)
+		@info "All @ref cross-references resolved."
+	else
+		@warn "Unresolved @ref targets — rendered as plain text" targets = sort(unique(unresolved))
+	end
+	return resolved
 end
 
 # ── HTML generation ───────────────────────────────────────────────────────────
@@ -309,7 +401,12 @@ document.addEventListener('DOMContentLoaded', function () {
   if (nav) {
 	var navH = nav.getBoundingClientRect().height;
 	document.documentElement.style.setProperty('--nav-h', navH + 'px');
-	document.documentElement.style.scrollPaddingTop = navH + 'px';
+	// --nav-h stays the bare nav height because the sticky module heading's `top`
+	// is keyed to it. Scroll padding also has to clear that heading, so any
+	// scroll the JS handler below does not intercept still lands in view.
+	var mh = document.querySelector('.api-module-h');
+	document.documentElement.style.scrollPaddingTop =
+	  (navH + (mh ? mh.getBoundingClientRect().height : 0)) + 'px';
   }
   if (typeof renderMathInElement === 'function') {
 	renderMathInElement(document.body, {
@@ -447,30 +544,73 @@ document.addEventListener('DOMContentLoaded', function () {
   update();
 })();
 
-// Sidebar click: scroll so the divider lands flush under the nav for both directions.
-// Temporarily set position:relative (same JS task, no repaint) so getBoundingClientRect
-// returns the natural flow top even when the heading is currently stuck.
+// In-page navigation for every "#" link: the sidebar module list and the @ref
+// cross-references inside docstrings alike.
+//
+// Two things sit above the scroll position and the browser accounts for neither.
+// The nav is fixed, and the module heading is sticky at top:var(--nav-h), so it
+// parks over whatever an entry anchor scrolls to. A module heading is its own
+// sticky element, so it needs the nav allowance only; an entry needs both.
+//
+// VERTICAL_MARGIN is separate from that: it is breathing room above a module
+// heading, which starts a section and wants air above it however it was reached —
+// sidebar or cross-reference. Entries take the sticky correction and nothing more,
+// so a cross-reference lands its target directly under the chrome.
 (function () {
-  // Increase this value to get more space above the heading
+  // Increase this value to get more space above a module heading
   var VERTICAL_MARGIN = 60;   // pixels
 
-  document.querySelectorAll('.docs-side a[href^="#"]').forEach(function (a) {
-	a.addEventListener('click', function (e) {
-	  var target = document.getElementById(this.getAttribute('href').slice(1));
-	  if (!target) return;
-	  e.preventDefault();
+  function navHeight() {
+	return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 60;
+  }
 
-	  var navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 60;
+  function stickyHeadingHeight() {
+	var h = document.querySelector('.api-module-h');
+	return h ? h.getBoundingClientRect().height : 0;
+  }
 
-	  // Temporarily switch to relative to measure the natural flow position
-	  target.style.setProperty('position', 'relative', 'important');
-	  var naturalTop = target.getBoundingClientRect().top + window.scrollY;
-	  target.style.removeProperty('position');
+  function targetOf(href) {
+	if (!href || href.charAt(0) !== '#') return null;
+	var id = href.slice(1);
+	try { id = decodeURIComponent(id); } catch (err) { /* keep the raw id */ }
+	return document.getElementById(id);
+  }
 
-	  // Scroll to the heading, leaving navH + VERTICAL_MARGIN space at the top
-	  window.scrollTo({ top: naturalTop - navH - VERTICAL_MARGIN });
-	});
+  function scrollToTarget(target) {
+	var isHeading = target.classList.contains('api-module-h');
+
+	// Temporarily switch to relative (same JS task, no repaint) so
+	// getBoundingClientRect returns the natural flow top even when stuck.
+	if (isHeading) target.style.setProperty('position', 'relative', 'important');
+	var naturalTop = target.getBoundingClientRect().top + window.scrollY;
+	if (isHeading) target.style.removeProperty('position');
+
+	var offset = isHeading ? navHeight() + VERTICAL_MARGIN
+						   : navHeight() + stickyHeadingHeight();
+	window.scrollTo({ top: naturalTop - offset });
+  }
+
+  // Delegated so cross-references rendered inside docstrings are covered too.
+  document.addEventListener('click', function (e) {
+	if (!e.target.closest) return;
+	var a = e.target.closest('a[href^="#"]');
+	if (!a) return;
+	var target = targetOf(a.getAttribute('href'));
+	if (!target) return;
+	e.preventDefault();
+	history.replaceState(null, '', a.getAttribute('href'));
+	scrollToTarget(target);
   });
+
+  // Deep links land the same way: the browser's own jump ignores the sticky heading.
+  window.addEventListener('hashchange', function () {
+	var target = targetOf(location.hash);
+	if (target) scrollToTarget(target);
+  });
+  if (location.hash) {
+	var initial = targetOf(location.hash);
+	if (initial) setTimeout(function () { scrollToTarget(initial); }, 0);
+  }
 })();
 </script>
 </body>
@@ -484,6 +624,6 @@ document.addEventListener('DOMContentLoaded', function () {
 end
 
 # ── Main ──────────────────────────────────────────────────────────────────────
-mods    = extract_all()
+mods    = resolve_all_refs(extract_all())
 outpath = joinpath(@__DIR__, "api.html")
 write_page(mods, outpath)

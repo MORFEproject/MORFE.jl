@@ -187,6 +187,20 @@ During evaluation the multilinear map is called as
 
     If `f!` does **not** satisfy assumption 1, pass `fully_asymmetric = true`.
 
+# Fields
+
+- `f!::F` — the in-place map itself, accumulating into its first argument.  Stored
+  as a type parameter so calls through it are statically dispatched.
+- `multiindex::NTuple{ORD, Int}` — `multiindex[k]` is how many times the derivative
+  `x^(k-1)` appears as an argument.
+- `multiplicity_external::Int` — how many external variables `r` are passed, after
+  the derivative arguments.
+- `deg::Int` — combined degree, `sum(multiindex) + multiplicity_external`.  Cached
+  because it is compared against the monomial degree on every factorisation.
+- `fully_asymmetric::Union{Nothing, Bool}` — overrides the symmetry inferred from
+  `multiindex`.  `nothing` means "not stated", which behaves as `false` but also
+  emits the `@info` note described above; that three-valued form is what lets the
+  model warn about an assumption the caller may not have realised it was making.
 """
 struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
     f!::F

@@ -76,6 +76,15 @@ end
 # =============================================================================
 # Per-order accumulator (mutable for in-place reset)
 # =============================================================================
+# Totals for the monomials of one polynomial order, reset between orders by
+# `_reset!` rather than reallocated. Fields:
+#   n_solved     — monomials solved at this order
+#   rhs_time     — seconds spent assembling right-hand sides
+#   rhs_bytes    — bytes allocated while assembling them
+#   solve_time   — seconds spent in the linear solve
+#   solve_bytes  — bytes allocated by the linear solve
+# Deliberately left without a docstring: it is a benchmarking internal, and a
+# docstring would publish it to the generated API page.
 
 mutable struct _OrderAccum
     n_solved::Int

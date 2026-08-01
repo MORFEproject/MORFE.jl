@@ -24,15 +24,18 @@
 
 Precomputed bookkeeping for one `(monomial l, term t, external-split)` triple.
 
-- `ext_count`        — multiplicity of this external-variable split
-					   (from `bounded_index_tuples`); always 1 when `me = 0`.
-- `args_ext_indices` — indices into the `unit_vectors` array that reconstruct
-					   the external forcing arguments; empty when `me = 0`.
-- `is_asymmetric`    — true iff `t` is `FullyAsymmetric` (no scratch buffer
-					   needed when replaying).
-- `orders`           — derivative index for each factor slot (length = deg_internal).
-- `entries`          — list of `FactorisationEntry` values, one per factorisation
-					   of the remainder exponent.
+# Fields
+
+- `ext_count::Int` — multiplicity of this external-variable split (from
+  `bounded_index_tuples`); always 1 when `me = 0`.
+- `args_ext_indices::Vector{Int}` — indices into the cache's `unit_vectors` that
+  reconstruct the external forcing arguments; empty when `me = 0`.
+- `is_asymmetric::Bool` — true iff the term is [`FullyAsymmetric`](@ref), in which
+  case replaying it needs no scratch buffer.
+- `orders::Vector{Int}` — derivative index for each factor slot; length is the
+  internal degree of the term.
+- `entries::Vector{FactorisationEntry}` — one entry per factorisation of the
+  remainder exponent, each carrying its own symmetry multiplier.
 """
 struct CachedSplit
     ext_count::Int
@@ -59,26 +62,50 @@ Type parameters:
 **Use** by passing to the `(model, exp_index, parametrisation, cache)` overload of
 `compute_multilinear_terms` inside the loop.  The cache is valid as long as the
 multiindex set and the model structure are unchanged (i.e. across all solve steps).
+
+# Fields
+
+Three parallel split representations coexist because a model may mix closure-based
+and FEM-backed nonlinear terms, and the FEM ones are far cheaper to evaluate batched
+over elements than term by term:
+
+- `splits::Vector{Vector{Vector{CachedSplit}}}` — the generic path.
+  `splits[l][t_idx]` lists the [`CachedSplit`](@ref) values for monomial `l` and
+  term `t_idx`; empty when the term degree exceeds the monomial degree.
+- `fem_splits::Vector{Vector{Vector{Any}}}` — the same indexing for FEM terms,
+  holding `FEMCachedSplit{DEG}` values, empty for closure terms.  Typed `Any`
+  because `DEG` varies per term; reached through a function barrier so the hot loop
+  stays type-stable.
+- `global_fem_splits::Vector{Any}` — one `FEMGlobalSplit` per monomial, fusing every
+  FEM term into a single element loop.  `Any` for the same reason.
+
+Buffers, all reused across monomials to keep the solve loop allocation-free:
+
+- `result_buffer::Vector{T}` — length `FOM`, accumulates the nonlinear contribution
+  returned to the caller.
+- `scratch_buffer::Vector{T}` — length `FOM`, working space for symmetric terms;
+  unused when a term is `FullyAsymmetric`.
+- `temp_buffer::Vector{T}` — length `FOM`, holds one intermediate contraction.
+- `unit_vectors::Vector` — `SVector{N_EXT, Int}` unit vectors used to rebuild the
+  external forcing arguments; empty when `N_EXT == 0`.
+- `fem_Fe::Vector{T}` — element-local residual for the external-multiplicity
+  fallback path, sized to the largest `ndofs_per_cell` in the model.
+- `global_∇W_qp::Matrix{QP}` — shared quadrature-point gradient buffer,
+  `max_global_unique × max_n_qp`.  `QP` is a type parameter precisely so element
+  access inside the hot loop is statically typed.
+- `global_Fe_buffers::Vector{Vector{T}}` — per-term element residual buffers, sized
+  to each FEM term's `fem_ndofs_per_cell`; empty for closure terms.
 """
 struct MultilinearTermsCache{T, QP}
     splits::Vector{Vector{Vector{CachedSplit}}}
-    # FEM-batched splits: fem_splits[l][t_idx] is Vector{FEMCachedSplit{DEG}} for FEM terms,
-    # or an empty Vector for closure terms. Element type is Any because DEG varies per term.
-    fem_splits::Vector{Vector{Vector{Any}}}
-    # O4 combined loop: one FEMGlobalSplit per monomial (element type Any because ENTRIES_TUPLE
-    # varies by monomial degree). Accessed via _replay_global_fem! function barrier.
-    global_fem_splits::Vector{Any}
+    fem_splits::Vector{Vector{Vector{Any}}}        # Vector{FEMCachedSplit{DEG}}; Any as DEG varies
+    global_fem_splits::Vector{Any}                 # FEMGlobalSplit per monomial
     result_buffer::Vector{T}
     scratch_buffer::Vector{T}
     temp_buffer::Vector{T}
-    unit_vectors::Vector   # Vector of SVector{N_EXT, Int}; empty when N_EXT == 0
-    # Pre-allocated element-local residual buffer for the me>0 fallback path.
-    fem_Fe::Vector{T}     # size: max_ndofs_per_cell
-    # O4 shared qp gradient buffer: (max_global_unique × max_n_qp).
-    # QP is a type parameter so element access inside the hot loop is type-stable.
-    global_∇W_qp::Matrix{QP}
-    # O4 per-term element residual buffers: global_Fe_buffers[t_idx] is sized to
-    # fem_ndofs_per_cell(t) for FEM terms; empty Vector{T} for closure terms.
+    unit_vectors::Vector                           # SVector{N_EXT, Int}; empty when N_EXT == 0
+    fem_Fe::Vector{T}                              # size: max_ndofs_per_cell
+    global_∇W_qp::Matrix{QP}                       # max_global_unique × max_n_qp
     global_Fe_buffers::Vector{Vector{T}}
 end
 
@@ -91,11 +118,12 @@ end
 
 One factorisation entry for the FEM-batched path.
 
-- `multiplier`           — symmetry count (same as FactorisationEntry.multiplier).
-- `local_factor_indices` — NTuple of length DEG: for each factor slot, the index into
-						   `FEMCachedSplit.unique_cols` for the enclosing split.
-						   NTuple (not Vector) so that `ntuple(k->..., Val(DEG))` in the
-						   hot loop is unrolled at compile time.
+# Fields
+
+- `multiplier::Int` — symmetry count, as in `FactorisationEntry.multiplier`.
+- `local_factor_indices::NTuple{DEG, Int}` — for each factor slot, the index into
+  the enclosing [`FEMCachedSplit`](@ref)`.unique_cols`.  An `NTuple` rather than a
+  `Vector` so `ntuple(k -> …, Val(DEG))` in the hot loop unrolls at compile time.
 """
 struct FEMFactorisationEntry{DEG}
     multiplier::Int
@@ -107,12 +135,17 @@ end
 
 Precomputed bookkeeping for one (monomial, FEM-term, external-split) triple.
 
-- `ext_count`        — external multiplicity (1 when me = 0).
-- `args_ext_indices` — unit vector indices for external args (empty when me = 0).
-- `unique_cols`      — deduplicated list of (derivative_order, W_col_idx) pairs across all
-					   entries in this split.  Scattered to qp-level gradients once per element.
-- `fem_entries`      — one FEMFactorisationEntry{DEG} per factorisation, with local indices
-					   into unique_cols.
+# Fields
+
+- `ext_count::Int` — external multiplicity; 1 when `me = 0`.
+- `args_ext_indices::Vector{Int}` — unit-vector indices for the external arguments;
+  empty when `me = 0`.
+- `unique_cols::Vector{Tuple{Int, Int}}` — deduplicated `(derivative_order,
+  W_col_idx)` pairs across every entry in this split.  Deduplication is what makes
+  the batching pay: each pair is scattered to quadrature-point gradients once per
+  element, however many factorisations reference it.
+- `fem_entries::Vector{FEMFactorisationEntry{DEG}}` — one entry per factorisation,
+  indexing into `unique_cols` rather than into `W` directly.
 """
 struct FEMCachedSplit{DEG}
     ext_count::Int
@@ -126,10 +159,13 @@ end
 
 One factorisation entry in the combined element loop for a given monomial.
 
-- `term_idx`             — index into `model.nonlinear_terms`
-- `multiplier`           — symmetry count (from `FEMFactorisationEntry`)
-- `local_factor_indices` — NTuple{DEG,Int}: indices into the enclosing
-						   `FEMGlobalSplit.global_unique_cols` table.
+# Fields
+
+- `term_idx::Int` — index into `model.nonlinear_terms`.  Present here but not in
+  [`FEMFactorisationEntry`](@ref) because the combined loop mixes terms.
+- `multiplier::Int` — symmetry count, as in [`FEMFactorisationEntry`](@ref).
+- `local_factor_indices::NTuple{DEG, Int}` — indices into the enclosing
+  [`FEMGlobalSplit`](@ref)`.global_unique_cols`.
 """
 struct FEMGlobalEntry{DEG}
     term_idx::Int
@@ -142,14 +178,19 @@ end
 
 All combined-loop bookkeeping for one monomial, covering all me=0 FEM terms.
 
-- `global_unique_cols`        — deduplicated (derivative_order, W_col_idx) pairs across
-								 ALL me=0 FEM terms and their splits. Scattered once per element.
-- `entries_by_deg`            — one `Vector{FEMGlobalEntry{D}}` per degree D present; stored as
-								 a typed Tuple so the inner loop dispatches type-stably on DEG.
-- `driver_term_idx`           — index of the FEM term that drives the element iterator; 0 when
-								 the split is empty (no me=0 FEM terms for this monomial).
-- `participating_term_indices` — sorted distinct `term_idx` values referenced in entries_by_deg;
-								 used in the assembly step to avoid scanning all terms.
+# Fields
+
+- `global_unique_cols::Vector{Tuple{Int, Int}}` — deduplicated `(derivative_order,
+  W_col_idx)` pairs across *all* `me = 0` FEM terms and their splits, scattered once
+  per element.  Deduplicating across terms, not just within one, is what the
+  combined loop buys over [`FEMCachedSplit`](@ref).
+- `entries_by_deg::ENTRIES_TUPLE` — one `Vector{FEMGlobalEntry{D}}` per degree `D`
+  present, held in a typed tuple so the inner loop dispatches type-stably on `DEG`.
+- `driver_term_idx::Int` — the FEM term whose element iterator drives the loop; `0`
+  when this monomial has no `me = 0` FEM terms.
+- `participating_term_indices::Vector{Int}` — sorted distinct `term_idx` values
+  appearing in `entries_by_deg`, so assembly touches only the terms involved instead
+  of scanning all of them.
 """
 struct FEMGlobalSplit{ENTRIES_TUPLE}
     global_unique_cols::Vector{Tuple{Int, Int}}

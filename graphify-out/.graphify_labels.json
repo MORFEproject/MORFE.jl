@@ -24,6 +24,7 @@
   "22": "Gmsh-to-COMSOL Export",
   "23": "test_parametrise_entry.jl",
   "24": "RomIO",
+  "25": "format.jl",
   "26": "generate_literate.jl",
   "27": "Tensor Symmetry Types",
   "28": "COMSOL-to-Gmsh Import",

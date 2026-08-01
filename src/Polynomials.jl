@@ -63,7 +63,7 @@ export DensePolynomial,
 
 Cache-friendly dense polynomial with a single contiguous coefficient array.
 
-## Type parameters
+# Type parameters
 | param | meaning |
 |-------|---------|
 | `T`   | Scalar element type (`Float64`, `ComplexF64`, …). Must be a concrete bits type for best performance. |
@@ -71,7 +71,8 @@ Cache-friendly dense polynomial with a single contiguous coefficient array.
 | `N`   | `ndims(coefficients)`. Number of axes: `N = 1` for scalar, `N = 2` for vector-valued, etc. |
 | `A`   | Concrete array type (`Array{T,N}` normally; can be an `Mmap` array). |
 
-## Fields
+# Fields
+
 - `coefficients::A` — shape `(d1, …, d_{N-1}, L)`.  The **last** axis
   indexes the `L` monomials in `multiindex_set`.  Leading axes describe
   the coefficient shape (none for scalar, `(K,)` for a K-vector, etc.).

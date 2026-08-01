@@ -1,8 +1,9 @@
 """
 	InvarianceEquation
 
-Assemble the cohomological linear systems that arise in the parametrisation method,
-a reduced-order modelling technique for high-dimensional dynamical systems.
+Assemble the part of the cohomological equations that corresponds to the [`FullOrderDynamics`](@ref),
+thereby imposing invariance of the manifold.
+[`MasterModeOrthogonality`](@ref) handles the orthogonality conditions induced by the parametrisation styles.
 
 ---
 
@@ -14,7 +15,7 @@ a reduced-order modelling technique for high-dimensional dynamical systems.
 | ROM     | Number of master modes (reduced coordinates) |
 | N_EXT   | Number of external forcing modes |
 | NVAR    | `ROM + N_EXT` (total reduced variables) |
-| R       | Set of resonant master modes (`|R| ≤ ROM`) |
+| R       | Set of resonant master modes |
 
 Non-resonant master modes have trivial (zero) reduced dynamics and are excluded
 from the cohomological equations; their columns in `C(s)` are omitted.
@@ -62,8 +63,7 @@ C(s) = Σ_{j=1}^{ORD} D[j] s^{j-1}
 with pre-computed coefficient matrices `D[j]` (size `FOM × NVAR`) given by
 
 ```
-D[j] = Σ_{k=j+1}^{ORD+1} B[k] · generalised_right_eigenmodes
-							 · reduced_dynamics_linear^{k-(j+1)}
+D[j] = Σ_{k=j+1}^{ORD+1} B[k] · generalised_right_eigenmodes · reduced_dynamics_linear^{k-(j+1)}
 ```
 
 Here:
@@ -180,16 +180,16 @@ include("HornerEvaluator.jl")
 include("ColumnPolynomials.jl")
 
 export precompute_column_polynomials,
-       precompute_master_column_polynomials,
-       precompute_external_column_polynomials,
-       evaluate_system_matrix_and_lower_order_rhs!,
-       evaluate_column!,
-       evaluate_external_rhs!,
-       assemble_cohomological_matrix_and_rhs!,
-       build_sparse_L_and_rhs!,
-       precompute_sparse_L_template,
-       precompute_sparse_bordered_template,
-       scatter_L_into_bordered!
+	precompute_master_column_polynomials,
+	precompute_external_column_polynomials,
+	evaluate_system_matrix_and_lower_order_rhs!,
+	evaluate_column!,
+	evaluate_external_rhs!,
+	assemble_cohomological_matrix_and_rhs!,
+	build_sparse_L_and_rhs!,
+	precompute_sparse_L_template,
+	precompute_sparse_bordered_template,
+	scatter_L_into_bordered!
 
 # =============================================================================
 # Full cohomological-matrix and RHS assembly (in-place only)
@@ -213,32 +213,32 @@ harmless because the matching orthogonality row pins `R_{r,α} = 0`
 `g_buffer` is the pre-allocated `FOM`-length scratch buffer for the external RHS.
 """
 function assemble_cohomological_matrix_and_rhs!(
-        M::AbstractMatrix,
-        rhs::AbstractVector,
-        s::Number,
-        linear_terms::NTuple{ORDP1, <:AbstractMatrix},
-        C_coeffs::Vector{<:AbstractMatrix},
-        E_coeffs::Vector{<:AbstractMatrix},
-        resonance::SVector{ROM, Bool},
-        lower_order_couplings::AbstractVector{<:AbstractVector},
-        external_dynamics::AbstractVector,
-        g_buffer::AbstractVector
+	M::AbstractMatrix,
+	rhs::AbstractVector,
+	s::Number,
+	linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+	C_coeffs::Vector{<:AbstractMatrix},
+	E_coeffs::Vector{<:AbstractMatrix},
+	resonance::SVector{ROM, Bool},
+	lower_order_couplings::AbstractVector{<:AbstractVector},
+	external_dynamics::AbstractVector,
+	g_buffer::AbstractVector,
 ) where {ROM, ORDP1}
-    FOM = size(linear_terms[1], 1)
-    fill!(rhs, zero(eltype(rhs)))
-    evaluate_system_matrix_and_lower_order_rhs!(
-        view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms
-    )
-    for j in eachindex(resonance)
-        column = view(M, :, FOM + j)
-        if resonance[j]
-            evaluate_column!(column, s, j, C_coeffs)
-        else
-            fill!(column, zero(eltype(M)))
-        end
-    end
-    evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
-    return nothing
+	FOM = size(linear_terms[1], 1)
+	fill!(rhs, zero(eltype(rhs)))
+	evaluate_system_matrix_and_lower_order_rhs!(
+		view(M, :, 1:FOM), rhs, s, lower_order_couplings, linear_terms,
+	)
+	for j in eachindex(resonance)
+		column = view(M, :, FOM + j)
+		if resonance[j]
+			evaluate_column!(column, s, j, C_coeffs)
+		else
+			fill!(column, zero(eltype(M)))
+		end
+	end
+	evaluate_external_rhs!(rhs, s, external_dynamics, E_coeffs, g_buffer)
+	return nothing
 end
 
 end # module InvarianceEquation
