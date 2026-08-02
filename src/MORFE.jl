@@ -51,7 +51,8 @@ include("ParametrisationMethod/parametrise_entry.jl")
 # Multiindices
 export MultiindexSet, zero_multiindex,
        all_multiindices_up_to, multiindices_with_total_degree,
-       all_multiindices_in_box, indices_in_box_with_bounded_degree
+       all_multiindices_in_box, indices_in_box_with_bounded_degree,
+       delete_multiindices, is_downward_closed
 
 # Polynomials
 export DensePolynomial, evaluate, extract_component

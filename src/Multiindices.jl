@@ -7,6 +7,7 @@ A *multiindex* is an exponent vector `α ∈ ℕᴺ` that identifies the monomia
 - `MultiindexSet{N}` — a sorted, deduplicated collection of `SVector{N, Int}` exponents
   in graded-lexicographic (GrLex) order, with O(1) degree-boundary queries.
 - Generators: `all_multiindices_up_to`, `multiindices_with_total_degree`, `all_multiindices_in_box`.
+- Non-mutating set operations: `delete_multiindices`, `Base.filter`, `is_downward_closed`.
 - Lookup: `find_in_set` (degree-bracketed binary search), `build_exponent_index_map`.
 - Factorisation enumerators: `factorisations_asymmetric`, `factorisations_fully_symmetric`,
   `factorisations_groupwise_symmetric` — used by `MultilinearTerms` to sum nonlinear contributions.
@@ -19,6 +20,7 @@ using StaticArrays: SVector
 export MultiindexSet, zero_multiindex, # nvars,
        all_multiindices_up_to, multiindices_with_total_degree,
        all_multiindices_in_box, indices_in_box_with_bounded_degree,
+       delete_multiindices, is_downward_closed,
        divides, is_constant, find_in_set, build_exponent_index_map,
        factorisations_asymmetric, factorisations_fully_symmetric,
        factorisations_groupwise_symmetric, FactorisationEntry,
@@ -238,6 +240,154 @@ function all_multiindices_in_box(bound::Vector{Int})
         idx += 1
     end
     return MultiindexSet(exps_vec)  # sorts in Grlex
+end
+
+# ==================== Set operations (non-mutating) ====================
+
+# Unit exponent e_i, built without touching StaticArrays' `setindex` API.
+@inline function _unit_exponent(::Val{N}, i::Int) where {N}
+    SVector{N, Int}(ntuple(j -> j == i ? 1 : 0, Val(N)))
+end
+
+# ----- Normalisation of the `exps` argument of `delete_multiindices` -----
+#
+# An `AbstractVector{<:Integer}` or an `NTuple` is ONE exponent; anything else iterable
+# is a collection of exponents.  Without this split `[1, 2]` would be ambiguous.
+
+function _exponent_lookup(::Val{N}, e::AbstractVector{<:Integer}) where {N}
+    Set((_as_exponent(Val(N), e),))
+end
+function _exponent_lookup(::Val{N}, e::NTuple{M, Integer}) where {N, M}
+    Set((_as_exponent(
+        Val(N), e),))
+end
+_exponent_lookup(::Val{N}, s::MultiindexSet{N}) where {N} = Set(s.exponents)
+
+function _exponent_lookup(::Val{N}, exps) where {N}
+    victims = Set{SVector{N, Int}}()
+    for e in exps
+        push!(victims, _as_exponent(Val(N), e))
+    end
+    return victims
+end
+
+function _as_exponent(::Val{N}, e) where {N}
+    length(e) == N || throw(ArgumentError(
+        "exponent $(collect(e)) has $(length(e)) components, but the set has $N variables"))
+    return SVector{N, Int}(e)
+end
+
+"""
+	delete_multiindices(set::MultiindexSet{N}, exps) -> MultiindexSet{N}
+
+Return a **new** `MultiindexSet` holding every exponent of `set` except those listed in
+`exps`.  `set` itself is never modified — there is no in-place variant.
+
+`exps` may be a single exponent (`SVector`, `Vector{Int}` or `NTuple{N,Int}`), any
+iterable of such exponents, or another `MultiindexSet{N}`.  Exponents that are not
+members of `set` are ignored, matching `Base.setdiff`; an exponent whose length differs
+from `N` throws an `ArgumentError`.
+
+Deleting cannot reorder a Grlex-sorted list, so the result is built through the
+pre-sorted path: no re-sort is performed, and `degree_offsets` is rebuilt so the O(1)
+degree-boundary queries stay correct even when an entire degree block disappears.
+
+Removing an exponent can break *downward closure*, which `parametrise(...; mset = ...)`
+requires — check the result with [`is_downward_closed`](@ref).
+
+# Examples
+
+```julia
+S = all_multiindices_up_to(2, 2)              # 6 monomials
+T = delete_multiindices(S, [[2, 0], [0, 2]])  # drop the two pure squares
+length(S), length(T)                          # (6, 4) — S is unchanged
+```
+"""
+function delete_multiindices(set::MultiindexSet{N}, exps) where {N}
+    victims = _exponent_lookup(Val(N), exps)
+    isempty(victims) && return MultiindexSet(copy(set.exponents), Val(true))
+    # `filter` rather than a comprehension: a comprehension that keeps nothing infers
+    # `Vector{Union{}}`, which no `MultiindexSet` constructor accepts.
+    return MultiindexSet(filter(v -> !(v in victims), set.exponents), Val(true))
+end
+
+# Two-set difference.  More specific than both generic methods above, so it also breaks
+# the ambiguity between `(set, exps)` and `(pred, set)` when both arguments are sets.
+function delete_multiindices(
+        set::MultiindexSet{N}, victims::MultiindexSet{M}) where {N, M}
+    M == N || throw(ArgumentError(
+        "cannot subtract a $M-variable set from an $N-variable set"))
+    return MultiindexSet(
+        filter(v -> find_in_set(victims, v) === nothing, set.exponents), Val(true))
+end
+
+"""
+	delete_multiindices(pred, set::MultiindexSet{N}) -> MultiindexSet{N}
+
+Return a **new** `MultiindexSet` holding the exponents of `set` for which `pred(α)` is
+`false`; `set` itself is never modified.  `pred` receives each exponent as an
+`SVector{N,Int}`.  This is the exact complement of `filter(pred, set)`: together the two
+partition `set`.
+
+# Examples
+
+```julia
+S = all_multiindices_up_to(3, 4)
+delete_multiindices(α -> sum(α) > 2, S) == all_multiindices_up_to(3, 2)   # true
+```
+"""
+function delete_multiindices(pred, set::MultiindexSet{N}) where {N}
+    return MultiindexSet(filter(v -> !pred(v), set.exponents), Val(true))
+end
+
+"""
+	filter(pred, set::MultiindexSet{N}) -> MultiindexSet{N}
+
+Return a **new** `MultiindexSet` holding the exponents of `set` for which `pred(α)` is
+`true`, leaving `set` untouched.  `pred` receives each exponent as an `SVector{N,Int}`.
+
+Filtering preserves Grlex order, so the result is built through the pre-sorted path.
+Use it to intersect independent conditions, e.g. a total-degree bound on the master
+coordinates together with a per-parameter box:
+
+```julia
+mset = filter(α -> α[1] + α[2] ≤ 4 && α[3] ≤ 2, all_multiindices_in_box([4, 4, 2]))
+```
+
+See [`delete_multiindices`](@ref) for the removal-side counterpart.
+"""
+function Base.filter(pred, set::MultiindexSet{N}) where {N}
+    return MultiindexSet(filter(pred, set.exponents), Val(true))
+end
+
+"""
+	is_downward_closed(set::MultiindexSet{N}) -> Bool
+
+Return `true` when every divisor of every member of `set` is itself a member.
+
+This is the *downward closure* property that `parametrise(...; mset = ...)` requires: the
+graded solve reads lower-order coefficients `W[α - eᵢ]` while working on `α`, so a
+missing divisor would be silently read as zero.  Combinatorial truncations
+(`all_multiindices_up_to`, `all_multiindices_in_box`) are closed by construction, but a
+spectral criterion such as `|⟨λ, α⟩| ≤ R` generally is not.
+
+The zero multiindex is **exempt**: DPIM sets are built with `min_degree = 1`, so a
+degree-1 exponent is not asked to have its constant divisor present.
+
+Only the immediate predecessors `α - eᵢ` are probed; by induction over the total degree
+that is equivalent to checking every divisor.  Cost is `O(N · |set| · log)` through
+[`find_in_set`](@ref).
+"""
+function is_downward_closed(set::MultiindexSet{N}) where {N}
+    N == 0 && return true
+    for v in set.exponents
+        _total_degree(v, Val(N)) <= 1 && continue   # only divisor is the exempt constant
+        for i in 1:N
+            v[i] == 0 && continue
+            find_in_set(set, v - _unit_exponent(Val(N), i)) === nothing && return false
+        end
+    end
+    return true
 end
 
 # ==================== Comparison predicates ====================

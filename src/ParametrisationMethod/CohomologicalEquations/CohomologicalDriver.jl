@@ -293,16 +293,21 @@ function solve_cohomological_problem(
         linear_terms, master_modes, Λ_master
     )
 
-    # ── 4. Solve external linear monomials via partial context (Φ_ext = 0) ───
+    # ── 4. Solve external linear monomials via partial contexts ──────────────
     if initial_W === nothing || initial_R === nothing
         # Φ_ext is unknown while the external directions are themselves being solved, so the
         # partial context carries zeros in its place.  For a non-diagonal (upper-triangular)
         # external block the directions couple, and the ones already solved are *known* data
-        # that must be fed back: column e of both external Horner recurrences reads only
-        # Φ_ext,j with Λ_ext[j, e] ≠ 0, i.e. j ≤ e.  Column e itself must stay zero — that
-        # self-term belongs on the left-hand side through s = Λ[e, e].
+        # that must be fed back — that is what `external_directions` carries.
+        #
+        # `blank` is the direction currently being solved.  Its own external column must be
+        # forced to zero: the recurrences propagate Φ_ext,j into column e through Λ_ext[j, e]
+        # for j < e, but that coupling is *already* delivered to the right-hand side by the
+        # e_dyn[j]·E_j(s) terms, so leaving it in column e would count it twice.  The
+        # remaining E_j, j > e, are weighted by e_dyn[j] = Λ_ext[j, e], which sits strictly
+        # below the diagonal and therefore vanishes — that is exactly upper-triangularity.
         known_directions = zeros(T, FOM, N_EXT)
-        build_partial_ctx = function (external_directions)
+        build_partial_ctx = function (external_directions, blank::Int)
             partial_E_coeffs = precompute_external_column_polynomials(
                 linear_terms, external_directions, Λ, D_master_steps
             )
@@ -310,6 +315,12 @@ function solve_cohomological_problem(
             partial_orth_E_coeffs = precompute_orthogonality_column_polynomials(
                 orthogonality_J_coeffs, right_master_blocks, external_directions, Λ
             )
+            if 1 <= blank <= N_EXT
+                fill!(partial_E_coeffs[blank], zero(T))
+                for r in 1:ROM
+                    partial_orth_E_coeffs[r][:, blank] .= zero(T)
+                end
+            end
             return _build_context(
                 linear_terms, hcat(master_modes, external_directions), lambda_diag,
                 InvarianceOperators{T}(invariance_C_coeffs, partial_E_coeffs),
@@ -324,14 +335,14 @@ function solve_cohomological_problem(
         # one Φ_ext = 0 context serves all directions, exactly as before.
         coupled_external = !isdiag(view(Λ, (ROM + 1):NVAR, (ROM + 1):NVAR))
         shared_partial_ctx = coupled_external ? nothing :
-                             build_partial_ctx(known_directions)
+                             build_partial_ctx(known_directions, 0)
         partial_ctx_for = function (e)
             coupled_external || return shared_partial_ctx
             for k in 1:(e - 1)
                 known_directions[:, k] .= view(
                     W.poly.coefficients, :, 1, ROM + k + unit_offset)
             end
-            return build_partial_ctx(known_directions)
+            return build_partial_ctx(known_directions, e)
         end
 
         _solve_external_directions!(

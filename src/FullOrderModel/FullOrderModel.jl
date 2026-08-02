@@ -57,6 +57,25 @@ function _info_implicit_symmetry(nonlinear_terms)
 end
 
 """
+	_check_external_terms(nonlinear_terms)
+
+Reject terms that read the external state in a model built without one.
+
+Without this the mismatch survives construction and only surfaces mid-solve, as
+`"Term expects external arguments but no external state provided"` from `evaluate_term!`.
+"""
+function _check_external_terms(nonlinear_terms)
+    for (i, t) in enumerate(nonlinear_terms)
+        t.multiplicity_external == 0 && continue
+        throw(ArgumentError("NDOrderModel: term $i ($(_term_label(t))) takes " *
+                            "$(t.multiplicity_external) external factor(s), but this " *
+                            "model was built without an external system.\nPass an " *
+                            "`ExternalSystem` (or the external dynamics polynomial) as " *
+                            "the third argument, or set multiplicity_external = 0."))
+    end
+end
+
+"""
 
 	NDOrderModel{ORD, ORDP1, N_NL, T, MT} <: AbstractFullOrderModel
 
@@ -123,6 +142,10 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     		# Checks performed
     		- Correct relationship between `ORD` and `ORDP1`.
     		- All matrices in `linear_terms` must be adequately sized.
+
+    		The two-argument form, which builds a model *without* an external system, additionally
+    		rejects any term with `multiplicity_external > 0` — such a term would otherwise construct
+    		fine and fail only at evaluation time, inside `evaluate_term!`.
     		"""
     function NDOrderModel(
             linear_terms::NTuple{ORDP1, MT},
@@ -163,6 +186,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
         n_fom = size(linear_terms[1], 1)
         @assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
         max_nl_deg = N_NL > 0 ? maximum(t.deg for t in nonlinear_terms) : 1
+        _check_external_terms(nonlinear_terms)
         _info_implicit_symmetry(nonlinear_terms)
         new{ORD, ORDP1, N_NL, 0, T, MT}(
             n_fom, linear_terms, nonlinear_terms, nothing, max_nl_deg)

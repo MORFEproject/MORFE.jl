@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constructing MultiindexSets · MORFE Literate</title>
+<style>
+:root { --bg:#0a0a0f; --ink:#e8e8ee; --ink2:#a0a0b0; --hair:#26262f; --acc:#9558B2; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 840px; margin: 0 auto; padding: 40px 20px 80px; }
+h1 { font-size: 30px; margin: 8px 0 4px; }
+h2 { font-size: 21px; margin-top: 2.2em; border-bottom: 1px solid var(--hair); padding-bottom: 6px; }
+p, li { color: var(--ink2); }
+strong, code { color: var(--ink); }
+a { color: #b78ccf; }
+pre { background:#111118; border:1px solid var(--hair); border-radius:6px;
+  padding:14px 16px; overflow-x:auto; font-size:13.5px; line-height:1.55; }
+code { font-family: "JuliaMono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+.kicker { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--acc); }
+.btnrow { display:flex; gap:10px; flex-wrap:wrap; margin:18px 0 30px; }
+.btn { display:inline-block; padding:8px 14px; border:1px solid var(--hair); border-radius:6px;
+  color:var(--ink); text-decoration:none; font-size:13.5px; }
+.btn:hover { border-color: var(--acc); }
+.note { border-left:3px solid var(--acc); background:rgba(149,88,178,0.07);
+  padding:10px 14px; border-radius:0 6px 6px 0; font-size:14px; color:var(--ink2); }
+</style></head><body><main>
+<span class="kicker">MORFE · Literate example</span>
+<h1>Constructing MultiindexSets</h1>
+<div class="btnrow"><a class="btn" href="../multiindex_sets.html">Custom tutorial page</a>
+<a class="btn" href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/multiindex_sets" target="_blank" rel="noopener">Example folder on GitHub ↗</a>
+<a class="btn" href="../index.html">All tutorials</a></div>
+<div class="note">Standardized rendering of the example's <code>main.jl</code>
+(narrative comments + code, not executed here). Run it yourself with the
+commands in the script header; expected numbers are asserted by the example's
+<code>validate.jl</code> and quoted in its README.</div>
+<p>Constructing MultiindexSets</p>
+<p>A <code>MultiindexSet</code> is the object that decides <strong>which monomials the DPIM solve computes</strong>. Every parametrisation <code>W</code> and reduced dynamics <code>R</code> carries one, and <code>parametrise&#40;model, order, ep; mset &#61; ...&#41;</code> lets you supply your own instead of the default graded expansion — that single argument is the difference between an isotropic expansion, an anisotropic parametric ROM, and a spectrally truncated one.</p>
+<p>This tutorial builds multiindex sets six ways, from the automatic generators to a spectral truncation driven by the superharmonics <code>s&#40;α&#41; &#61; ⟨λ, α⟩</code>:</p>
+<ol>
+<li><p>the automatic generators</p>
+</li>
+<li><p>the same sets built by hand from a vector of exponents</p>
+</li>
+<li><p>combining conditions: anisotropic total degree × per-parameter box</p>
+</li>
+<li><p>removing multiindices with <code>delete_multiindices</code> and <code>filter</code></p>
+</li>
+<li><p>bounding the superharmonics by a spectral radius</p>
+</li>
+<li><p>checking a custom set against the <code>parametrise</code> contract</p>
+</li>
+</ol>
+<p>Each section writes an interactive lattice view to <code>results/figures/</code>. Nothing is solved here — the script runs in a couple of seconds and needs no FEM backend.</p>
+<p>Run it from the repository root:</p>
+<pre><code>julia --project -e &#39;include&#40;&quot;examples/internals/multiindex_sets/main.jl&quot;&#41;&#39;</code></pre>
+<pre><code class="language-julia">using MORFE.Multiindices
+using StaticArrays: SVector
+
+include&#40;joinpath&#40;@__DIR__, &quot;viz.jl&quot;&#41;&#41;
+
+const FIGDIR &#61; get&#40;ENV, &quot;MORFE_LATTICE_OUT&quot;, joinpath&#40;@__DIR__, &quot;results&quot;, &quot;figures&quot;&#41;&#41;</code></pre>
+<p>Compact printing: a set is small enough to show in full throughout this tutorial.</p>
+<pre><code class="language-julia">show_set&#40;name, S&#41; &#61; println&#40;rpad&#40;name, 34&#41;, lpad&#40;length&#40;S&#41;, 4&#41;, &quot;  &quot;, collect&#40;S&#41;&#41;</code></pre>
+<hr />
+<ol>
+<li><p>The automatic generators</p>
+</li>
+</ol>
+<p>A multiindex α ∈ ℕᴺ is the exponent vector of the monomial z₁^α₁ ⋯ z<em>N^α</em>N. A MultiindexSet stores them sorted in graded-lexicographic &#40;GrLex&#41; order: total degree ascending first, then lexicographic <em>descending</em> within a degree. That order is what makes the cohomological solve causal — when the solver reaches α, every coefficient it needs at lower degree has already been computed. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">println&#40;&quot;&#61;&quot;^92&#41;
+println&#40;&quot;1. Automatic generators\n&quot;&#41;</code></pre>
+<p><code>min_degree &#61; 1</code> throughout: the expansion is centred on the fixed point, so the constant monomial α &#61; 0 is never part of a DPIM set. Every set below excludes it.</p>
+<pre><code class="language-julia">total_deg &#61; all_multiindices_up_to&#40;2, 4; min_degree &#61; 1&#41;      # 1 ≤ |α| ≤ 4
+exact_deg &#61; multiindices_with_total_degree&#40;2, 4&#41;              # |α| &#61; 4
+box &#61; filter&#40;α -&gt; sum&#40;α&#41; ≥ 1, all_multiindices_in_box&#40;&#91;3, 3&#93;&#41;&#41;   # 0 ≤ αᵢ ≤ 3
+
+show_set&#40;&quot;up_to&#40;2, 4; min_degree &#61; 1&#41;&quot;, total_deg&#41;
+show_set&#40;&quot;multiindices_with_total_degree&#40;2, 4&#41;&quot;, exact_deg&#41;
+show_set&#40;&quot;in_box&#40;&#91;3, 3&#93;&#41;, origin dropped&quot;, box&#41;</code></pre>
+<p><code>all_multiindices_up_to</code> without <code>min_degree</code> does include the constant — which is exactly the one monomial <code>parametrise</code> refuses.</p>
+<pre><code class="language-julia">println&#40;&quot;\nwith the constant:    &quot;, length&#40;all_multiindices_up_to&#40;2, 4&#41;&#41;, &quot; monomials&quot;&#41;
+println&#40;&quot;without it:           &quot;, length&#40;total_deg&#41;, &quot; monomials&quot;&#41;</code></pre>
+<p>The GrLex order is visible in the listing above: degree 1 is &#91;1,0&#93; then &#91;0,1&#93;, degree 2 is &#91;2,0&#93;, &#91;1,1&#93;, &#91;0,2&#93;. Position in that order is the column index used everywhere else in MORFE, and <code>find_in_set</code> recovers it through a degree-bracketed binary search.</p>
+<pre><code class="language-julia">println&#40;&quot;\nfind_in_set&#40;total_deg, &#91;1, 1&#93;&#41;  &#61; &quot;, find_in_set&#40;total_deg, &#91;1, 1&#93;&#41;&#41;
+println&#40;&quot;find_in_set&#40;total_deg, &#91;9, 9&#93;&#41;  &#61; &quot;, find_in_set&#40;total_deg, &#91;9, 9&#93;&#41;, &quot;  &#40;absent&#41;&quot;&#41;
+println&#40;&quot;total_deg&#91;5&#93;                    &#61; &quot;, total_deg&#91;5&#93;&#41;</code></pre>
+<p><code>indices_in_box_with_bounded_degree</code> is the workhorse query: componentwise bound plus a HALF-OPEN degree window, degree<em>lower</em>bound ≤ |α| &lt; total<em>deg</em>upper.</p>
+<pre><code class="language-julia">in_window &#61; indices_in_box_with_bounded_degree&#40;total_deg, &#91;2, 2&#93;, 1, 3&#41;
+println&#40;&quot;indices with 1 ≤ |α| &lt; 3 inside &#91;2,2&#93;: &quot;, in_window&#41;
+println&#40;&quot;  → &quot;, &#91;Vector&#40;total_deg&#91;i&#93;&#41; for i in in_window&#93;&#41;
+
+write_lattice&#40;joinpath&#40;FIGDIR, &quot;fig1_generators.html&quot;&#41;,
+    &#91;LatticePanel&#40;&quot;|α| ≤ 4&quot;, total_deg;
+         note &#61; &quot;all_multiindices_up_to&#40;2, 4; min_degree &#61; 1&#41; — the graded simplex.&quot;&#41;,
+        LatticePanel&#40;&quot;|α| &#61; 4&quot;, exact_deg;
+            note &#61; &quot;multiindices_with_total_degree&#40;2, 4&#41; — one degree slice, the anti-diagonal.&quot;&#41;,
+        LatticePanel&#40;&quot;box &#91;3,3&#93;&quot;, box;
+            note &#61; &quot;all_multiindices_in_box&#40;&#91;3, 3&#93;&#41; — a hyperrectangle: degree up to 6 on the diagonal.&quot;&#41;&#93;;
+    title &#61; &quot;Generators&quot;,
+    caption &#61; &quot;The three automatic generators. The constant α &#61; 0 is excluded throughout.&quot;&#41;</code></pre>
+<hr />
+<ol start="2">
+<li><p>The same sets, built by hand</p>
+</li>
+</ol>
+<p>The generators are conveniences over one public constructor that takes the exponents directly. Use it whenever the shape you want is not a simplex or a box. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
+println&#40;&quot;2. Manual construction\n&quot;&#41;</code></pre>
+<p>Vector of SVectors — the storage representation. Order does not matter: the constructor sorts into GrLex and deduplicates for you.</p>
+<pre><code class="language-julia">by_hand &#61; MultiindexSet&#40;&#91;SVector&#123;2, Int&#125;&#40;a, b&#41;
+                         for a in 0:4 for b in 0:4 if 1 ≤ a &#43; b ≤ 4&#93;&#41;
+println&#40;&quot;hand-built &#61;&#61; up_to&#40;2, 4; min_degree &#61; 1&#41;: &quot;, by_hand &#61;&#61; total_deg&#41;</code></pre>
+<p>Deliberately unsorted, with a duplicate:</p>
+<pre><code class="language-julia">messy &#61; MultiindexSet&#40;&#91;SVector&#123;2, Int&#125;&#40;0, 2&#41;, SVector&#123;2, Int&#125;&#40;1, 0&#41;,
+    SVector&#123;2, Int&#125;&#40;0, 2&#41;, SVector&#123;2, Int&#125;&#40;2, 0&#41;&#93;&#41;
+show_set&#40;&quot;sorted and deduplicated&quot;, messy&#41;</code></pre>
+<p>Two more spellings of the same thing. Note that the matrix form takes exponents as COLUMNS, so it is <code>nvars × nmonomials</code>.</p>
+<pre><code class="language-julia">from_vecs &#61; MultiindexSet&#40;&#91;&#91;1, 0&#93;, &#91;0, 1&#93;, &#91;1, 1&#93;&#93;&#41;
+from_matrix &#61; MultiindexSet&#40;&#91;1 0 1; 0 1 1&#93;&#41;
+println&#40;&quot;Vector&#123;Vector&#123;Int&#125;&#125; &#61;&#61; Matrix&#123;Int&#125;: &quot;, from_vecs &#61;&#61; from_matrix&#41;</code></pre>
+<p>Equality compares the exponents only — <code>degree_offsets</code> is a derived field.</p>
+<pre><code class="language-julia">println&#40;&quot;equality ignores degree_offsets:    &quot;,
+    MultiindexSet&#40;&#91;&#91;2, 0&#93;, &#91;1, 0&#93;&#93;&#41; &#61;&#61; MultiindexSet&#40;&#91;&#91;1, 0&#93;, &#91;2, 0&#93;&#93;&#41;&#41;</code></pre>
+<p>And a set no generator can produce: a hand-picked selection.</p>
+<pre><code class="language-julia">handpicked &#61; MultiindexSet&#40;&#91;&#91;1, 0&#93;, &#91;0, 1&#93;, &#91;3, 1&#93;, &#91;1, 3&#93;&#93;&#41;
+show_set&#40;&quot;hand-picked&quot;, handpicked&#41;</code></pre>
+<hr />
+<ol start="3">
+<li><p>Combining conditions</p>
+</li>
+</ol>
+<p>The parametric ROMs are the real use case. There the reduced coordinates split into master coordinates z, which deserve a total-degree bound, and parameter coordinates θ, which deserve a per-parameter box — an expansion of order 4 in z but only 2 in each θ. The two conditions simply intersect. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
+println&#40;&quot;3. Combining conditions: anisotropic z-total × θ-box\n&quot;&#41;
+
+const MAXZ &#61; 4   # total degree budget in the master coordinates
+const MAXT &#61; 2   # per-parameter budget in each θ</code></pre>
+<p>Route A — a comprehension stating both conditions directly. This is the pattern the parametric examples use in their config files.</p>
+<pre><code class="language-julia">aniso_A &#61; MultiindexSet&#40;&#91;SVector&#123;3, Int&#125;&#40;a, b, c&#41;
+                         for a in 0:MAXZ for b in 0:MAXZ for c in 0:MAXT
+                         if a &#43; b ≤ MAXZ &amp;&amp; 1 ≤ a &#43; b &#43; c&#93;&#41;</code></pre>
+<p>Route B — start from the enclosing box and narrow it with <code>filter</code>.</p>
+<pre><code class="language-julia">aniso_B &#61; filter&#40;α -&gt; α&#91;1&#93; &#43; α&#91;2&#93; ≤ MAXZ &amp;&amp; sum&#40;α&#41; ≥ 1,
+    all_multiindices_in_box&#40;&#91;MAXZ, MAXZ, MAXT&#93;&#41;&#41;
+
+println&#40;&quot;route A &#40;comprehension&#41; &#61;&#61; route B &#40;filter&#41;: &quot;, aniso_A &#61;&#61; aniso_B&#41;
+println&#40;&quot;enclosing box:      &quot;, length&#40;all_multiindices_in_box&#40;&#91;MAXZ, MAXZ, MAXT&#93;&#41;&#41;&#41;
+println&#40;&quot;anisotropic set:    &quot;, length&#40;aniso_A&#41;&#41;
+println&#40;&quot;isotropic |α| ≤ 4:  &quot;, length&#40;all_multiindices_up_to&#40;3, MAXZ; min_degree &#61; 1&#41;&#41;,
+    &quot;  &#40;a different set — it allows α₃ &#61; 3, 4 but forbids |α| &#61; 5, 6&#41;&quot;&#41;</code></pre>
+<p>Two parameters, i.e. the four-variable set of the parametric beam example. Same two conditions, one more θ.</p>
+<pre><code class="language-julia">println&#40;&quot;two parameters &#40;NVAR &#61; 4&#41;: &quot;,
+    length&#40;filter&#40;α -&gt; α&#91;1&#93; &#43; α&#91;2&#93; ≤ MAXZ &amp;&amp; sum&#40;α&#41; ≥ 1,
+        all_multiindices_in_box&#40;&#91;MAXZ, MAXZ, MAXT, MAXT&#93;&#41;&#41;&#41;, &quot; monomials&quot;&#41;</code></pre>
+<p>––- The lattice figure: one universe, composable conditions ––-</p>
+<p>Every button acts on the SAME lattice. The red ones are filters and INTERSECT — turn on two and only the monomials satisfying both remain. The green ones are unions and ADD their monomials back on top of whatever the filters left. <code>reset</code> clears both. Whatever a condition excludes stays visible as a hollow marker, and the camera holds still across a toggle, so the shapes can be compared directly.</p>
+<pre><code class="language-julia">universe &#61; filter&#40;α -&gt; sum&#40;α&#41; ≥ 1, all_multiindices_in_box&#40;&#91;MAXZ, MAXZ, MAXT&#93;&#41;&#41;
+
+println&#40;&quot;\nuniverse &#40;the box, minus the origin&#41;: &quot;, length&#40;universe&#41;, &quot; monomials&quot;&#41;
+for &#40;name, pred&#41; in &#40;&quot;|α| ≤ 4&quot; &#61;&gt; &#40;α -&gt; sum&#40;α&#41; ≤ MAXZ&#41;,
+    &quot;α₁ &#43; α₂ ≤ 4&quot; &#61;&gt; &#40;α -&gt; α&#91;1&#93; &#43; α&#91;2&#93; ≤ MAXZ&#41;,
+    &quot;α₁ ≤ 2&quot; &#61;&gt; &#40;α -&gt; α&#91;1&#93; ≤ 2&#41;,
+    &quot;α ≤ &#40;2,2,1&#41;&quot; &#61;&gt; &#40;α -&gt; all&#40;α .≤ &#91;2, 2, 1&#93;&#41;&#41;,
+    &quot;α₃ &#61; 0 face&quot; &#61;&gt; &#40;α -&gt; α&#91;3&#93; &#61;&#61; 0&#41;&#41;
+    println&#40;&quot;  &quot;, rpad&#40;name, 16&#41;, count&#40;pred, universe.exponents&#41;&#41;
+end
+
+write_lattice&#40;joinpath&#40;FIGDIR, &quot;fig2_anisotropic.html&quot;&#41;,
+    LatticeConditions&#40;universe;
+        filters &#61; &#91;&quot;|α| ≤ 4&quot; &#61;&gt; &#40;α -&gt; sum&#40;α&#41; ≤ MAXZ&#41;,
+            &quot;α₁ &#43; α₂ ≤ 4&quot; &#61;&gt; &#40;α -&gt; α&#91;1&#93; &#43; α&#91;2&#93; ≤ MAXZ&#41;,
+            &quot;α₁ ≤ 2&quot; &#61;&gt; &#40;α -&gt; α&#91;1&#93; ≤ 2&#41;,
+            &quot;α ≤ &#40;2,2,1&#41;&quot; &#61;&gt; &#40;α -&gt; all&#40;α .≤ &#91;2, 2, 1&#93;&#41;&#41;&#93;,
+        unions &#61; &#91;&quot;α₃ &#61; 0 face&quot; &#61;&gt; &#40;α -&gt; α&#91;3&#93; &#61;&#61; 0&#41;,
+            &quot;α₃ &#61; 2 face&quot; &#61;&gt; &#40;α -&gt; α&#91;3&#93; &#61;&#61; 2&#41;&#93;&#41;;
+    title &#61; &quot;Filtering a lattice&quot;,
+    caption &#61; &quot;Red filters intersect · green buttons add points back · reset clears both.&quot;&#41;</code></pre>
+<hr />
+<ol start="4">
+<li><p>Removing multiindices</p>
+</li>
+</ol>
+<p><code>delete_multiindices</code> returns a NEW set — there is no in-place variant, so a set you have already handed to a parametrisation can never be mutated underneath it. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
+println&#40;&quot;4. Deleting multiindices\n&quot;&#41;
+
+S &#61; all_multiindices_up_to&#40;2, 3; min_degree &#61; 1&#41;
+show_set&#40;&quot;S&quot;, S&#41;</code></pre>
+<p>By explicit exponent. Accepts a single exponent, a list of them, or another set.</p>
+<pre><code class="language-julia">no_corners &#61; delete_multiindices&#40;S, &#91;&#91;3, 0&#93;, &#91;0, 3&#93;&#93;&#41;
+show_set&#40;&quot;delete &#91;3,0&#93; and &#91;0,3&#93;&quot;, no_corners&#41;
+show_set&#40;&quot;delete a single exponent&quot;, delete_multiindices&#40;S, &#91;1, 1&#93;&#41;&#41;
+show_set&#40;&quot;set difference&quot;,
+    delete_multiindices&#40;S, all_multiindices_up_to&#40;2, 1; min_degree &#61; 1&#41;&#41;&#41;</code></pre>
+<p>Exponents that are not members are simply ignored, as with <code>setdiff</code>.</p>
+<pre><code class="language-julia">println&#40;&quot;deleting an absent exponent is a no-op: &quot;,
+    delete_multiindices&#40;S, &#91;&#91;9, 9&#93;&#93;&#41; &#61;&#61; S&#41;</code></pre>
+<p>S itself never changes.</p>
+<pre><code class="language-julia">println&#40;&quot;S is untouched: &quot;, length&#40;S&#41;, &quot; monomials, still &quot;, collect&#40;S&#41;&#91;end&#93;&#41;</code></pre>
+<p>By predicate — and <code>filter</code> keeps exactly what <code>delete_multiindices</code> drops.</p>
+<pre><code class="language-julia">odd_only &#61; delete_multiindices&#40;α -&gt; iseven&#40;sum&#40;α&#41;&#41;, S&#41;
+even_only &#61; filter&#40;α -&gt; iseven&#40;sum&#40;α&#41;&#41;, S&#41;
+show_set&#40;&quot;odd total degree&quot;, odd_only&#41;
+show_set&#40;&quot;even total degree&quot;, even_only&#41;
+println&#40;&quot;the two partition S: &quot;, length&#40;odd_only&#41; &#43; length&#40;even_only&#41; &#61;&#61; length&#40;S&#41;&#41;</code></pre>
+<p>Deletion cannot reorder a sorted list, so the result skips the re-sort — but the degree table is rebuilt, and lookups stay correct even when a whole degree vanishes.</p>
+<pre><code class="language-julia">gapped &#61; delete_multiindices&#40;α -&gt; sum&#40;α&#41; &#61;&#61; 2, S&#41;
+show_set&#40;&quot;degree-2 block removed&quot;, gapped&#41;
+println&#40;&quot;find_in_set&#40;gapped, &#91;3, 0&#93;&#41; &#61; &quot;, find_in_set&#40;gapped, &#91;3, 0&#93;&#41;,
+    &quot;   find_in_set&#40;gapped, &#91;1, 1&#93;&#41; &#61; &quot;, find_in_set&#40;gapped, &#91;1, 1&#93;&#41;&#41;
+
+write_lattice&#40;joinpath&#40;FIGDIR, &quot;fig3_deletion.html&quot;&#41;,
+    &#91;LatticePanel&#40;&quot;S &#61; 1 ≤ |α| ≤ 3&quot;, S; note &#61; &quot;The starting set.&quot;&#41;,
+        LatticePanel&#40;&quot;explicit deletion&quot;, S;
+            marks &#61; Dict&#40;&#91;3, 0&#93; &#61;&gt; &quot;dropped&quot;, &#91;0, 3&#93; &#61;&gt; &quot;dropped&quot;&#41;,
+            note &#61; &quot;delete_multiindices&#40;S, &#91;&#91;3,0&#93;, &#91;0,3&#93;&#93;&#41; — removed exponents shown hollow.&quot;&#41;,
+        LatticePanel&#40;&quot;odd degree kept&quot;, S;
+            marks &#61; Dict&#40;Vector&#40;α&#41; &#61;&gt; &#40;isodd&#40;sum&#40;α&#41;&#41; ? &quot;kept&quot; : &quot;dropped&quot;&#41;
+            for α in S&#41;,
+            note &#61; &quot;delete_multiindices&#40;α -&gt; iseven&#40;sum&#40;α&#41;&#41;, S&#41;.&quot;&#41;,
+        LatticePanel&#40;&quot;even degree kept&quot;, S;
+            marks &#61; Dict&#40;Vector&#40;α&#41; &#61;&gt; &#40;iseven&#40;sum&#40;α&#41;&#41; ? &quot;kept&quot; : &quot;dropped&quot;&#41;
+            for α in S&#41;,
+            note &#61; &quot;filter&#40;α -&gt; iseven&#40;sum&#40;α&#41;&#41;, S&#41; — the exact complement.&quot;&#41;&#93;;
+    title &#61; &quot;Deletion&quot;,
+    caption &#61; &quot;Deletion is non-mutating: every panel is a new set derived from the first.&quot;&#41;</code></pre>
+<hr />
+<ol start="5">
+<li><p>Bounding the superharmonics by a spectral radius</p>
+</li>
+</ol>
+<p>Every monomial has a superharmonic s&#40;α&#41; &#61; ⟨λ, α⟩ — the eigenvalue of the linear part its forced response sits at, obtained by adding the eigenvalues head to tail, α<em>k copies of λ</em>k. This is exactly what <code>Resonance._superharmonics</code> computes, and it drives resonance detection: α is resonant with master mode r when |λ_r − s&#40;α&#41;| &lt; tol.</p>
+<p>It also supports a truncation that no degree or box bound can express — keep only the monomials whose response lands inside a band |s&#40;α&#41;| &lt; R of the spectrum. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
+println&#40;&quot;5. Spectral bandwidth cut\n&quot;&#41;</code></pre>
+<p>A damped spectrum: one oscillatory conjugate pair and one real decaying mode.</p>
+<pre><code class="language-julia">λ &#61; &#91;-1 &#43; 2im, -1 - 2im, -1.0 &#43; 0im&#93;
+superharmonic&#40;α&#41; &#61; sum&#40;λ .* α&#41;   # s&#40;α&#41; &#61; ⟨λ, α⟩
+
+full &#61; all_multiindices_up_to&#40;3, 4; min_degree &#61; 1&#41;
+R &#61; 4.0
+
+band &#61; filter&#40;α -&gt; abs&#40;superharmonic&#40;α&#41;&#41; &lt; R, full&#41;
+println&#40;&quot;|α| ≤ 4:         &quot;, length&#40;full&#41;, &quot; monomials&quot;&#41;
+println&#40;&quot;|s&#40;α&#41;| &lt; &quot;, R, &quot;:     &quot;, length&#40;band&#41;, &quot; monomials&quot;&#41;
+@assert length&#40;full&#41; &#61;&#61; 34 &amp;&amp; length&#40;band&#41; &#61;&#61; 13</code></pre>
+<p>Since every eigenvalue has the same real part, Re s &#61; −|α| and Im s &#61; 2&#40;α₁ − α₂&#41;:</p>
+<p>|s|² &#61; &#40;α₁&#43;α₂&#43;α₃&#41;² &#43; 4&#40;α₁−α₂&#41;² &#61; 5α₁² &#43; 5α₂² &#43; α₃² − 6α₁α₂ &#43; 2α₁α₃ &#43; 2α₂α₃</p>
+<p>The α₁α₂ coefficient is NEGATIVE. Multiplying by z̄ cancels imaginary part contributed by z, pulling s back towards the real axis — so |s| is not monotone under divisibility, and a monomial can sit inside the band while one of its divisors does not.</p>
+<pre><code class="language-julia">println&#40;&quot;\nα                s&#40;α&#41;              |s|     kept&quot;&#41;
+for α in full.exponents
+    sum&#40;α&#41; ≤ 3 || continue
+    s &#61; superharmonic&#40;α&#41;
+    println&#40;&quot;  &quot;, rpad&#40;string&#40;Vector&#40;α&#41;&#41;, 12&#41;, rpad&#40;string&#40;round&#40;s, digits &#61; 3&#41;&#41;, 18&#41;,
+        rpad&#40;string&#40;round&#40;abs&#40;s&#41;, digits &#61; 3&#41;&#41;, 8&#41;, abs&#40;s&#41; &lt; R ? &quot;yes&quot; : &quot;no&quot;&#41;
+end</code></pre>
+<p>Because every Re λ is equal, s&#40;α&#41; &#61; λ_r forces |α| &#61; 1: this spectrum has no NONTRIVIAL resonances at all. They appear when the eigenvalues sit on the imaginary axis, which is the conservative case the bordered solve exists for.</p>
+<pre><code class="language-julia">println&#40;&quot;\nresonant monomials of degree &gt; 1: &quot;,
+    count&#40;α -&gt; sum&#40;α&#41; &gt; 1 &amp;&amp; any&#40;r -&gt; abs&#40;λ&#91;r&#93; - superharmonic&#40;α&#41;&#41; &lt; 1e-8, eachindex&#40;λ&#41;&#41;,
+        full.exponents&#41;&#41;</code></pre>
+<p>So the band is NOT downward closed. The graded solve reads W&#91;α − eᵢ&#93; while working on α, so <code>parametrise</code> rejects a set with a missing divisor.</p>
+<pre><code class="language-julia">println&#40;&quot;\nis_downward_closed&#40;band&#41;: &quot;, is_downward_closed&#40;band&#41;&#41;
+@assert &#33;is_downward_closed&#40;band&#41;
+
+unit&#40;i, n&#41; &#61; SVector&#123;n, Int&#125;&#40;ntuple&#40;j -&gt; j &#61;&#61; i ? 1 : 0, n&#41;&#41;</code></pre>
+<p>Degree 1 is exempt — its only divisor is the constant, which min_degree &#61; 1 removed.</p>
+<pre><code class="language-julia">for α in band.exponents, i in 1:3
+    &#40;α&#91;i&#93; &gt; 0 &amp;&amp; sum&#40;α&#41; &gt; 1&#41; || continue
+    β &#61; α - unit&#40;i, 3&#41;
+    find_in_set&#40;band, β&#41; &#61;&#61;&#61; nothing || continue
+    println&#40;&quot;  &quot;, Vector&#40;α&#41;, &quot; is kept &#40;|s| &#61; &quot;, round&#40;abs&#40;superharmonic&#40;α&#41;&#41;, digits &#61; 3&#41;,
+        &quot;&#41;, but its divisor &quot;, Vector&#40;β&#41;, &quot; has |s| &#61; &quot;,
+        round&#40;abs&#40;superharmonic&#40;β&#41;&#41;, digits &#61; 3&#41;, &quot; ≥ &quot;, R&#41;
+end</code></pre>
+<p>The fix: take the downward closure — add back every divisor of every member. The result is legal, and still far smaller than the full expansion.</p>
+<pre><code class="language-julia">function downward_closure&#40;S::MultiindexSet&#123;N&#125;&#41; where &#123;N&#125;
+    closed &#61; Set&#123;SVector&#123;N, Int&#125;&#125;&#40;&#41;
+    for α in S.exponents
+        for idx in CartesianIndices&#40;ntuple&#40;i -&gt; 0:α&#91;i&#93;, N&#41;&#41;
+            push&#33;&#40;closed, SVector&#123;N, Int&#125;&#40;Tuple&#40;idx&#41;&#41;&#41;
+        end
+    end
+    delete&#33;&#40;closed, zero&#40;SVector&#123;N, Int&#125;&#41;&#41;   # parametrise needs min_degree ≥ 1
+    return MultiindexSet&#40;collect&#40;closed&#41;&#41;
+end
+
+band_closed &#61; downward_closure&#40;band&#41;
+println&#40;&quot;\ndownward closure:   &quot;, length&#40;band_closed&#41;, &quot; monomials, added &quot;,
+    &#91;Vector&#40;α&#41; for α in band_closed.exponents if find_in_set&#40;band, α&#41; &#61;&#61;&#61; nothing&#93;&#41;
+println&#40;&quot;is_downward_closed: &quot;, is_downward_closed&#40;band_closed&#41;&#41;
+println&#40;&quot;still below |α| ≤ 4: &quot;, length&#40;band_closed&#41;, &quot; &lt; &quot;, length&#40;full&#41;&#41;
+@assert length&#40;band_closed&#41; &#61;&#61; 15 &amp;&amp; is_downward_closed&#40;band_closed&#41;
+
+write_lattice&#40;joinpath&#40;FIGDIR, &quot;fig4_spectral.html&quot;&#41;,
+    LatticeSpectrum&#40;full, λ, R;
+        note &#61; &quot;Hover a monomial: the arrows add α₁ copies of λ₁, α₂ of λ₂ and α₃ of λ₃ to reach s&#40;α&#41;.&quot;&#41;;
+    title &#61; &quot;Superharmonics&quot;,
+    caption &#61; &quot;Left: the lattice, coloured by |s&#40;α&#41;|. Right: the same monomials as points &quot; *
+              &quot;in the complex plane, with the band |s| &lt; 4 dashed.&quot;&#41;</code></pre>
+<hr />
+<ol start="6">
+<li><p>Handing a custom set to <code>parametrise</code></p>
+</li>
+</ol>
+<p><code>parametrise&#40;model, order, ep; mset &#61; ...&#41;</code> checks the first three clauses below and trusts you on the fourth. This helper checks all of them up front, which is worth doing before a long solve. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
+println&#40;&quot;6. Checking the parametrise contract\n&quot;&#41;
+
+function check_mset&#40;mset::MultiindexSet&#123;N&#125;, nvar::Int&#41; where &#123;N&#125;
+    problems &#61; String&#91;&#93;
+    N &#61;&#61; nvar ||
+        push&#33;&#40;problems, &quot;has &#36;N variables, but the model needs NVAR &#61; &#36;nvar&quot;&#41;
+    isempty&#40;mset.exponents&#41; || sum&#40;first&#40;mset.exponents&#41;&#41; ≥ 1 ||
+        push&#33;&#40;problems, &quot;contains the zero multiindex &#40;needs min total degree ≥ 1&#41;&quot;&#41;
+    for i in 1:N
+        find_in_set&#40;mset, &#91;j &#61;&#61; i ? 1 : 0 for j in 1:N&#93;&#41; &#61;&#61;&#61; nothing &amp;&amp;
+            push&#33;&#40;problems, &quot;is missing the unit multiindex e_&#36;i&quot;&#41;
+    end
+    is_downward_closed&#40;mset&#41; ||
+        push&#33;&#40;problems, &quot;is not downward closed &#40;a divisor of a member is missing&#41;&quot;&#41;
+    return problems
+end
+
+for &#40;name, S&#41; in &#40;&quot;isotropic |α| ≤ 4&quot; &#61;&gt; all_multiindices_up_to&#40;2, 4; min_degree &#61; 1&#41;,
+    &quot;anisotropic z × θ&quot; &#61;&gt; aniso_A,
+    &quot;spectral band &#40;raw&#41;&quot; &#61;&gt; band,
+    &quot;spectral band &#40;closed&#41;&quot; &#61;&gt; band_closed&#41;
+    nvar &#61; length&#40;first&#40;S.exponents&#41;&#41;
+    problems &#61; check_mset&#40;S, nvar&#41;
+    println&#40;rpad&#40;name, 26&#41;, isempty&#40;problems&#41; ? &quot;OK — usable as mset&quot; :
+                            &quot;rejected: &quot; * join&#40;problems, &quot;; &quot;&#41;&#41;
+end
+
+println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
+println&#40;&quot;Figures written to &quot;, FIGDIR&#41;
+foreach&#40;f -&gt; println&#40;&quot;  &quot;, f&#41;, sort&#40;readdir&#40;FIGDIR&#41;&#41;&#41;
+println&#40;&quot;Demo finished successfully.&quot;&#41;</code></pre>
+
+</main></body></html>

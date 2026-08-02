@@ -80,28 +80,28 @@
     "semantic_hash": "a0c7c7eaad29fd4903f9c11eda5b4e8a"
   },
   "src/FullOrderModel/ExternalSystems.jl": {
-    "mtime": 1785602084.5015976,
-    "ast_hash": "d452d0695eebc527ff09e0af926473a2",
+    "mtime": 1785672283.2166188,
+    "ast_hash": "d874c6bfac65b6e56a7dfbace001c7ce",
     "semantic_hash": ""
   },
   "src/FullOrderModel/FullOrderModel.jl": {
-    "mtime": 1785602504.67728,
-    "ast_hash": "563df79b68dbee3152d03b125129c710",
+    "mtime": 1785691622.958658,
+    "ast_hash": "23f55ad5b59b134540a90d9ce13f3fed",
     "semantic_hash": ""
   },
   "src/FullOrderModel/MultilinearMaps.jl": {
-    "mtime": 1785602023.0468132,
-    "ast_hash": "3de4fb6d486ea454dd5b069f30883d6b",
+    "mtime": 1785691846.2935839,
+    "ast_hash": "3b24d1fdef0207abaf8bab11f20eba75",
     "semantic_hash": ""
   },
   "src/MORFE.jl": {
-    "mtime": 1785600150.8914459,
-    "ast_hash": "c8db3eeb406c633fc0c226e397b46444",
+    "mtime": 1785706961.5288908,
+    "ast_hash": "c6485ce304547f89112b299c84db4d56",
     "semantic_hash": ""
   },
   "src/Multiindices.jl": {
-    "mtime": 1785602058.8974304,
-    "ast_hash": "403333f1772de2f172f35e453a46fa56",
+    "mtime": 1785706961.52927,
+    "ast_hash": "4b46e4c326754da4acbf3536d1440033",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalBenchmark.jl": {
@@ -115,18 +115,18 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl": {
-    "mtime": 1785600150.9843946,
-    "ast_hash": "90a7c6d7e7184d13699496a29502aa20",
+    "mtime": 1785674215.3205183,
+    "ast_hash": "38b342a1dda0ef883207d3cf4d11519e",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl": {
-    "mtime": 1785601781.442925,
-    "ast_hash": "eb448202ce448ebc0990a602df17f7cd",
+    "mtime": 1785603213.5399592,
+    "ast_hash": "703f5bcafc8882d0f9d4a8927d795ede",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl": {
-    "mtime": 1785602199.2610674,
-    "ast_hash": "d1ebf015521c51fc5c9b62c539a780c7",
+    "mtime": 1785603147.1395302,
+    "ast_hash": "de6ef71802301e1c9c4f4af1672dcfd1",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/ConjugateSymmetry.jl": {
@@ -150,13 +150,13 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/HornerEvaluator.jl": {
-    "mtime": 1785600151.0554547,
-    "ast_hash": "6709646ce9185b2206087102ec000cb5",
+    "mtime": 1785672283.5433586,
+    "ast_hash": "e93c311d0fc7056fab4d2c82f856f292",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl": {
-    "mtime": 1785600151.057795,
-    "ast_hash": "ec4c7ce0cce160e29c6f3d8add85728c",
+    "mtime": 1785691846.4258344,
+    "ast_hash": "fd4ccf3740b6bcd8fce3e1e2e2d9a6b2",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl": {
@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl": {
-    "mtime": 1785600151.1295009,
-    "ast_hash": "13fe752cda0c4624de572758696e6748",
+    "mtime": 1785672102.101767,
+    "ast_hash": "5a1c4931df579ddd1d4bf0613435200e",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/RightHandSide/MultilinearTerms/CacheBuilder.jl": {
@@ -410,8 +410,8 @@
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/demo_NDOrderModel.jl": {
-    "mtime": 1781706765.6875243,
-    "ast_hash": "d1c9871490a15921b1d67dd47dc92f2d",
+    "mtime": 1785691637.1582773,
+    "ast_hash": "b2268f76521a0be22de70c156ab5ac17",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/demo_external_system.jl": {
@@ -490,18 +490,18 @@
     "semantic_hash": ""
   },
   "test/FullOrderModel/test_external_system.jl": {
-    "mtime": 1785600151.6974444,
-    "ast_hash": "2b736b2b9f31c06c02a9c05564efe50b",
+    "mtime": 1785672173.4032295,
+    "ast_hash": "1dccb17eed51b843d80732deafdc1cc8",
     "semantic_hash": ""
   },
   "test/FullOrderModel/test_full_order_model.jl": {
-    "mtime": 1785600151.7155344,
-    "ast_hash": "0ea8a5e9735adb75849139e74a5b89f9",
+    "mtime": 1785706293.6767144,
+    "ast_hash": "c9350f17776c027e051af189bf15cec1",
     "semantic_hash": ""
   },
   "test/FullOrderModel/test_multilinear_maps.jl": {
-    "mtime": 1785600151.7470582,
-    "ast_hash": "9a792e4148c16cfd0f13a602151ccae9",
+    "mtime": 1785706291.5455153,
+    "ast_hash": "1669b7c0277afacce920efbcd6a5e97e",
     "semantic_hash": ""
   },
   "test/ParametrisationMethod/test_conjugate_symmetry.jl": {
@@ -555,8 +555,8 @@
     "semantic_hash": ""
   },
   "test/Utils/test_multiindices.jl": {
-    "mtime": 1785600152.1776981,
-    "ast_hash": "415c7cf4442bfe5a5b3b6cec2f3fedba",
+    "mtime": 1785706961.529687,
+    "ast_hash": "0f0e8731fdc33f27f52c466362f507ee",
     "semantic_hash": ""
   },
   "test/Utils/test_polynomials.jl": {
@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "test/runtests.jl": {
-    "mtime": 1785600152.334102,
-    "ast_hash": "ec5a2f5b59b0b17792d374a210234e68",
+    "mtime": 1785706925.0680008,
+    "ast_hash": "582bad347dc046267f995b222c7c0ec7",
     "semantic_hash": ""
   },
   "website/assets/dpim-scheme.jsx": {
@@ -640,8 +640,8 @@
     "semantic_hash": ""
   },
   "website/generate_api.jl": {
-    "mtime": 1785602606.4951003,
-    "ast_hash": "46d3da6eb6c92b86f2ee8db5b667d721",
+    "mtime": 1785604412.2786713,
+    "ast_hash": "fb975da4bd785e9d9857f8f79506d738",
     "semantic_hash": ""
   },
   ".github/workflows/Documentation.yml": {
@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "examples/internals/README.md": {
-    "mtime": 1781706765.9249246,
-    "ast_hash": "28d5af427a15e12203cbe1c199ee38e4",
+    "mtime": 1785690447.5935943,
+    "ast_hash": "15cbf7e10c7151bf23edc7710819ab67",
     "semantic_hash": ""
   },
   "examples/mesh_import/README.md": {
@@ -1135,23 +1135,23 @@
     "semantic_hash": ""
   },
   "website/tutorials/index.html": {
-    "mtime": 1785245339.4447825,
-    "ast_hash": "e67cf2eab8983d5bedba9ce31d36e75e",
+    "mtime": 1785691478.4743335,
+    "ast_hash": "e35f298d732759970c12c9c9fd7be5b4",
     "semantic_hash": ""
   },
   "website/tutorials/karman.html": {
-    "mtime": 1785245130.991529,
-    "ast_hash": "f874fc4d28b8282d987ec9f9c2cf7357",
+    "mtime": 1785691456.3337584,
+    "ast_hash": "1d43d943dca39271480ef028e5df0e7f",
     "semantic_hash": ""
   },
   "website/tutorials/micromirror.html": {
-    "mtime": 1785245175.1254022,
-    "ast_hash": "a6f5d6ee2b48a4019b0e1dcf4384f9a8",
+    "mtime": 1785691456.3343117,
+    "ast_hash": "5e1dbb2e3064c4044e6305c1029b44c9",
     "semantic_hash": ""
   },
   "website/tutorials/roadmap.html": {
-    "mtime": 1785245130.993806,
-    "ast_hash": "d22bd095863425769ff91036ff6e2ef7",
+    "mtime": 1785691456.3346376,
+    "ast_hash": "435679b487df42ceac29f87ebdd94cda",
     "semantic_hash": ""
   },
   "website/tutorials/assets/karman/karman_thumb.svg": {
@@ -1195,58 +1195,58 @@
     "semantic_hash": ""
   },
   "website/generate_literate.jl": {
-    "mtime": 1785245252.3622773,
-    "ast_hash": "2dcfa536a0ca822c1b377a910336ad02",
+    "mtime": 1785691484.6796727,
+    "ast_hash": "3dce6174ba405036550be3fad2b4f8ea",
     "semantic_hash": ""
   },
   "website/tutorials/literate/01_clamped_beam_ferrite.html": {
-    "mtime": 1785245268.9437199,
-    "ast_hash": "85689d607b605b421694a128f6f56b97",
+    "mtime": 1785709857.4084888,
+    "ast_hash": "3de35ace3baf7c8d030e9504610ff56d",
     "semantic_hash": ""
   },
   "website/tutorials/literate/02_clamped_beam_gridap.html": {
-    "mtime": 1785245269.0112243,
-    "ast_hash": "4fab4422c615dd4db22e5b1adc704afb",
+    "mtime": 1785709857.4348195,
+    "ast_hash": "4e76bdba1a539cfe40d19b63cc13509a",
     "semantic_hash": ""
   },
   "website/tutorials/literate/03_arch_comsol_wedge.html": {
-    "mtime": 1785245269.0338898,
-    "ast_hash": "e446f533ea4d302af7b82fea9fc00532",
+    "mtime": 1785709857.4492078,
+    "ast_hash": "b5827235b826f7b68c7bab77bdf88329",
     "semantic_hash": ""
   },
   "website/tutorials/literate/04_parametric_clamped_beam.html": {
-    "mtime": 1785245269.0698962,
+    "mtime": 1785709857.4748023,
     "ast_hash": "839dd1fb9631a0e34e1d2bf01c6950e1",
     "semantic_hash": ""
   },
   "website/tutorials/literate/05_karman_vortex_street.html": {
-    "mtime": 1785245269.0975976,
+    "mtime": 1785709857.4887493,
     "ast_hash": "ca8a2e6b9569bb883b32c9f97cfcb120",
     "semantic_hash": ""
   },
   "website/tutorials/literate/06_dielectric_elastomer_actuator.html": {
-    "mtime": 1785245269.11815,
+    "mtime": 1785709857.5026689,
     "ast_hash": "91ba068d2e216169485c1e970d1c35fc",
     "semantic_hash": ""
   },
   "website/tutorials/literate/07_parametric_arch.html": {
-    "mtime": 1785245269.1407971,
+    "mtime": 1785709857.516072,
     "ast_hash": "9bfc5f3f48878256f19dbf5bcd6dc44c",
     "semantic_hash": ""
   },
   "website/tutorials/literate/08_mems_micromirror.html": {
-    "mtime": 1785245269.1609495,
-    "ast_hash": "634844a2aeb26db3aee57494e2c3e016",
+    "mtime": 1785709857.5285444,
+    "ast_hash": "031af9f0c33e5dcd2038ca805ece2aac",
     "semantic_hash": ""
   },
   "website/tutorials/parametric.html": {
-    "mtime": 1785245130.994215,
-    "ast_hash": "cecbe43071b33f4a6a7d23b8758a6ffb",
+    "mtime": 1785691456.333986,
+    "ast_hash": "149408ccfe34ba1847dbd03e5ae3794c",
     "semantic_hash": ""
   },
   "website/tutorials/structural_svk.html": {
-    "mtime": 1785245130.9944336,
-    "ast_hash": "b79c1040310562a1cff43b7ed44e7552",
+    "mtime": 1785691456.3350973,
+    "ast_hash": "3fa77d128198a6560af2f4661f3ccb74",
     "semantic_hash": ""
   },
   "format/format.jl": {
@@ -1257,6 +1257,76 @@
   ".github/workflows/format.yml": {
     "mtime": 1785600041.1439996,
     "ast_hash": "c9a2f71d49749e53026c6f006eb19258",
+    "semantic_hash": ""
+  },
+  "test/ParametrisationMethod/test_external_coupling.jl": {
+    "mtime": 1785673343.6169403,
+    "ast_hash": "4817cf61fd94c016917f3de48ade608f",
+    "semantic_hash": ""
+  },
+  "examples/internals/multiindex_sets/main.jl": {
+    "mtime": 1785709344.9323795,
+    "ast_hash": "50c9d07151a49b48577011e5481f3379",
+    "semantic_hash": ""
+  },
+  "examples/internals/multiindex_sets/viz.jl": {
+    "mtime": 1785709648.9944193,
+    "ast_hash": "c688fbf3df8e7b5c68dd40e4533ce214",
+    "semantic_hash": ""
+  },
+  "examples/internals/multiindex_sets/README.md": {
+    "mtime": 1785709822.029277,
+    "ast_hash": "3bd29ccbe59db1721e49f65a564672df",
+    "semantic_hash": ""
+  },
+  "examples/internals/multiindex_sets/results/figures/fig1_generators.html": {
+    "mtime": 1785709672.1125274,
+    "ast_hash": "0916c4e599a63a19d7d7a8ae5f228161",
+    "semantic_hash": ""
+  },
+  "examples/internals/multiindex_sets/results/figures/fig2_anisotropic.html": {
+    "mtime": 1785709673.571319,
+    "ast_hash": "566bc48b5517220a8e99066181b2fdb6",
+    "semantic_hash": ""
+  },
+  "examples/internals/multiindex_sets/results/figures/fig3_deletion.html": {
+    "mtime": 1785709673.7565315,
+    "ast_hash": "1ff80ea292a2c8dc1d06c4b6f18fcc1b",
+    "semantic_hash": ""
+  },
+  "examples/internals/multiindex_sets/results/figures/fig4_spectral.html": {
+    "mtime": 1785709674.4027166,
+    "ast_hash": "a500afb3e81a21b6ab7cf2f9704b722e",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/multiindex/fig1_generators.html": {
+    "mtime": 1785709851.5843964,
+    "ast_hash": "0916c4e599a63a19d7d7a8ae5f228161",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/multiindex/fig2_anisotropic.html": {
+    "mtime": 1785709853.0657127,
+    "ast_hash": "566bc48b5517220a8e99066181b2fdb6",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/multiindex/fig3_deletion.html": {
+    "mtime": 1785709853.2886603,
+    "ast_hash": "1ff80ea292a2c8dc1d06c4b6f18fcc1b",
+    "semantic_hash": ""
+  },
+  "website/tutorials/assets/multiindex/fig4_spectral.html": {
+    "mtime": 1785709853.9468744,
+    "ast_hash": "a500afb3e81a21b6ab7cf2f9704b722e",
+    "semantic_hash": ""
+  },
+  "website/tutorials/literate/multiindex_sets.html": {
+    "mtime": 1785709857.3820329,
+    "ast_hash": "dd36b60c920d4d2db873fb24377ec191",
+    "semantic_hash": ""
+  },
+  "website/tutorials/multiindex_sets.html": {
+    "mtime": 1785709999.730746,
+    "ast_hash": "9a7b25e325b6e562cab5e9a8b2f2d033",
     "semantic_hash": ""
   }
 }

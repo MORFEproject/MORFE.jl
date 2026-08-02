@@ -323,6 +323,160 @@ end
 end
 
 # ============================================================================
+# Test non-mutating set operations: delete_multiindices, filter
+# ============================================================================
+@testset "delete_multiindices: explicit exponents" begin
+    set = all_multiindices_up_to(2, 2)   # [0,0],[1,0],[0,1],[2,0],[1,1],[0,2]
+
+    # A list of exponents, in several accepted spellings
+    @test collect(delete_multiindices(set, [[2, 0], [0, 2]])) ==
+          [[0, 0], [1, 0], [0, 1], [1, 1]]
+    @test delete_multiindices(set, [SVector{2, Int}(2, 0), SVector{2, Int}(0, 2)]) ==
+          delete_multiindices(set, [[2, 0], [0, 2]])
+    @test delete_multiindices(set, [(2, 0), (0, 2)]) ==
+          delete_multiindices(set, [[2, 0], [0, 2]])
+
+    # A single exponent is not a collection of exponents
+    single = delete_multiindices(set, [1, 1])
+    @test collect(single) == [[0, 0], [1, 0], [0, 1], [2, 0], [0, 2]]
+    @test delete_multiindices(set, (1, 1)) == single
+    @test delete_multiindices(set, SVector{2, Int}(1, 1)) == single
+
+    # Another MultiindexSet: plain set difference
+    @test collect(delete_multiindices(set, all_multiindices_up_to(2, 1))) ==
+          [[2, 0], [1, 1], [0, 2]]
+
+    # Exponents that are not members are ignored (setdiff semantics)
+    @test delete_multiindices(set, [[9, 9]]) == set
+    @test delete_multiindices(set, Vector{Int}[]) == set
+
+    # Wrong number of components is an error, both spellings
+    @test_throws ArgumentError delete_multiindices(set, [[1, 2, 3]])
+    @test_throws ArgumentError delete_multiindices(set, [1, 2, 3])
+    @test_throws ArgumentError delete_multiindices(set, all_multiindices_up_to(3, 1))
+end
+
+@testset "delete_multiindices: non-mutating" begin
+    set = all_multiindices_up_to(3, 3)
+    before_len = length(set)
+    before_exps = copy(set.exponents)
+    before_offs = copy(set.degree_offsets)
+
+    reduced = delete_multiindices(set, [[1, 1, 1]])
+    @test length(reduced) == before_len - 1
+
+    # The input is untouched, and the result does not alias it
+    @test length(set) == before_len
+    @test set.exponents == before_exps
+    @test set.degree_offsets == before_offs
+    @test reduced.exponents !== set.exponents
+
+    # Same for the predicate form and for the no-op path
+    delete_multiindices(α -> sum(α) > 1, set)
+    @test set.exponents == before_exps
+    untouched = delete_multiindices(set, [[9, 9, 9]])
+    @test untouched == set
+    @test untouched.exponents !== set.exponents
+end
+
+@testset "delete_multiindices: invariants survive" begin
+    set = all_multiindices_up_to(2, 3)
+
+    # Removing an entire degree block leaves a gap the offset table must absorb
+    gapped = delete_multiindices(α -> sum(α) == 2, set)
+    @test is_grlex_sorted(gapped)
+    @test collect(gapped) ==
+          [[0, 0], [1, 0], [0, 1], [3, 0], [2, 1], [1, 2], [0, 3]]
+
+    # find_in_set is degree-bracketed through degree_offsets: it must agree with a
+    # linear scan on both surviving and removed exponents
+    for (i, v) in enumerate(gapped.exponents)
+        @test find_in_set(gapped, v) == i
+    end
+    @test find_in_set(gapped, [1, 1]) === nothing
+    @test find_in_set(gapped, [2, 0]) === nothing
+
+    # ... and so must the degree-bracketed box query
+    @test indices_in_box_with_bounded_degree(gapped, [3, 3], 1, 4) == collect(2:7)
+    @test indices_in_box_with_bounded_degree(gapped, [3, 3], 2, 3) == Int[]
+
+    # Deleting the top degree shortens the offset table
+    trimmed = delete_multiindices(α -> sum(α) == 3, set)
+    @test is_grlex_sorted(trimmed)
+    @test trimmed == all_multiindices_up_to(2, 2)
+    @test find_in_set(trimmed, [3, 0]) === nothing
+
+    # Deleting everything yields a usable empty set
+    empty = delete_multiindices(α -> true, set)
+    @test length(empty) == 0
+    @test find_in_set(empty, [0, 0]) === nothing
+    @test indices_in_box_with_bounded_degree(empty, [3, 3], 0, 4) == Int[]
+end
+
+@testset "delete_multiindices and filter: predicate forms" begin
+    set = all_multiindices_up_to(3, 4)
+
+    @test delete_multiindices(α -> sum(α) > 2, set) == all_multiindices_up_to(3, 2)
+    @test filter(α -> sum(α) ≤ 2, set) == all_multiindices_up_to(3, 2)
+
+    # The two are exact complements: they partition the set
+    pred = α -> α[1] ≥ 2
+    kept = filter(pred, set)
+    dropped = delete_multiindices(pred, set)
+    @test length(kept) + length(dropped) == length(set)
+    @test isempty(intersect(Set(kept.exponents), Set(dropped.exponents)))
+    @test union(Set(kept.exponents), Set(dropped.exponents)) == Set(set.exponents)
+    @test is_grlex_sorted(kept)
+    @test is_grlex_sorted(dropped)
+
+    # The predicate sees an SVector
+    @test filter(α -> α isa SVector{3, Int}, set) == set
+
+    # An anisotropic condition: total degree in the first two variables, box in the third
+    aniso = filter(α -> α[1] + α[2] ≤ 2 && α[3] ≤ 1, all_multiindices_in_box([2, 2, 1]))
+    @test all(α -> α[1] + α[2] ≤ 2 && α[3] ≤ 1, aniso.exponents)
+    @test is_grlex_sorted(aniso)
+end
+
+# ============================================================================
+# Test is_downward_closed
+# ============================================================================
+@testset "is_downward_closed" begin
+    # Combinatorial truncations are closed by construction
+    @test is_downward_closed(all_multiindices_up_to(3, 4))
+    @test is_downward_closed(all_multiindices_up_to(3, 4; min_degree = 1))
+    @test is_downward_closed(all_multiindices_in_box([2, 3]))
+    @test is_downward_closed(all_multiindices_in_box([1, 2, 3]))
+
+    # Degenerate cases
+    @test is_downward_closed(MultiindexSet(SVector{2, Int}[]))
+    @test is_downward_closed(MultiindexSet(Matrix{Int}(undef, 0, 0)))
+
+    # Removing a divisor of a retained member breaks closure
+    set = all_multiindices_up_to(2, 2)
+    @test !is_downward_closed(delete_multiindices(set, [[1, 0]]))
+    @test !is_downward_closed(delete_multiindices(set, [[0, 1]]))
+
+    # Removing a maximal element does not
+    @test is_downward_closed(delete_multiindices(set, [[2, 0]]))
+
+    # A single monomial with no divisors present
+    @test !is_downward_closed(MultiindexSet([[2, 2]]))
+
+    # The zero multiindex is exempt: a min_degree = 1 set is still closed
+    @test is_downward_closed(delete_multiindices(set, [[0, 0]]))
+
+    # A spectral-style cut generally is not closed; its downward closure is
+    λ = [im, -im]
+    radius = 1.5
+    cut = filter(α -> abs(sum(λ .* α)) ≤ radius, all_multiindices_up_to(2, 3))
+    @test !is_downward_closed(cut)
+    closed = MultiindexSet(reduce(vcat,
+        [[SVector{2, Int}(a, b) for a in 0:α[1] for b in 0:α[2]] for α in cut.exponents]))
+    @test is_downward_closed(closed)
+end
+
+# ============================================================================
 # Test predicates: divides, is_constant
 # ============================================================================
 @testset "Predicates" begin

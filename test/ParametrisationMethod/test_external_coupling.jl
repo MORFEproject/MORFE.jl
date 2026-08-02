@@ -31,7 +31,10 @@ const _EC_N_EXT = 2
 const _EC_NVAR = _EC_ROM + _EC_N_EXT
 const _EC_DEGREE = 3
 const _EC_ζ = 0.01
-const _EC_ω = [1.0, 3.0, 5.0, 7.0]
+# Incommensurate: uniform damping makes λ_k ∝ ω_k, so an integer ratio ω_k/ω₁ ≤ degree
+# would put a monomial superharmonic exactly on a non-master eigenvalue (an outer
+# resonance the border cannot regularise).
+const _EC_ω = [1.0, 2.7, 4.3, 6.1]
 
 const _EC_K = Matrix{Float64}(Diagonal(_EC_ω .^ 2))
 const _EC_C = Matrix{Float64}(Diagonal(2_EC_ζ .* _EC_ω))
@@ -88,9 +91,10 @@ Build the model whose external dynamics are `A` and whose forcing shape matrix i
 The nonlinear term is a plain quadratic so the reduction is not trivial.
 """
 function _ec_make_model(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64})
-    F_real = real(F)
+    # `F` stays complex: the reference model's forcing is `F * T` with complex `T`, and
+    # taking a real part would break the very equivalence under test.
     term_quad = MultilinearMap((res, x, y) -> (res .+= x .* y), (2, 0))
-    term_forcing = MultilinearMap((res, r) -> (res .+= F_real * r), (0, 0), 1)
+    term_forcing = MultilinearMap((res, r) -> (res .+= F * r), (0, 0), 1)
     ext_sys = ExternalSystem(_ec_linear_external_polynomial(A))
     return NDOrderModel((_EC_K, _EC_C, _EC_M), (term_quad, term_forcing), ext_sys)
 end
@@ -162,6 +166,35 @@ end
             @test norm(R_coupled.poly.coefficients[1:_EC_ROM, idx]) < 1e-12
             @test norm(R_diag.poly.coefficients[1:_EC_ROM, idx]) < 1e-12
         end
+    end
+
+    @testset "invariance residual is truncation-limited, not O(ε)" begin
+        # Ground truth, independent of the transformation argument above.  With no external
+        # monomial resonant, the master coordinates stay zero under the reduced flow, so the
+        # external-only slice is genuinely invariant and the residual there must decay at the
+        # truncation rate O(ε^(degree+1)).  A dropped or double-counted coupling term shows up
+        # as an O(ε) residual instead — four orders shallower.
+        model = _ec_make_model(A_coupled, _EC_F)
+        FOM = model.n_fom
+        max_deg = maximum(t.deg for t in model.nonlinear_terms; init = 0)
+        E = zeros(ComplexF64, FOM)
+        buf_nl = zeros(ComplexF64, FOM)
+        buf_fom = zeros(ComplexF64, FOM)
+        pw = zeros(ComplexF64, _EC_NVAR, maximum(W_coupled.poly.max_exponents) + 1)
+
+        residual = function (ε)
+            z = ComplexF64[0, 0, ε, ε]
+            MORFE.InvarianceError._invariance_error_at!(
+                E, buf_nl, buf_fom, pw, model, max_deg, W_coupled, R_coupled, z)
+            return norm(E)
+        end
+
+        r1, r2 = residual(1e-2), residual(1e-3)
+        # One decade in ε must buy ~four decades in residual (degree 3 ⇒ O(ε⁴)).
+        @test r2 / r1≈1e-4 rtol=0.1
+        # And in absolute terms the residual must be far below the O(ε) an unfed
+        # coupling would leave behind.
+        @test r2 < 1e-8 * 1e-3
     end
 
     @testset "external rows of R carry the prescribed external dynamics" begin

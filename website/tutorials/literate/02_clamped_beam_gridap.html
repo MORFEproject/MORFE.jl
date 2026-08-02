@@ -46,6 +46,8 @@ end
 Pkg.instantiate&#40;&#41;
 
 using MORFE
+using MORFE.InvarianceError: invariance_error_norms
+using Random: MersenneTwister
 
 using Gridap
 using GridapGmsh
@@ -371,7 +373,37 @@ function write_rdyn&#40;R::ReducedDynamics&#123;ROM, NVAR, T&#125;, out_path::St
 end
 write_rdyn&#40;Rr, joinpath&#40;dirs.data, &quot;equations.txt&quot;&#41;&#41;
 
-save_rom&#40;dirs, W, R&#41;
+save_rom&#40;dirs, W, R&#41;</code></pre>
+<hr />
+<p>A-posteriori check: does the computed manifold actually satisfy the invariance equation ∂W/∂z·R&#40;z&#41; &#61; F&#40;W&#40;z&#41;&#41;?</p>
+<p>This is the validation that survives to sizes where there is no reference to compare against — it evaluates the defining equation on the manifold itself. Normalised by a representative term so the number is dimensionless and can be compared across models.</p>
+<p>Seeded: the number goes into summary.txt, which is version-controlled, so it must not change from run to run for reasons that have nothing to do with the model. –––––––––––––––––––––––––––––––––––––-</p>
+<pre><code class="language-julia">&quot;&quot;&quot;
+	invariance_residual&#40;model, W, R, ROM; amplitude, n_samples, seed&#41;
+		-&gt; &#40;absolute_rms, relative&#41;
+
+Relative invariance-equation residual on a Gaussian point cloud of the given
+amplitude, normalised by ‖B₀·W₁&#40;z&#41;‖ over the same cloud.
+&quot;&quot;&quot;
+function invariance_residual&#40;model, W, R, ROM;
+		amplitude &#61; 1e-3, n_samples &#61; 200, seed &#61; 20260731&#41;
+	rng &#61; MersenneTwister&#40;seed&#41;
+	rms &#61; invariance_error_norms&#40;model, W, R; n_samples, amplitude, rng&#41;.rms
+	scale &#61; 0.0
+	for _ in 1:n_samples
+		z &#61; ComplexF64&#91;complex&#40;amplitude / sqrt&#40;2&#41; * randn&#40;rng&#41;,
+			amplitude / sqrt&#40;2&#41; * randn&#40;rng&#41;&#41; for _ in 1:ROM&#93;
+		X &#61; MORFE.Polynomials.evaluate&#40;W.poly, z&#41;
+		scale &#61; max&#40;scale, norm&#40;model.linear_terms&#91;1&#93; * view&#40;X, :, 1&#41;&#41;&#41;
+	end
+	return rms, rms / scale
+end
+
+_amp &#61; 1e-3
+_res, _rel_res &#61; invariance_residual&#40;model, W, R, ROM; amplitude &#61; _amp&#41;
+println&#40;&quot;\nInvariance residual &#40;amplitude &#36;_amp&#41;: &quot;,
+	&quot;absolute rms &#61; &#36;_res, relative &#61; &#36;_rel_res&quot;&#41;
+
 write_summary&#40;dirs, &#91;
 	&quot;example: 02_clamped_beam_gridap&quot;,
 	&quot;model: clamped-clamped beam, St. Venant-Kirchhoff, Gridap backend&quot;,
@@ -382,6 +414,9 @@ write_summary&#40;dirs, &#91;
 	&quot;parametrisation_order: &#36;max_degree&quot;,
 	&quot;n_monomials: &#36;&#40;length&#40;mset&#41;&#41;&quot;,
 	&quot;cohomological_solve_time_s: &#36;&#40;_t_solve&#41;&quot;,
+	&quot;invariance_residual_amplitude: &#36;_amp&quot;,
+	&quot;invariance_residual_rms: &#36;_res&quot;,
+	&quot;invariance_residual_relative: &#36;_rel_res&quot;,
 &#93;&#41;
 println&#40;&quot;\nResults written to &#36;&#40;dirs.base&#41;&quot;&#41;</code></pre>
 

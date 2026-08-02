@@ -11,6 +11,14 @@ struct ScaledProduct
 end
 (s::ScaledProduct)(res, x, y) = (res .+= s.a .* x .* y)
 
+# The keyword constructor reports every value it had to default.  Testsets that are not
+# about that reporting wrap their calls in `quiet` to keep the output readable; the
+# "assumption reporting" testset below asserts the messages themselves.
+quiet(f) = Base.CoreLogging.with_logger(f, Base.CoreLogging.NullLogger())
+
+# Text of the single log record `f` is expected to emit.
+only_message(f) = string(only(first(Test.collect_test_logs(f))).message)
+
 function make_bilinear_elementwise()
     f!(res, x, y) = (res .+= x .* y)
     return f!
@@ -29,11 +37,11 @@ end
 
 @testset "MultilinearMaps" begin
     @testset "MultilinearMap construction" begin
-        @testset "first-order shorthand (no multiindex)" begin
+        @testset "no multiindex: shape inferred, order defaults to 2" begin
             f!(res, x, y) = (res .+= x .* y)
-            m = MultilinearMap(f!)
+            m = quiet(() -> MultilinearMap(f!))
             @test m.deg == 2
-            @test m.multiindex == (2,)
+            @test m.multiindex == (2, 0)
             @test m.multiplicity_external == 0
         end
 
@@ -108,7 +116,8 @@ end
                 @test kw.fully_asymmetric === pos.fully_asymmetric
             end
 
-            three_arg = [(f2!, (1,), 1), (f2!, (0,), 2), (f3!, (0, 0), 1)]
+            f1!(res, r) = (res .+= r)
+            three_arg = [(f2!, (1,), 1), (f2!, (0,), 2), (f1!, (0, 0), 1)]
             for (f!, mi, me) in three_arg
                 pos = MultilinearMap(f!, mi, me)
                 kw = MultilinearMap(f!; multiindex = mi, multiplicity_external = me)
@@ -119,24 +128,31 @@ end
             end
         end
 
-        @testset "bare call reproduces the first-order shorthand" begin
+        @testset "bare call infers the shape and defaults to ORD = 2" begin
             f!(res, x, y) = (res .+= x .* y)
-            m = MultilinearMap(f!)
-            @test m.multiindex === (2,)
-            # The shorthand used to build a UInt8 tuple that the inner constructor
-            # silently converted; pin the element type so that cannot come back.
-            @test typeof(m.multiindex) === NTuple{1, Int}
+            m = @test_logs (:info, r"assumed multiindex") MultilinearMap(f!)
+            @test m.multiindex === (2, 0)
+            # The old shorthand built a UInt8 tuple that the inner constructor silently
+            # converted; pin the element type so that cannot come back.
+            @test typeof(m.multiindex) === NTuple{2, Int}
             @test m.deg == 2
             @test m.multiplicity_external == 0
             @test m.fully_asymmetric === nothing
+
+            # `order = 1` is the way to get a first-order term, which `FirstOrderModel` needs.
+            m1 = @test_logs (:info,) match_mode=:any MultilinearMap(f!; order = 1)
+            @test m1.multiindex === (2,)
+            @test m1 isa MultilinearMap{1}
         end
 
         @testset "fully_asymmetric round-trips through every form" begin
             f!(res, x, y) = (res .+= x .* y)
             for fa in (nothing, false, true)
-                @test MultilinearMap(f!; fully_asymmetric = fa).fully_asymmetric === fa
-                @test MultilinearMap(f!; multiindex = (2,),
-                    fully_asymmetric = fa).fully_asymmetric === fa
+                quiet() do
+                    @test MultilinearMap(f!; fully_asymmetric = fa).fully_asymmetric === fa
+                    @test MultilinearMap(f!; multiindex = (2,),
+                        fully_asymmetric = fa).fully_asymmetric === fa
+                end
                 @test MultilinearMap(f!, (2,);
                     fully_asymmetric = fa).fully_asymmetric === fa
                 @test MultilinearMap(f!, (1,), 1;
@@ -146,7 +162,7 @@ end
 
         @testset "multiindex accepts a vector" begin
             f!(res, x, y, z) = (res .+= x .* y .* z)
-            m = MultilinearMap(f!; multiindex = [2, 1])
+            m = MultilinearMap(f!; multiindex = [2, 1], multiplicity_external = 0)
             @test m.multiindex == (2, 1)
             @test m isa MultilinearMap{2}
         end
@@ -155,29 +171,37 @@ end
             f2!(res, x, y) = (res .+= x .* y)
             f3!(res, x, y, z) = (res .+= x .* y .* z)
 
-            padded = MultilinearMap(f2!; multiindex = (2,), order = 3)
+            padded = MultilinearMap(
+                f2!; multiindex = (2,), order = 3, multiplicity_external = 0)
             @test padded.multiindex == (2, 0, 0)
             @test padded isa MultilinearMap{3}
 
-            inferred = MultilinearMap(f2!; order = 3)
+            inferred = quiet(() -> MultilinearMap(f2!; order = 3))
             @test inferred.multiindex == (2, 0, 0)
 
-            from_degree = MultilinearMap(f3!; degree = 3, order = 3)
+            from_degree = quiet(() -> MultilinearMap(f3!; degree = 3, order = 3))
             @test from_degree.multiindex == (3, 0, 0)
 
-            with_external = MultilinearMap(f2!; multiplicity_external = 1, order = 2)
-            @test with_external.multiindex == (1, 0)
-            @test with_external.deg == 2
+            # A mixed internal/external split is never inferred — it would mean guessing
+            # f!(res, x, r).  Stating the multiindex is what makes it legal.
+            @test_throws "cannot infer how the 2 factors" MultilinearMap(
+                f2!; multiplicity_external = 1, order = 2)
+            stated = MultilinearMap(
+                f2!; multiindex = (1, 0), multiplicity_external = 1)
+            @test stated.multiindex == (1, 0)
+            @test stated.deg == 2
 
             @test_throws "never truncate" MultilinearMap(
                 f3!; multiindex = (2, 0, 1), order = 2)
-            @test MultilinearMap(f2!; multiindex = (2,), order = 1).multiindex == (2,)
+            @test MultilinearMap(f2!; multiindex = (2,), order = 1,
+                multiplicity_external = 0).multiindex == (2,)
         end
 
         @testset "order padding is symmetry-neutral" begin
             f!(res, x, y) = (res .+= x .* y)
             short = MultilinearMap(f!, (2,))
-            long = MultilinearMap(f!; multiindex = (2,), order = 3)
+            long = MultilinearMap(
+                f!; multiindex = (2,), order = 3, multiplicity_external = 0)
             @test typeof(symmetry_type(short)) === typeof(symmetry_type(long))
         end
 
@@ -187,14 +211,17 @@ end
             q!(res, x, y) = (res .+= x .* y)
             t!(res, x, y, z) = (res .+= x .* y .* z)
             K = Matrix{Float64}(I, 3, 3)
-            terms = (MultilinearMap(q!, (2,); order = 3),
+            terms = (
+                MultilinearMap(q!; multiindex = (2,), order = 3,
+                    multiplicity_external = 0, fully_asymmetric = false),
                 MultilinearMap(t!, (3, 0, 0); fully_asymmetric = false))
             @test NDOrderModel((K, K, K, K), terms) isa NDOrderModel{3}
         end
 
         @testset "derivatives keyword" begin
             f!(res, x, y, z) = (res .+= x .* y .* z)
-            m = MultilinearMap(f!; derivatives = (0, 0, 1))
+            m = MultilinearMap(f!; derivatives = (0, 0, 1), multiplicity_external = 0,
+                order = 2)
             @test m.multiindex == (2, 1)
             @test m.deg == 3
 
@@ -208,9 +235,12 @@ end
             evaluate_term!(got, m, (x, xd), nothing)
             @test got ≈ ref
 
-            @test MultilinearMap(f!; derivatives = (0, 0, 1), order = 4).multiindex ==
-                  (2, 1, 0, 0)
-            @test MultilinearMap(f!; derivatives = (0, 2, 2)).multiindex == (1, 0, 2)
+            @test quiet(() -> MultilinearMap(f!; derivatives = (0, 0, 1),
+                order = 4)).multiindex == (2, 1, 0, 0)
+            # `order` defaults to max(2, length(base)), so a three-order list is not
+            # truncated by the default.
+            @test quiet(() -> MultilinearMap(f!;
+                derivatives = (0, 2, 2))).multiindex == (1, 0, 2)
 
             @test_throws "non-decreasing" MultilinearMap(f!; derivatives = (1, 0, 0))
             @test_throws "must be non-negative" MultilinearMap(
@@ -221,20 +251,190 @@ end
 
         @testset "degree keyword" begin
             va!(res, args...) = (res .+= reduce((a, b) -> a .* b, args))
-            m = MultilinearMap(va!; degree = 3)
+            m = quiet(() -> MultilinearMap(va!; degree = 3))
             @test m.deg == 3
-            @test m.multiindex == (3,)
+            @test m.multiindex == (3, 0)      # order defaults to 2
 
-            ext = MultilinearMap(va!; degree = 3, multiplicity_external = 1)
+            # An inferred mixed split is refused; stating the multiindex allows it.
+            @test_throws "cannot infer how the 3 factors" MultilinearMap(
+                va!; degree = 3, multiplicity_external = 1)
+            ext = MultilinearMap(va!; multiindex = (2,), multiplicity_external = 1)
             @test ext.multiindex == (2,)
             @test ext.deg == 3
 
             f3!(res, x, y, z) = (res .+= x .* y .* z)
-            @test MultilinearMap(f3!; multiindex = (2, 1), degree = 3).deg == 3
+            @test MultilinearMap(f3!; multiindex = (2, 1), degree = 3,
+                multiplicity_external = 0).deg == 3
             @test_throws "disagrees" MultilinearMap(f3!; multiindex = (2, 1), degree = 4)
-            @test_throws "cannot infer" MultilinearMap(va!)
+            @test_throws "cannot infer the degree" MultilinearMap(va!)
             @test_throws "smaller than multiplicity_external" MultilinearMap(
                 va!; degree = 1, multiplicity_external = 2)
+        end
+    end
+
+    # Fixtures for the resolution tables: 0, 1, 2 and 3 factors, plus a varargs closure
+    # whose arity cannot be introspected.
+    z!(res) = nothing
+    r1!(res, r) = (res .+= r)
+    q2!(res, x, y) = (res .+= x .* y)
+    c3!(res, x, y, z) = (res .+= x .* y .* z)
+    vararg!(res, args...) = (res .+= reduce((a, b) -> a .* b, args))
+
+    @testset "forcing-term default" begin
+        @testset "bare call on a one-factor f!" begin
+            m = @test_logs (:info, r"pure external forcing term") MultilinearMap(r1!)
+            @test m.multiindex == (0, 0)
+            @test m.multiplicity_external == 1
+            @test m.deg == 1
+            @test m isa MultilinearMap{2}
+        end
+
+        @testset "equals the positional spelling field for field" begin
+            m = quiet(() -> MultilinearMap(r1!))
+            pos = MultilinearMap(r1!, (0, 0), 1)
+            @test typeof(m) === typeof(pos)
+            @test m.f! === pos.f!
+            @test m.multiindex === pos.multiindex
+            @test m.multiplicity_external === pos.multiplicity_external
+            @test m.deg === pos.deg
+            @test m.fully_asymmetric === pos.fully_asymmetric
+        end
+
+        @testset "multiplicity_external stated: only the rest is assumed" begin
+            m = @test_logs (:info, r"assumed multiindex") MultilinearMap(
+                r1!; multiplicity_external = 1)
+            @test m.multiindex == (0, 0)
+            @test m.deg == 1
+        end
+
+        @testset "purely external quadratic term" begin
+            m = @test_logs (:info, r"assumed multiindex") MultilinearMap(
+                q2!; multiplicity_external = 2)
+            @test m.multiindex == (0, 0)
+            @test m.multiplicity_external == 2
+            @test m.deg == 2
+        end
+
+        @testset "degree = 1 triggers the same reading" begin
+            m = @test_logs (:info, r"pure external forcing term") MultilinearMap(
+                vararg!; degree = 1)
+            @test m.multiindex == (0, 0)
+            @test m.multiplicity_external == 1
+        end
+
+        @testset "silenced by stating the shape" begin
+            @test_logs MultilinearMap(r1!; multiindex = (0,), multiplicity_external = 1)
+            @test_logs MultilinearMap(
+                r1!; multiindex = (0, 0, 0), multiplicity_external = 1)
+            @test quiet(() -> MultilinearMap(r1!; multiplicity_external = 1,
+                order = 3)).multiindex == (0, 0, 0)
+            @test quiet(() -> MultilinearMap(r1!; multiplicity_external = 1,
+                order = 1)).multiindex == (0,)
+        end
+
+        @testset "a stated linear term is still refused" begin
+            # The shape was stated, so there is nothing to assume: multiindex = (1,) with
+            # no external factors is unambiguously a linear state term.
+            @test_throws "degree at least 2" MultilinearMap(r1!; multiindex = (1,))
+            @test_throws "degree at least 2" MultilinearMap(r1!, (1,))
+        end
+
+        @testset "evaluates and composes into a forced model" begin
+            n = 3
+            m = quiet(() -> MultilinearMap(r1!))
+            res = zeros(ComplexF64, n)
+            evaluate_term!(res, m, (zeros(n), zeros(n)), ComplexF64[2.0, 0.0, 0.0])
+            @test res ≈ ComplexF64[2.0, 0.0, 0.0]
+
+            K = Matrix{Float64}(I, n, n)
+            ext = MORFE.ExternalSystems.ExternalSystem((0.0 + 1.0im, 0.0 - 1.0im))
+            @test NDOrderModel((K, K, K), (m,), ext) isa NDOrderModel
+        end
+    end
+
+    @testset "mixed internal/external splits are never inferred" begin
+        @test_throws "cannot infer how the 2 factors" MultilinearMap(
+            q2!; multiplicity_external = 1)
+        @test_throws "cannot infer how the 3 factors" MultilinearMap(
+            c3!; multiplicity_external = 1)
+        # ...but they are perfectly legal once stated.
+        @test_logs MultilinearMap(q2!; multiindex = (1, 0), multiplicity_external = 1)
+        @test MultilinearMap(q2!, (1, 0), 1).deg == 2
+    end
+
+    @testset "assumption reporting" begin
+        @testset "order defaults to 2 for every inferred shape" begin
+            @test quiet(() -> MultilinearMap(q2!)).multiindex == (2, 0)
+            @test quiet(() -> MultilinearMap(c3!)).multiindex == (3, 0)
+            @test quiet(() -> MultilinearMap(vararg!; degree = 3)).multiindex == (3, 0)
+            @test quiet(() -> MultilinearMap(q2!; order = 1)).multiindex == (2,)
+            @test quiet(() -> MultilinearMap(q2!; order = 3)).multiindex == (2, 0, 0)
+        end
+
+        @testset "compact message names exactly the assumed fields" begin
+            msg = only_message(() -> MultilinearMap(q2!))
+            @test occursin("multiindex = (2, 0)", msg)
+            @test occursin("order = 2", msg)
+            @test occursin("multiplicity_external = 0", msg)
+            @test occursin("from the arity of f!", msg)
+            @test !occursin("LINEAR", msg)
+            @test !occursin("fully_asymmetric", msg)
+
+            # `degree` is named as the source when it, not the arity, fixed the degree.
+            @test occursin("from `degree`",
+                only_message(() -> MultilinearMap(vararg!; degree = 3)))
+
+            # A field that was actually stated must not be listed as assumed.
+            omsg = only_message(() -> MultilinearMap(q2!; order = 1))
+            @test !occursin("order =", omsg)
+            @test occursin("multiplicity_external = 0", omsg)
+        end
+
+        @testset "forcing message explains the linear-term risk" begin
+            msg = only_message(() -> MultilinearMap(r1!))
+            @test occursin("LINEAR", msg)
+            @test occursin("f!(res, r)", msg)
+            @test occursin("linear_terms", msg)
+            @test !occursin("fully_asymmetric", msg)
+            # No inference from argument names: the factor is called `r` here, but the
+            # message must never quote it.
+            @test !occursin("named", msg)
+        end
+
+        @testset "every form the messages call silent really is silent" begin
+            @test_logs MultilinearMap(r1!; multiindex = (0, 0), multiplicity_external = 1)
+            @test_logs MultilinearMap(r1!, (0, 0), 1)
+            @test_logs MultilinearMap(q2!; multiindex = (2, 0), multiplicity_external = 0)
+        end
+
+        @testset "positional forms never report" begin
+            @test_logs MultilinearMap(q2!, (2, 0))
+            @test_logs MultilinearMap(q2!, (2,))
+            @test_logs MultilinearMap(q2!, (2, 0); fully_asymmetric = false)
+            @test_logs MultilinearMap(r1!, (0, 0), 1)
+            @test_logs MultilinearMap(r1!, (0, 0), 1; fully_asymmetric = true)
+        end
+
+        @testset "nothing is reported when construction fails" begin
+            # `_info_assumed` runs after the term validates, so a failed build never
+            # announces an assumption that did not survive.
+            logs, _ = Test.collect_test_logs() do
+                try
+                    MultilinearMap(z!)
+                catch
+                end
+            end
+            @test isempty(logs)
+            @test_throws "degree at least 2" MultilinearMap(z!)
+        end
+
+        @testset "fully_asymmetric is still reported where it matters" begin
+            # Excluded from the constructor report, but `_info_implicit_symmetry` at
+            # NDOrderModel still catches it — moved, not lost.
+            K = Matrix{Float64}(I, 3, 3)
+            term = MultilinearMap(q2!, (2, 0))
+            @test_logs (:info, r"did not set `fully_asymmetric`") NDOrderModel(
+                (K, K, K), (term,))
         end
     end
 
@@ -335,7 +535,10 @@ end
             h! = g!
             term = MultilinearMap(h!, (2,))
             K = Matrix{Float64}(I, 3, 3)
-            @test NDOrderModel((K, K), (term,)) isa NDOrderModel
+            # `fully_asymmetric` is left unset on purpose: that is what makes
+            # `_info_implicit_symmetry` — and hence `_term_label` — run at all.
+            model = @test_logs (:info,) match_mode=:any NDOrderModel((K, K), (term,))
+            @test model isa NDOrderModel
         end
 
         @testset "concretely annotated arguments" begin

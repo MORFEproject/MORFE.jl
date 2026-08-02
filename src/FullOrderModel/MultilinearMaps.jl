@@ -211,10 +211,14 @@ a per-slot list of derivative orders:
 ```julia
 MultilinearMap(f!; multiindex, derivatives, order, degree,
     multiplicity_external, fully_asymmetric)   # recommended
-MultilinearMap(f!)                                             # first-order shorthand
+MultilinearMap(f!)                             # shape inferred from the arity of f!
 MultilinearMap(f!, multiindex; fully_asymmetric)
 MultilinearMap(f!, multiindex, multiplicity_external; fully_asymmetric)
 ```
+
+In the keyword form an omitted `order` means `ORD = 2`, the second-order mechanical
+setting, and a one-factor `f!` is read as a pure external forcing term.  Every assumed
+value is reported through an `@info`; the positional forms assume nothing and stay silent.
 """
 struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
     f!::F
@@ -265,6 +269,11 @@ function _method_arities(f!)
     return fixed, va
 end
 
+"""
+	_arity_description(fixed, va) -> String
+
+Human-readable summary of the argument counts a callable accepts, e.g. `"3, ≥ 1"`.
+"""
 function _arity_description(fixed, va)
     parts = vcat([string(n) for n in sort(unique(fixed))],
         ["≥ $n" for n in sort(unique(va))])
@@ -388,6 +397,94 @@ function _msg_degree_mismatch(degree, multiindex, multiplicity_external)
     return "MultilinearMap: degree = $degree disagrees with multiindex = $multiindex and\n" *
            "multiplicity_external = $multiplicity_external, which give\n" *
            "sum(multiindex) + multiplicity_external = $total.  Drop `degree`, or correct it."
+end
+
+function _msg_mixed_split(f!, total, internal, multiplicity_external)
+    guess = _call_signature((internal,), multiplicity_external)
+    return "MultilinearMap: cannot infer how the $total factors of `f!` split between the " *
+           "state\nand the external state when multiplicity_external = " *
+           "$multiplicity_external — that would mean\nguessing $guess.\n" *
+           "State the internal shape explicitly:\n" *
+           "  MultilinearMap(f!; multiindex = ($internal, 0), multiplicity_external = " *
+           "$multiplicity_external)\n" *
+           "  MultilinearMap(f!, ($internal, 0), $multiplicity_external)" *
+           "                # positional form\n" *
+           "Only a pure forcing term — no derivative factors at all — is inferred " *
+           "automatically."
+end
+
+"""
+	_msg_assumed_compact(f!, multiindex, multiplicity_external, assumed) -> String
+
+One-line report of the values the constructor had to default.  `assumed` is the list of
+field names that were not stated; only those are named, so the closing sentence ("state
+them explicitly to silence this message") is always true.
+"""
+function _msg_assumed_compact(f!, multiindex, multiplicity_external, assumed)
+    deg = sum(multiindex) + multiplicity_external
+    return "MultilinearMap$(_definition_site(f!)) — assumed " * join(assumed, ", ") *
+           ".\n" *
+           "⇒ deg = $deg, $(_call_signature(multiindex, multiplicity_external)).  " *
+           "State them explicitly to silence this message."
+end
+
+"""
+	_msg_assumed_forcing(f!, multiindex, multiplicity_external) -> String
+
+Full report for the one inference that can silently reinterpret a linear term as a forcing
+term.  Every call it presents as silent really is silent under the resolution rules — the
+testset "suggested silent forms are silent" pins that.
+"""
+function _msg_assumed_forcing(f!, multiindex, multiplicity_external)
+    ord = length(multiindex)
+    deg = sum(multiindex) + multiplicity_external
+    return "MultilinearMap$(_definition_site(f!)) — assuming a pure external forcing term.\n" *
+           "  multiindex = $multiindex         — no derivative factors, system order " *
+           "ORD = $ord\n" *
+           "  multiplicity_external = $multiplicity_external   — f! receives the external " *
+           "state $(multiplicity_external == 1 ? "once" : "$multiplicity_external times")\n" *
+           "  ⇒ deg = $deg, called as $(_call_signature(multiindex, multiplicity_external))\n" *
+           "Nothing in `f!` reveals the system order or the external multiplicity, so both " *
+           "were\nassumed.  Either of these states the term in full, and is silent:\n" *
+           "  MultilinearMap(f!; multiindex = $multiindex, multiplicity_external = " *
+           "$multiplicity_external)\n" *
+           "  MultilinearMap(f!, $multiindex, $multiplicity_external)" *
+           "                              # positional form\n" *
+           "(`MultilinearMap(f!; multiplicity_external = $multiplicity_external, " *
+           "order = $ord)` builds the same term\nbut still reports the assumed multiindex.)\n" *
+           "If the single factor of `f!` is a state vector rather than the external state, " *
+           "this\nterm is LINEAR and belongs in `linear_terms`, not in a `MultilinearMap`."
+end
+
+"""
+	_info_assumed(f!, multiindex, multiplicity_external, mi_source, assumed_order,
+	              assumed_me, forcing)
+
+Emit an `@info` naming every value the constructor had to default, or nothing at all when
+the caller pinned them.  `mi_source` is `:stated`, `:arity` or `:degree`, and names where an
+assumed `multiindex` came from.
+
+`fully_asymmetric` is deliberately not reported here: it already has a dedicated diagnostic,
+`FullOrderModel._info_implicit_symmetry`, which fires at `NDOrderModel` construction exactly
+when the flag changes the result.
+"""
+function _info_assumed(f!, multiindex, multiplicity_external, mi_source, assumed_order,
+        assumed_me, forcing)
+    assumed_mi = mi_source !== :stated
+    (assumed_mi || assumed_order || assumed_me) || return nothing
+    if forcing
+        @info _msg_assumed_forcing(f!, multiindex, multiplicity_external)
+        return nothing
+    end
+    assumed = String[]
+    if assumed_mi
+        origin = mi_source === :degree ? "from `degree`" : "from the arity of f!"
+        push!(assumed, "multiindex = $multiindex ($origin)")
+    end
+    assumed_order && push!(assumed, "order = $(length(multiindex))")
+    assumed_me && push!(assumed, "multiplicity_external = $multiplicity_external")
+    @info _msg_assumed_compact(f!, multiindex, multiplicity_external, assumed)
+    return nothing
 end
 
 function _msg_degree_below_external(degree, multiplicity_external)
@@ -524,27 +621,41 @@ Create a multilinear term, naming every argument.  This is the recommended const
   with `multiindex`.
 - `order`: the system order `ORD`.  Zero-pads a shorter `multiindex` up to it, so a
   quadratic term of a third-order model can be written `multiindex = (2,), order = 3`
-  instead of `(2, 0, 0)`.  It may pad but never truncate.
+  instead of `(2, 0, 0)`.  It may pad but never truncate.  Defaults to `2` — see below.
 - `degree`: the total degree, external factors included.  Use it when the arity of `f!`
   cannot be introspected (a varargs closure), or as a cross-check against `multiindex`.
 - `multiplicity_external`: how many times the external state `r` is passed to `f!`,
-  after the derivative arguments.  Defaults to `0`.
+  after the derivative arguments.  Defaults to `0`, or to `1` under the forcing rule below.
 - `fully_asymmetric`: overrides the symmetry inferred from `multiindex`; see the note in
   the [`MultilinearMap`](@ref) docstring.  Defaults to `nothing` ("not stated").
 
 # Defaults for omitted arguments
 
-`multiplicity_external` defaults to `0`.  The `multiindex` is resolved in this order:
+| Value | Assumed unless… | Default |
+|:---|:---|:---|
+| `multiindex` | `multiindex` or `derivatives` given | from `degree`, else from the arity of `f!`, with every non-external factor on `x^(0)` |
+| `order` | `order` given, **or** `multiindex` given | `2` — the second-order mechanical setting |
+| `multiplicity_external` | given | `0`, or `1` under the forcing rule |
 
-1. `derivatives`, if given, is counted into a `multiindex`.
-2. Otherwise `multiindex`, if given, is used as-is.
-3. Otherwise `degree`, if given, puts all non-external factors on `x^(0)`.
-4. Otherwise the degree is inferred from the arity of `f!`, and all non-external factors
-   go on `x^(0)`.
+`multiindex` pins the order exactly, since its length *is* `ORD`; `derivatives` does not,
+because it lists argument slots rather than the system order.
 
-The result is then zero-padded to `order`, if `order` was given.  With every keyword
-omitted this reduces to the first-order shorthand: `MultilinearMap(f!)` reads the arity
-of `f!` and builds a term of that degree in `x` alone.
+Two rules apply only when neither `multiindex` nor `derivatives` was given:
+
+- **Forcing rule.**  A total degree of 1 with `multiplicity_external` unstated is read as a
+  pure external forcing term (`multiplicity_external = 1`, no derivative factors).  Without
+  it, `MultilinearMap(f!)` on `f!(res, r)` would resolve to a degree-1 term in the state,
+  which is *linear* and cannot be represented here — linear contributions belong in the
+  `linear_terms` matrices of `NDOrderModel`.
+- **Mixed terms are never inferred.**  With `multiplicity_external >= 1` and a non-zero
+  internal degree, splitting the factors would mean guessing `f!(res, x, r)`; that is an
+  `ArgumentError`.  Only the pure-forcing split is inferable.  Stating `multiindex` lifts
+  the restriction — mixed terms are perfectly legal, just not guessable.
+
+**Every assumed value is reported through an `@info`.**  A call that pins `multiindex` (or
+`derivatives` plus `order`) and `multiplicity_external` is silent, as are all the positional
+constructors.  `fully_asymmetric` is not reported here: it has its own diagnostic at
+`NDOrderModel` construction, which fires exactly when the flag changes the result.
 
 # Examples
 
@@ -557,11 +668,14 @@ MultilinearMap(f!; derivatives = (0, 0, 1))          # identical
 MultilinearMap(f!; multiindex = (3,), order = 3)     # ⇒ (3, 0, 0)
 MultilinearMap(f!; degree = 3, order = 3)            # ⇒ (3, 0, 0)
 
-# forcing term f!(res, r) driven only by the external state
+# pure external forcing, f!(res, r): shape, order and multiplicity all assumed
+MultilinearMap(f!)                                   # ⇒ (0, 0), me 1, ORD 2
+
+# the same term stated in full — silent
 MultilinearMap(f!; multiindex = (0, 0), multiplicity_external = 1)
 
-# first-order shorthand: degree read from the arity of f!
-MultilinearMap(f!)
+# a first-order term must say so, since the order defaults to 2
+MultilinearMap(f!; order = 1)                        # ⇒ (2,), ORD 1
 
 # f! is not symmetric in its two x^(0) slots
 MultilinearMap(f!; multiindex = (2, 0), fully_asymmetric = true)
@@ -571,8 +685,9 @@ MultilinearMap(f!; multiindex = (2, 0), fully_asymmetric = true)
 
 Throws `ArgumentError` if `multiindex`/`derivatives` entries are negative, if
 `derivatives` is not sorted, if `order` would truncate, if `degree` disagrees with
-`multiindex`, if the resulting degree is below 2 with no external factors, or if `f!`
-cannot be called with `deg + 1` arguments.
+`multiindex`, if a mixed internal/external split would have to be guessed, if the resulting
+degree is below 2 with no external factors, or if `f!` cannot be called with `deg + 1`
+arguments.
 """
 Base.@constprop :aggressive function MultilinearMap(f!;
         multiindex = nothing,
@@ -584,25 +699,52 @@ Base.@constprop :aggressive function MultilinearMap(f!;
     (multiindex === nothing || derivatives === nothing) ||
         throw(ArgumentError(_msg_multiindex_and_derivatives()))
 
+    stated_shape = multiindex !== nothing || derivatives !== nothing
     me = multiplicity_external === nothing ? 0 : Int(multiplicity_external)
     me >= 0 || throw(ArgumentError(_msg_negative_external(me)))
 
+    assumed_me = false
     base = if derivatives !== nothing
         _counts_from_derivatives(_as_index_tuple(derivatives, "derivatives"))
     elseif multiindex !== nothing
         _as_index_tuple(multiindex, "multiindex")
-    elseif degree !== nothing
-        (_internal_degree(Int(degree), me),)
     else
-        (_internal_degree(_infer_degree(f!), me),)
+        total = degree === nothing ? _infer_degree(f!) : Int(degree)
+        # Total degree 1 with no external factors is a *linear* term, which a
+        # `MultilinearMap` cannot represent — `linear_first_order_matrices` builds the
+        # companion pair from `linear_terms` alone, so such a term would drive the RHS
+        # while staying invisible to the eigenproblem.  When the caller stated neither the
+        # internal shape nor an external count, the only reading that makes sense is a
+        # pure forcing term, so assume it rather than erroring out.
+        if total == 1 && multiplicity_external === nothing
+            me = 1
+            assumed_me = true
+        end
+        internal = _internal_degree(total, me)
+        # Which of the `total` factors are internal and which are external is not something
+        # `f!` reveals.  Only the pure-forcing split (none internal) is inferable.
+        internal >= 1 && me >= 1 &&
+            throw(ArgumentError(_msg_mixed_split(f!, total, internal, me)))
+        (internal,)
     end
 
-    mi = order === nothing ? base : _pad_to_order(base, Int(order))
+    # ORD = 2 — the second-order mechanical setting — unless the caller pinned the order,
+    # either with `order` or with a `multiindex` whose length states it exactly.
+    assumed_order = order === nothing && multiindex === nothing
+    ord = order !== nothing ? Int(order) :
+          (multiindex !== nothing ? length(base) : max(2, length(base)))
+    mi = _pad_to_order(base, ord)
 
     if degree !== nothing && Int(degree) != sum(mi) + me
         throw(ArgumentError(_msg_degree_mismatch(Int(degree), mi, me)))
     end
-    return _build_multilinear_map(f!, mi, me, fully_asymmetric)
+    term = _build_multilinear_map(f!, mi, me, fully_asymmetric)
+    # Report only after the term validates, so a failed construction never announces an
+    # assumption that did not survive.
+    mi_source = stated_shape ? :stated : (degree === nothing ? :arity : :degree)
+    _info_assumed(f!, mi, me, mi_source, assumed_order,
+        multiplicity_external === nothing, assumed_me)
+    return term
 end
 
 """
@@ -634,7 +776,10 @@ Create a multilinear term for a system of order `ORD` that also takes the extern
 `f!` is called with the derivative arguments selected by `multiindex` first, then the
 external state `r` repeated `multiplicity_external` times.  A term that depends on the
 external state may have total degree 1 — a pure forcing term is written
-`MultilinearMap(f!, (0, 0), 1)`.
+`MultilinearMap(f!, (0, 0), 1)`, for which `MultilinearMap(f!)` is a shorthand.
+
+The model this term goes into must have an external system; `NDOrderModel` rejects a
+`multiplicity_external > 0` term otherwise.
 
 # Arguments
 - `f!`: in-place evaluation function, accumulating into its first argument
@@ -646,7 +791,13 @@ external state may have total degree 1 — a pure forcing term is written
   the [`MultilinearMap`](@ref) docstring
 
 Equivalent to
-`MultilinearMap(f!; multiindex = multiindex, multiplicity_external = multiplicity_external)`.
+`MultilinearMap(f!; multiindex = multiindex, multiplicity_external = multiplicity_external)`,
+and — like every positional form — it assumes nothing, so it never emits the `@info` the keyword
+constructor uses to report defaulted values.
+
+A pure forcing term of a second-order system, `MultilinearMap(f!, (0, 0), 1)`, is what the keyword
+constructor infers from a one-factor `f!` when nothing else is stated; see the keyword
+constructor's docstring for that shorthand and the assumptions it makes.
 """
 function MultilinearMap(
         f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int;

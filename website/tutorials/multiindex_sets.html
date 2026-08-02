@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Constructing MultiindexSets — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
+<style>
+.pre-wrap { position: relative; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 3px 9px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(255,255,255,0.06); color: var(--ink-3);
+  border: 1px solid var(--hair); border-radius: 4px;
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.6;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--ink); border-color: var(--ink-3); }
+.copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.4); background: rgba(56,152,38,0.08); }
+.fig iframe { display:block; width:100%; aspect-ratio: 900/560; border:0; background:#07070b; }
+/* vertical rhythm — space between successive ideas */
+.docs-main .step .body > p,
+.docs-main .step .body > pre,
+.docs-main .step .body > .pre-wrap,
+.docs-main .step .body > ul,
+.docs-main .step .body > .adm,
+.docs-main .step .body > .fig,
+.docs-main .step .body > .math-block { margin-top: 22px; }
+.docs-main .math-block { margin: 24px 0; }
+.docs-main > ul > li, .docs-main > ol > li { margin-bottom: 11px; }
+/* small comparison table */
+table.mi { width:100%; border-collapse:collapse; margin:20px 0; font-size:13.5px; }
+table.mi th, table.mi td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--hair); }
+table.mi th { color:var(--ink-2); font-family:var(--mono); font-size:11px;
+  letter-spacing:0.08em; text-transform:uppercase; font-weight:500; }
+table.mi td:first-child { font-family:var(--mono); font-size:12.5px; color:var(--ink); white-space:nowrap; }
+table.mi td { color:var(--ink-2); }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.docs-main pre').forEach(function (pre) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pre-wrap';
+    wrap.style.position = 'relative';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(pre.innerText).then(function () {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    wrap.appendChild(btn);
+  });
+});
+</script>
+</head>
+<body class="docs-page">
+
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+
+<div class="site">
+
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav>
+<script src="../assets/nav.js"></script>
+
+<div class="docs-shell">
+
+  <aside class="docs-side">
+    <div class="ver"><span>Tutorials</span></div>
+    <h4>Getting started</h4>
+    <ul>
+      <li><a href="../api.html#install">Installation</a></li>
+      <li><a href="../api.html#current-api">Current API</a></li>
+      <li><a href="../api.html#concepts">Concepts &amp; vocabulary</a></li>
+    </ul>
+
+    <h4>Demos</h4>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
+    </ul>
+
+    <h4>Tutorials</h4>
+    <ul>
+      <li><a href="multiindex_sets.html" class="active">Constructing MultiindexSets</a></li>
+      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
+      <li><a href="karman.html">Kármán vortex street</a></li>
+      <li><a href="parametric.html">Geometry as a coordinate</a></li>
+      <li><a href="micromirror.html">MEMS micromirror</a></li>
+      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
+      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
+      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
+    </ul>
+
+    <h4>Manual</h4>
+    <ul>
+      <li><a href="../api.html#fe-input">FE input format</a></li>
+      <li><a href="../api.html#master">Master subspace</a></li>
+      <li><a href="../api.html#order">Choosing order</a></li>
+      <li><a href="../api.html#forcing">Forcing &amp; resonances</a></li>
+      <li><a href="../api.html#continuation">Continuation</a></li>
+    </ul>
+
+  </aside>
+
+  <main class="docs-main">
+
+    <div class="crumbs">
+      <a href="../api.html">MORFE.jl</a>
+      <span class="sep">/</span>
+      <a href="index.html">Tutorials</a>
+      <span class="sep">/</span>
+      <span>Constructing MultiindexSets</span>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+      <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> CORE API</span>
+      <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
+      <span class="tag" style="color:var(--ink-3);">&lt; 5 S · NO FEM</span>
+    </div>
+
+    <h1 id="overview">Constructing MultiindexSets</h1>
+    <p style="margin:6px 0 14px;"><a class="btn" href="literate/multiindex_sets.html" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Literate script — standardized walkthrough ↗</a></p>
+    <p class="lede">
+      A <code>MultiindexSet</code> decides <strong>which monomials the DPIM solve computes</strong>.
+      It is the one argument that separates an isotropic expansion from an anisotropic parametric
+      ROM or a spectrally truncated one — and you can build it yourself.
+    </p>
+
+    <div class="fig">
+      <iframe src="assets/multiindex/fig1_generators.html"
+        title="Lattice views of the three automatic multiindex generators and the default DPIM set"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 01</span>
+        The three automatic generators. A multiindex $\alpha \in \mathbb N^N$ is the exponent
+        vector of the monomial $z_1^{\alpha_1}\cdots z_N^{\alpha_N}$, so a set of them is a
+        region of the integer lattice. Switch panels to compare the shapes.</div>
+    </div>
+
+    <div class="adm tip">
+      <div class="adm-head">Runs today — current API</div>
+      <div class="adm-body">
+        <p>Every line on this page comes from
+        <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/multiindex_sets" target="_blank" rel="noopener"><code>examples/internals/multiindex_sets</code></a>.
+        It needs no FEM backend and runs in a couple of seconds:</p>
+        <pre class="code" style="margin-top:10px;">julia --project -e 'include("examples/internals/multiindex_sets/main.jl")'</pre>
+      </div>
+    </div>
+
+    <h2 id="goal">What this tutorial demonstrates</h2>
+    <ul>
+      <li>The three automatic generators, and the graded-lexicographic order they produce.</li>
+      <li>Building the same sets by hand, straight from a vector of exponents.</li>
+      <li>Combining conditions — total degree in the master coordinates, a box in each parameter.</li>
+      <li>Removing multiindices with <code>delete_multiindices</code> and <code>filter</code>.</li>
+      <li>Bounding the superharmonics $s(\alpha) = \langle \lambda, \alpha\rangle$ by a spectral radius — and why that breaks the one invariant <code>parametrise</code> depends on.</li>
+    </ul>
+
+    <h2 id="why">Why the set matters</h2>
+    <p>
+      DPIM solves one cohomological problem per monomial. The set you supply is therefore
+      the complete list of unknowns: a parametrisation $\mathbf W$ stores one coefficient
+      column per member, and the reduced dynamics $\mathbf R$ does too. Doubling the set
+      doubles the solve.
+    </p>
+    <p>
+      The exponents are kept sorted in <strong>graded-lexicographic (GrLex)</strong> order —
+      total degree ascending, then lexicographic <em>descending</em> within a degree. That
+      order is what makes the solve causal: by the time the solver reaches $\alpha$, every
+      lower-degree coefficient it needs has already been computed.
+    </p>
+
+    <hr style="margin: 56px 0;"/>
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="num">01</div>
+      <div class="body">
+        <h3 id="step-generators">Start from a generator</h3>
+        <p>
+          Three functions cover the usual shapes. All three return a <code>MultiindexSet</code>
+          already in GrLex order.
+        </p>
+<pre class="code"><span class="kw">using</span> MORFE.Multiindices
+
+<span class="var">total_deg</span> <span class="op">=</span> <span class="fn">all_multiindices_up_to</span>(<span class="num">2</span>, <span class="num">4</span>; <span class="var">min_degree</span> <span class="op">=</span> <span class="num">1</span>)   <span class="cm"># 1 ≤ |α| ≤ 4</span>
+<span class="var">exact_deg</span> <span class="op">=</span> <span class="fn">multiindices_with_total_degree</span>(<span class="num">2</span>, <span class="num">4</span>)           <span class="cm"># |α| = 4</span>
+<span class="var">box</span> <span class="op">=</span> <span class="fn">filter</span>(<span class="var">α</span> <span class="op">-></span> <span class="fn">sum</span>(<span class="var">α</span>) <span class="op">≥</span> <span class="num">1</span>, <span class="fn">all_multiindices_in_box</span>([<span class="num">3</span>, <span class="num">3</span>]))   <span class="cm"># 0 ≤ αᵢ ≤ 3</span></pre>
+        <p>
+          The first is what <code>parametrise</code> builds when you pass no <code>mset</code>.
+          Note <code>min_degree = 1</code> on every one of them: the constant monomial is
+          excluded, because the expansion is centred on the fixed point.
+        </p>
+        <p>
+          Position in the GrLex order <em>is</em> the column index used everywhere else in MORFE.
+          <code>find_in_set</code> recovers it with a binary search bracketed to a single degree
+          block, and returns <code>nothing</code> for a non-member:
+        </p>
+<pre class="code"><span class="fn">find_in_set</span>(<span class="var">total_deg</span>, [<span class="num">1</span>, <span class="num">1</span>])   <span class="cm"># 5</span>
+<span class="fn">find_in_set</span>(<span class="var">total_deg</span>, [<span class="num">9</span>, <span class="num">9</span>])   <span class="cm"># nothing</span>
+
+<span class="cm"># componentwise bound + a HALF-OPEN degree window: lower ≤ |α| &lt; upper</span>
+<span class="fn">indices_in_box_with_bounded_degree</span>(<span class="var">total_deg</span>, [<span class="num">2</span>, <span class="num">2</span>], <span class="num">1</span>, <span class="num">3</span>)
+<span class="cm"># → [2, 3, 4, 5, 6]   i.e. [1,0] [0,1] [2,0] [1,1] [0,2]</span></pre>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="num">02</div>
+      <div class="body">
+        <h3 id="step-manual">Or hand over the exponents yourself</h3>
+        <p>
+          The generators are conveniences over one public constructor that takes the exponent
+          vectors directly. Order does not matter — it sorts into GrLex and deduplicates for you.
+        </p>
+<pre class="code"><span class="kw">using</span> StaticArrays: SVector
+
+<span class="var">by_hand</span> <span class="op">=</span> <span class="fn">MultiindexSet</span>([<span class="fn">SVector</span>{<span class="num">2</span>, Int}(<span class="var">a</span>, <span class="var">b</span>)
+                        <span class="kw">for</span> <span class="var">a</span> <span class="kw">in</span> <span class="num">0</span>:<span class="num">4</span> <span class="kw">for</span> <span class="var">b</span> <span class="kw">in</span> <span class="num">0</span>:<span class="num">4</span> <span class="kw">if</span> <span class="num">1</span> <span class="op">≤</span> <span class="var">a</span> <span class="op">+</span> <span class="var">b</span> <span class="op">≤</span> <span class="num">4</span>])
+
+<span class="var">by_hand</span> <span class="op">==</span> <span class="fn">all_multiindices_up_to</span>(<span class="num">2</span>, <span class="num">4</span>; <span class="var">min_degree</span> <span class="op">=</span> <span class="num">1</span>)   <span class="cm"># true</span></pre>
+        <p>Two more spellings of the same thing — note the matrix form takes exponents as <em>columns</em>:</p>
+<pre class="code"><span class="fn">MultiindexSet</span>([[<span class="num">1</span>, <span class="num">0</span>], [<span class="num">0</span>, <span class="num">1</span>], [<span class="num">1</span>, <span class="num">1</span>]])   <span class="cm"># Vector{Vector{Int}}</span>
+<span class="fn">MultiindexSet</span>([<span class="num">1</span> <span class="num">0</span> <span class="num">1</span>; <span class="num">0</span> <span class="num">1</span> <span class="num">1</span>])           <span class="cm"># nvars × nmonomials matrix</span></pre>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+      <div class="num">03</div>
+      <div class="body">
+        <h3 id="step-combine">Combine conditions: total degree × box</h3>
+        <p>
+          This is the shape parametric ROMs need. The reduced coordinates split into master
+          coordinates $z$, which deserve a shared total-degree budget, and parameter
+          coordinates $\theta$, which deserve a budget each — order 4 in $z$ but only 2 in
+          every $\theta$. The two conditions simply intersect.
+        </p>
+<pre class="code"><span class="kw">const</span> MAXZ <span class="op">=</span> <span class="num">4</span>   <span class="cm"># total degree budget in the master coordinates</span>
+<span class="kw">const</span> MAXT <span class="op">=</span> <span class="num">2</span>   <span class="cm"># per-parameter budget in each θ</span>
+
+<span class="cm"># route A — state both conditions in a comprehension</span>
+<span class="var">aniso_A</span> <span class="op">=</span> <span class="fn">MultiindexSet</span>([<span class="fn">SVector</span>{<span class="num">3</span>, Int}(<span class="var">a</span>, <span class="var">b</span>, <span class="var">c</span>)
+                        <span class="kw">for</span> <span class="var">a</span> <span class="kw">in</span> <span class="num">0</span>:MAXZ <span class="kw">for</span> <span class="var">b</span> <span class="kw">in</span> <span class="num">0</span>:MAXZ <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="num">0</span>:MAXT
+                        <span class="kw">if</span> <span class="var">a</span> <span class="op">+</span> <span class="var">b</span> <span class="op">≤</span> MAXZ <span class="op">&amp;&amp;</span> <span class="num">1</span> <span class="op">≤</span> <span class="var">a</span> <span class="op">+</span> <span class="var">b</span> <span class="op">+</span> <span class="var">c</span>])
+
+<span class="cm"># route B — start from the enclosing box and narrow it</span>
+<span class="var">aniso_B</span> <span class="op">=</span> <span class="fn">filter</span>(<span class="var">α</span> <span class="op">-></span> <span class="var">α</span>[<span class="num">1</span>] <span class="op">+</span> <span class="var">α</span>[<span class="num">2</span>] <span class="op">≤</span> MAXZ <span class="op">&amp;&amp;</span> <span class="fn">sum</span>(<span class="var">α</span>) <span class="op">≥</span> <span class="num">1</span>,
+                 <span class="fn">all_multiindices_in_box</span>([MAXZ, MAXZ, MAXT]))
+
+<span class="var">aniso_A</span> <span class="op">==</span> <span class="var">aniso_B</span>   <span class="cm"># true — 44 monomials, from a box of 75</span></pre>
+        <p>
+          Every button below acts on the <em>same</em> lattice — the box $[4,4,2]$ with the
+          origin removed. The <strong style="color:#CB3C33">red</strong> ones are filters and
+          <strong>intersect</strong>: switch two on and only the monomials satisfying both
+          survive. The <strong style="color:#389826">green</strong> ones
+          <strong>add</strong> their monomials back on top of whatever the filters left.
+          <code>reset</code> clears everything. What a condition excludes stays visible as a
+          hollow marker, and the camera holds still across a toggle, so the shapes can be
+          compared directly:
+        </p>
+        <div class="fig">
+          <iframe src="assets/multiindex/fig2_anisotropic.html"
+            title="A three-dimensional multiindex lattice with composable filter and union conditions"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 02</span>
+            One lattice, composable conditions — drag to orbit. Layers of $\alpha_3$ carry the
+            Julia colours, so the extrusion is easy to read. Filters: total degree
+            $|\alpha| \le 4$, the anisotropic cut $\alpha_1 + \alpha_2 \le 4$, a single variable
+            $\alpha_1 \le 2$, and a full box $\alpha \le (2,2,1)$. The unions add a face of the
+            lattice back — switch on the box filter and then a face to see monomials the box
+            had cut reappear.</div>
+        </div>
+        <p>
+          Switching on <code>|α| ≤ 4</code> and <code>α₁ + α₂ ≤ 4</code> together is the point of
+          this section: the anisotropic cut is <em>not</em> an isotropic expansion of the same
+          order. $|\alpha| \le 4$ in three variables allows $\alpha_3 = 3$ or $4$ while
+          forbidding the total degrees 5 and 6 that the anisotropic set keeps.
+        </p>
+        <div class="adm note">
+          <div class="adm-head">The origin is never a member</div>
+          <div class="adm-body">
+            <p>Every set on this page satisfies $|\alpha| \ge 1$. DPIM expands around a fixed
+            point, so <code>MORFE.jl</code> skips the constant monomial — build with <code>min_degree = 1</code>, or
+            filter with <code>sum(α) ≥ 1</code>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step">
+      <div class="num">04</div>
+      <div class="body">
+        <h3 id="step-delete">Remove multiindices</h3>
+        <p>
+          <code>delete_multiindices</code> returns a <strong>new</strong> set. There is no
+          in-place variant, so a set already handed to a parametrisation can never be mutated
+          underneath it.
+        </p>
+<pre class="code"><span class="var">S</span> <span class="op">=</span> <span class="fn">all_multiindices_up_to</span>(<span class="num">2</span>, <span class="num">3</span>; <span class="var">min_degree</span> <span class="op">=</span> <span class="num">1</span>)
+
+<span class="cm"># by explicit exponent — one, a list of them, or another set</span>
+<span class="fn">delete_multiindices</span>(<span class="var">S</span>, [[<span class="num">3</span>, <span class="num">0</span>], [<span class="num">0</span>, <span class="num">3</span>]])
+<span class="fn">delete_multiindices</span>(<span class="var">S</span>, [<span class="num">1</span>, <span class="num">1</span>])
+<span class="fn">delete_multiindices</span>(<span class="var">S</span>, <span class="fn">all_multiindices_up_to</span>(<span class="num">2</span>, <span class="num">1</span>; <span class="var">min_degree</span> <span class="op">=</span> <span class="num">1</span>))
+
+<span class="cm"># by predicate — and `filter` keeps exactly what this drops</span>
+<span class="var">odd</span> <span class="op">=</span> <span class="fn">delete_multiindices</span>(<span class="var">α</span> <span class="op">-></span> <span class="fn">iseven</span>(<span class="fn">sum</span>(<span class="var">α</span>)), <span class="var">S</span>)
+<span class="var">even</span> <span class="op">=</span> <span class="fn">filter</span>(<span class="var">α</span> <span class="op">-></span> <span class="fn">iseven</span>(<span class="fn">sum</span>(<span class="var">α</span>)), <span class="var">S</span>)
+
+<span class="fn">length</span>(<span class="var">odd</span>) <span class="op">+</span> <span class="fn">length</span>(<span class="var">even</span>) <span class="op">==</span> <span class="fn">length</span>(<span class="var">S</span>)   <span class="cm"># true — they partition S</span></pre>
+        <p>
+          Exponents that are not members are ignored, as with <code>setdiff</code>. Deletion
+          cannot reorder a sorted list, so the result skips the re-sort — but the degree
+          boundary table <em>is</em> rebuilt, and lookups stay correct even when an entire
+          degree disappears:
+        </p>
+<pre class="code"><span class="var">gapped</span> <span class="op">=</span> <span class="fn">delete_multiindices</span>(<span class="var">α</span> <span class="op">-></span> <span class="fn">sum</span>(<span class="var">α</span>) <span class="op">==</span> <span class="num">2</span>, <span class="var">S</span>)
+
+<span class="fn">find_in_set</span>(<span class="var">gapped</span>, [<span class="num">3</span>, <span class="num">0</span>])   <span class="cm"># 4</span>
+<span class="fn">find_in_set</span>(<span class="var">gapped</span>, [<span class="num">1</span>, <span class="num">1</span>])   <span class="cm"># nothing</span></pre>
+        <div class="fig">
+          <iframe src="assets/multiindex/fig3_deletion.html"
+            title="Lattice views of explicit and predicate deletion, with removed monomials drawn hollow"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 03</span>
+            Deletion is non-mutating: every panel is a new set derived from the first, with
+            what was removed drawn hollow. The last two panels are exact complements.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step">
+      <div class="num">05</div>
+      <div class="body">
+        <h3 id="step-spectral">Bound the superharmonics by a spectral radius</h3>
+        <p>
+          Every monomial carries a <strong>superharmonic</strong>
+          $s(\alpha) = \langle \lambda, \alpha\rangle$ — the eigenvalue of the linear part at
+          which its forced response sits. You get it by adding the eigenvalues head to tail,
+          $\alpha_k$ copies of $\lambda_k$. MORFE already computes it for resonance detection:
+          $\alpha$ is resonant with master mode $r$ when
+          $|\lambda_r - s(\alpha)| < \texttt{tol}$.
+        </p>
+        <p>
+          The same quantity supports a truncation no degree or box bound can express — keep
+          only the monomials whose response lands inside a band $|s(\alpha)| < R$ of the
+          spectrum. Take a damped spectrum: one oscillatory conjugate pair and one real
+          decaying mode.
+        </p>
+<pre class="code"><span class="var">λ</span> <span class="op">=</span> [<span class="op">-</span><span class="num">1</span> <span class="op">+</span> <span class="num">2</span><span class="var">im</span>, <span class="op">-</span><span class="num">1</span> <span class="op">-</span> <span class="num">2</span><span class="var">im</span>, <span class="op">-</span><span class="num">1.0</span> <span class="op">+</span> <span class="num">0</span><span class="var">im</span>]
+<span class="fn">superharmonic</span>(<span class="var">α</span>) <span class="op">=</span> <span class="fn">sum</span>(<span class="var">λ</span> <span class="op">.*</span> <span class="var">α</span>)   <span class="cm"># s(α) = ⟨λ, α⟩</span>
+
+<span class="var">full</span> <span class="op">=</span> <span class="fn">all_multiindices_up_to</span>(<span class="num">3</span>, <span class="num">4</span>; <span class="var">min_degree</span> <span class="op">=</span> <span class="num">1</span>)
+<span class="var">R</span> <span class="op">=</span> <span class="num">4.0</span>
+
+<span class="var">band</span> <span class="op">=</span> <span class="fn">filter</span>(<span class="var">α</span> <span class="op">-></span> <span class="fn">abs</span>(<span class="fn">superharmonic</span>(<span class="var">α</span>)) <span class="op">&lt;</span> <span class="var">R</span>, <span class="var">full</span>)
+<span class="cm"># 34 monomials → 13</span></pre>
+        <div class="fig">
+          <iframe src="assets/multiindex/fig4_spectral.html" style="aspect-ratio: 900/660;"
+            title="The lattice coloured by the superharmonic modulus, beside the superharmonics plotted in the complex plane"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 04</span>
+            Left: the lattice, coloured by $|s(\alpha)|$, hollow outside the band. Right: the
+            same monomials as points in $\mathbb{C}$, with $|s| = 4$ dashed. <strong>Hover a
+            monomial</strong> and the arrows add $\alpha_1$ copies of $\lambda_1$, $\alpha_2$
+            of $\lambda_2$ and $\alpha_3$ of $\lambda_3$ to reach its superharmonic.</div>
+        </div>
+        <p>
+          Two things the right-hand panel makes obvious. Every superharmonic has
+          $\operatorname{Re} s < 0$ — the whole right half-plane is empty, because every mode
+          is damped. And there are only <strong>nine</strong> distinct points for thirteen
+          monomials: superharmonics collide. $(1,1,0)$ and $(0,0,2)$ both land on $-2$;
+          $(2,1,0)$ and $(1,0,2)$ both land on $-3+2i$ by different routes. Collisions are
+          the whole reason resonance detection exists.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step">
+      <div class="num">06</div>
+      <div class="body">
+        <h3 id="step-contract">Check the contract before you solve</h3>
+        <p>
+          A spectral cut is <strong>not downward closed</strong>: it can keep $\alpha$ while
+          dropping a divisor of $\alpha$. The graded solve reads $\mathbf W[\alpha - e_i]$
+          while working on $\alpha$, so a missing divisor would be silently read as zero.
+        </p>
+<pre class="code"><span class="fn">is_downward_closed</span>(<span class="var">band</span>)   <span class="cm"># false</span>
+<span class="cm"># [2,1,0] is kept (|s| = 3.606), but its divisor [2,0,0] has |s| = 4.472 ≥ R</span>
+<span class="cm"># [1,2,0] is kept (|s| = 3.606), but its divisor [0,2,0] has |s| = 4.472 ≥ R</span></pre>
+        <p>
+          The fix is to take the downward closure — add back every divisor of every member.
+          The result is legal, and still far smaller than the full expansion:
+        </p>
+<pre class="code"><span class="kw">function</span> <span class="fn">downward_closure</span>(<span class="var">S</span>::MultiindexSet{N}) <span class="kw">where</span> {N}
+    <span class="var">closed</span> <span class="op">=</span> <span class="fn">Set</span>{<span class="fn">SVector</span>{N, Int}}()
+    <span class="kw">for</span> <span class="var">α</span> <span class="kw">in</span> <span class="var">S</span>.<span class="var">exponents</span>
+        <span class="kw">for</span> <span class="var">idx</span> <span class="kw">in</span> <span class="fn">CartesianIndices</span>(<span class="fn">ntuple</span>(<span class="var">i</span> <span class="op">-></span> <span class="num">0</span>:<span class="var">α</span>[<span class="var">i</span>], N))
+            <span class="fn">push!</span>(<span class="var">closed</span>, <span class="fn">SVector</span>{N, Int}(<span class="fn">Tuple</span>(<span class="var">idx</span>)))
+        <span class="kw">end</span>
+    <span class="kw">end</span>
+    <span class="fn">delete!</span>(<span class="var">closed</span>, <span class="fn">zero</span>(<span class="fn">SVector</span>{N, Int}))   <span class="cm"># DPIM needs min_degree ≥ 1</span>
+    <span class="kw">return</span> <span class="fn">MultiindexSet</span>(<span class="fn">collect</span>(<span class="var">closed</span>))
+<span class="kw">end</span>
+
+<span class="fn">is_downward_closed</span>(<span class="fn">downward_closure</span>(<span class="var">band</span>))   <span class="cm"># true — 15 monomials, vs 34</span>
+<span class="cm"># the closure added exactly [2,0,0] and [0,2,0]</span></pre>
+        <p>The full contract for a custom <code>mset</code>:</p>
+        <table class="mi">
+          <thead><tr><th>Clause</th><th>Why</th><th>Checked by <code>parametrise</code>?</th></tr></thead>
+          <tbody>
+            <tr><td>NVAR = ROM + N_EXT</td><td>one coordinate per reduced variable</td><td>yes</td></tr>
+            <tr><td>min total degree ≥ 1</td><td>the expansion is centred on the fixed point</td><td>yes</td></tr>
+            <tr><td>every unit multiindex</td><td>the linear part is initialised from the eigenvectors</td><td>yes</td></tr>
+            <tr><td>downward closed</td><td>the graded solve reads $\mathbf W[\alpha - e_i]$</td><td><strong>no</strong> — use <code>is_downward_closed</code></td></tr>
+            <tr><td>closed under conjugation</td><td>only when a conjugate permutation is used</td><td><strong>no</strong></td></tr>
+          </tbody>
+        </table>
+        <p>Then hand it over:</p>
+<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">order</span>, <span class="var">eigenproblem</span>; <span class="var">mset</span> <span class="op">=</span> <span class="var">band_closed</span>)</pre>
+      </div>
+    </div>
+
+    <h2 id="recap">Recap</h2>
+    <ul>
+      <li>Generators cover the simplex and the box; the plain constructor covers everything else.</li>
+      <li><code>filter</code> and <code>delete_multiindices</code> are complements, both non-mutating, both preserving GrLex order and the degree boundary table.</li>
+      <li>Anisotropy is just an intersection of conditions — total degree in $z$, a box in each $\theta$.</li>
+      <li>A spectral bound is the one truncation that uses the eigenvalues — and the one whose downward closure you must take before handing it to <code>parametrise</code>, because $|s|$ is not monotone under divisibility.</li>
+    </ul>
+
+    <h2 id="next">Where to next?</h2>
+    <ul>
+      <li><a href="parametric.html">Geometry as a coordinate</a> — an anisotropic set driving a real parametric ROM.</li>
+      <li><a href="karman.html">Kármán vortex street</a> — the complete workflow, resonance set included.</li>
+      <li><a href="../api.html">API reference</a> — <code>Multiindices</code> in full.</li>
+    </ul>
+
+  </main>
+
+  <aside class="docs-toc">
+    <h5>On this page</h5>
+    <ul id="toc-list">
+      <li><a href="#overview" class="active">Overview</a></li>
+      <li><a href="#goal">What you will learn</a></li>
+      <li><a href="#why">Why the set matters</a></li>
+      <li><a href="#step-generators">01 · Generators</a></li>
+      <li><a href="#step-manual">02 · By hand</a></li>
+      <li><a href="#step-combine">03 · Combining conditions</a></li>
+      <li><a href="#step-delete">04 · Removing multiindices</a></li>
+      <li><a href="#step-spectral">05 · Spectral radius</a></li>
+      <li><a href="#step-contract">06 · The contract</a></li>
+      <li><a href="#recap">Recap</a></li>
+      <li><a href="#next">Where to next?</a></li>
+    </ul>
+    <h5 style="margin-top:32px;">Links</h5>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/multiindex_sets" target="_blank" rel="noopener">Example folder ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl" target="_blank" rel="noopener">Multiindices.jl ↗</a></li>
+    </ul>
+  </aside>
+
+</div>
+</div>
+
+<script src="../assets/manifold-bg.js"></script>
+<script>
+(function () {
+  const links = document.querySelectorAll('#toc-list a');
+  const targets = [...links].map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  function onScroll() {
+    let active = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const r = targets[i].getBoundingClientRect();
+      if (r.top < 140) active = i;
+    }
+    links.forEach(l => l.classList.remove('active'));
+    if (links[active]) links[active].classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+</body>
+</html>

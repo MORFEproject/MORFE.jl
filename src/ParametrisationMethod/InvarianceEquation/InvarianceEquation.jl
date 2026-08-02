@@ -1,7 +1,7 @@
 """
 	InvarianceEquation
 
-Assemble the part of the cohomological equations that corresponds to the [`FullOrderDynamics`](@ref),
+Assemble the part of the cohomological equations that corresponds to the [`FullOrderModel`](@ref),
 thereby imposing invariance of the manifold.
 [`MasterModeOrthogonality`](@ref) handles the orthogonality conditions induced by the parametrisation styles.
 

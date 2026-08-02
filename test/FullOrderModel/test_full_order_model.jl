@@ -112,4 +112,57 @@ using SparseArrays
 
         @test res == zeros(n)
     end
+
+    @testset "external terms require an external system" begin
+        n = 3
+        K = Matrix{Float64}(I, n, n)
+        forcing = MultilinearMap((res, r) -> (res .+= sum(r)), (0, 0), 1)
+        quad = MultilinearMap((res, x, y) -> (res .+= x .* y), (2, 0);
+            fully_asymmetric = false)
+
+        @testset "rejected without one" begin
+            # Previously this constructed fine and only failed mid-solve, inside
+            # `evaluate_term!`.
+            @test_throws "without an external system" NDOrderModel((K, K, K), (forcing,))
+            @test_throws "term 1" NDOrderModel((K, K, K), (forcing,))
+            @test_throws "external factor(s)" NDOrderModel((K, K, K), (quad, forcing))
+        end
+
+        @testset "accepted with one" begin
+            ext = MORFE.ExternalSystems.ExternalSystem((0.0 + 1.0im, 0.0 - 1.0im))
+            @test NDOrderModel((K, K, K), (forcing,), ext) isa NDOrderModel
+        end
+
+        @testset "purely internal terms are unaffected" begin
+            @test NDOrderModel((K, K, K), (quad,)) isa NDOrderModel
+        end
+    end
+
+    @testset "implicit-symmetry @info" begin
+        n = 3
+        K = Matrix{Float64}(I, n, n)
+        f!(res, x, y) = (res .+= x .* y)
+
+        @testset "fires when fully_asymmetric is unset" begin
+            # multiindex = (2,) implies f! is symmetric in its two slots — an assumption
+            # the caller may not have realised it was making.
+            term = MultilinearMap(f!, (2,))
+            @test_logs (:info, r"did not set `fully_asymmetric`") NDOrderModel(
+                (K, K), (term,))
+        end
+
+        @testset "silent when fully_asymmetric is acknowledged" begin
+            # `@test_logs` with no pattern asserts nothing at Info or above is emitted.
+            for fa in (false, true)
+                term = MultilinearMap(f!, (2,); fully_asymmetric = fa)
+                @test_logs NDOrderModel((K, K), (term,))
+            end
+        end
+
+        @testset "silent when the multiindex implies no symmetry" begin
+            g!(res, x, xd) = (res .+= x .* xd)
+            term = MultilinearMap(g!, (1, 1))
+            @test_logs NDOrderModel((K, K, K), (term,))
+        end
+    end
 end # @testset "FullOrderModel"

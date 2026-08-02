@@ -21,12 +21,14 @@ B₀ = 3.0 * Matrix{Float64}(I, n, n)
 function bilinear_term!(res, x1, x2)
     @. res += x1 * x2
 end
-f_term1 = MultilinearMap(bilinear_term!)   # degree 2
+# `order = 1` is required here: `FirstOrderModel` takes `MultilinearMap{1}` terms, and an
+# omitted order defaults to the second-order mechanical setting, ORD = 2.
+f_term1 = MultilinearMap(bilinear_term!; order = 1)   # degree 2
 
 function trilinear_term!(res, x1, x2, x3)
     @. res += 3.0 * x1 * x2 * x3
 end
-f_term2 = MultilinearMap(trilinear_term!)  # degree 3
+f_term2 = MultilinearMap(trilinear_term!; order = 1)  # degree 3
 
 model_fo = FirstOrderModel((B₀, B₁), (f_term1, f_term2))
 A_fo, B_fo = linear_first_order_matrices(model_fo)

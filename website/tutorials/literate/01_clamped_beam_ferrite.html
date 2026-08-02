@@ -62,16 +62,14 @@ const SVK &#61; MORFEFerrite.StructuralSVK</code></pre>
 
 MESH &#61; joinpath&#40;@__DIR__, &quot;clamped_clamped_beam.msh&quot;&#41;   # Gmsh .msh or COMSOL .mphtxt
 MATERIAL &#61; SVK.SVKMaterial&#40;E &#61; 160e3, ν &#61; 0.22, ρ &#61; 2.32e-3&#41;
-DAMPING &#61; SVK.RayleighDamping&#40;
-	α &#61; 0.5370828278264171 / 100.0,
-	β &#61; 1.0 / &#40;0.5370828278264171 * 100.0&#41;,
-&#41;
+DAMPING &#61; SVK.RayleighDamping&#40;α &#61; 0.0, β &#61; 0.0&#41;
 DIRICHLET &#61; &quot;Dirichlet&quot;        # Gmsh facetset name &#40;COMSOL: Set of entity IDs&#41;
 FE_ORDER &#61; 2
 QUAD_ORDER &#61; 3
 MASTER &#61; &#91;1&#93;                   # master conjugate mode pairs
 ORDER &#61; FAST ? 3 : 9           # parametrisation order
-FORCING &#61; nothing              # or SVK.HarmonicForcing&#40;mode &#61; 1, amplitude &#61; 0.03&#41;</code></pre>
+FORCING &#61; nothing              # or SVK.HarmonicForcing&#40;mode &#61; 1, amplitude &#61; 0.03&#41;;</code></pre>
+<p>a vector of them gives multi-harmonic forcing &#40;N_EXT &#61; 2 per forcing&#41;</p>
 <p>── PIPELINE — generic; no need to edit ──────────────────────────────────────</p>
 <h2>Assemble the mechanical model &#40;K, M, C on free DOFs &#43; SVK nonlinearity&#41;</h2>
 <pre><code class="language-julia">model &#61; SVK.mechanical_model&#40;MESH;

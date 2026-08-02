@@ -32,6 +32,10 @@ const GH_FERRITE = "https://github.com/MORFEproject/MORFEFerrite.jl"
 # id, title, source main.jl, GitHub folder, custom tutorial page (site-relative
 # to tutorials/) — `nothing` while the custom page does not exist yet.
 const EXAMPLES = [
+	(id = "multiindex_sets", title = "Constructing MultiindexSets",
+		src = joinpath(ROOT, "examples", "internals", "multiindex_sets", "main.jl"),
+		gh = "$GH_MORFE/tree/main/examples/internals/multiindex_sets",
+		custom = "multiindex_sets.html"),
 	(id = "01_clamped_beam_ferrite", title = "Clamped-clamped beam — StructuralSVK",
 		src = joinpath(FERRITE_ROOT, "examples", "01_clamped_beam_ferrite", "main.jl"),
 		gh = "$GH_FERRITE/tree/main/examples/01_clamped_beam_ferrite", custom = "structural_svk.html"),

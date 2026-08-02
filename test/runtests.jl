@@ -32,6 +32,7 @@ should_run(group) = GROUP == "all" || GROUP == group
                 include("ParametrisationMethod/test_parametrise_entry.jl")
             end
             include("ParametrisationMethod/test_bordered_solver.jl")
+            include("ParametrisationMethod/test_external_coupling.jl")
         end
     end
     if should_run("rom_io")
@@ -79,6 +80,15 @@ if GROUP == "examples"
                 @__DIR__, "..", "examples", "internals", "demo_polynomials.jl"))
             include(joinpath(@__DIR__, "..", "examples", "internals",
                 "demo_multiindices_factorisations.jl"))
+            # Writes its lattice figures to a scratch directory rather than the
+            # example's own results/, so the test run leaves no artefacts behind.
+            mktempdir() do tmp
+                withenv("MORFE_LATTICE_OUT" => tmp) do
+                    include(joinpath(@__DIR__, "..", "examples", "internals",
+                        "multiindex_sets", "main.jl"))
+                end
+                @test length(readdir(tmp)) == 4
+            end
             @test true
         end
         # The remaining examples (02 Gridap, 06 dielectric) manage their own Pkg
