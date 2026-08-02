@@ -7,7 +7,7 @@ A *multiindex* is an exponent vector `α ∈ ℕᴺ` that identifies the monomia
 - `MultiindexSet{N}` — a sorted, deduplicated collection of `SVector{N, Int}` exponents
   in graded-lexicographic (GrLex) order, with O(1) degree-boundary queries.
 - Generators: `all_multiindices_up_to`, `multiindices_with_total_degree`, `all_multiindices_in_box`.
-- Binary-search lookup: `find_in_set`, `build_exponent_index_map`.
+- Lookup: `find_in_set` (degree-bracketed binary search), `build_exponent_index_map`.
 - Factorisation enumerators: `factorisations_asymmetric`, `factorisations_fully_symmetric`,
   `factorisations_groupwise_symmetric` — used by `MultilinearTerms` to sum nonlinear contributions.
 - Combinatorial utilities: `monomial_rank`, `bounded_index_tuples`, `divides`, `is_constant`.
@@ -41,24 +41,6 @@ Returns `true` if `a` comes before `b` in this order.
         end
     end
     return false  # equal
-end
-
-"""
-	grlex_precede(t::NTuple{N,Int}, v::AbstractVector{Int}) -> Bool
-
-Compare a tuple (representing an exponent) with a vector in graded lexicographic order.
-Useful for binary search without allocating a vector.
-"""
-@inline function grlex_precede(t::NTuple{N, Int}, v::AbstractVector{Int}) where {N}
-    dt = sum(t)
-    dv = sum(v)
-    dt != dv && return dt < dv
-    for i in 1:N
-        ti = t[i]
-        vi = v[i]
-        ti != vi && return ti > vi
-    end
-    return false
 end
 
 # ==================== MultiindexSet type ====================
@@ -290,41 +272,64 @@ end
 Base.:(==)(::MultiindexSet{N}, ::MultiindexSet{M}) where {N, M} = false
 
 """
-	find_in_set(set::MultiindexSet, exp::AbstractVector{Int}) -> Union{Int, Nothing}
+	_total_degree(exp, ::Val{N}) -> Int
 
-Return the column index of `exp` in `set.exponents` using binary search,
-exploiting the fact that the set is sorted according to Grlex.
-Returns `nothing` if `exp` is not present.
+Total degree of an `N`-component exponent.  Written as an explicit loop so that it
+works uniformly for `Vector`, `SVector` and `NTuple`, and returns `0` for `N == 0`,
+where `sum` on an empty tuple is not defined.
 """
-function find_in_set(set::MultiindexSet{N}, exp::AbstractVector{Int}) where {N}
+@inline function _total_degree(exp, ::Val{N}) where {N}
+    d = 0
+    @inbounds for i in 1:N
+        d += exp[i]
+    end
+    return d
+end
+
+"""
+	_lex_cmp_same_degree(v::SVector{N,Int}, e) -> Int
+
+Three‑way descending‑lexicographic comparison of two exponents **of equal total
+degree**: `-1` if `v` precedes `e`, `+1` if `e` precedes `v`, `0` if they are equal.
+Since the degrees are known to match, no degree sums are computed.
+"""
+@inline function _lex_cmp_same_degree(v::SVector{N, Int}, e) where {N}
+    @inbounds for i in 1:N
+        vi, ei = v[i], e[i]
+        vi != ei && return vi > ei ? -1 : 1   # larger component precedes
+    end
+    return 0
+end
+
+# Binary search for `exp` (of known total degree `deg`) inside the degree-`deg` block.
+# `degree_offsets` brackets that block in O(1), so the search spans only the monomials
+# of that one degree and every probe is a plain lexicographic comparison.
+function _find_in_set(set::MultiindexSet{N}, exp, deg::Int) where {N}
     exps = set.exponents
-    lo, hi = 1, length(exps)
-    while lo <= hi
-        mid = (lo + hi) ÷ 2
-        v_mid = exps[mid]
-        if v_mid == exp
-            return mid
-        elseif grlex_precede(v_mid, exp)
-            lo = mid + 1
-        else
-            hi = mid - 1
-        end
+    lo = _last_index_below_degree(set, deg) + 1   # first index of the degree-`deg` block
+    hi = _last_index_below_degree(set, deg + 1)   # last index of that block
+    @inbounds while lo <= hi
+        mid = lo + ((hi - lo) >> 1)
+        c = _lex_cmp_same_degree(exps[mid], exp)
+        c == 0 && return mid
+        c < 0 ? (lo = mid + 1) : (hi = mid - 1)
     end
     return nothing
 end
 
 """
-	_sv_eq_tuple(v::SVector{N,Int}, t::NTuple{N,Int})
+	find_in_set(set::MultiindexSet, exp::AbstractVector{Int}) -> Union{Int, Nothing}
 
-Helper function that compares an `SVector` and an `NTuple` element-wise.
+Return the column index of `exp` in `set.exponents`, or `nothing` if `exp` is not
+present (including when its length differs from the number of variables).
+
+The total degree of `exp` brackets the search to a single degree block via
+`degree_offsets`, after which a binary search in Grlex (here plain descending
+lexicographic, the degrees being equal) locates the exponent.
 """
-@inline function _sv_eq_tuple(v::SVector{N, Int}, t::NTuple{N, Int}) where {N}
-    for i in 1:N
-        if v[i] != t[i]
-            return false
-        end
-    end
-    return true
+function find_in_set(set::MultiindexSet{N}, exp::AbstractVector{Int}) where {N}
+    length(exp) == N || return nothing
+    return _find_in_set(set, exp, _total_degree(exp, Val(N)))
 end
 
 """
@@ -333,20 +338,7 @@ end
 Tuple version – avoids allocating a vector for the exponent.
 """
 function find_in_set(set::MultiindexSet{N}, exp::NTuple{N, Int}) where {N}
-    exps = set.exponents
-    lo, hi = 1, length(exps)
-    while lo <= hi
-        mid = (lo + hi) ÷ 2
-        v_mid = exps[mid]
-        if _sv_eq_tuple(v_mid, exp)
-            return mid
-        elseif grlex_precede(exp, v_mid)  # exp < v_mid ?
-            hi = mid - 1
-        else
-            lo = mid + 1
-        end
-    end
-    return nothing
+    return _find_in_set(set, exp, _total_degree(exp, Val(N)))
 end
 
 """

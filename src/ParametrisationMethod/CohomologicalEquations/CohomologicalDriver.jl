@@ -41,42 +41,51 @@ function _initialise_waveform!(
 end
 
 """
-	_solve_external_directions!(W, R, partial_ctx, model, ml_cache, sym, N_EXT, ROM, unit_offset)
+	_solve_external_directions!(W, R, partial_ctx_for, model, ml_cache, sym, N_EXT, ROM, unit_offset)
 
-Solve the `N_EXT` external forcing directions using a *partial* context in which
-the external generalised eigenvectors `Φ_ext` are set to zero (they are unknown at
-this stage).  When conjugate-symmetry is active, secondary external monomials are
-skipped and filled from their primaries via `fill_conjugate_monomial!`.
+Solve the `N_EXT` external forcing directions in increasing variable order.
+
+`partial_ctx_for(e)` returns the *partial* context for external direction `e`: one in which
+the external generalised eigenvectors `Φ_ext` are known only for the directions already
+solved, and zero from `e` onwards.  Solving in order is what makes that possible — column
+`e` of the external column-polynomial recurrences reads only `Φ_ext,j` with `Λ_ext[j, e] ≠ 0`,
+hence only `j ≤ e` for the upper-triangular `Λ_ext` that the solver requires.
+
+When conjugate-symmetry is active, secondary external monomials are filled from their
+primaries via `fill_conjugate_monomial!` in the same pass rather than afterwards, so that
+`Φ_ext,k` is populated for every `k < e` regardless of how it was obtained.  This is safe
+because `primary_pairs` guarantees a secondary's source has the smaller index.
 
 All external linear monomials are marked in `sym.skip_bits` after this call so
 the main `solve_cohomological_equations!` loop does not overwrite them.
 """
 function _solve_external_directions!(
-        W, R, partial_ctx, model, ml_cache,
+        W, R, partial_ctx_for, model, ml_cache,
         sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int, ROM::Int, unit_offset::Int
 )
     for e in 1:N_EXT
         idx = ROM + e + unit_offset
-        solve_single_monomial!(W, R, idx, partial_ctx, model, ml_cache)
+        solve_single_monomial!(W, R, idx, partial_ctx_for(e), model, ml_cache)
         @inbounds sym.skip_bits[idx] = true
     end
     return nothing
 end
 
 function _solve_external_directions!(
-        W, R, partial_ctx, model, ml_cache,
+        W, R, partial_ctx_for, model, ml_cache,
         sym::ConjugateSymmetryData{<:SVector}, N_EXT::Int, ROM::Int, unit_offset::Int
 )
     N_EXT == 0 && return nothing
-    ext_idx_set = Set(ROM + e + unit_offset for e in 1:N_EXT)
     for e in 1:N_EXT
         idx = ROM + e + unit_offset
-        @inbounds sym.skip_bits[idx] && continue   # secondary: filled below
-        solve_single_monomial!(W, R, idx, partial_ctx, model, ml_cache)
-    end
-    for (src, dst) in sym.primary_pairs
-        src ∈ ext_idx_set || continue
-        fill_conjugate_monomial!(W, R, dst, src, sym)
+        if @inbounds sym.skip_bits[idx]
+            # Secondary: its source is a pre-marked primary with a smaller index, so it is
+            # already available — `_build_conjugate_symmetry` only ever marks the larger
+            # index of a pair, and `monomial_map` is symmetric.
+            fill_conjugate_monomial!(W, R, idx, sym.monomial_map[idx], sym)
+        else
+            solve_single_monomial!(W, R, idx, partial_ctx_for(e), model, ml_cache)
+        end
     end
     for e in 1:N_EXT
         @inbounds sym.skip_bits[ROM + e + unit_offset] = true
@@ -146,9 +155,13 @@ end
 High-level driver that assembles a [`CohomologicalContext`](@ref) from raw
 spectral data and solves the full set of cohomological equations.
 
-External eigenvalues are read directly from `model.external_system.eigenvalues`
-(or treated as absent when `model.external_system === nothing`).  The
-linear-operator tuple is read from `model.linear_terms`.
+The external dynamics enter through `model.external_system.first_order_dynamics`, which
+`_embed_external_dynamics!` copies into the external rows of `R`; the superharmonics `s`
+are then contracted against `diag(Λ)` read back from `R`, so the external part of `s` is
+the diagonal of the external linear matrix.  That matrix must be upper triangular — the
+requirement is enforced by the `ExternalSystem` constructors and explained in the
+`ExternalSystems` module docstring.  The linear-operator tuple is read from
+`model.linear_terms`.
 
 ## Steps
 
@@ -156,8 +169,8 @@ linear-operator tuple is read from `model.linear_terms`.
    and initialise master-mode linear monomials.
 2. Build shared resources (buffers, lower-order coupling data, sparse solver state).
 3. Solve the linear cohomological equations for each external forcing direction via
-   a partial context in which the external columns of `generalised_right_eigenmodes`
-   are set to zero.
+   a partial context in which the not-yet-solved external columns of
+   `generalised_right_eigenmodes` are set to zero.
 4. Build the full `generalised_right_eigenmodes` from the solved external directions.
 5. Assemble the full context and call [`solve_cohomological_equations!`](@ref).
 
@@ -282,24 +295,47 @@ function solve_cohomological_problem(
 
     # ── 4. Solve external linear monomials via partial context (Φ_ext = 0) ───
     if initial_W === nothing || initial_R === nothing
-        partial_E_coeffs = precompute_external_column_polynomials(
-            linear_terms, zeros(T, FOM, N_EXT), Λ, D_master_steps
-        )
-        partial_eigenmodes = hcat(master_modes, zeros(T, FOM, N_EXT))
-        partial_orth_C_coeffs,
-        partial_orth_E_coeffs = precompute_orthogonality_column_polynomials(
-            orthogonality_J_coeffs, right_master_blocks, zeros(T, FOM, N_EXT), Λ
-        )
-        partial_ctx = _build_context(
-            linear_terms, partial_eigenmodes, lambda_diag,
-            InvarianceOperators{T}(invariance_C_coeffs, partial_E_coeffs),
-            OrthogonalityOperators{T}(orthogonality_J_coeffs,
-                partial_orth_C_coeffs, partial_orth_E_coeffs),
-            resonance_set, linear_skip_set,
-            lower_order, buffers, sparse_solver
-        )
+        # Φ_ext is unknown while the external directions are themselves being solved, so the
+        # partial context carries zeros in its place.  For a non-diagonal (upper-triangular)
+        # external block the directions couple, and the ones already solved are *known* data
+        # that must be fed back: column e of both external Horner recurrences reads only
+        # Φ_ext,j with Λ_ext[j, e] ≠ 0, i.e. j ≤ e.  Column e itself must stay zero — that
+        # self-term belongs on the left-hand side through s = Λ[e, e].
+        known_directions = zeros(T, FOM, N_EXT)
+        build_partial_ctx = function (external_directions)
+            partial_E_coeffs = precompute_external_column_polynomials(
+                linear_terms, external_directions, Λ, D_master_steps
+            )
+            partial_orth_C_coeffs,
+            partial_orth_E_coeffs = precompute_orthogonality_column_polynomials(
+                orthogonality_J_coeffs, right_master_blocks, external_directions, Λ
+            )
+            return _build_context(
+                linear_terms, hcat(master_modes, external_directions), lambda_diag,
+                InvarianceOperators{T}(invariance_C_coeffs, partial_E_coeffs),
+                OrthogonalityOperators{T}(orthogonality_J_coeffs,
+                    partial_orth_C_coeffs, partial_orth_E_coeffs),
+                resonance_set, linear_skip_set,
+                lower_order, buffers, sparse_solver
+            )
+        end
+
+        # Harmonic forcing (±iΩ) and every other diagonal external block need no feedback:
+        # one Φ_ext = 0 context serves all directions, exactly as before.
+        coupled_external = !isdiag(view(Λ, (ROM + 1):NVAR, (ROM + 1):NVAR))
+        shared_partial_ctx = coupled_external ? nothing :
+                             build_partial_ctx(known_directions)
+        partial_ctx_for = function (e)
+            coupled_external || return shared_partial_ctx
+            for k in 1:(e - 1)
+                known_directions[:, k] .= view(
+                    W.poly.coefficients, :, 1, ROM + k + unit_offset)
+            end
+            return build_partial_ctx(known_directions)
+        end
+
         _solve_external_directions!(
-            W, R, partial_ctx, model, ml_cache, sym, N_EXT, ROM, unit_offset)
+            W, R, partial_ctx_for, model, ml_cache, sym, N_EXT, ROM, unit_offset)
     else
         # initial values provided: external directions are already in W; mark them done
         # so the main loop does not overwrite them.

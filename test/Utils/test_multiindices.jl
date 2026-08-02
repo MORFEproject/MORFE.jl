@@ -252,6 +252,49 @@ end
         exp = set[idx]
         @test find_in_set(set, exp) == idx
     end
+
+    # Sets whose degree blocks are incomplete: the degree bracket must not assume
+    # that a block contains every exponent of that degree.
+    for incomplete in (all_multiindices_in_box([2, 1, 2]),
+        MultiindexSet([[0, 2, 0], [3, 1, 0], [1, 1, 0], [0, 0, 4]]))
+        exps = incomplete.exponents
+        for (i, v) in enumerate(exps)
+            @test find_in_set(incomplete, v) == i
+            @test find_in_set(incomplete, Vector(v)) == i
+        end
+        # Non-members, including ones sharing a degree with a populated block
+        for miss in ([9, 0, 0], [1, 0, 1], [0, 1, 1], [2, 2, 0], [0, 0, 5])
+            @test find_in_set(incomplete, miss) ==
+                  findfirst(v -> Vector(v) == miss, exps)
+        end
+    end
+
+    # Degree-gapped set (the shape `parametrise` builds via min_degree)
+    gapped = all_multiindices_up_to(3, 4; min_degree = 2)
+    for (i, v) in enumerate(gapped.exponents)
+        @test find_in_set(gapped, v) == i
+    end
+    @test find_in_set(gapped, [0, 0, 0]) === nothing
+    @test find_in_set(gapped, [1, 0, 0]) === nothing
+    @test find_in_set(gapped, [0, 1, 0]) === nothing
+    @test find_in_set(gapped, [0, 0, 1]) === nothing
+
+    # Tuple version agrees with the vector version, on members and non-members
+    tset = all_multiindices_up_to(3, 3)
+    for v in tset.exponents
+        @test find_in_set(tset, Tuple(v)) == find_in_set(tset, Vector(v))
+    end
+    @test find_in_set(tset, (4, 0, 0)) === nothing
+    @test find_in_set(tset, (2, 1, 0)) == find_in_set(tset, [2, 1, 0])
+
+    # Wrong-length exponents are simply absent, not an error
+    set = all_multiindices_up_to(2, 2)
+    @test find_in_set(set, [1]) === nothing
+    @test find_in_set(set, [1, 1, 0]) === nothing
+
+    # Zero-variable set: the empty exponent is its single element
+    @test find_in_set(all_multiindices_up_to(0, 2), ()) == 1
+    @test find_in_set(all_multiindices_up_to(0, 2), Int[]) == 1
 end
 
 @testset "indices_in_box_with_bounded_degree" begin

@@ -75,15 +75,47 @@ end
             @test evs ≈ expected
         end
 
-        @testset "2D non-diagonal real system: linear matrix stored correctly" begin
-            A = [0.0 -1.0; 1.0 0.0]   # rotation generator; eigenvalues ±i
+        @testset "2D upper-triangular system: linear matrix stored correctly" begin
+            λ1, λ2 = -1.0 + 2.0im, -1.0 - 2.0im
+            A = ComplexF64[λ1 5.0; 0 λ2]
             poly = _linear_polynomial(A)
             sys = ExternalSystem(poly)
 
             @test sys.linear_matrix ≈ A
-            evs = sort(sys.eigenvalues, by = imag)
-            @test evs[1]≈-1.0im atol=1e-12
-            @test evs[2]≈1.0im atol=1e-12
+            @test sys.eigenvalues[1] ≈ λ1
+            @test sys.eigenvalues[2] ≈ λ2
+        end
+
+        @testset "eigenvalues follow variable order, not LAPACK order" begin
+            # `eigvals` reorders even for triangular (and diagonal) matrices, but
+            # Resonance._superharmonics contracts eigenvalues against multiindex
+            # components position by position, so eigenvalues[e] must be A[e, e].
+            λ1, λ2 = -1.0 + 2.0im, -1.0 - 2.0im
+            A = ComplexF64[λ1 5.0; 0 λ2]
+            @test !isapprox(eigvals(A), diag(A))   # guard: the orders really do differ
+
+            sys = ExternalSystem(_linear_polynomial(A))
+            @test collect(sys.eigenvalues) == diag(A)   # exact, not merely ≈
+        end
+
+        @testset "non-upper-triangular linear matrix is rejected" begin
+            A = [0.0 -1.0; 1.0 0.0]   # rotation generator; not triangular
+            poly = _linear_polynomial(A)
+
+            @test_throws ArgumentError ExternalSystem(poly)
+            # The message must name the offending entry and the GrLex reason.
+            err = try
+                ExternalSystem(poly)
+            catch e
+                e
+            end
+            @test occursin("(2, 1)", err.msg)
+            @test occursin("GrLex", err.msg)
+        end
+
+        @testset "lower-triangular linear matrix is rejected" begin
+            A = ComplexF64[-1.0 0.0; 3.0 -2.0]
+            @test_throws ArgumentError ExternalSystem(_linear_polynomial(A))
         end
 
         @testset "polynomial field stored correctly" begin
@@ -140,6 +172,25 @@ end
             sys2 = ExternalSystem(poly, evs)
             @test sys1.linear_matrix ≈ sys2.linear_matrix
         end
+
+        @testset "permuted eigenvalues are rejected: ordering carries meaning" begin
+            λ1, λ2 = -1.0 + 2.0im, -1.0 - 2.0im
+            A = ComplexF64[λ1 0; 0 λ2]
+            poly = _linear_polynomial(A)
+            permuted = SVector{2, ComplexF64}(λ2, λ1)   # right set, wrong positions
+
+            @test_throws ErrorException ExternalSystem(poly, permuted; check = true)
+            sys = ExternalSystem(poly, permuted; check = false)
+            @test sys.eigenvalues == permuted
+        end
+
+        @testset "triangularity is enforced even when check = false" begin
+            A = ComplexF64[-1.0 0.0; 3.0 -2.0]
+            poly = _linear_polynomial(A)
+            evs = SVector{2, ComplexF64}(-1.0 + 0im, -2.0 + 0im)
+
+            @test_throws ArgumentError ExternalSystem(poly, evs; check = false)
+        end
     end
     @testset "ExternalSystem Constructor 3: from eigenvalues only (purely linear diagonal)" begin
         @testset "1D: single complex eigenvalue" begin
@@ -191,7 +242,7 @@ end
     end
     @testset "EigenvalueType inference (_evtype)" begin
         @testset "Real polynomial → Complex eigenvalue type" begin
-            A = [0.0 -1.0; 1.0 0.0]
+            A = [-1.0 2.0; 0.0 -3.0]
             poly = _linear_polynomial(A)
             sys = ExternalSystem(poly)
 
@@ -231,11 +282,10 @@ end
             @test sys1.linear_matrix ≈ sys2.linear_matrix
             @test sys1.linear_matrix ≈ sys3.linear_matrix
 
-            sort_key = x -> (real(x), imag(x))
-            @test sort(collect(sys1.eigenvalues), by = sort_key) ≈
-                  sort(collect(sys2.eigenvalues), by = sort_key)
-            @test sort(collect(sys1.eigenvalues), by = sort_key) ≈
-                  sort(collect(sys3.eigenvalues), by = sort_key)
+            # No sorting: all three constructors must agree position by position, since
+            # eigenvalues[e] is the eigenvalue of external variable e.
+            @test sys1.eigenvalues ≈ sys2.eigenvalues
+            @test sys1.eigenvalues ≈ sys3.eigenvalues
         end
 
         @testset "linear_matrix matches linear_matrix_of_polynomial" begin

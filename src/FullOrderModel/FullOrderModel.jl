@@ -20,7 +20,7 @@ using StaticArrays: SVector
 
 using ..Polynomials: DensePolynomial
 using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap,
-                         evaluate_term!, fem_elements
+                         evaluate_term!, fem_elements, _definition_site
 using ..ExternalSystems: ExternalSystem
 
 export NDOrderModel, FirstOrderModel, linear_first_order_matrices, evaluate_nonlinear_terms!
@@ -29,8 +29,9 @@ abstract type AbstractFullOrderModel end
 
 function _term_label(t)
     if t isa MultilinearMap
-        m = only(methods(t.f!))
-        return "MultilinearMap @ $(basename(String(m.file))):$(m.line)"
+        # `_definition_site` rather than `only(methods(...))`: `f!` may legitimately carry
+        # several methods, and this runs inside an `@info` that must never throw.
+        return "MultilinearMap" * _definition_site(t.f!)
     else
         T_name = string(nameof(typeof(t)))
         try

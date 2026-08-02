@@ -39,6 +39,14 @@ Accumulate the `|β| = 1` part of the lower-order coupling sum into `accumulator
 For each unit-vector `eⱼ` with `eⱼ ≤ upper_bound`, and for each `i < j`, adds
 `R[i, eⱼ] * (upper_bound - eⱼ + eᵢ)[i] * W[:, :, upper_bound - eⱼ + eᵢ]`
 to `accumulator`.  Only reads precomputed `multiindex_dict` — no allocations.
+
+The `i < j` restriction is *causality*, not an optimisation.  `upper_bound - eⱼ + eᵢ` has the
+same total degree as `upper_bound`, and GrLex breaks ties by descending lexicographic order,
+so that exponent precedes `upper_bound` — and is therefore already solved — exactly when
+`i < j`.  Consequently this branch reads only the strictly upper triangle of the reduced
+linear dynamics `Λ`, and a strictly-lower entry of `Λ` would be dropped without trace.  That
+is why the external system's linear matrix is required to be upper triangular; see the
+`ExternalSystems` module docstring.
 """
 @inline function _sum_degree_one_terms!(accumulator::Vector{Vector{T}},
         upper_bound::SVector{NVAR, Int},

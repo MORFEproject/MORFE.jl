@@ -201,6 +201,20 @@ During evaluation the multilinear map is called as
   `multiindex`.  `nothing` means "not stated", which behaves as `false` but also
   emits the `@info` note described above; that three-valued form is what lets the
   model warn about an assumption the caller may not have realised it was making.
+
+# Construction
+
+Four constructors are available.  The keyword form is the recommended one — it names
+every argument and can infer `multiindex` from the system order, the total degree or
+a per-slot list of derivative orders:
+
+```julia
+MultilinearMap(f!; multiindex, derivatives, order, degree,
+    multiplicity_external, fully_asymmetric)   # recommended
+MultilinearMap(f!)                                             # first-order shorthand
+MultilinearMap(f!, multiindex; fully_asymmetric)
+MultilinearMap(f!, multiindex, multiplicity_external; fully_asymmetric)
+```
 """
 struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
     f!::F
@@ -210,53 +224,451 @@ struct MultilinearMap{ORD, F} <: AbstractMultilinearMap{ORD}
     fully_asymmetric::Union{Nothing, Bool}
 end
 
-"""
-	MultilinearMap(f, multiindex)
+# -----------------------------------------------------------------------
+# Construction helpers
+# -----------------------------------------------------------------------
+#
+# Every public constructor funnels into `_build_multilinear_map`, so the validation
+# rules live in exactly one place.  The keyword constructor only resolves the
+# (multiindex, multiplicity_external, ORD) triple from whichever keywords the caller
+# supplied; the kernel then checks it and builds the struct.
 
-Create a multilinear term for a system of order ORD without external dynamics.
+"""
+	_definition_site(f!) -> String
+
+Return `" @ file.jl:12"` for the first method of `f!`, or `""` when `f!` exposes no
+methods.  Used by `show` and by `FullOrderModel._term_label` to point a diagnostic at
+the definition of a term.  Deliberately uses `first` rather than `only`: `f!` is allowed
+to carry several methods, and a display helper must never throw.
+"""
+function _definition_site(f!)
+    ms = methods(f!)
+    isempty(ms) && return ""
+    m = first(ms)
+    return " @ $(basename(String(m.file))):$(m.line)"
+end
+
+"""
+	_method_arities(f!) -> (fixed, va)
+
+Split the methods of `f!` by argument count, *including* `res` but excluding the
+callable itself.  `fixed` lists the exact counts of the fixed-arity methods; `va` lists,
+for each varargs method, the minimum number of arguments it accepts.
+"""
+function _method_arities(f!)
+    fixed = Int[]
+    va = Int[]
+    for m in methods(f!)
+        n = m.nargs - 1                    # drop the callable itself
+        m.isva ? push!(va, n - 1) : push!(fixed, n)
+    end
+    return fixed, va
+end
+
+function _arity_description(fixed, va)
+    parts = vcat([string(n) for n in sort(unique(fixed))],
+        ["≥ $n" for n in sort(unique(va))])
+    return isempty(parts) ? "none" : join(parts, ", ")
+end
+
+"""
+	_call_signature(multiindex, multiplicity_external) -> String
+
+Render the call `f!` receives, e.g. `"f!(res, x^(0), x^(0), x^(1), r)"` for
+`multiindex = (2, 1)` and `multiplicity_external = 1`.
+"""
+function _call_signature(multiindex, multiplicity_external)
+    slots = String[]
+    for (k, n) in enumerate(multiindex), _ in 1:n
+
+        push!(slots, "x^($(k - 1))")
+    end
+    append!(slots, fill("r", multiplicity_external))
+    return isempty(slots) ? "f!(res)" : "f!(res, " * join(slots, ", ") * ")"
+end
+
+"""
+	_symmetry_label(multiindex, fully_asymmetric) -> String
+
+Name the symmetry class a term will be given by the parametrisation solver.
+
+Mirrors `symmetry_type` in
+`src/ParametrisationMethod/RightHandSide/MultilinearTerms/Symmetry.jl`, which cannot be
+called from here: `MultilinearMaps` is loaded twelve includes earlier.  The testset
+"show agrees with symmetry_type" holds the two in step.
+"""
+function _symmetry_label(multiindex, fully_asymmetric)
+    fully_asymmetric === true && return "FullyAsymmetric (forced)"
+    all(<=(1), multiindex) && return "FullyAsymmetric"
+    count(>(0), multiindex) == 1 && return "FullySymmetric"
+    return "GroupwiseSymmetric"
+end
+
+# -- error messages -----------------------------------------------------
+#
+# Built by helpers rather than inline so the formatter leaves them alone and the
+# validation kernel stays readable.  Each one states the rule, the offending value,
+# and the fix.
+
+function _msg_negative_multiindex(multiindex)
+    return "MultilinearMap: multiindex entries must be non-negative, got $multiindex.\n" *
+           "multiindex[k] counts how many factor slots use the derivative x^(k-1), so\n" *
+           "multiindex = (2, 1) means f!(res, x^(0), x^(0), x^(1))."
+end
+
+function _msg_empty_multiindex()
+    return "MultilinearMap: multiindex must have at least one entry — its length is the\n" *
+           "order ORD of the system the term belongs to.  For a first-order system pass\n" *
+           "a 1-tuple, e.g. multiindex = (2,)."
+end
+
+function _msg_negative_external(multiplicity_external)
+    return "MultilinearMap: multiplicity_external must be non-negative, got " *
+           "$multiplicity_external.\nIt counts how many times the external state r is " *
+           "passed to f!, after the derivative arguments."
+end
+
+function _msg_degree_too_low(multiindex, multiplicity_external, deg)
+    return "MultilinearMap: a term with no external factors must have degree at least 2,\n" *
+           "but multiindex = $multiindex gives deg = $deg.  Linear contributions belong in\n" *
+           "the `linear_terms` matrices of `NDOrderModel`, not in a `MultilinearMap`.  If\n" *
+           "this term is meant to depend on the external state r, pass " *
+           "`multiplicity_external`."
+end
+
+function _msg_arity(f!, want, fixed, va, multiindex, multiplicity_external)
+    deg = want - 1
+    return "MultilinearMap: `f!` must accept $want arguments — `res` plus $deg factors —\n" *
+           "but its methods accept $(_arity_description(fixed, va)) " *
+           "(defined$(_definition_site(f!))).\n" *
+           "  multiindex = $multiindex, multiplicity_external = $multiplicity_external\n" *
+           "  ⇒ deg = sum(multiindex) + multiplicity_external = $deg\n" *
+           "Expected call: $(_call_signature(multiindex, multiplicity_external))\n" *
+           "Either change the arity of `f!`, or correct `multiindex`."
+end
+
+function _msg_infer_degree(f!, fixed)
+    found = isempty(fixed) ? "only varargs methods" :
+            "methods of arity $(_arity_description(fixed, Int[]))"
+    return "MultilinearMap: cannot infer the degree of `f!`; it has $found" *
+           "$(_definition_site(f!)).\n" *
+           "Pass `multiindex`, `derivatives` or `degree` explicitly."
+end
+
+function _msg_multiindex_and_derivatives()
+    return "MultilinearMap: pass either `multiindex` or `derivatives`, not both.\n" *
+           "`multiindex` counts slots per derivative order; `derivatives` lists the\n" *
+           "derivative order of each slot in call order, e.g. derivatives = (0, 0, 1)\n" *
+           "is the same term as multiindex = (2, 1)."
+end
+
+function _msg_derivatives_negative(derivatives)
+    return "MultilinearMap: `derivatives` entries must be non-negative, got $derivatives.\n" *
+           "Each entry is the 0-based derivative order of one argument slot, so\n" *
+           "derivatives = (0, 0, 1) means f!(res, x, x, xdot)."
+end
+
+function _msg_derivatives_unsorted(derivatives)
+    return "MultilinearMap: `derivatives` must be non-decreasing, got $derivatives.\n" *
+           "`evaluate_term!` always passes factors grouped by ascending derivative order,\n" *
+           "so `derivatives` describes the call signature of `f!` and cannot be reordered\n" *
+           "for you.  Either write derivatives = $(Tuple(sort(collect(derivatives)))) and " *
+           "define `f!` to match,\nor reorder the arguments inside `f!` yourself."
+end
+
+function _msg_order_truncates(base, order)
+    return "MultilinearMap: order = $order is smaller than length(multiindex) = " *
+           "$(length(base))\n(multiindex = $base).  `order` may only zero-pad a multiindex " *
+           "up to the system\norder, never truncate it — dropping an entry would silently " *
+           "drop a derivative slot."
+end
+
+function _msg_degree_mismatch(degree, multiindex, multiplicity_external)
+    total = sum(multiindex) + multiplicity_external
+    return "MultilinearMap: degree = $degree disagrees with multiindex = $multiindex and\n" *
+           "multiplicity_external = $multiplicity_external, which give\n" *
+           "sum(multiindex) + multiplicity_external = $total.  Drop `degree`, or correct it."
+end
+
+function _msg_degree_below_external(degree, multiplicity_external)
+    return "MultilinearMap: degree = $degree is smaller than multiplicity_external = " *
+           "$multiplicity_external.\n`degree` is the *total* degree, external factors " *
+           "included, so it cannot be exceeded\nby the number of external factors alone."
+end
+
+# -- validation ---------------------------------------------------------
+
+"""
+	_check_arity(f!, deg, multiindex, multiplicity_external)
+
+Throw an `ArgumentError` unless `f!` can be called with `deg + 1` arguments.
+
+`hasmethod` is the fast accept path, but it returns `false` for methods with concrete
+argument annotations, so a scan of the method table decides rejection.  A varargs method
+that can absorb the arguments is accepted — that is what admits closures built by
+`MORFESymbolicsExt` and callable structs.  A callable exposing no methods at all is
+trusted rather than rejected.
+"""
+function _check_arity(f!, deg, multiindex, multiplicity_external)
+    want = deg + 1
+    hasmethod(f!, NTuple{want, Any}) && return nothing
+    fixed, va = _method_arities(f!)
+    isempty(fixed) && isempty(va) && return nothing
+    (want in fixed || any(<=(want), va)) && return nothing
+    throw(ArgumentError(_msg_arity(
+        f!, want, fixed, va, multiindex, multiplicity_external)))
+end
+
+"""
+	_infer_degree(f!) -> Int
+
+Number of factors `f!` takes, i.e. its argument count less `res`.  Requires a single
+fixed arity; varargs or conflicting arities are ambiguous and raise an `ArgumentError`
+telling the caller to state the degree explicitly.
+"""
+function _infer_degree(f!)
+    fixed, _ = _method_arities(f!)
+    arities = unique(fixed)
+    length(arities) == 1 && return only(arities) - 1        # subtract `res`
+    throw(ArgumentError(_msg_infer_degree(f!, fixed)))
+end
+
+# -- keyword normalisation ----------------------------------------------
+
+_as_index_tuple(x::Tuple{Vararg{Integer}}, ::AbstractString) = map(Int, x)
+function _as_index_tuple(x::AbstractVector{<:Integer}, ::AbstractString)
+    return ntuple(k -> Int(x[k]), length(x))
+end
+function _as_index_tuple(x, what::AbstractString)
+    throw(ArgumentError("MultilinearMap: `$what` must be a tuple or vector of " *
+                        "integers, got $(typeof(x))."))
+end
+
+"""
+	_counts_from_derivatives(derivatives) -> NTuple
+
+Convert a per-slot list of 0-based derivative orders into a `multiindex` of counts:
+`(0, 0, 1) → (2, 1)`.  The list must be non-decreasing, since it *is* the argument
+order `f!` will be called with.
+"""
+function _counts_from_derivatives(derivatives::NTuple{N, Int}) where {N}
+    N == 0 && return (0,)
+    any(<(0), derivatives) &&
+        throw(ArgumentError(_msg_derivatives_negative(derivatives)))
+    issorted(derivatives) ||
+        throw(ArgumentError(_msg_derivatives_unsorted(derivatives)))
+    return ntuple(k -> count(==(k - 1), derivatives), derivatives[end] + 1)
+end
+
+"""
+	_pad_to_order(base, order) -> NTuple
+
+Zero-pad `base` to length `order`.  Padding is symmetry-neutral: trailing zeros change
+neither `all(<=(1), mi)` nor `count(>(0), mi)`, so `symmetry_type` classifies `(2,)` and
+`(2, 0, 0)` identically.  Truncation is refused — it would silently drop a slot.
+"""
+function _pad_to_order(base::NTuple{N, Int}, order::Int) where {N}
+    order < N && throw(ArgumentError(_msg_order_truncates(base, order)))
+    order == N && return base
+    return ntuple(k -> k <= N ? base[k] : 0, order)
+end
+
+function _internal_degree(degree::Int, multiplicity_external::Int)
+    d = degree - multiplicity_external
+    d >= 0 || throw(ArgumentError(_msg_degree_below_external(
+        degree, multiplicity_external)))
+    return d
+end
+
+"""
+	_build_multilinear_map(f!, multiindex, multiplicity_external, fully_asymmetric)
+
+Validate a fully resolved term and build it.  The single place where the invariants of
+`MultilinearMap` are enforced; every public constructor ends up here.
+
+Checks run in the order negatives → degree → arity so that `sum(multiindex)` is
+meaningful in every message.
+"""
+function _build_multilinear_map(f!, multiindex::NTuple{ORD, Int},
+        multiplicity_external::Int,
+        fully_asymmetric::Union{Nothing, Bool}) where {ORD}
+    ORD >= 1 || throw(ArgumentError(_msg_empty_multiindex()))
+    all(>=(0), multiindex) ||
+        throw(ArgumentError(_msg_negative_multiindex(multiindex)))
+    multiplicity_external >= 0 ||
+        throw(ArgumentError(_msg_negative_external(multiplicity_external)))
+    deg = sum(multiindex) + multiplicity_external
+    (deg >= 2 || multiplicity_external >= 1) ||
+        throw(ArgumentError(_msg_degree_too_low(
+            multiindex, multiplicity_external, deg)))
+    _check_arity(f!, deg, multiindex, multiplicity_external)
+    return MultilinearMap{ORD, typeof(f!)}(
+        f!, multiindex, multiplicity_external, deg, fully_asymmetric)
+end
+
+"""
+	MultilinearMap(f!; multiindex = nothing, derivatives = nothing, order = nothing,
+	               degree = nothing, multiplicity_external = nothing,
+	               fully_asymmetric = nothing)
+
+Create a multilinear term, naming every argument.  This is the recommended constructor.
+
+# Keyword arguments
+
+- `multiindex`: tuple (or vector) of counts, `multiindex[k]` being how many argument
+  slots use the derivative `x^(k-1)`.  Its length is the order `ORD` of the system.
+- `derivatives`: the alternative spelling — the 0-based derivative order of *each*
+  argument slot, in call order.  `derivatives = (0, 0, 1)` is the same term as
+  `multiindex = (2, 1)`, i.e. `f!(res, x, x, ẋ)`.  Must be non-decreasing, because it
+  describes the order in which `evaluate_term!` passes the factors.  Mutually exclusive
+  with `multiindex`.
+- `order`: the system order `ORD`.  Zero-pads a shorter `multiindex` up to it, so a
+  quadratic term of a third-order model can be written `multiindex = (2,), order = 3`
+  instead of `(2, 0, 0)`.  It may pad but never truncate.
+- `degree`: the total degree, external factors included.  Use it when the arity of `f!`
+  cannot be introspected (a varargs closure), or as a cross-check against `multiindex`.
+- `multiplicity_external`: how many times the external state `r` is passed to `f!`,
+  after the derivative arguments.  Defaults to `0`.
+- `fully_asymmetric`: overrides the symmetry inferred from `multiindex`; see the note in
+  the [`MultilinearMap`](@ref) docstring.  Defaults to `nothing` ("not stated").
+
+# Defaults for omitted arguments
+
+`multiplicity_external` defaults to `0`.  The `multiindex` is resolved in this order:
+
+1. `derivatives`, if given, is counted into a `multiindex`.
+2. Otherwise `multiindex`, if given, is used as-is.
+3. Otherwise `degree`, if given, puts all non-external factors on `x^(0)`.
+4. Otherwise the degree is inferred from the arity of `f!`, and all non-external factors
+   go on `x^(0)`.
+
+The result is then zero-padded to `order`, if `order` was given.  With every keyword
+omitted this reduces to the first-order shorthand: `MultilinearMap(f!)` reads the arity
+of `f!` and builds a term of that degree in `x` alone.
+
+# Examples
+
+```julia
+# f!(res, x, x, ẋ) in a second-order system
+MultilinearMap(f!; multiindex = (2, 1))
+MultilinearMap(f!; derivatives = (0, 0, 1))          # identical
+
+# cubic term of a third-order system, without hand-written trailing zeros
+MultilinearMap(f!; multiindex = (3,), order = 3)     # ⇒ (3, 0, 0)
+MultilinearMap(f!; degree = 3, order = 3)            # ⇒ (3, 0, 0)
+
+# forcing term f!(res, r) driven only by the external state
+MultilinearMap(f!; multiindex = (0, 0), multiplicity_external = 1)
+
+# first-order shorthand: degree read from the arity of f!
+MultilinearMap(f!)
+
+# f! is not symmetric in its two x^(0) slots
+MultilinearMap(f!; multiindex = (2, 0), fully_asymmetric = true)
+```
+
+# Errors
+
+Throws `ArgumentError` if `multiindex`/`derivatives` entries are negative, if
+`derivatives` is not sorted, if `order` would truncate, if `degree` disagrees with
+`multiindex`, if the resulting degree is below 2 with no external factors, or if `f!`
+cannot be called with `deg + 1` arguments.
+"""
+Base.@constprop :aggressive function MultilinearMap(f!;
+        multiindex = nothing,
+        derivatives = nothing,
+        order = nothing,
+        degree = nothing,
+        multiplicity_external = nothing,
+        fully_asymmetric::Union{Nothing, Bool} = nothing)
+    (multiindex === nothing || derivatives === nothing) ||
+        throw(ArgumentError(_msg_multiindex_and_derivatives()))
+
+    me = multiplicity_external === nothing ? 0 : Int(multiplicity_external)
+    me >= 0 || throw(ArgumentError(_msg_negative_external(me)))
+
+    base = if derivatives !== nothing
+        _counts_from_derivatives(_as_index_tuple(derivatives, "derivatives"))
+    elseif multiindex !== nothing
+        _as_index_tuple(multiindex, "multiindex")
+    elseif degree !== nothing
+        (_internal_degree(Int(degree), me),)
+    else
+        (_internal_degree(_infer_degree(f!), me),)
+    end
+
+    mi = order === nothing ? base : _pad_to_order(base, Int(order))
+
+    if degree !== nothing && Int(degree) != sum(mi) + me
+        throw(ArgumentError(_msg_degree_mismatch(Int(degree), mi, me)))
+    end
+    return _build_multilinear_map(f!, mi, me, fully_asymmetric)
+end
+
+"""
+	MultilinearMap(f!, multiindex; fully_asymmetric = nothing)
+
+Create a multilinear term for a system of order `ORD` without external dynamics.
 
 # Arguments
-- `f!`: in-place evaluation function
-- `multiindex`: tuple specifying which derivatives are used
+- `f!`: in-place evaluation function, accumulating into its first argument
+- `multiindex::NTuple{ORD, Int}`: how many argument slots use each derivative;
+  `multiindex[k]` counts the slots taking `x^(k-1)`
+
+# Keyword arguments
+- `fully_asymmetric`: overrides the symmetry inferred from `multiindex`; see the note in
+  the [`MultilinearMap`](@ref) docstring
+
+Equivalent to `MultilinearMap(f!; multiindex = multiindex)`.
 """
 function MultilinearMap(f!, multiindex::NTuple{ORD, Int};
         fully_asymmetric::Union{Nothing, Bool} = nothing) where {ORD}
-    @assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
-    deg = sum(multiindex)
-    # Check if input arguments of f matches deg
-    ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
-    @assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-    @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
-
-    return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, 0, deg, fully_asymmetric)
+    return _build_multilinear_map(f!, multiindex, 0, fully_asymmetric)
 end
 
-# Create a multilinear term for a first order system.
-function MultilinearMap(f!; fully_asymmetric::Union{Nothing, Bool} = nothing)
-    ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
-    deg = ms[1].nargs - 2 # subtract the function itself and `res`
-    @assert deg >= 2 "Function $(f!) must have degree at least 2, but has degree $deg"
-    multiindex = (UInt8(deg),)
-    return MultilinearMap{1, typeof(f!)}(f!, multiindex, 0, deg, fully_asymmetric)
-end
+"""
+	MultilinearMap(f!, multiindex, multiplicity_external; fully_asymmetric = nothing)
 
+Create a multilinear term for a system of order `ORD` that also takes the external state.
+
+`f!` is called with the derivative arguments selected by `multiindex` first, then the
+external state `r` repeated `multiplicity_external` times.  A term that depends on the
+external state may have total degree 1 — a pure forcing term is written
+`MultilinearMap(f!, (0, 0), 1)`.
+
+# Arguments
+- `f!`: in-place evaluation function, accumulating into its first argument
+- `multiindex::NTuple{ORD, Int}`: how many argument slots use each derivative
+- `multiplicity_external::Int`: how many times `r` is passed to `f!`
+
+# Keyword arguments
+- `fully_asymmetric`: overrides the symmetry inferred from `multiindex`; see the note in
+  the [`MultilinearMap`](@ref) docstring
+
+Equivalent to
+`MultilinearMap(f!; multiindex = multiindex, multiplicity_external = multiplicity_external)`.
+"""
 function MultilinearMap(
         f!, multiindex::NTuple{ORD, Int}, multiplicity_external::Int;
         fully_asymmetric::Union{Nothing, Bool} = nothing) where {ORD}
-    @assert all(multiindex .>= 0) "Terms in the multiindex cannot be negative, but multiindex=$multiindex"
-    @assert multiplicity_external >= 0 "The argument multiplicity_external cannot be negative, but multiplicity_external=$multiplicity_external"
-    deg = sum(multiindex) + multiplicity_external
-    # Check if input arguments of f matches deg
-    ms = methods(f!)
-    @assert length(ms) == 1 "Function $(f!) must have exactly one method to determine number of inputs"
-    @assert ms[1].nargs == deg + 2 "Function $(f!) must accept $(deg+1) arguments (`res` and $deg inputs) instead of $(ms[1].nargs - 1)"
-    @assert (deg >= 2) || (multiplicity_external >= 1)
-    "Function $(f!) does not depend the external state, hence it must have degree at least 2, but it has degree $deg"
+    return _build_multilinear_map(
+        f!, multiindex, multiplicity_external, fully_asymmetric)
+end
 
-    return MultilinearMap{ORD, typeof(f!)}(f!, multiindex, multiplicity_external, deg,
-        fully_asymmetric)
+function Base.show(io::IO, t::MultilinearMap{ORD}) where {ORD}
+    print(io, "MultilinearMap{ORD=", ORD, "} multiindex=", t.multiindex,
+        ", multiplicity_external=", t.multiplicity_external, ", deg=", t.deg,
+        ", ", _symmetry_label(t.multiindex, t.fully_asymmetric))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", t::MultilinearMap{ORD}) where {ORD}
+    println(io, "MultilinearMap{ORD=", ORD, "}", _definition_site(t.f!))
+    println(io, "  multiindex: ", t.multiindex, "  →  ",
+        _call_signature(t.multiindex, t.multiplicity_external))
+    println(io, "  multiplicity_external: ", t.multiplicity_external)
+    println(io, "  deg: ", t.deg)
+    println(io, "  fully_asymmetric: ", t.fully_asymmetric)
+    print(io, "  symmetry: ", _symmetry_label(t.multiindex, t.fully_asymmetric))
 end
 
 """
