@@ -15,7 +15,7 @@ spectral truncation driven by the superharmonics `s(α) = ⟨λ, α⟩`:
  3. combining conditions: anisotropic total degree × per-parameter box
  4. removing multiindices with `delete_multiindices` and `filter`
  5. bounding the superharmonics by a spectral radius
- 6. checking a custom set against the `parametrise` contract
+ 6. the `parametrise` contract, and how `validate_multiindex_set` enforces it
 
 Each section writes an interactive lattice view to `results/figures/`. Nothing is
 solved here — the script runs in a couple of seconds and needs no FEM backend.
@@ -26,6 +26,7 @@ Run it from the repository root:
 """
 
 using MORFE.Multiindices
+using MORFE: validate_multiindex_set
 using StaticArrays: SVector
 
 include(joinpath(@__DIR__, "viz.jl"))
@@ -77,14 +78,15 @@ println("indices with 1 ≤ |α| < 3 inside [2,2]: ", in_window)
 println("  → ", [Vector(total_deg[i]) for i in in_window])
 
 write_lattice(joinpath(FIGDIR, "fig1_generators.html"),
-	[LatticePanel("|α| ≤ 4", total_deg;
-			note = "all_multiindices_up_to(2, 4; min_degree = 1) — the graded simplex."),
-		LatticePanel("|α| = 4", exact_deg;
-			note = "multiindices_with_total_degree(2, 4) — one degree slice, the anti-diagonal."),
-		LatticePanel("box [3,3]", box;
-			note = "all_multiindices_in_box([3, 3]) — a hyperrectangle: degree up to 6 on the diagonal.")];
-	title = "Generators",
-	caption = "The three automatic generators. The constant α = 0 is excluded throughout.")
+    [
+        LatticePanel("1 ≤ |α| ≤ 4", total_deg;
+            note = "all_multiindices_up_to(2, 4; min_degree = 1) — the graded simplex."),
+        LatticePanel("|α| = 4", exact_deg;
+            note = "multiindices_with_total_degree(2, 4) — one degree slice, the line α₁ + α₂ = 4."),
+        LatticePanel("1 ≤ |α|, α ≤ [3,3]", box;
+            note = "all_multiindices_in_box([3, 3]) — a hyperrectangle: degree |α| = 6 on the corner.")];
+    title = "Generators",
+    caption = "The three automatic generators. The constant α = 0 is excluded throughout.")
 
 # ------------------------------------------------------------------------------
 # 2. The same sets, built by hand
@@ -99,12 +101,12 @@ println("2. Manual construction\n")
 # Vector of SVectors — the storage representation. Order does not matter: the
 # constructor sorts into GrLex and deduplicates for you.
 by_hand = MultiindexSet([SVector{2, Int}(a, b)
-						 for a in 0:4 for b in 0:4 if 1 ≤ a + b ≤ 4])
+                         for a in 0:4 for b in 0:4 if 1 ≤ a + b ≤ 4])
 println("hand-built == up_to(2, 4; min_degree = 1): ", by_hand == total_deg)
 
 # Deliberately unsorted, with a duplicate:
 messy = MultiindexSet([SVector{2, Int}(0, 2), SVector{2, Int}(1, 0),
-	SVector{2, Int}(0, 2), SVector{2, Int}(2, 0)])
+    SVector{2, Int}(0, 2), SVector{2, Int}(2, 0)])
 show_set("sorted and deduplicated", messy)
 
 # Two more spellings of the same thing. Note that the matrix form takes exponents as
@@ -115,7 +117,7 @@ println("Vector{Vector{Int}} == Matrix{Int}: ", from_vecs == from_matrix)
 
 # Equality compares the exponents only — `degree_offsets` is a derived field.
 println("equality ignores degree_offsets:    ",
-	MultiindexSet([[2, 0], [1, 0]]) == MultiindexSet([[1, 0], [2, 0]]))
+    MultiindexSet([[2, 0], [1, 0]]) == MultiindexSet([[1, 0], [2, 0]]))
 
 # And a set no generator can produce: a hand-picked selection.
 handpicked = MultiindexSet([[1, 0], [0, 1], [3, 1], [1, 3]])
@@ -139,24 +141,25 @@ const MAXT = 2   # per-parameter budget in each θ
 # Route A — a comprehension stating both conditions directly. This is the pattern the
 # parametric examples use in their config files.
 aniso_A = MultiindexSet([SVector{3, Int}(a, b, c)
-						 for a in 0:MAXZ for b in 0:MAXZ for c in 0:MAXT
-						 if a + b ≤ MAXZ && 1 ≤ a + b + c])
+                         for a in 0:MAXZ for b in 0:MAXZ
+                         for c in 0:MAXT
+                         if a + b ≤ MAXZ && 1 ≤ a + b + c])
 
 # Route B — start from the enclosing box and narrow it with `filter`.
 aniso_B = filter(α -> α[1] + α[2] ≤ MAXZ && sum(α) ≥ 1,
-	all_multiindices_in_box([MAXZ, MAXZ, MAXT]))
+    all_multiindices_in_box([MAXZ, MAXZ, MAXT]))
 
 println("route A (comprehension) == route B (filter): ", aniso_A == aniso_B)
 println("enclosing box:      ", length(all_multiindices_in_box([MAXZ, MAXZ, MAXT])))
 println("anisotropic set:    ", length(aniso_A))
 println("isotropic |α| ≤ 4:  ", length(all_multiindices_up_to(3, MAXZ; min_degree = 1)),
-	"  (a different set — it allows α₃ = 3, 4 but forbids |α| = 5, 6)")
+    "  (a different set — it allows α₃ = 3, 4 but forbids |α| = 5, 6)")
 
 # Two parameters, i.e. the four-variable set of the parametric beam example. Same two
 # conditions, one more θ.
 println("two parameters (NVAR = 4): ",
-	length(filter(α -> α[1] + α[2] ≤ MAXZ && sum(α) ≥ 1,
-		all_multiindices_in_box([MAXZ, MAXZ, MAXT, MAXT]))), " monomials")
+    length(filter(α -> α[1] + α[2] ≤ MAXZ && sum(α) ≥ 1,
+        all_multiindices_in_box([MAXZ, MAXZ, MAXT, MAXT]))), " monomials")
 
 # ----- The lattice figure: one universe, composable conditions -----
 #
@@ -170,23 +173,23 @@ universe = filter(α -> sum(α) ≥ 1, all_multiindices_in_box([MAXZ, MAXZ, MAXT
 
 println("\nuniverse (the box, minus the origin): ", length(universe), " monomials")
 for (name, pred) in ("|α| ≤ 4" => (α -> sum(α) ≤ MAXZ),
-	"α₁ + α₂ ≤ 4" => (α -> α[1] + α[2] ≤ MAXZ),
-	"α₁ ≤ 2" => (α -> α[1] ≤ 2),
-	"α ≤ (2,2,1)" => (α -> all(α .≤ [2, 2, 1])),
-	"α₃ = 0 face" => (α -> α[3] == 0))
-	println("  ", rpad(name, 16), count(pred, universe.exponents))
+    "α₁ + α₂ ≤ 4" => (α -> α[1] + α[2] ≤ MAXZ),
+    "α₁ ≤ 2" => (α -> α[1] ≤ 2),
+    "α ≤ (2,2,1)" => (α -> all(α .≤ [2, 2, 1])),
+    "α₃ = 0 face" => (α -> α[3] == 0))
+    println("  ", rpad(name, 16), count(pred, universe.exponents))
 end
 
 write_lattice(joinpath(FIGDIR, "fig2_anisotropic.html"),
-	LatticeConditions(universe;
-		filters = ["|α| ≤ 4" => (α -> sum(α) ≤ MAXZ),
-			"α₁ + α₂ ≤ 4" => (α -> α[1] + α[2] ≤ MAXZ),
-			"α₁ ≤ 2" => (α -> α[1] ≤ 2),
-			"α ≤ (2,2,1)" => (α -> all(α .≤ [2, 2, 1]))],
-		unions = ["α₃ = 0 face" => (α -> α[3] == 0),
-			"α₃ = 2 face" => (α -> α[3] == 2)]);
-	title = "Filtering a lattice",
-	caption = "Red filters intersect · green buttons add points back · reset clears both.")
+    LatticeConditions(universe;
+        filters = ["|α| ≤ 4" => (α -> sum(α) ≤ MAXZ),
+            "α₁ + α₂ ≤ 4" => (α -> α[1] + α[2] ≤ MAXZ),
+            "α₁ ≤ 2" => (α -> α[1] ≤ 2),
+            "α ≤ (2,2,1)" => (α -> all(α .≤ [2, 2, 1]))],
+        unions = ["α₃ = 0 face" => (α -> α[3] == 0),
+            "α₃ = 2 face" => (α -> α[3] == 2)]);
+    title = "Filtering a lattice",
+    caption = "Red filters intersect · green buttons add points back · reset clears both.")
 
 # ------------------------------------------------------------------------------
 # 4. Removing multiindices
@@ -206,11 +209,11 @@ no_corners = delete_multiindices(S, [[3, 0], [0, 3]])
 show_set("delete [3,0] and [0,3]", no_corners)
 show_set("delete a single exponent", delete_multiindices(S, [1, 1]))
 show_set("set difference",
-	delete_multiindices(S, all_multiindices_up_to(2, 1; min_degree = 1)))
+    delete_multiindices(S, all_multiindices_up_to(2, 1; min_degree = 1)))
 
 # Exponents that are not members are simply ignored, as with `setdiff`.
 println("deleting an absent exponent is a no-op: ",
-	delete_multiindices(S, [[9, 9]]) == S)
+    delete_multiindices(S, [[9, 9]]) == S)
 
 # S itself never changes.
 println("S is untouched: ", length(S), " monomials, still ", collect(S)[end])
@@ -227,23 +230,23 @@ println("the two partition S: ", length(odd_only) + length(even_only) == length(
 gapped = delete_multiindices(α -> sum(α) == 2, S)
 show_set("degree-2 block removed", gapped)
 println("find_in_set(gapped, [3, 0]) = ", find_in_set(gapped, [3, 0]),
-	"   find_in_set(gapped, [1, 1]) = ", find_in_set(gapped, [1, 1]))
+    "   find_in_set(gapped, [1, 1]) = ", find_in_set(gapped, [1, 1]))
 
 write_lattice(joinpath(FIGDIR, "fig3_deletion.html"),
-	[LatticePanel("S = 1 ≤ |α| ≤ 3", S; note = "The starting set."),
-		LatticePanel("explicit deletion", S;
-			marks = Dict([3, 0] => "dropped", [0, 3] => "dropped"),
-			note = "delete_multiindices(S, [[3,0], [0,3]]) — removed exponents shown hollow."),
-		LatticePanel("odd degree kept", S;
-			marks = Dict(Vector(α) => (isodd(sum(α)) ? "kept" : "dropped")
-						 for α in S),
-			note = "delete_multiindices(α -> iseven(sum(α)), S)."),
-		LatticePanel("even degree kept", S;
-			marks = Dict(Vector(α) => (iseven(sum(α)) ? "kept" : "dropped")
-						 for α in S),
-			note = "filter(α -> iseven(sum(α)), S) — the exact complement.")];
-	title = "Deletion",
-	caption = "Deletion is non-mutating: every panel is a new set derived from the first.")
+    [LatticePanel("S = 1 ≤ |α| ≤ 3", S; note = "The starting set."),
+        LatticePanel("explicit deletion", S;
+            marks = Dict([3, 0] => "dropped", [0, 3] => "dropped"),
+            note = "delete_multiindices(S, [[3,0], [0,3]]) — removed exponents shown hollow."),
+        LatticePanel("odd degree kept", S;
+            marks = Dict(Vector(α) => (isodd(sum(α)) ? "kept" : "dropped")
+            for α in S),
+            note = "delete_multiindices(α -> iseven(sum(α)), S)."),
+        LatticePanel("even degree kept", S;
+            marks = Dict(Vector(α) => (iseven(sum(α)) ? "kept" : "dropped")
+            for α in S),
+            note = "filter(α -> iseven(sum(α)), S) — the exact complement.")];
+    title = "Deletion",
+    caption = "Deletion is non-mutating: every panel is a new set derived from the first.")
 
 # ------------------------------------------------------------------------------
 # 5. Bounding the superharmonics by a spectral radius
@@ -281,18 +284,18 @@ println("|s(α)| < ", R, ":     ", length(band), " monomials")
 # and a monomial can sit inside the band while one of its divisors does not.
 println("\nα                s(α)              |s|     kept")
 for α in full.exponents
-	sum(α) ≤ 3 || continue
-	s = superharmonic(α)
-	println("  ", rpad(string(Vector(α)), 12), rpad(string(round(s, digits = 3)), 18),
-		rpad(string(round(abs(s), digits = 3)), 8), abs(s) < R ? "yes" : "no")
+    sum(α) ≤ 3 || continue
+    s = superharmonic(α)
+    println("  ", rpad(string(Vector(α)), 12), rpad(string(round(s, digits = 3)), 18),
+        rpad(string(round(abs(s), digits = 3)), 8), abs(s) < R ? "yes" : "no")
 end
 
 # Because every Re λ is equal, s(α) = λ_r forces |α| = 1: this spectrum has no
 # NONTRIVIAL resonances at all. They appear when the eigenvalues sit on the imaginary
 # axis, which is the conservative case the bordered solve exists for.
 println("\nresonant monomials of degree > 1: ",
-	count(α -> sum(α) > 1 && any(r -> abs(λ[r] - superharmonic(α)) < 1e-8, eachindex(λ)),
-		full.exponents))
+    count(α -> sum(α) > 1 && any(r -> abs(λ[r] - superharmonic(α)) < 1e-8, eachindex(λ)),
+        full.exponents))
 
 # So the band is NOT downward closed. The graded solve reads W[α − eᵢ] while working on
 # α, so DPIM rejects a set with a missing divisor.
@@ -303,76 +306,83 @@ unit(i, n) = SVector{n, Int}(ntuple(j -> j == i ? 1 : 0, n))
 
 # Degree 1 is exempt — its only divisor is the constant, which min_degree = 1 removed.
 for α in band.exponents, i in 1:3
-	(α[i] > 0 && sum(α) > 1) || continue
-	β = α - unit(i, 3)
-	find_in_set(band, β) === nothing || continue
-	println("  ", Vector(α), " is kept (|s| = ", round(abs(superharmonic(α)), digits = 3),
-		"), but its divisor ", Vector(β), " has |s| = ",
-		round(abs(superharmonic(β)), digits = 3), " ≥ ", R)
+
+    (α[i] > 0 && sum(α) > 1) || continue
+    β = α - unit(i, 3)
+    find_in_set(band, β) === nothing || continue
+    println("  ", Vector(α), " is kept (|s| = ", round(abs(superharmonic(α)), digits = 3),
+        "), but its divisor ", Vector(β), " has |s| = ",
+        round(abs(superharmonic(β)), digits = 3), " ≥ ", R)
 end
 
 # The fix: take the downward closure — add back every divisor of every member. The
 # result is legal, and still far smaller than the full expansion.
 function downward_closure(S::MultiindexSet{N}) where {N}
-	closed = Set{SVector{N, Int}}()
-	for α in S.exponents
-		for idx in CartesianIndices(ntuple(i -> 0:α[i], N))
-			push!(closed, SVector{N, Int}(Tuple(idx)))
-		end
-	end
-	delete!(closed, zero(SVector{N, Int}))   # DPIM needs min_degree ≥ 1
-	return MultiindexSet(collect(closed))
+    closed = Set{SVector{N, Int}}()
+    for α in S.exponents
+        for idx in CartesianIndices(ntuple(i -> 0:α[i], N))
+            push!(closed, SVector{N, Int}(Tuple(idx)))
+        end
+    end
+    delete!(closed, zero(SVector{N, Int}))   # DPIM needs min_degree ≥ 1
+    return MultiindexSet(collect(closed))
 end
 
 band_closed = downward_closure(band)
 println("\ndownward closure:   ", length(band_closed), " monomials, added ",
-	[Vector(α) for α in band_closed.exponents if find_in_set(band, α) === nothing])
+    [Vector(α) for α in band_closed.exponents if find_in_set(band, α) === nothing])
 println("is_downward_closed: ", is_downward_closed(band_closed))
 println("still below |α| ≤ 4: ", length(band_closed), " < ", length(full))
 @assert length(band_closed) == 15 && is_downward_closed(band_closed)
 
 write_lattice(joinpath(FIGDIR, "fig4_spectral.html"),
-	LatticeSpectrum(full, λ, R;
-		note = "Hover over a multiindex α to visualise its superharmonic: s(α) = α₁ λ₁ + α₂ λ₂ + α₃ λ₃.");
-	title = "Superharmonics",
-	caption = "Left: the lattice, coloured by |s(α)|. Right: the same monomials as points " *
-			  "in the complex plane, with the band |s| < 4 dashed.")
+    LatticeSpectrum(full, λ, R;
+        note = "Hover over a multiindex α to visualise its superharmonic: s(α) = α₁ λ₁ + α₂ λ₂ + α₃ λ₃.");
+    title = "Superharmonics",
+    caption = "Left: the lattice, coloured by |s(α)|. Right: the same monomials as points " *
+              "in the complex plane, with the band |s| < 4 dashed.")
 
 # ------------------------------------------------------------------------------
 # 6. Handing a custom set to `parametrise`
 #
-# `parametrise(model, order, ep; mset = ...)` checks the first three clauses below and
-# trusts you on the fourth. This helper checks all of them up front, which is worth
-# doing before a long solve.
+# `parametrise(model, order, ep; mset = ...)` enforces the whole contract before it
+# solves anything, through `validate_multiindex_set`. That function needs no model, so
+# a set can be checked the moment it is built rather than after a long assembly.
+#
+# It throws an ArgumentError naming the offending exponent. Both `parametrise` and
+# `solve_cohomological_problem` take `validate_mset = false` to skip the check.
 # ------------------------------------------------------------------------------
 
 println("\n" * "="^92)
 println("6. Checking the parametrise contract\n")
 
-function check_mset(mset::MultiindexSet{N}, nvar::Int) where {N}
-	problems = String[]
-	N == nvar ||
-		push!(problems, "has $N variables, but the model needs NVAR = $nvar")
-	isempty(mset.exponents) || sum(first(mset.exponents)) ≥ 1 ||
-		push!(problems, "contains the zero multiindex (needs min total degree ≥ 1)")
-	for i in 1:N
-		find_in_set(mset, [j == i ? 1 : 0 for j in 1:N]) === nothing &&
-			push!(problems, "is missing the unit multiindex e_$i")
-	end
-	is_downward_closed(mset) ||
-		push!(problems, "is not downward closed (a divisor of a member is missing)")
-	return problems
+# The two closure predicates on their own, when a Bool is all you want:
+println("is_downward_closed(band_closed)          = ", is_downward_closed(band_closed))
+println("is_conjugate_closed(aniso_A, [2, 1, 3])  = ",
+    is_conjugate_closed(aniso_A, [2, 1, 3]))
+# Swapping z₁ ↔ z₂ maps the anisotropic set onto itself: both conditions defining it
+# (α₁ + α₂ ≤ MAXZ, and the θ box) are symmetric in α₁ and α₂.
+
+# And the whole contract, exactly as `parametrise` applies it.
+function report(name, S; nvar = length(first(S.exponents)), rom = 2, perm = nothing)
+    try
+        validate_multiindex_set(S, nvar, rom; conjugate_permutation = perm)
+        println(rpad(name, 26), "OK — usable as mset")
+    catch err
+        err isa ArgumentError || rethrow()
+        # First sentence only; the full message also states why it matters.
+        println(rpad(name, 26), "rejected — ", first(split(err.msg, ". ")))
+    end
 end
 
-for (name, S) in ("isotropic |α| ≤ 4" => all_multiindices_up_to(2, 4; min_degree = 1),
-	"anisotropic z × θ" => aniso_A,
-	"spectral band (raw)" => band,
-	"spectral band (closed)" => band_closed)
-	nvar = length(first(S.exponents))
-	problems = check_mset(S, nvar)
-	println(rpad(name, 26), isempty(problems) ? "OK — usable as mset" :
-							"rejected: " * join(problems, "; "))
-end
+report("isotropic |α| ≤ 4", all_multiindices_up_to(2, 4; min_degree = 1))
+report("anisotropic z × θ", aniso_A; rom = 2, perm = [2, 1, 3])
+report("spectral band (raw)", band; rom = 3)
+report("spectral band (closed)", band_closed; rom = 3)
+report("band, wrong NVAR", band; nvar = 4, rom = 3)
+report("not conjugate closed",
+    delete_multiindices(all_multiindices_up_to(2, 3; min_degree = 1), [[1, 2]]);
+    rom = 2, perm = [2, 1])
 
 println("\n" * "="^92)
 println("Figures written to ", FIGDIR)

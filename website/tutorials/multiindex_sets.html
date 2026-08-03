@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Tutorials</h4>
     <ul>
+      <li><a href="full_order_model.html">Building a full-order model</a></li>
       <li><a href="multiindex_sets.html" class="active">Constructing MultiindexSets</a></li>
       <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
       <li><a href="karman.html">Kármán vortex street</a></li>
@@ -339,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function () {
             title="Lattice views of explicit and predicate deletion, with removed monomials drawn hollow"></iframe>
           <div class="fig-cap"><span class="lab">FIG · 03</span>
             Deletion is non-mutating: every panel is a new set derived from the first, with
-            what was removed drawn hollow. The last two panels are exact complements.</div>
+            what was removed drawn hollow.</div>
         </div>
       </div>
     </div>
@@ -375,10 +376,11 @@ document.addEventListener('DOMContentLoaded', function () {
           <iframe src="assets/multiindex/fig4_spectral.html" style="aspect-ratio: 900/660;"
             title="The lattice coloured by the superharmonic modulus, beside the superharmonics plotted in the complex plane"></iframe>
           <div class="fig-cap"><span class="lab">FIG · 04</span>
-            Left: the lattice, coloured by $|s(\alpha)|$, hollow outside the band. Right: the
-            same monomials as points in $\mathbb{C}$, with $|s| = 4$ dashed. <strong>Hover a
-            monomial</strong> and the arrows add $\alpha_1$ copies of $\lambda_1$, $\alpha_2$
-            of $\lambda_2$ and $\alpha_3$ of $\lambda_3$ to reach its superharmonic.</div>
+            Left: the multiindex lattice. Right: the corresponding complex superharmonics, with $|s| = 4$ dashed.
+            <strong>Hover a monomial</strong> and the arrows add $\alpha_1$ copies of
+            $\lambda_1$, $\alpha_2$ of $\lambda_2$ and $\alpha_3$ of $\lambda_3$ to reach it.
+            The <span style="color:#E8C33D">yellow rings</span> are the two divisors that fall
+            outside the band — the ones step 06 has to add back.</div>
         </div>
         <p>
           Two things the right-hand panel makes obvious. Every superharmonic has
@@ -395,11 +397,12 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">06</div>
       <div class="body">
-        <h3 id="step-contract">Check the contract before you solve</h3>
+        <h3 id="step-contract">The contract, and how it is enforced</h3>
         <p>
           A spectral cut is <strong>not downward closed</strong>: it can keep $\alpha$ while
           dropping a divisor of $\alpha$. The graded solve reads $\mathbf W[\alpha - e_i]$
           while working on $\alpha$, so a missing divisor would be silently read as zero.
+          That is why the set is checked before anything is solved.
         </p>
 <pre class="code"><span class="fn">is_downward_closed</span>(<span class="var">band</span>)   <span class="cm"># false</span>
 <span class="cm"># [2,1,0] is kept (|s| = 3.606), but its divisor [2,0,0] has |s| = 4.472 ≥ R</span>
@@ -428,10 +431,34 @@ document.addEventListener('DOMContentLoaded', function () {
             <tr><td>NVAR = ROM + N_EXT</td><td>one coordinate per reduced variable</td><td>yes</td></tr>
             <tr><td>min total degree ≥ 1</td><td>the expansion is centred on the fixed point</td><td>yes</td></tr>
             <tr><td>every unit multiindex</td><td>the linear part is initialised from the eigenvectors</td><td>yes</td></tr>
-            <tr><td>downward closed</td><td>the graded solve reads $\mathbf W[\alpha - e_i]$</td><td><strong>no</strong> — use <code>is_downward_closed</code></td></tr>
-            <tr><td>closed under conjugation</td><td>only when a conjugate permutation is used</td><td><strong>no</strong></td></tr>
+            <tr><td>downward closed</td><td>the graded solve reads $\mathbf W[\alpha - e_i]$</td><td>yes</td></tr>
+            <tr><td>closed under conjugation</td><td>only when a conjugate permutation is used</td><td>yes</td></tr>
           </tbody>
         </table>
+        <p>
+          All five are enforced by <code>validate_multiindex_set</code>, which
+          <code>parametrise</code> and <code>solve_cohomological_problem</code> both run
+          before solving. It takes no model, so you can check a set the moment you build it,
+          and it names the offending exponent rather than just refusing:
+        </p>
+<pre class="code"><span class="fn">validate_multiindex_set</span>(<span class="var">band</span>, <span class="num">3</span>, <span class="num">3</span>)
+<span class="cm"># ArgumentError: custom mset is not downward closed: [2, 1, 0] is a member</span>
+<span class="cm"># but its divisor [2, 0, 0] is not. The graded solve reads W[α - β + eᵢ] and</span>
+<span class="cm"># factorises α over members of mset, so a missing divisor is read as zero</span>
+<span class="cm"># and silently corrupts the right-hand side.</span></pre>
+        <div class="adm note">
+          <div class="adm-head">Why these two used to be your problem</div>
+          <div class="adm-body">
+            <p>The two closure clauses fail differently. A missing <strong>divisor</strong>
+            is read as zero and silently corrupts the right-hand side — wrong numbers, no
+            error. A missing <strong>conjugate partner</strong> keeps the answer correct but
+            makes the solve fall back to solving that monomial directly, so you lose the
+            pairing optimisation and the result no longer carries the conjugate structure
+            the permutation asserts. Both are now rejected up front; pass
+            <code>validate_mset = false</code> to skip the check if you have already done
+            it yourself.</p>
+          </div>
+        </div>
         <p>Then hand it over:</p>
 <pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">order</span>, <span class="var">eigenproblem</span>; <span class="var">mset</span> <span class="op">=</span> <span class="var">band_closed</span>)</pre>
       </div>
@@ -442,7 +469,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <li>Generators cover the simplex and the box; the plain constructor covers everything else.</li>
       <li><code>filter</code> and <code>delete_multiindices</code> are complements, both non-mutating, both preserving GrLex order and the degree boundary table.</li>
       <li>Anisotropy is just an intersection of conditions — total degree in $z$, a box in each $\theta$.</li>
-      <li>A spectral bound is the one truncation that uses the eigenvalues — and the one whose downward closure you must take before handing it to <code>parametrise</code>, because $|s|$ is not monotone under divisibility.</li>
+      <li>A spectral bound is the one truncation that uses the eigenvalues — and the one whose downward closure you must take, because $|s|$ is not monotone under divisibility. <code>parametrise</code> will reject it otherwise.</li>
+      <li>The contract is enforced, not assumed: <code>validate_multiindex_set</code> checks all five clauses and names the exponent that breaks one.</li>
     </ul>
 
     <h2 id="next">Where to next?</h2>

@@ -194,6 +194,12 @@ requirement is enforced by the `ExternalSystem` constructors and explained in th
   The caller must verify that the eigenvectors satisfy the conjugate symmetry before passing
   this argument — two eigenvalues forming a conjugate pair is necessary but not sufficient
   (the eigenspace must be one-dimensional, or the eigenvectors must be chosen conjugately).
+- `validate_mset` — check `mset` against the contract the solve assumes (variable count,
+  minimum degree, unit multiindices, downward closure, and closure under
+  `conjugate_permutation`) via [`validate_multiindex_set`](@ref), throwing an
+  `ArgumentError` naming the offending exponent.  Default `true`: every path into the
+  solve passes through here, so this is where the contract is enforced.  `parametrise`
+  checks first and passes `false` to avoid walking the set twice.
 - `show_progress` — print a progress line to `stderr` while solving (default: `true`).
   Suppressed automatically when `stderr` is not a TTY.
 
@@ -213,10 +219,15 @@ function solve_cohomological_problem(
         master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
         left_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
         conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
+        validate_mset::Bool = true,
         show_progress::Bool = true,
         benchmark_dir::Union{Nothing, AbstractString} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
+    # Every path into the solve lands here, so this is where the mset contract is
+    # enforced. `parametrise` checks first and passes validate_mset = false.
+    validate_mset && validate_multiindex_set(mset, NVAR, ROM;
+        conjugate_permutation = conjugate_permutation)
     FOM = size(master_modes, 1)
     @assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
     T = ComplexF64

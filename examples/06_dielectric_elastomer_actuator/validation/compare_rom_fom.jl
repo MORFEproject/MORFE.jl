@@ -38,7 +38,7 @@ println("\n[1] Closure validation (coupled (u,q) vs closed third-order system)")
 T_cl = 20 * T_period
 # Run both integrations explicitly to avoid Julia soft-scope ambiguity
 ts_cl, wcpl_cl, _ = integrate_fom(p, fe, bp; Ω, T_end = T_cl, dt = dt_fom)
-_, w3rd_cl, _     = integrate_thirdorder(p, fe, bp; Ω, T_end = T_cl, dt = dt_fom)
+_, w3rd_cl, _ = integrate_thirdorder(p, fe, bp; Ω, T_end = T_cl, dt = dt_fom)
 err1 = norm(wcpl_cl .- w3rd_cl) / max(norm(wcpl_cl), 1e-300)
 @printf "    v_a = %-8.4g  rel. L2 mismatch = %.3e\n" p.v_a err1
 
@@ -78,7 +78,9 @@ ts_r, Z_r = integrate_rom(R, mset4, ComplexF64[0, 0, 1, 1], T_ss, T_period / 200
 w_r = reconstruct_tip(W, mset4, Z_r, fe.idx_wtip)
 amp_rom = steady_amplitude(ts_r, w_r, T_period)
 
-@printf "    FOM amplitude = %.6e\n    ROM amplitude = %.6e\n    rel. error    = %.3e\n" amp_fom amp_rom abs(amp_rom - amp_fom) / amp_fom
+@printf "    FOM amplitude = %.6e\n    ROM amplitude = %.6e\n    rel. error    = %.3e\n" amp_fom amp_rom abs(amp_rom -
+                                                                                                             amp_fom) /
+                                                                                                         amp_fom
 @assert abs(amp_rom - amp_fom) / amp_fom < 0.05 "ROM amplitude error > 5%"
 
 # Plot last 5 periods of the ROM vs FOM tip history
@@ -137,7 +139,8 @@ for Ωk in Ωs
         a_fom = fom_amplitude_at(Ωk)
         push!(fom_check_Ω, Ωk)
         push!(fom_check_amp, a_fom)
-        @printf "    %.3f   %.6e   %.6e   %.2e\n" Ωk / Ω a_rom a_fom abs(a_rom - a_fom) / a_fom
+        @printf "    %.3f   %.6e   %.6e   %.2e\n" Ωk / Ω a_rom a_fom abs(a_rom - a_fom) /
+                                                                     a_fom
         @assert abs(a_rom - a_fom) / a_fom < 0.05 "FRF point error > 5% at Ω/ω₁ = $(Ωk/Ω)"
     else
         @printf "    %.3f   %.6e\n" Ωk / Ω a_rom

@@ -64,7 +64,7 @@ MATERIAL &#61; SVK.SVKMaterial&#40;E &#61; 160e3, ν &#61; 0.22, ρ &#61; 2.32e-
 DAMPING &#61; SVK.RayleighDamping&#40;α &#61; 0.0, β &#61; 0.0&#41;
 DIRICHLET &#61; Set&#40;&#91;1, 11&#93;&#41;       # COMSOL entity IDs of the arch feet &#40;raw IDs 0 and 10&#41;
 FE_ORDER &#61; 2
-QUAD_ORDER &#61; 4
+QUAD_ORDER &#61; 4 # should read quadrature order instead; &quot;QUAD&quot; also means quadratic
 MASTER &#61; &#91;1&#93;                   # master conjugate mode pairs
 ORDER &#61; FAST ? 3 : 5           # parametrisation order
 FORCING &#61; nothing              # or SVK.HarmonicForcing&#40;mode &#61; 1, amplitude &#61; 0.03&#41;;</code></pre>

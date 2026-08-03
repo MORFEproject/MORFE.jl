@@ -89,6 +89,14 @@ if GROUP == "examples"
                 end
                 @test length(readdir(tmp)) == 4
             end
+            mktempdir() do tmp
+                withenv("MORFE_FOM_OUT" => tmp) do
+                    include(joinpath(@__DIR__, "..", "examples", "internals",
+                        "full_order_model", "main.jl"))
+                end
+                # four figures plus the website card's thumbnail
+                @test length(readdir(tmp)) == 5
+            end
             @test true
         end
         # The remaining examples (02 Gridap, 06 dielectric) manage their own Pkg

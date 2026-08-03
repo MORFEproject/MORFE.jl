@@ -1,16 +1,16 @@
-# Graph Report - MORFE_jl  (2026-08-02)
+# Graph Report - MORFE_jl  (2026-08-03)
 
 ## Corpus Check
-- 161 files · ~468,019 words
+- 164 files · ~508,985 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1347 nodes · 1404 edges · 158 communities (134 shown, 24 thin omitted)
+- 1407 nodes · 1503 edges · 161 communities (137 shown, 24 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9dfc6499`
+- Built from commit: `295488e9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -63,11 +63,14 @@
 - [[_COMMUNITY_BifurcationKit Interface|BifurcationKit Interface]]
 - [[_COMMUNITY_Multilinear Maps|Multilinear Maps]]
 - [[_COMMUNITY_multiindex_sets — Constructing MultiindexSets|multiindex_sets — Constructing MultiindexSets]]
+- [[_COMMUNITY_main.jl|main.jl]]
 - [[_COMMUNITY_FEM Utility|FEM Utility]]
 - [[_COMMUNITY_Sparse Solve|Sparse Solve]]
 - [[_COMMUNITY_MORFE.jl — Next Steps|MORFE.jl — Next Steps]]
+- [[_COMMUNITY_viz.jl|viz.jl]]
 - [[_COMMUNITY_Conjugate Symmetry Exploitation — Implementation Plan|Conjugate Symmetry Exploitation — Implementation Plan]]
 - [[_COMMUNITY_test_forces.jl|test_forces.jl]]
+- [[_COMMUNITY_full_order_model — Building a full-order model|full_order_model — Building a full-order model]]
 - [[_COMMUNITY_main.jl|main.jl]]
 - [[_COMMUNITY_benchmark_speedup.jl|benchmark_speedup.jl]]
 - [[_COMMUNITY_Python_Scipy.py|Python_Scipy.py]]
@@ -170,7 +173,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (158 total, 24 thin omitted)
+## Communities (161 total, 24 thin omitted)
 
 ### Community 0 - "Eigensolvers"
 Cohesion: 0.06
@@ -321,12 +324,12 @@ Cohesion: 0.40
 Nodes (4): MORFE, MORFE.ParametrisationMethod, Random, Test
 
 ### Community 40 - "viz.jl"
-Cohesion: 0.33
-Nodes (11): _conditions_js(), MORFE.Multiindices, String, _js_num(), _js_str(), _lattice_html(), LatticeConditions, LatticePanel (+3 more)
+Cohesion: 0.30
+Nodes (14): _conditions_js(), Float64, MORFE.Multiindices, String, _js_num(), _js_str(), _lattice_html(), LatticeConditions (+6 more)
 
 ### Community 41 - "main.jl"
-Cohesion: 0.33
-Nodes (4): MORFE.Multiindices, StaticArrays, missing_divisor(), unit()
+Cohesion: 0.25
+Nodes (3): MORFE, MORFE.Multiindices, StaticArrays
 
 ### Community 44 - "Master Mode Orthogonality"
 Cohesion: 0.50
@@ -344,6 +347,10 @@ Nodes (20): _arity_description(), _as_index_tuple(), _call_signature(), _check_a
 Cohesion: 0.50
 Nodes (3): How to run, multiindex_sets — Constructing MultiindexSets, Output
 
+### Community 50 - "main.jl"
+Cohesion: 0.09
+Nodes (17): advance(), duffing_rhs(), external_rhs(), force(), LinearAlgebra, MORFE, MORFE.Multiindices, MORFE.MultilinearMaps (+9 more)
+
 ### Community 52 - "Sparse Solve"
 Cohesion: 0.83
 Nodes (3): _bordered_solve!(), _refactorise!(), _singular_bordered_system()
@@ -352,6 +359,10 @@ Nodes (3): _bordered_solve!(), _refactorise!(), _singular_bordered_system()
 Cohesion: 0.05
 Nodes (38): §1 — Thread-parallel solve by degree group *(Critical)*, 1a. `degree_boundaries` in `ConjugateSymmetryData`, 1b. Per-thread compute buffers, 1c. Thread-parallel solve loop, 1d. Integration strategy, §2 — `solve_jobs` flat work list *(Medium)*, §3 — `detect_conjugate_permutation` utility function *(Medium — UX)*, §4 — FEM O4: combined element loop across all FEM terms *(Critical for FEM)* ✅ (+30 more)
 
+### Community 65 - "viz.jl"
+Cohesion: 0.23
+Nodes (20): _arr(), _base_css(), _base_js(), ChartPanel, _charts_html(), Curve, Bool, Int (+12 more)
+
 ### Community 67 - "Conjugate Symmetry Exploitation — Implementation Plan"
 Cohesion: 0.06
 Nodes (30): 10. API Change to `solve_cohomological_problem`, 11. `CohomologicalContext` Changes, 12. File-by-File Change Summary, 13. Dispatch Chain Summary, 14. Edge Cases, 15. Expected Performance Gain, 16. Verification, 1. Mathematical Summary (+22 more)
@@ -359,6 +370,10 @@ Nodes (30): 10. API Change to `solve_cohomological_problem`, 11. `CohomologicalC
 ### Community 68 - "test_forces.jl"
 Cohesion: 0.10
 Nodes (28): a_g(), E_nl_g(), f2_gridap(), _f2_morfe!(), f2_naive(), _f2_naive_real!(), f3_gridap(), _f3_morfe!() (+20 more)
+
+### Community 69 - "full_order_model — Building a full-order model"
+Cohesion: 0.33
+Nodes (5): full_order_model — Building a full-order model, How to run, Output, The other scripts here, The upper-triangularity constraint
 
 ### Community 70 - "main.jl"
 Cohesion: 0.10
@@ -593,7 +608,7 @@ Cohesion: 0.50
 Nodes (3): LinearAlgebra, MORFE.InvarianceEquation, StaticArrays
 
 ## Knowledge Gaps
-- **620 isolated node(s):** `Pkg`, `MORFE`, `Ferrite`, `FerriteGmsh`, `SparseArrays` (+615 more)
+- **631 isolated node(s):** `Pkg`, `MORFE`, `Ferrite`, `FerriteGmsh`, `SparseArrays` (+626 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -605,7 +620,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Mechanical_Problem_Solver` connect `Eigensolvers` to `main.jl`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `Pkg`, `MORFE`, `Ferrite` to the rest of the system?**
-  _633 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _644 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Eigensolvers` be split into smaller, more focused modules?**
   _Cohesion score 0.05975609756097561 - nodes in this community are weakly interconnected._
 - **Should `Cohomological Equations` be split into smaller, more focused modules?**

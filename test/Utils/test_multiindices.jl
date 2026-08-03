@@ -477,6 +477,51 @@ end
 end
 
 # ============================================================================
+# Test is_conjugate_closed
+# ============================================================================
+@testset "is_conjugate_closed" begin
+    set = all_multiindices_up_to(2, 3; min_degree = 1)
+
+    # Combinatorial sets are symmetric in their coordinates, so any permutation closes
+    @test is_conjugate_closed(set, [2, 1])
+    @test is_conjugate_closed(set, [1, 2])            # identity: trivially closed
+    @test is_conjugate_closed(all_multiindices_in_box([3, 3]), [2, 1])
+    @test is_conjugate_closed(all_multiindices_up_to(3, 3), [2, 1, 3])
+
+    # A box that is NOT symmetric in the swapped pair is not closed
+    @test !is_conjugate_closed(all_multiindices_in_box([2, 1]), [2, 1])
+
+    # Dropping one of a conjugate pair breaks it; dropping a self-paired one does not
+    @test !is_conjugate_closed(delete_multiindices(set, [[1, 2]]), [2, 1])
+    @test !is_conjugate_closed(delete_multiindices(set, [[2, 1]]), [2, 1])
+    @test is_conjugate_closed(delete_multiindices(set, [[1, 1]]), [2, 1])   # self-paired
+
+    # Removing both members of a pair keeps the set closed
+    @test is_conjugate_closed(delete_multiindices(set, [[1, 2], [2, 1]]), [2, 1])
+
+    # A permutation that fixes every coordinate closes any set
+    @test is_conjugate_closed(delete_multiindices(set, [[1, 2]]), [1, 2])
+
+    # Degenerate cases
+    @test is_conjugate_closed(MultiindexSet(SVector{2, Int}[]), [2, 1])
+
+    # Length mismatch is an error, not a silent false
+    @test_throws ArgumentError is_conjugate_closed(set, [2, 1, 3])
+    @test_throws ArgumentError is_conjugate_closed(set, [1])
+
+    # The permutation acts on COMPONENTS: (P·α)[k] = α[perm[k]].  With perm = [2,1]
+    # the partner of (2,1) is (1,2) — pin the direction explicitly.
+    pair = MultiindexSet([[2, 1], [1, 2]])
+    @test is_conjugate_closed(pair, [2, 1])
+    @test !is_conjugate_closed(MultiindexSet([[2, 1]]), [2, 1])
+
+    # Three variables, only the first two paired
+    tri = MultiindexSet([[2, 1, 1], [1, 2, 1]])
+    @test is_conjugate_closed(tri, [2, 1, 3])
+    @test !is_conjugate_closed(MultiindexSet([[2, 1, 1]]), [2, 1, 3])
+end
+
+# ============================================================================
 # Test predicates: divides, is_constant
 # ============================================================================
 @testset "Predicates" begin

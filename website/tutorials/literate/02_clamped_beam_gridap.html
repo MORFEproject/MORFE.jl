@@ -80,7 +80,7 @@ dΩ &#61; Measure&#40;Ω, degree&#41;
 dΓ &#61; Measure&#40;Γ, degree&#41;
 reffe &#61; ReferenceFE&#40;lagrangian, VectorValue&#123;3, Float64&#125;, order&#41;
 V &#61; TestFESpace&#40;model, reffe; conformity &#61; :H1, dirichlet_tags &#61; &#91;&quot;Dirichlet&quot;&#93;,
-	dirichlet_masks &#61; &#91;&#40;true, true, true&#41;&#93;&#41;
+    dirichlet_masks &#61; &#91;&#40;true, true, true&#41;&#93;&#41;
 g&#40;x&#41; &#61; VectorValue&#40;0.0, 0.0, 0.0&#41;
 U &#61; TrialFESpace&#40;V, g&#41;</code></pre>
 <p>Material properties and constitutive relations</p>
@@ -101,18 +101,18 @@ E_nl_grad&#40;∇u1, ∇u2&#41; &#61; 0.25 * &#40;&#40;∇u1&#39;&#41; ⋅ ∇u2
 
 #Quadratic nonlinear terms
 function g_quad&#40;u1, u2, v&#41;
-	∫&#40;ε&#40;v&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u1, u2&#41;&#41;&#41; &#43;
-	  0.5 * &#40;sym&#40;∇&#40;u1&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ σ_nln&#40;ε&#40;u2&#41;&#41;
-			 &#43;
-			 sym&#40;∇&#40;u2&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ σ_nln&#40;ε&#40;u1&#41;&#41;&#41;&#41;dΩ
+    ∫&#40;ε&#40;v&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u1, u2&#41;&#41;&#41; &#43;
+      0.5 * &#40;sym&#40;∇&#40;u1&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ σ_nln&#40;ε&#40;u2&#41;&#41;
+             &#43;
+             sym&#40;∇&#40;u2&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ σ_nln&#40;ε&#40;u1&#41;&#41;&#41;&#41;dΩ
 end
 
 #Cubic nonlinear terms
 function h_cube&#40;u1, u2, u3, v&#41;
-	1 / 3 *
-	∫&#40;sym&#40;∇&#40;u1&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u2, u3&#41;&#41;&#41; &#43;
-	  sym&#40;∇&#40;u2&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u1, u3&#41;&#41;&#41; &#43;
-	  sym&#40;∇&#40;u3&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u1, u2&#41;&#41;&#41;&#41;dΩ
+    1 / 3 *
+    ∫&#40;sym&#40;∇&#40;u1&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u2, u3&#41;&#41;&#41; &#43;
+      sym&#40;∇&#40;u2&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u1, u3&#41;&#41;&#41; &#43;
+      sym&#40;∇&#40;u3&#41;&#39; ⋅ ∇&#40;v&#41;&#41; ⊙ &#40;σ_nln&#40;E_nl&#40;u1, u2&#41;&#41;&#41;&#41;dΩ
 end</code></pre>
 <p>Assemble matrices of second order system</p>
 <pre><code class="language-julia">stiffness_matrix &#61; assemble_matrix&#40;&#40;u, v&#41; -&gt; a&#40;u, v&#41;, U, V&#41;
@@ -125,33 +125,33 @@ FOM &#61; size&#40;stiffness_matrix, 1&#41;
 println&#40;&quot;FOM:&quot;, FOM&#41;</code></pre>
 <p>Define nonlinear terms for FullOrderModel of First Order Note: Current implementation needs fe space to be available in scope and is not efficiently implemented for complex values</p>
 <pre><code class="language-julia">function quadratic_nonlinearity&#33;&#40;res, vec1, vec2&#41;
-	u1r &#61; FEFunction&#40;V, real&#40;vec1&#41;&#41;
-	u1i &#61; FEFunction&#40;V, imag&#40;vec1&#41;&#41;
-	u2r &#61; FEFunction&#40;V, real&#40;vec2&#41;&#41;
-	u2i &#61; FEFunction&#40;V, imag&#40;vec2&#41;&#41;
-	res .-&#61; assemble_vector&#40;v -&gt; &#40;g_quad&#40;u1r, u2r, v&#41; - g_quad&#40;u1i, u2i, v&#41;&#41;, V&#41;
-	res .-&#61; assemble_vector&#40;v -&gt; &#40;g_quad&#40;u1r, u2i, v&#41; &#43; g_quad&#40;u1i, u2r, v&#41;&#41;, V&#41; * im
+    u1r &#61; FEFunction&#40;V, real&#40;vec1&#41;&#41;
+    u1i &#61; FEFunction&#40;V, imag&#40;vec1&#41;&#41;
+    u2r &#61; FEFunction&#40;V, real&#40;vec2&#41;&#41;
+    u2i &#61; FEFunction&#40;V, imag&#40;vec2&#41;&#41;
+    res .-&#61; assemble_vector&#40;v -&gt; &#40;g_quad&#40;u1r, u2r, v&#41; - g_quad&#40;u1i, u2i, v&#41;&#41;, V&#41;
+    res .-&#61; assemble_vector&#40;v -&gt; &#40;g_quad&#40;u1r, u2i, v&#41; &#43; g_quad&#40;u1i, u2r, v&#41;&#41;, V&#41; * im
 end
 term_quad &#61; MultilinearMap&#40;quadratic_nonlinearity&#33;, &#40;2, 0&#41;&#41;
 function cubic_nonlinearity&#33;&#40;res, vec1, vec2, vec3&#41;
-	u1r &#61; FEFunction&#40;V, real&#40;vec1&#41;&#41;
-	u2r &#61; FEFunction&#40;V, real&#40;vec2&#41;&#41;
-	u3r &#61; FEFunction&#40;V, real&#40;vec3&#41;&#41;
-	u1i &#61; FEFunction&#40;V, imag&#40;vec1&#41;&#41;
-	u2i &#61; FEFunction&#40;V, imag&#40;vec2&#41;&#41;
-	u3i &#61; FEFunction&#40;V, imag&#40;vec3&#41;&#41;
-	res .-&#61; assemble_vector&#40;
-		v -&gt; &#40;h_cube&#40;u1r, u2r, u3r, v&#41; - h_cube&#40;u1r, u2i, u3i, v&#41; -
-			  h_cube&#40;u1i, u2r, u3i, v&#41; - h_cube&#40;u1i, u2i, u3r, v&#41;&#41;, V&#41;
-	res .-&#61; assemble_vector&#40;
-		v -&gt; &#40;h_cube&#40;u1i, u2r, u3r, v&#41; &#43; h_cube&#40;u1r, u2i, u3r, v&#41; &#43;
-			  h_cube&#40;u1r, u2r, u3i, v&#41; - h_cube&#40;u1i, u2i, u3i, v&#41;&#41;, V&#41;
+    u1r &#61; FEFunction&#40;V, real&#40;vec1&#41;&#41;
+    u2r &#61; FEFunction&#40;V, real&#40;vec2&#41;&#41;
+    u3r &#61; FEFunction&#40;V, real&#40;vec3&#41;&#41;
+    u1i &#61; FEFunction&#40;V, imag&#40;vec1&#41;&#41;
+    u2i &#61; FEFunction&#40;V, imag&#40;vec2&#41;&#41;
+    u3i &#61; FEFunction&#40;V, imag&#40;vec3&#41;&#41;
+    res .-&#61; assemble_vector&#40;
+        v -&gt; &#40;h_cube&#40;u1r, u2r, u3r, v&#41; - h_cube&#40;u1r, u2i, u3i, v&#41; -
+              h_cube&#40;u1i, u2r, u3i, v&#41; - h_cube&#40;u1i, u2i, u3r, v&#41;&#41;, V&#41;
+    res .-&#61; assemble_vector&#40;
+        v -&gt; &#40;h_cube&#40;u1i, u2r, u3r, v&#41; &#43; h_cube&#40;u1r, u2i, u3r, v&#41; &#43;
+              h_cube&#40;u1r, u2r, u3i, v&#41; - h_cube&#40;u1i, u2i, u3i, v&#41;&#41;, V&#41;
 end
 term_cubic &#61; MultilinearMap&#40;cubic_nonlinearity&#33;, &#40;3, 0&#41;&#41;
 
 model &#61; NDOrderModel&#40;
-	&#40;stiffness_matrix, damping_matrix, mass_matrix&#41;,# B0, B1, B2
-	&#40;term_quad, term_cubic&#41;,
+    &#40;stiffness_matrix, damping_matrix, mass_matrix&#41;,# B0, B1, B2
+    &#40;term_quad, term_cubic&#41;
 &#41;</code></pre>
 <hr />
 <ol start="2">
@@ -179,78 +179,78 @@ Attributes:
 
 &quot;&quot;&quot;
 mutable struct Mechanical_Problem_Solver &lt;: AbstractEigensolver
-	right_eig_result::Union&#123;Nothing, Matrix&#125;
-	eigenvalues::Union&#123;Nothing, Vector&#125;
-	nev::Int64
-	α::Float64
-	β::Float64
+    right_eig_result::Union&#123;Nothing, Matrix&#125;
+    eigenvalues::Union&#123;Nothing, Vector&#125;
+    nev::Int64
+    α::Float64
+    β::Float64
 end
 function MORFE.Eigenproblems.solve&#40;model::NDOrderModel, solver::Mechanical_Problem_Solver&#41;
-	ω2,
-	ϕ &#61; eigs&#40;
-		model.linear_terms&#91;1&#93;, model.linear_terms&#91;3&#93;, nev &#61; solver.nev, which &#61; :SM&#41;</code></pre>
+    ω2,
+    ϕ &#61; eigs&#40;
+        model.linear_terms&#91;1&#93;, model.linear_terms&#91;3&#93;, nev &#61; solver.nev, which &#61; :SM&#41;</code></pre>
 <p>@time ω2, ϕ &#61; eigen&#40;Matrix&#40;model.linear<em>terms&#91;1&#93;&#41;, Matrix&#40;model.linear</em>terms&#91;3&#93;&#41;&#41;</p>
-<pre><code class="language-julia">	idx &#61; sortperm&#40;real&#40;ω2&#41;&#41;&#91;1:&#40;solver.nev&#41;&#93;
-	ω2 &#61; ω2&#91;idx&#93;
-	ϕ &#61; ϕ&#91;:, idx&#93;
-	FOM &#61; length&#40;ϕ&#91;:, 1&#93;&#41;
-	ω &#61; sqrt.&#40;real&#40;ω2&#41;&#41;
-	ϕ &#61; real&#40;ϕ&#41;
-	λ &#61; zeros&#40;ComplexF64, solver.nev * 2&#41;
-	for i in 1:&#40;solver.nev&#41;
-		ξ &#61; 0.5 * &#40;solver.α / ω&#91;i&#93; &#43; solver.β * ω&#91;i&#93;&#41;
-		λ&#91;2*i-1&#93; &#61; ω&#91;i&#93; * &#40;-ξ &#43; sqrt&#40;Complex&#40;1.0 - ξ^2&#41;&#41; * im&#41;
-		λ&#91;2*i&#93; &#61; ω&#91;i&#93; * &#40;-ξ - sqrt&#40;Complex&#40;1.0 - ξ^2&#41;&#41; * im&#41;
-	end
-	eigenvectors &#61; Matrix&#123;ComplexF64&#125;&#40;undef, FOM * 2, solver.nev * 2&#41;
-	for i in 1:&#40;solver.nev&#41;
-		eigenvectors&#91;1:FOM, &#40;i*2-1&#41;&#93; .&#61; ϕ&#91;:, i&#93;
-		eigenvectors&#91;1:FOM, &#40;i*2&#41;&#93; .&#61; ϕ&#91;:, i&#93;
-		#velocity part
-		eigenvectors&#91;&#40;FOM&#43;1&#41;:end, &#40;i*2-1&#41;&#93; .&#61; λ&#91;&#40;i*2-1&#41;&#93; * ϕ&#91;:, i&#93;
-		eigenvectors&#91;&#40;FOM&#43;1&#41;:end, &#40;i*2&#41;&#93; .&#61; λ&#91;&#40;i*2&#41;&#93; * ϕ&#91;:, i&#93;
-	end</code></pre>
+<pre><code class="language-julia">    idx &#61; sortperm&#40;real&#40;ω2&#41;&#41;&#91;1:&#40;solver.nev&#41;&#93;
+    ω2 &#61; ω2&#91;idx&#93;
+    ϕ &#61; ϕ&#91;:, idx&#93;
+    FOM &#61; length&#40;ϕ&#91;:, 1&#93;&#41;
+    ω &#61; sqrt.&#40;real&#40;ω2&#41;&#41;
+    ϕ &#61; real&#40;ϕ&#41;
+    λ &#61; zeros&#40;ComplexF64, solver.nev * 2&#41;
+    for i in 1:&#40;solver.nev&#41;
+        ξ &#61; 0.5 * &#40;solver.α / ω&#91;i&#93; &#43; solver.β * ω&#91;i&#93;&#41;
+        λ&#91;2 * i - 1&#93; &#61; ω&#91;i&#93; * &#40;-ξ &#43; sqrt&#40;Complex&#40;1.0 - ξ^2&#41;&#41; * im&#41;
+        λ&#91;2 * i&#93; &#61; ω&#91;i&#93; * &#40;-ξ - sqrt&#40;Complex&#40;1.0 - ξ^2&#41;&#41; * im&#41;
+    end
+    eigenvectors &#61; Matrix&#123;ComplexF64&#125;&#40;undef, FOM * 2, solver.nev * 2&#41;
+    for i in 1:&#40;solver.nev&#41;
+        eigenvectors&#91;1:FOM, &#40;i * 2 - 1&#41;&#93; .&#61; ϕ&#91;:, i&#93;
+        eigenvectors&#91;1:FOM, &#40;i * 2&#41;&#93; .&#61; ϕ&#91;:, i&#93;
+        #velocity part
+        eigenvectors&#91;&#40;FOM &#43; 1&#41;:end, &#40;i * 2 - 1&#41;&#93; .&#61; λ&#91;&#40;i * 2 - 1&#41;&#93; * ϕ&#91;:, i&#93;
+        eigenvectors&#91;&#40;FOM &#43; 1&#41;:end, &#40;i * 2&#41;&#93; .&#61; λ&#91;&#40;i * 2&#41;&#93; * ϕ&#91;:, i&#93;
+    end</code></pre>
 <p>store results in solver for left eigen_vectors</p>
-<pre><code class="language-julia">	solver.right_eig_result &#61; eigenvectors
-	solver.eigenvalues &#61; λ
-	return λ, eigenvectors
+<pre><code class="language-julia">    solver.right_eig_result &#61; eigenvectors
+    solver.eigenvalues &#61; λ
+    return λ, eigenvectors
 end
 
 function MORFE.Eigenproblems.solve_left&#40;
-	model::NDOrderModel, solver::Mechanical_Problem_Solver&#41;
-	@assert solver.right_eig_result&#33;&#61;&#61;nothing &quot;First run solve&#40;&#41;&quot;
-	left_eigenvectors &#61; similar&#40;solver.right_eig_result&#41;
-	FOM &#61; Int&#40;0.5 * length&#40;left_eigenvectors&#91;:, 1&#93;&#41;&#41;
-	for i in 1:Int&#40;0.5*size&#40;left_eigenvectors, 2&#41;&#41;
-		left_eigenvectors&#91;&#40;FOM&#43;1&#41;:end, &#40;i*2-1&#41;&#93; &#61; solver.right_eig_result&#91;
-			1:FOM, &#40;i*2&#41;&#93;
-		left_eigenvectors&#91;&#40;FOM&#43;1&#41;:end, &#40;i*2&#41;&#93; &#61; solver.right_eig_result&#91;
-			1:FOM, &#40;i*2-1&#41;&#93;
-	end
-	for &#40;i, λ&#41; in enumerate&#40;solver.eigenvalues&#41;</code></pre>
+        model::NDOrderModel, solver::Mechanical_Problem_Solver&#41;
+    @assert solver.right_eig_result&#33;&#61;&#61;nothing &quot;First run solve&#40;&#41;&quot;
+    left_eigenvectors &#61; similar&#40;solver.right_eig_result&#41;
+    FOM &#61; Int&#40;0.5 * length&#40;left_eigenvectors&#91;:, 1&#93;&#41;&#41;
+    for i in 1:Int&#40;0.5 * size&#40;left_eigenvectors, 2&#41;&#41;
+        left_eigenvectors&#91;&#40;FOM &#43; 1&#41;:end, &#40;i * 2 - 1&#41;&#93; &#61; solver.right_eig_result&#91;
+            1:FOM, &#40;i * 2&#41;&#93;
+        left_eigenvectors&#91;&#40;FOM &#43; 1&#41;:end, &#40;i * 2&#41;&#93; &#61; solver.right_eig_result&#91;
+            1:FOM, &#40;i * 2 - 1&#41;&#93;
+    end
+    for &#40;i, λ&#41; in enumerate&#40;solver.eigenvalues&#41;</code></pre>
 <p>left<em>eigenvectors&#91;&#40;FOM &#43; 1&#41;:end, i&#93; &#61; solver.right</em>eig_result&#91;1:FOM, i&#93;</p>
-<pre><code class="language-julia">		left_eigenvectors&#91;1:FOM, i&#93; &#61; -&#40;1 / conj&#40;λ&#41;&#41; * model.linear_terms&#91;1&#93;&#39; *
-									  left_eigenvectors&#91;&#40;FOM&#43;1&#41;:end, i&#93;
-	end
-	return solver.eigenvalues, left_eigenvectors
+<pre><code class="language-julia">        left_eigenvectors&#91;1:FOM, i&#93; &#61; -&#40;1 / conj&#40;λ&#41;&#41; * model.linear_terms&#91;1&#93;&#39; *
+                                      left_eigenvectors&#91;&#40;FOM &#43; 1&#41;:end, i&#93;
+    end
+    return solver.eigenvalues, left_eigenvectors
 end</code></pre>
 <p>Compute left and right eigenpairs using the default solver and store it in Eigenproblem</p>
 <pre><code class="language-julia">eigenproblem &#61; solve_eigenproblem&#40;
-	model, solver &#61; Mechanical_Problem_Solver&#40;nothing, nothing, 10, α, β&#41;,
-	sorter&#33; &#61; &#40;args...&#41; -&gt; nothing&#41;
+    model, solver &#61; Mechanical_Problem_Solver&#40;nothing, nothing, 10, α, β&#41;,
+    sorter&#33; &#61; &#40;args...&#41; -&gt; nothing&#41;
 &#40;eigenvalues, Y, X&#41; &#61; get_eigenpairs&#40;eigenproblem&#41;
 for &#40;i, λ&#41; in enumerate&#40;eigenvalues&#41;
-	println&#40;&quot;  mode &#36;i →   λ &#61; &#36;λ\n&quot;&#41;
+    println&#40;&quot;  mode &#36;i →   λ &#61; &#36;λ\n&quot;&#41;
 end</code></pre>
 <p>test residuual of left and right eigenvectors</p>
 <pre><code class="language-julia">if test &#61;&#61; true
-	A, B &#61; linear_first_order_matrices&#40;model&#41;
-	FOM2 &#61; Int&#40;size&#40;Y, 1&#41; / 2&#41;
-	for &#40;i, λ&#41; in enumerate&#40;eigenvalues&#41;
-		res_y &#61; norm&#40;A * Y&#91;:, i&#93; - λ * B * Y&#91;:, i&#93;&#41;
-		res_x &#61; norm&#40;A&#39; * X&#91;:, i&#93; - conj&#40;λ&#41; * B&#39; * X&#91;:, i&#93;&#41;
-		println&#40;&quot;mode &#36;i:&quot;, res_x, &quot; &quot;, res_y&#41;
-	end
+    A, B &#61; linear_first_order_matrices&#40;model&#41;
+    FOM2 &#61; Int&#40;size&#40;Y, 1&#41; / 2&#41;
+    for &#40;i, λ&#41; in enumerate&#40;eigenvalues&#41;
+        res_y &#61; norm&#40;A * Y&#91;:, i&#93; - λ * B * Y&#91;:, i&#93;&#41;
+        res_x &#61; norm&#40;A&#39; * X&#91;:, i&#93; - conj&#40;λ&#41; * B&#39; * X&#91;:, i&#93;&#41;
+        println&#40;&quot;mode &#36;i:&quot;, res_x, &quot; &quot;, res_y&#41;
+    end
 end</code></pre>
 <hr />
 <ol start="3">
@@ -266,14 +266,14 @@ NVAR &#61; ROM &#43; N_EXT</code></pre>
 
 master_eigenvalues &#61; SVector&#123;ROM, ComplexF64&#125;&#40;eigenvalues&#91;1:ROM&#93;&#41;
 master_modes &#61; Y&#91;1:FOM, 1:ROM&#93;            # size: FOM × ROM
-left_eigenmodes &#61; Y&#91;&#40;FOM&#43;1&#41;:end, 1:ROM&#93;  # size: FOM × ROM</code></pre>
+left_eigenmodes &#61; Y&#91;&#40;FOM &#43; 1&#41;:end, 1:ROM&#93;  # size: FOM × ROM</code></pre>
 <p>Higher-order master mode derivatives W^&#40;k&#41;&#91;e<em>r&#93;, k &#61; 2 … ORD. For the companion-form eigenproblem with state ẑ &#61; &#91;x; ẋ; …&#93;, the k-th block of ẑ &#40;rows &#40;k-1&#41;<em>FOM&#43;1 : k</em>FOM&#41; gives W^&#40;k&#41;&#91;e</em>r&#93; directly.</p>
 <pre><code class="language-julia">ORD_model &#61; length&#40;model.linear_terms&#41; - 1   # &#61; 2 for this second-order system
 master_modes_derivatives &#61; zeros&#40;ComplexF64, FOM, ORD_model - 1, ROM&#41;
 for r in 1:ROM
-	for k in 1:&#40;ORD_model-1&#41;   # k &#61; 1 only for ORD &#61; 2
-		master_modes_derivatives&#91;:, k, r&#93; .&#61; Y&#91;&#40;k*FOM&#43;1&#41;:&#40;&#40;k&#43;1&#41;*FOM&#41;, r&#93;
-	end
+    for k in 1:&#40;ORD_model - 1&#41;   # k &#61; 1 only for ORD &#61; 2
+        master_modes_derivatives&#91;:, k, r&#93; .&#61; Y&#91;&#40;k * FOM &#43; 1&#41;:&#40;&#40;k &#43; 1&#41; * FOM&#41;, r&#93;
+    end
 end</code></pre>
 <hr />
 <ol start="4">
@@ -281,20 +281,20 @@ end</code></pre>
 </li>
 </ol>
 <hr />
-<pre><code class="language-julia">outer_eigenvalues &#61; eigenvalues&#91;&#40;ROM&#43;1&#41;:end&#93; # ROM...2*10</code></pre>
+<pre><code class="language-julia">outer_eigenvalues &#61; eigenvalues&#91;&#40;ROM &#43; 1&#41;:end&#93; # ROM...2*10</code></pre>
 <p>no external system — NVAR &#61; ROM</p>
 <pre><code class="language-julia">max_degree &#61; 3
 mset &#61; all_multiindices_up_to&#40;NVAR, max_degree; min_degree &#61; 1&#41;
 println&#40;&quot;\nMultiindex set: degree ≤ &#36;max_degree in &#36;NVAR variables → &#36;&#40;length&#40;mset&#41;&#41; monomials&quot;&#41;
 
 resonance_set &#61; resonance_set_from_complex_normal_form_style&#40;
-	mset, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05&#41;</code></pre>
+    mset, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05&#41;</code></pre>
 <p>resonance<em>set &#61; resonance</em>set<em>from</em>graph<em>style&#40;     mset, Vector&#123;ComplexF64&#125;&#40;master</em>eigenvalues&#41;, ComplexF64&#91;&#93;, outer_eigenvalues, 0.05 &#41;</p>
 <pre><code class="language-julia">println&#40;&quot;\nResonance set:&quot;&#41;
 for &#40;idx, mi&#41; in enumerate&#40;mset.exponents&#41;
-	res_str &#61; join&#40;findall&#40;resonant_targets&#40;resonance_set, idx&#41;&#41;, &quot;, &quot;&#41;
-	isempty&#40;res_str&#41; &amp;&amp; &#40;res_str &#61; &quot;none&quot;&#41;
-	println&#40;&quot;  &#36;mi → &#91;&#36;res_str&#93;&quot;&#41;
+    res_str &#61; join&#40;findall&#40;resonant_targets&#40;resonance_set, idx&#41;&#41;, &quot;, &quot;&#41;
+    isempty&#40;res_str&#41; &amp;&amp; &#40;res_str &#61; &quot;none&quot;&#41;
+    println&#40;&quot;  &#36;mi → &#91;&#36;res_str&#93;&quot;&#41;
 end</code></pre>
 <hr />
 <ol start="5">
@@ -303,16 +303,16 @@ end</code></pre>
 </ol>
 <hr />
 <pre><code class="language-julia">left_modes_derivatives &#61; left_eigenmode_orders_from_slice&#40;
-	model.linear_terms, left_eigenmodes,
-	collect&#40;master_eigenvalues&#41;&#41;&#91;:, 1:&#40;ORD_model-1&#41;, :&#93;
+    model.linear_terms, left_eigenmodes,
+    collect&#40;master_eigenvalues&#41;&#41;&#91;:, 1:&#40;ORD_model - 1&#41;, :&#93;
 
 _t_solve &#61; @elapsed W, R &#61; solve_cohomological_problem&#40;
-	model, mset,
-	master_eigenvalues,
-	master_modes, left_eigenmodes,
-	resonance_set;
-	master_modes_derivatives &#61; master_modes_derivatives,
-	left_modes_derivatives &#61; left_modes_derivatives,
+    model, mset,
+    master_eigenvalues,
+    master_modes, left_eigenmodes,
+    resonance_set;
+    master_modes_derivatives &#61; master_modes_derivatives,
+    left_modes_derivatives &#61; left_modes_derivatives
 &#41;</code></pre>
 <hr />
 <ol start="6">
@@ -322,11 +322,11 @@ _t_solve &#61; @elapsed W, R &#61; solve_cohomological_problem&#40;
 <hr />
 <pre><code class="language-julia">conj_map &#61; zeros&#40;Int64, NVAR&#41;
 for i in 1:NVAR
-	if i &#37; 2 &#61;&#61; 1
-		conj_map&#91;i&#93; &#61; i &#43; 1
-	else
-		conj_map&#91;i&#93; &#61; i - 1
-	end
+    if i &#37; 2 &#61;&#61; 1
+        conj_map&#91;i&#93; &#61; i &#43; 1
+    else
+        conj_map&#91;i&#93; &#61; i - 1
+    end
 end
 Rr &#61; ReducedDynamics&#40;realify&#40;R.poly, conj_map&#41;, R.external_system_size&#41;</code></pre>
 <hr />
@@ -338,38 +338,38 @@ Rr &#61; ReducedDynamics&#40;realify&#40;R.poly, conj_map&#41;, R.external_syste
 <pre><code class="language-julia">dirs &#61; results_dirs&#40;@__DIR__&#41;
 
 function write_rdyn&#40;R::ReducedDynamics&#123;ROM, NVAR, T&#125;, out_path::String&#41; where &#123;ROM, NVAR, T&#125;
-	rdyn &#61; &#91;&quot;&quot; for i in 1:NVAR&#93;
-	for i in 1:NVAR
-		rdyn&#91;i&#93; &#61; &quot;a&quot; * string&#40;i&#41; * &quot;&#39; &#61; &quot;
-	end
-	coeff &#61; R.poly.coefficients
-	mset &#61; R.poly.multiindex_set
+    rdyn &#61; &#91;&quot;&quot; for i in 1:NVAR&#93;
+    for i in 1:NVAR
+        rdyn&#91;i&#93; &#61; &quot;a&quot; * string&#40;i&#41; * &quot;&#39; &#61; &quot;
+    end
+    coeff &#61; R.poly.coefficients
+    mset &#61; R.poly.multiindex_set
 
-	for m in 1:length&#40;mset.exponents&#41;
-		multiindex &#61; mset.exponents&#91;m&#93;
-		monomial &#61; &quot;&quot;
-		for d in 1:NVAR
-			if &#40;multiindex&#91;d&#93; &#33;&#61; 0&#41;
-				monomial *&#61; &quot;*a&quot; * string&#40;d&#41; * &quot;^&quot; * string&#40;multiindex&#91;d&#93;&#41;
-			end
-		end
-		for d in 1:Int&#40;NVAR * 0.5&#41;
-			rcoeff &#61; real&#40;coeff&#91;2 * d - 1, m&#93;&#41;
-			icoeff &#61; -1 * imag&#40;coeff&#91;2 * d - 1, m&#93;&#41;
-			if abs&#40;rcoeff&#41; &gt; 1e-20
-				rdyn&#91;2 * d - 1&#93; *&#61; &quot; &#43; &quot; * string&#40;rcoeff&#41; * monomial
-			end
-			if abs&#40;icoeff&#41; &gt; 1e-20
-				rdyn&#91;2 * d&#93; *&#61; &quot; &#43; &quot; * string&#40;icoeff&#41; * monomial
-			end
-		end
-	end
+    for m in 1:length&#40;mset.exponents&#41;
+        multiindex &#61; mset.exponents&#91;m&#93;
+        monomial &#61; &quot;&quot;
+        for d in 1:NVAR
+            if &#40;multiindex&#91;d&#93; &#33;&#61; 0&#41;
+                monomial *&#61; &quot;*a&quot; * string&#40;d&#41; * &quot;^&quot; * string&#40;multiindex&#91;d&#93;&#41;
+            end
+        end
+        for d in 1:Int&#40;NVAR * 0.5&#41;
+            rcoeff &#61; real&#40;coeff&#91;2 * d - 1, m&#93;&#41;
+            icoeff &#61; -1 * imag&#40;coeff&#91;2 * d - 1, m&#93;&#41;
+            if abs&#40;rcoeff&#41; &gt; 1e-20
+                rdyn&#91;2 * d - 1&#93; *&#61; &quot; &#43; &quot; * string&#40;rcoeff&#41; * monomial
+            end
+            if abs&#40;icoeff&#41; &gt; 1e-20
+                rdyn&#91;2 * d&#93; *&#61; &quot; &#43; &quot; * string&#40;icoeff&#41; * monomial
+            end
+        end
+    end
 
-	ofile &#61; open&#40;out_path, &quot;w&quot;&#41;
-	for i in 1:NVAR
-		write&#40;ofile, rdyn&#91;i&#93; * &quot;;\n&quot;&#41;
-	end
-	close&#40;ofile&#41;
+    ofile &#61; open&#40;out_path, &quot;w&quot;&#41;
+    for i in 1:NVAR
+        write&#40;ofile, rdyn&#91;i&#93; * &quot;;\n&quot;&#41;
+    end
+    close&#40;ofile&#41;
 end
 write_rdyn&#40;Rr, joinpath&#40;dirs.data, &quot;equations.txt&quot;&#41;&#41;
 
@@ -386,38 +386,39 @@ Relative invariance-equation residual on a Gaussian point cloud of the given
 amplitude, normalised by ‖B₀·W₁&#40;z&#41;‖ over the same cloud.
 &quot;&quot;&quot;
 function invariance_residual&#40;model, W, R, ROM;
-		amplitude &#61; 1e-3, n_samples &#61; 200, seed &#61; 20260731&#41;
-	rng &#61; MersenneTwister&#40;seed&#41;
-	rms &#61; invariance_error_norms&#40;model, W, R; n_samples, amplitude, rng&#41;.rms
-	scale &#61; 0.0
-	for _ in 1:n_samples
-		z &#61; ComplexF64&#91;complex&#40;amplitude / sqrt&#40;2&#41; * randn&#40;rng&#41;,
-			amplitude / sqrt&#40;2&#41; * randn&#40;rng&#41;&#41; for _ in 1:ROM&#93;
-		X &#61; MORFE.Polynomials.evaluate&#40;W.poly, z&#41;
-		scale &#61; max&#40;scale, norm&#40;model.linear_terms&#91;1&#93; * view&#40;X, :, 1&#41;&#41;&#41;
-	end
-	return rms, rms / scale
+        amplitude &#61; 1e-3, n_samples &#61; 200, seed &#61; 20260731&#41;
+    rng &#61; MersenneTwister&#40;seed&#41;
+    rms &#61; invariance_error_norms&#40;model, W, R; n_samples, amplitude, rng&#41;.rms
+    scale &#61; 0.0
+    for _ in 1:n_samples
+        z &#61; ComplexF64&#91;complex&#40;amplitude / sqrt&#40;2&#41; * randn&#40;rng&#41;,
+                           amplitude / sqrt&#40;2&#41; * randn&#40;rng&#41;&#41; for _ in 1:ROM&#93;
+        X &#61; MORFE.Polynomials.evaluate&#40;W.poly, z&#41;
+        scale &#61; max&#40;scale, norm&#40;model.linear_terms&#91;1&#93; * view&#40;X, :, 1&#41;&#41;&#41;
+    end
+    return rms, rms / scale
 end
 
 _amp &#61; 1e-3
 _res, _rel_res &#61; invariance_residual&#40;model, W, R, ROM; amplitude &#61; _amp&#41;
 println&#40;&quot;\nInvariance residual &#40;amplitude &#36;_amp&#41;: &quot;,
-	&quot;absolute rms &#61; &#36;_res, relative &#61; &#36;_rel_res&quot;&#41;
+    &quot;absolute rms &#61; &#36;_res, relative &#61; &#36;_rel_res&quot;&#41;
 
-write_summary&#40;dirs, &#91;
-	&quot;example: 02_clamped_beam_gridap&quot;,
-	&quot;model: clamped-clamped beam, St. Venant-Kirchhoff, Gridap backend&quot;,
-	&quot;mesh: 40x3x1 Hex8 elements, quadratic Lagrange &#40;order 2&#41;&quot;,
-	&quot;n_dofs: &#36;FOM&quot;,
-	&quot;master_modes: &#36;ROM&quot;,
-	&quot;master_eigenvalues: &#36;&#40;collect&#40;master_eigenvalues&#41;&#41;&quot;,
-	&quot;parametrisation_order: &#36;max_degree&quot;,
-	&quot;n_monomials: &#36;&#40;length&#40;mset&#41;&#41;&quot;,
-	&quot;cohomological_solve_time_s: &#36;&#40;_t_solve&#41;&quot;,
-	&quot;invariance_residual_amplitude: &#36;_amp&quot;,
-	&quot;invariance_residual_rms: &#36;_res&quot;,
-	&quot;invariance_residual_relative: &#36;_rel_res&quot;,
-&#93;&#41;
+write_summary&#40;dirs,
+    &#91;
+        &quot;example: 02_clamped_beam_gridap&quot;,
+        &quot;model: clamped-clamped beam, St. Venant-Kirchhoff, Gridap backend&quot;,
+        &quot;mesh: 40x3x1 Hex8 elements, quadratic Lagrange &#40;order 2&#41;&quot;,
+        &quot;n_dofs: &#36;FOM&quot;,
+        &quot;master_modes: &#36;ROM&quot;,
+        &quot;master_eigenvalues: &#36;&#40;collect&#40;master_eigenvalues&#41;&#41;&quot;,
+        &quot;parametrisation_order: &#36;max_degree&quot;,
+        &quot;n_monomials: &#36;&#40;length&#40;mset&#41;&#41;&quot;,
+        &quot;cohomological_solve_time_s: &#36;&#40;_t_solve&#41;&quot;,
+        &quot;invariance_residual_amplitude: &#36;_amp&quot;,
+        &quot;invariance_residual_rms: &#36;_res&quot;,
+        &quot;invariance_residual_relative: &#36;_rel_res&quot;
+    &#93;&#41;
 println&#40;&quot;\nResults written to &#36;&#40;dirs.base&#41;&quot;&#41;</code></pre>
 
 </main></body></html>

@@ -12,14 +12,14 @@
 using JuliaFormatter
 
 const ROOT = dirname(@__DIR__)
-const TARGETS = ["src", "ext", "test"]
+const TARGETS = ["src", "ext", "test", "examples"]
 
 paths = [joinpath(ROOT, dir) for dir in TARGETS]
 already_formatted = format(paths; verbose = true)
 
 if already_formatted
-    @info "All files already formatted." targets = TARGETS
+	@info "All files already formatted." targets = TARGETS
 else
-    @warn "Files were reformatted. Review and commit the changes." targets = TARGETS
-    exit(1)
+	@warn "Files were reformatted. Review and commit the changes." targets = TARGETS
+	exit(1)
 end

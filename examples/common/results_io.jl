@@ -5,7 +5,7 @@ using Serialization, Printf, LinearAlgebra
 "Create and return results dirs. `run_name=nothing` → flat results/{data,figures}."
 function results_dirs(example_dir; run_name = nothing)
     base = run_name === nothing ? joinpath(example_dir, "results") :
-                                  joinpath(example_dir, "results", run_name)
+           joinpath(example_dir, "results", run_name)
     data = joinpath(base, "data")
     figs = joinpath(base, "figures")
     mkpath(data)
@@ -18,7 +18,7 @@ function save_rom(dirs, W, R)
     serialize(joinpath(dirs.data, "W.jls"), W)
     serialize(joinpath(dirs.data, "R.jls"), R)
     open(joinpath(dirs.data, "R_coefficients.csv"), "w") do io
-        exps   = R.poly.multiindex_set.exponents
+        exps = R.poly.multiindex_set.exponents
         coeffs = R.poly.coefficients        # (NVAR, L) matrix
         NVAR_R = size(coeffs, 1)
         header = join(["exp_$i" for i in 1:length(exps[1])], ",") * "," *

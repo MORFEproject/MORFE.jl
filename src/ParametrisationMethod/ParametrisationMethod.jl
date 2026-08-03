@@ -18,18 +18,124 @@ module ParametrisationMethod
 
 using LinearAlgebra: mul!
 using StaticArrays: SVector
-using ..Multiindices: MultiindexSet
+using ..Multiindices: MultiindexSet, find_in_set, is_downward_closed, is_conjugate_closed
 using ..Polynomials: DensePolynomial, restrict_polynomial_to_degree
 
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
        compute_higher_derivative_coefficients!,
        restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree,
-       parametrise
+       parametrise, validate_multiindex_set
 
 # High-level entry point. The generic function is owned here; its method is
 # defined in `parametrise_entry.jl`, included after `CohomologicalEquations`
 # (which it calls) is available — see src/MORFE.jl.
 function parametrise end
+
+# ==================== Multiindex-set contract ====================
+
+"""
+	validate_multiindex_set(mset, nvar, rom; conjugate_permutation = nothing)
+
+Check a custom multiindex set against everything the cohomological solve assumes, and
+throw an `ArgumentError` naming the offending exponent on the first violation.
+
+The clauses, and why each one matters:
+
+1. **`nvar` variables**, matching `ROM + N_EXT`.
+2. **Minimum total degree ≥ 1** — the expansion is centred on the fixed point, so the
+   constant monomial has no coefficient to solve for.
+3. **Every unit multiindex `eᵢ`** — the linear part of the parametrisation is
+   initialised from the eigenvectors, one column per unit multiindex.
+4. **Downward closed** — the graded solve reads `W[α - β + eᵢ]` while working on `α`
+   and factorises `α = β₁ + … + β_d` over members of `mset`. A missing divisor is not an
+   error at run time: it is read as zero, silently corrupting the right-hand side.
+5. With a `conjugate_permutation`: that it is an involutive permutation of `1:nvar`
+   mapping `1:rom` into itself, and that `mset` is **closed under it**. A member whose
+   partner is absent is solved directly rather than filled by conjugation, so the result
+   loses the conjugate structure the permutation asserts.
+
+Returns `nothing`.  Cost is `O(nvar · |mset| · log|mset|)` — negligible beside a solve,
+but `parametrise` and `solve_cohomological_problem` both take a `validate_mset = false`
+escape hatch for callers that have already checked.
+
+See [`is_downward_closed`](@ref) and [`is_conjugate_closed`](@ref) for the two closure
+predicates on their own.
+"""
+function validate_multiindex_set(mset::MultiindexSet{N}, nvar::Int, rom::Int;
+        conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing) where {N}
+    N == nvar || throw(ArgumentError(
+        "custom mset has $N variables, but the model requires NVAR = ROM + N_EXT = $nvar"))
+    isempty(mset.exponents) && throw(ArgumentError("custom mset is empty"))
+
+    # Grlex puts the lowest degree first, so one look at the head settles clause 2.
+    sum(first(mset.exponents)) ≥ 1 || throw(ArgumentError(
+        "custom mset must not contain the zero multiindex (min total degree ≥ 1)"))
+
+    for i in 1:N
+        unit = [j == i ? 1 : 0 for j in 1:N]
+        find_in_set(mset, unit) === nothing && throw(ArgumentError(
+            "custom mset is missing the unit multiindex e_$i; the linear " *
+            "initialisation of the parametrisation requires all unit multiindices"))
+    end
+
+    if !is_downward_closed(mset)
+        α, β = _first_missing_divisor(mset)
+        throw(ArgumentError(
+            "custom mset is not downward closed: $(Vector(α)) is a member but its " *
+            "divisor $(Vector(β)) is not. The graded solve reads W[α - β + eᵢ] and " *
+            "factorises α over members of mset, so a missing divisor is read as zero " *
+            "and silently corrupts the right-hand side."))
+    end
+
+    conjugate_permutation === nothing && return nothing
+    perm = conjugate_permutation
+    length(perm) == N || throw(ArgumentError(
+        "conjugate_permutation has $(length(perm)) entries, but NVAR = $N"))
+    sort(collect(perm)) == collect(1:N) || throw(ArgumentError(
+        "conjugate_permutation must be a permutation of 1:$N, got $(collect(perm))"))
+    all(i -> perm[perm[i]] == i, 1:N) || throw(ArgumentError(
+        "conjugate_permutation must be an involution (perm[perm[i]] == i), " *
+        "got $(collect(perm))"))
+    # The reduced rows are filled as R[r, conj] = conj(R[perm[r], src]) for r in 1:ROM
+    # only, so the master block must be closed under the permutation.
+    all(r -> perm[r] ≤ rom, 1:rom) || throw(ArgumentError(
+        "conjugate_permutation must map the master block 1:$rom into itself, " *
+        "got $(collect(perm)); pairing a master coordinate with an external one " *
+        "would fill the reduced dynamics from the wrong row"))
+
+    if !is_conjugate_closed(mset, perm)
+        α, pα = _first_missing_conjugate(mset, perm)
+        throw(ArgumentError(
+            "custom mset is not closed under conjugate_permutation $(collect(perm)): " *
+            "$(Vector(α)) is a member but its conjugate $(Vector(pα)) is not. The " *
+            "solve fills conjugate monomials from their partners, so the result would " *
+            "lack the conjugate structure the permutation asserts."))
+    end
+    return nothing
+end
+
+# Locate one concrete (member, absent divisor) pair, for the error message only.
+function _first_missing_divisor(mset::MultiindexSet{N}) where {N}
+    for α in mset.exponents
+        sum(α) > 1 || continue          # degree 1 divides only the exempt constant
+        for i in 1:N
+            α[i] == 0 && continue
+            β = α - SVector{N, Int}(ntuple(j -> j == i ? 1 : 0, Val(N)))
+            find_in_set(mset, β) === nothing && return (α, β)
+        end
+    end
+    error("mset reported not downward closed but no missing divisor was found")
+end
+
+# Locate one concrete (member, absent conjugate) pair, for the error message only.
+function _first_missing_conjugate(mset::MultiindexSet{N}, perm) where {N}
+    for α in mset.exponents
+        pα = SVector{N, Int}(ntuple(k -> α[perm[k]], Val(N)))
+        pα == α && continue
+        find_in_set(mset, pα) === nothing && return (α, pα)
+    end
+    error("mset reported not conjugate closed but no missing partner was found")
+end
 
 """
 	Parametrisation{ORD, NVAR, T}

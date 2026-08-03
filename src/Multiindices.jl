@@ -7,7 +7,8 @@ A *multiindex* is an exponent vector `α ∈ ℕᴺ` that identifies the monomia
 - `MultiindexSet{N}` — a sorted, deduplicated collection of `SVector{N, Int}` exponents
   in graded-lexicographic (GrLex) order, with O(1) degree-boundary queries.
 - Generators: `all_multiindices_up_to`, `multiindices_with_total_degree`, `all_multiindices_in_box`.
-- Non-mutating set operations: `delete_multiindices`, `Base.filter`, `is_downward_closed`.
+- Non-mutating set operations: `delete_multiindices`, `Base.filter`, `is_downward_closed`,
+  `is_conjugate_closed`.
 - Lookup: `find_in_set` (degree-bracketed binary search), `build_exponent_index_map`.
 - Factorisation enumerators: `factorisations_asymmetric`, `factorisations_fully_symmetric`,
   `factorisations_groupwise_symmetric` — used by `MultilinearTerms` to sum nonlinear contributions.
@@ -20,7 +21,7 @@ using StaticArrays: SVector
 export MultiindexSet, zero_multiindex, # nvars,
        all_multiindices_up_to, multiindices_with_total_degree,
        all_multiindices_in_box, indices_in_box_with_bounded_degree,
-       delete_multiindices, is_downward_closed,
+       delete_multiindices, is_downward_closed, is_conjugate_closed,
        divides, is_constant, find_in_set, build_exponent_index_map,
        factorisations_asymmetric, factorisations_fully_symmetric,
        factorisations_groupwise_symmetric, FactorisationEntry,
@@ -371,6 +372,10 @@ missing divisor would be silently read as zero.  Combinatorial truncations
 (`all_multiindices_up_to`, `all_multiindices_in_box`) are closed by construction, but a
 spectral criterion such as `|⟨λ, α⟩| ≤ R` generally is not.
 
+`parametrise` and `solve_cohomological_problem` enforce this through
+`validate_multiindex_set`, which reports *which* divisor is missing; use this predicate
+when a plain `Bool` is enough.
+
 The zero multiindex is **exempt**: DPIM sets are built with `min_degree = 1`, so a
 degree-1 exponent is not asked to have its constant divisor present.
 
@@ -386,6 +391,39 @@ function is_downward_closed(set::MultiindexSet{N}) where {N}
             v[i] == 0 && continue
             find_in_set(set, v - _unit_exponent(Val(N), i)) === nothing && return false
         end
+    end
+    return true
+end
+
+"""
+	is_conjugate_closed(set::MultiindexSet{N}, perm::AbstractVector{Int}) -> Bool
+
+Return `true` when the conjugate partner of every member of `set` is itself a member.
+
+`perm` is an `N`-length permutation pairing conjugate coordinates (self-paired entries
+for real ones).  It acts on the **components** of an exponent,
+
+	(P·α)[k] = α[perm[k]],
+
+the same convention the cohomological solve uses when it fills a conjugate monomial from
+its partner.  Monomials with `P·α == α` are self-paired and trivially closed.
+
+`parametrise(...; mset = ..., conjugate_permutation = ...)` requires this: a member whose
+partner is absent is solved directly instead of being filled by conjugation, which costs
+the pairing optimisation and returns a parametrisation without the conjugate structure
+the permutation asserts.  It is enforced through `validate_multiindex_set`, which reports
+*which* partner is missing; use this predicate when a plain `Bool` is enough.
+
+Throws an `ArgumentError` if `length(perm) != N`.
+"""
+function is_conjugate_closed(set::MultiindexSet{N}, perm::AbstractVector{Int}) where {N}
+    length(perm) == N || throw(ArgumentError(
+        "conjugate permutation has $(length(perm)) entries, but the set has $N variables"))
+    N == 0 && return true
+    for v in set.exponents
+        pv = SVector{N, Int}(ntuple(k -> v[perm[k]], Val(N)))
+        pv == v && continue                       # self-paired
+        find_in_set(set, pv) === nothing && return false
     end
     return true
 end

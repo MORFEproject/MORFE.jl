@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Tutorials</h4>
     <ul>
+      <li><a href="full_order_model.html">Building a full-order model</a></li>
       <li><a href="multiindex_sets.html">Constructing MultiindexSets</a></li>
       <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
       <li><a href="karman.html">Kármán vortex street</a></li>
@@ -196,6 +197,19 @@ W, R  = solve_cohomological_problem(
     </p>
 
     <div class="tut-grid">
+      <a class="tut-card" href="full_order_model.html">
+        <div class="thumb">
+          <span class="corner">NDOrderModel</span>
+          <img src="assets/full_order_model/thumb.svg" loading="lazy"
+            alt="Phase portrait of the forced Duffing oscillator: the transient spiralling in, and the closed steady-state loop it settles onto" />
+        </div>
+        <div class="card-body">
+          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L0 · core API</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+          <h3>Building a full-order model</h3>
+          <p>The three objects every solve starts from — nonlinear terms, the external system that drives them, and the model that holds them together. Includes why the Lorenz system is rejected, and the change of coordinates that repairs it.</p>
+          <div class="meta"><span>MultilinearMap</span><span>ExternalSystem</span><span>&lt;15 s</span></div>
+        </div>
+      </a>
       <a class="tut-card" href="multiindex_sets.html">
         <div class="thumb">
           <span class="corner">MultiindexSet</span>

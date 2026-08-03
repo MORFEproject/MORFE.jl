@@ -33,7 +33,9 @@ select { font:inherit; font-size:12px; background:#111118; color:var(--ink);
 #panes { display:flex; flex:1; min-height:0; gap:10px; }
 #stage { position:relative; flex:1.35; min-height:0; min-width:0;
   border:1px solid var(--hair); border-radius:6px; background:#07070b; overflow:hidden; }
-#plane { position:relative; flex:1; min-height:0; min-width:0;
+/* Narrower than the lattice: the complex window is 1:3, so equal aspect leaves side
+   margin in any wider pane — better to give that width to the lattice. */
+#plane { position:relative; flex:0.72; min-height:0; min-width:0;
   border:1px solid var(--hair); border-radius:6px; background:#07070b; overflow:hidden; }
 #stage svg, #stage canvas, #plane svg { display:block; width:100%; height:100%; }
 #stage canvas { cursor:grab; touch-action:none; }
@@ -59,7 +61,7 @@ select { font:inherit; font-size:12px; background:#111118; color:var(--ink);
   <div id="note">The three automatic generators. The constant α = 0 is excluded throughout.</div>
 </div>
 <script>
-const PANELS = [{name:"|α| ≤ 4",nvar:2,count:14,valueLabel:"",note:"all_multiindices_up_to(2, 4; min_degree = 1) — the graded simplex.",pts:[{a:[1,0],d:1,m:"kept",v:null},{a:[0,1],d:1,m:"kept",v:null},{a:[2,0],d:2,m:"kept",v:null},{a:[1,1],d:2,m:"kept",v:null},{a:[0,2],d:2,m:"kept",v:null},{a:[3,0],d:3,m:"kept",v:null},{a:[2,1],d:3,m:"kept",v:null},{a:[1,2],d:3,m:"kept",v:null},{a:[0,3],d:3,m:"kept",v:null},{a:[4,0],d:4,m:"kept",v:null},{a:[3,1],d:4,m:"kept",v:null},{a:[2,2],d:4,m:"kept",v:null},{a:[1,3],d:4,m:"kept",v:null},{a:[0,4],d:4,m:"kept",v:null}]},{name:"|α| = 4",nvar:2,count:5,valueLabel:"",note:"multiindices_with_total_degree(2, 4) — one degree slice, the anti-diagonal.",pts:[{a:[4,0],d:4,m:"kept",v:null},{a:[3,1],d:4,m:"kept",v:null},{a:[2,2],d:4,m:"kept",v:null},{a:[1,3],d:4,m:"kept",v:null},{a:[0,4],d:4,m:"kept",v:null}]},{name:"box [3,3]",nvar:2,count:15,valueLabel:"",note:"all_multiindices_in_box([3, 3]) — a hyperrectangle: degree up to 6 on the diagonal.",pts:[{a:[1,0],d:1,m:"kept",v:null},{a:[0,1],d:1,m:"kept",v:null},{a:[2,0],d:2,m:"kept",v:null},{a:[1,1],d:2,m:"kept",v:null},{a:[0,2],d:2,m:"kept",v:null},{a:[3,0],d:3,m:"kept",v:null},{a:[2,1],d:3,m:"kept",v:null},{a:[1,2],d:3,m:"kept",v:null},{a:[0,3],d:3,m:"kept",v:null},{a:[3,1],d:4,m:"kept",v:null},{a:[2,2],d:4,m:"kept",v:null},{a:[1,3],d:4,m:"kept",v:null},{a:[3,2],d:5,m:"kept",v:null},{a:[2,3],d:5,m:"kept",v:null},{a:[3,3],d:6,m:"kept",v:null}]}];
+const PANELS = [{name:"1 ≤ |α| ≤ 4",nvar:2,count:14,valueLabel:"",note:"all_multiindices_up_to(2, 4; min_degree = 1) — the graded simplex.",pts:[{a:[1,0],d:1,m:"kept",v:null},{a:[0,1],d:1,m:"kept",v:null},{a:[2,0],d:2,m:"kept",v:null},{a:[1,1],d:2,m:"kept",v:null},{a:[0,2],d:2,m:"kept",v:null},{a:[3,0],d:3,m:"kept",v:null},{a:[2,1],d:3,m:"kept",v:null},{a:[1,2],d:3,m:"kept",v:null},{a:[0,3],d:3,m:"kept",v:null},{a:[4,0],d:4,m:"kept",v:null},{a:[3,1],d:4,m:"kept",v:null},{a:[2,2],d:4,m:"kept",v:null},{a:[1,3],d:4,m:"kept",v:null},{a:[0,4],d:4,m:"kept",v:null}]},{name:"|α| = 4",nvar:2,count:5,valueLabel:"",note:"multiindices_with_total_degree(2, 4) — one degree slice, the line α₁ + α₂ = 4.",pts:[{a:[4,0],d:4,m:"kept",v:null},{a:[3,1],d:4,m:"kept",v:null},{a:[2,2],d:4,m:"kept",v:null},{a:[1,3],d:4,m:"kept",v:null},{a:[0,4],d:4,m:"kept",v:null}]},{name:"1 ≤ |α|, α ≤ [3,3]",nvar:2,count:15,valueLabel:"",note:"all_multiindices_in_box([3, 3]) — a hyperrectangle: degree |α| = 6 on the corner.",pts:[{a:[1,0],d:1,m:"kept",v:null},{a:[0,1],d:1,m:"kept",v:null},{a:[2,0],d:2,m:"kept",v:null},{a:[1,1],d:2,m:"kept",v:null},{a:[0,2],d:2,m:"kept",v:null},{a:[3,0],d:3,m:"kept",v:null},{a:[2,1],d:3,m:"kept",v:null},{a:[1,2],d:3,m:"kept",v:null},{a:[0,3],d:3,m:"kept",v:null},{a:[3,1],d:4,m:"kept",v:null},{a:[2,2],d:4,m:"kept",v:null},{a:[1,3],d:4,m:"kept",v:null},{a:[3,2],d:5,m:"kept",v:null},{a:[2,3],d:5,m:"kept",v:null},{a:[3,3],d:6,m:"kept",v:null}]}];
 const COL = { kept:"#9558B2", resonant:"#389826", dropped:"#4a4a58" };
 // Julia's brand colours, cycled over the layers of the third displayed coordinate.
 const JULIA = ["#9558B2", "#389826", "#CB3C33", "#4063D8"];
@@ -94,7 +96,12 @@ function ramp(t) {
   const [p, q, u] = t < 0.5 ? [a, b, t*2] : [b, c, (t-0.5)*2];
   return "rgb(" + p.map((v,i)=>Math.round(v+(q[i]-v)*u)).join(",") + ")";
 }
-const VIOLATOR = "#E8A33D";   // breaks downward closure — amber, unused elsewhere
+// Outside the band but required by downward closure.  Yellow, unused elsewhere.
+const NEEDED = "#E8C33D";
+const fmtC = (re, im) => {
+  const r = Math.round(re*1000)/1000, i = Math.round(im*1000)/1000;
+  return r + (i < 0 ? " − " + Math.abs(i) : " + " + i) + "i";
+};
 const finite = v => v !== null && v === v;
 const sub = n => String(n).split("").map(d => "₀₁₂₃₄₅₆₇₈₉"[+d]).join("");
 const axisName = slot => "α" + sub(axes[slot] + 1);
@@ -121,8 +128,10 @@ function tooltipFor(P, e) {
   if (e.reps.length === 1) {
 	const p = e.reps[0];
 	lines.push("α = (" + p.a.join(", ") + ")", "|α| = " + p.d);
-	if (p.m === "dropped") lines.push("not in the set");
-	if (finite(p.v) && P.valueLabel) lines.push(P.valueLabel + " = " + p.v.toFixed(4));
+	if (p.re !== undefined) lines.push("s = " + fmtC(p.re, p.im));
+	else if (finite(p.v) && P.valueLabel) lines.push(P.valueLabel + " = " + p.v.toFixed(4));
+	if (p.m === "dropped") lines.push("outside the band");
+	if (p.m === "needed") lines.push("outside the band —", "the closure must add it back");
 	if (p.m === "resonant") lines.push("(resonant: s ≈ λᵣ)");
   } else {
 	lines.push("(" + axes.map((_, s) => axisName(s)).join(", ") + ") = (" +
@@ -210,9 +219,12 @@ function render3D(P, pts) {
   const mxs = [0,1,2].map(k => Math.max(1, ...pts.map(p => p.c[k])));
   const ext = mxs.map(m => m + 1);
   const vmax = Math.max(...pts.map(p => finite(p.v) ? p.v : 0), 0);
-  // The layer a point belongs to is its third displayed coordinate.
+  // The layer a point belongs to is its third displayed coordinate.  Spectrum figures
+  // are the exception: they are plain white, so nothing on the lattice can be mistaken
+  // for the categorical λ colours used by the arrows in the complex plane.
   const colourOf = p => p.mark === "resonant" ? COL.resonant
-	: (finite(p.v) && vmax > 0 ? ramp(p.v/vmax) : layerColour(p.c[2]));
+	: (P.lam ? "#e8e8ee"
+			 : (finite(p.v) && vmax > 0 ? ramp(p.v/vmax) : layerColour(p.c[2])));
 
   // Unit-scale projection: centre the lattice on its own extent, rotate about the
   // vertical, then tilt.  Screen placement is applied afterwards by `fit`, so the
@@ -303,17 +315,17 @@ function render3D(P, pts) {
 	  const base = Math.max(3, Math.min(11, view.s * 0.13));   // relative to the fit
 	  const r = base * (0.62 + 0.38*d);
 	  ctx.globalAlpha = 0.42 + 0.58*d;
-	  if (o.p.mark === "dropped") {
+	  if (o.p.mark === "needed") {
+		// Outside the band, but the downward closure has to put it back.
+		ctx.strokeStyle = NEEDED; ctx.lineWidth = 2.4;
+		ctx.beginPath(); ctx.arc(o.s.x, o.s.y, r*0.85, 0, 6.2832); ctx.stroke();
+	  } else if (o.p.mark === "dropped") {
 		ctx.globalAlpha *= 0.6;
 		ctx.strokeStyle = "#4a4a58"; ctx.lineWidth = 1.1;
 		ctx.beginPath(); ctx.arc(o.s.x, o.s.y, r*0.7, 0, 6.2832); ctx.stroke();
 	  } else {
 		ctx.fillStyle = colourOf(o.p);
 		ctx.beginPath(); ctx.arc(o.s.x, o.s.y, r, 0, 6.2832); ctx.fill();
-		if (o.p.mark === "violator") {   // kept, but a divisor of it was not
-		  ctx.strokeStyle = VIOLATOR; ctx.lineWidth = 2.4;
-		  ctx.beginPath(); ctx.arc(o.s.x, o.s.y, r + 2.2, 0, 6.2832); ctx.stroke();
-		}
 	  }
 	  o.r = r;
 	}
@@ -388,18 +400,16 @@ function renderPlane(P) {
   const sx = re => ox + re*s, sy = im => oy - im*s;
   const lim = Math.max(Math.abs(view[0]), view[1], Math.abs(view[2]), view[3]);
 
-  // axes, clipped to the window
-  add("line", { x1:sx(view[0]), y1:sy(0), x2:sx(view[1]), y2:sy(0),
-	stroke:"#3a3a48", "stroke-width":1 });
-  add("line", { x1:sx(0), y1:sy(view[2]), x2:sx(0), y2:sy(view[3]),
-	stroke:"#3a3a48", "stroke-width":1 });
+  // Axes span the pane; only the ticks respect the window.
+  add("line", { x1:6, y1:sy(0), x2:W-6, y2:sy(0), stroke:"#3a3a48", "stroke-width":1 });
+  add("line", { x1:sx(0), y1:6, x2:sx(0), y2:H-6, stroke:"#3a3a48", "stroke-width":1 });
   const lbl = (x, y, t, anchor, fill) => {
 	const e = add("text", { x, y, fill: fill || "#6e6e7e", "font-size":10.5,
 	  "font-family":"ui-monospace, Menlo, monospace", "text-anchor":anchor || "middle" });
 	e.textContent = t; return e;
   };
-  lbl(sx(view[1]) - 2, sy(0) - 7, "Re", "end");
-  lbl(sx(0) + 7, sy(view[3]) + 10, "Im", "start");
+  lbl(W - 8, sy(0) - 7, "Re", "end");
+  lbl(sx(0) + 7, 16, "Im", "start");
   for (let t = Math.ceil(view[0]); t <= Math.floor(view[1]); t++) {
 	if (t === 0) continue;
 	add("line", { x1:sx(t), y1:sy(0)-3, x2:sx(t), y2:sy(0)+3, stroke:"#3a3a48" });
@@ -414,14 +424,17 @@ function renderPlane(P) {
 	"stroke-width":1.2, "stroke-dasharray":"4 3", opacity:0.75 });
   lbl(sx(0), sy(0) - R*s*1.05, "|s| = " + R, "start", "#9558b2");
 
-  const vmax = Math.max(...P.pts.map(p => p.v), 0);
   for (const p of P.pts) {
-	const drop = p.m === "dropped", bad = p.m === "violator";
-	add("circle", { cx:sx(p.re), cy:sy(p.im), r: drop ? 3.4 : 4.8,
-	  fill: drop ? "none" : (vmax > 0 ? ramp(p.v/vmax) : COL.kept),
-	  stroke: drop ? "#4a4a58" : (bad ? VIOLATOR : "rgba(0,0,0,0.45)"),
-	  "stroke-width": drop ? 1.2 : (bad ? 2.6 : 0.8),
-	  "stroke-dasharray": drop ? "2 2" : "none" });
+	if (p.m === "needed") {
+	  add("circle", { cx:sx(p.re), cy:sy(p.im), r:4.6, fill:"none",
+		stroke:NEEDED, "stroke-width":2.4 });
+	} else if (p.m === "dropped") {
+	  add("circle", { cx:sx(p.re), cy:sy(p.im), r:3.4, fill:"none",
+		stroke:"#4a4a58", "stroke-width":1.2, "stroke-dasharray":"2 2" });
+	} else {
+	  add("circle", { cx:sx(p.re), cy:sy(p.im), r:4.8, fill:"#e8e8ee",
+		stroke:"rgba(0,0,0,0.45)", "stroke-width":0.8 });
+	}
   }
 
   const gPath = add("g", { class:"path" });
@@ -473,7 +486,10 @@ function renderLegend(P, pts) {
   const seen = new Set(pts.map(p => p.mark));
   const is3D = axes.length === 3;
   const bits = [];
-  if (P.valueLabel && pts.some(p => finite(p.v))) {
+  if (P.lam) {
+	// No gradient here — the lattice is plain white so the λ colours stay unambiguous.
+	bits.push('<span><i style="background:#e8e8ee"></i>in the band</span>');
+  } else if (P.valueLabel && pts.some(p => finite(p.v))) {
 	const vs = pts.filter(p => finite(p.v)).map(p => p.v);
 	bits.push('<span><span id="ramp" style="display:inline-block"></span>&nbsp; ' +
 	  P.valueLabel + " 0 … " + Math.max(...vs).toFixed(2) + "</span>");
@@ -493,9 +509,9 @@ function renderLegend(P, pts) {
   if (seen.has("dropped"))
 	bits.push('<span><i style="border:1px dashed #4a4a58"></i>' +
 	  (P.lam ? "outside the band" : "removed") + "</span>");
-  if (seen.has("violator"))
-	bits.push('<span><i style="background:transparent;border:2px solid ' + VIOLATOR +
-	  '"></i>divisor outside the band</span>');
+  if (seen.has("needed"))
+	bits.push('<span><i style="background:transparent;border:2px solid ' + NEEDED +
+	  '"></i>divisor the closure must add</span>');
   if (P.lam) {
 	// Explain the arrow colours of the hover path.
 	const fmt = ([r, i]) => r + (i < 0 ? " − " + (-i) : " + " + i) + "i";

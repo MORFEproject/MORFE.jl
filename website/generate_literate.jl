@@ -32,6 +32,10 @@ const GH_FERRITE = "https://github.com/MORFEproject/MORFEFerrite.jl"
 # id, title, source main.jl, GitHub folder, custom tutorial page (site-relative
 # to tutorials/) — `nothing` while the custom page does not exist yet.
 const EXAMPLES = [
+	(id = "full_order_model", title = "Building a full-order model",
+		src = joinpath(ROOT, "examples", "internals", "full_order_model", "main.jl"),
+		gh = "$GH_MORFE/tree/main/examples/internals/full_order_model",
+		custom = "full_order_model.html"),
 	(id = "multiindex_sets", title = "Constructing MultiindexSets",
 		src = joinpath(ROOT, "examples", "internals", "multiindex_sets", "main.jl"),
 		gh = "$GH_MORFE/tree/main/examples/internals/multiindex_sets",

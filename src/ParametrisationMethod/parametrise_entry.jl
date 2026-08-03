@@ -40,7 +40,13 @@ from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
   variables, minimum total degree ≥ 1, contain every unit multiindex, and be
   **downward closed** (every divisor of a member is a member) as well as closed
   under the conjugate permutation when one is used — the graded solve relies on
-  both. `nothing` → `all_multiindices_up_to(NVAR, order; min_degree = 1)`.
+  both. All of this is **enforced** by [`validate_multiindex_set`](@ref), which throws
+  an `ArgumentError` naming the offending exponent.
+  `nothing` → `all_multiindices_up_to(NVAR, order; min_degree = 1)`.
+- `validate_mset::Bool = true`: check a custom `mset` against the contract above before
+  solving. Set `false` only when the set has already been validated, or when the check
+  itself is too costly on a very large set; an invalid set then produces a silently
+  wrong parametrisation rather than an error.
 - `conjugate_permutation::Union{Nothing, Vector{Int}} = nothing`: NVAR-length
   permutation pairing conjugate coordinates (self-paired entries for real modes);
   passed through to the cohomological solve to enforce conjugate symmetry.
@@ -70,6 +76,7 @@ function ParametrisationMethod.parametrise(
         conjugacy_map = nothing,
         mset::Union{Nothing, MultiindexSet} = nothing,
         conjugate_permutation::Union{Nothing, Vector{Int}} = nothing,
+        validate_mset::Bool = true,
         external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing,
         master_modes_derivatives = nothing,
         left_modes_derivatives = nothing) where {ORD, ORDP1, N_NL, N_EXT, LT, MT}
@@ -119,19 +126,14 @@ function ParametrisationMethod.parametrise(
     # Multiindex set: default graded-total, or a validated custom set.
     @assert order > 0 "order must be an integer bigger than zero"
     if mset === nothing
+        # Graded-total sets are downward closed, contain every unit multiindex and are
+        # symmetric under any coordinate permutation — nothing to check.
         mset = all_multiindices_up_to(NVAR, order; min_degree = 1)
-    else
-        mset isa MultiindexSet{NVAR} || throw(ArgumentError(
-            "custom mset has $(length(first(mset.exponents))) variables, " *
-            "but the model requires NVAR = ROM + N_EXT = $NVAR"))
-        sum(first(mset.exponents)) ≥ 1 || throw(ArgumentError(
-            "custom mset must not contain the zero multiindex (min total degree ≥ 1)"))
-        for i in 1:NVAR
-            unit = [j == i ? 1 : 0 for j in 1:NVAR]
-            find_in_set(mset, unit) === nothing && throw(ArgumentError(
-                "custom mset is missing the unit multiindex e_$i; the linear " *
-                "initialisation of the parametrisation requires all unit multiindices"))
-        end
+    elseif validate_mset
+        # Check here rather than only in the solve, so a malformed set is rejected
+        # before the eigenproblem slicing and resonance-set construction.
+        validate_multiindex_set(mset, NVAR, ROM;
+            conjugate_permutation = conjugate_permutation)
     end
 
     # Generate ResonanceSet
@@ -149,7 +151,8 @@ function ParametrisationMethod.parametrise(
         resonance_set;
         master_modes_derivatives = master_modes_derivatives,
         left_modes_derivatives = left_modes_derivatives,
-        conjugate_permutation = conjugate_permutation
+        conjugate_permutation = conjugate_permutation,
+        validate_mset = false   # already checked above; don't walk the set twice
     )
 
     return W, R

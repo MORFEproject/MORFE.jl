@@ -55,9 +55,10 @@ commands in the script header; expected numbers are asserted by the example's
 <p>All parameters in config.jl. Acceptance checks &#40;implementation<em>plan</em>detailed.md Phases 3–7&#41; run inline and <code>@assert</code>; set <code>RUN_CHECKS &#61; false</code> to skip. Validation against the coupled &#40;u, q&#41; ground truth: validation/compare<em>rom</em>fom.jl.</p>
 <pre><code class="language-julia">using Pkg: Pkg
 Pkg.activate&#40;@__DIR__&#41;
-if &#33;isfile&#40;joinpath&#40;@__DIR__, &quot;Manifest.toml&quot;&#41;&#41; || &#33;haskey&#40;Pkg.project&#40;&#41;.dependencies, &quot;MORFE&quot;&#41;
-	Pkg.develop&#40;Pkg.PackageSpec&#40;path &#61; joinpath&#40;@__DIR__, &quot;../..&quot;&#41;&#41;&#41;
-	Pkg.add&#40;&#91;&quot;StaticArrays&quot;, &quot;Printf&quot;, &quot;Plots&quot;&#93;&#41;
+if &#33;isfile&#40;joinpath&#40;@__DIR__, &quot;Manifest.toml&quot;&#41;&#41; ||
+   &#33;haskey&#40;Pkg.project&#40;&#41;.dependencies, &quot;MORFE&quot;&#41;
+    Pkg.develop&#40;Pkg.PackageSpec&#40;path &#61; joinpath&#40;@__DIR__, &quot;../..&quot;&#41;&#41;&#41;
+    Pkg.add&#40;&#91;&quot;StaticArrays&quot;, &quot;Printf&quot;, &quot;Plots&quot;&#93;&#41;
 end
 Pkg.instantiate&#40;&#41;
 
@@ -99,7 +100,7 @@ n &#61; fe.n</code></pre>
 <pre><code class="language-julia">println&#40;&quot;\nEigenanalysis &#40;dense companion form, 3n &#61; &#36;&#40;3n&#41;&#41; …&quot;&#41;
 eig &#61; dea_eigenanalysis&#40;model_auto, B0, B1, B2, B3, fe.idx_wtip, bp.ĉ / p.R&#41;
 &#40;; λ1, master_eigenvalues, master_modes, mmd, left_eigenmodes,
-	left_modes_derivatives&#41; &#61; eig</code></pre>
+    left_modes_derivatives&#41; &#61; eig</code></pre>
 <p>─────────────────────────────────────────────────────────────────────────────</p>
 <ol start="5">
 <li><p>Milestone 1 — autonomous reduction &#40;backbone&#41;</p>
@@ -109,25 +110,25 @@ eig &#61; dea_eigenanalysis&#40;model_auto, B0, B1, B2, B3, fe.idx_wtip, bp.ĉ /
 <pre><code class="language-julia">println&#40;&quot;\nMilestone 1 — autonomous reduction &#40;NVAR &#61; 2, degree ≤ 7&#41; …&quot;&#41;
 mset2 &#61; all_multiindices_up_to&#40;2, 7; min_degree &#61; 1&#41;
 res2 &#61; resonance_set_from_complex_normal_form_style&#40;
-	mset2, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05&#41;
+    mset2, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05&#41;
 @time W_a, R_a &#61; solve_cohomological_problem&#40;
-	model_auto, mset2, master_eigenvalues, master_modes, left_eigenmodes, res2;
-	master_modes_derivatives &#61; mmd, left_modes_derivatives &#61; left_modes_derivatives,
-	conjugate_permutation &#61; &#91;2, 1&#93;&#41;</code></pre>
+    model_auto, mset2, master_eigenvalues, master_modes, left_eigenmodes, res2;
+    master_modes_derivatives &#61; mmd, left_modes_derivatives &#61; left_modes_derivatives,
+    conjugate_permutation &#61; &#91;2, 1&#93;&#41;</code></pre>
 <p>Realify the master equation ż₁ &#61; ẋ₁ &#43; i ẏ₁ in real variables &#40;x₁, y₁&#41;: Re&#40;c&#41; feeds ẋ₁, Im&#40;c&#41; feeds ẏ₁ &#40;imaginary parts carry the frequency content&#41;.</p>
 <pre><code class="language-julia">Rr_a &#61; realify&#40;extract_component&#40;R_a.poly, 1&#41;, &#91;2, 1&#93;&#41;
 println&#40;&quot;Autonomous reduced dynamics ż₁ in real variables &#40;x₁, y₁&#41;:&quot;&#41;
 println&#40;&quot;  &#40;x₁,y₁&#41; exponents :  ẋ₁-coeff      ẏ₁-coeff&quot;&#41;
 for &#40;m, mi&#41; in enumerate&#40;Rr_a.multiindex_set.exponents&#41;
-	c &#61; Rr_a.coefficients&#91;m&#93;
-	abs&#40;c&#41; &gt; 1e-10 &amp;&amp;
-		@printf &quot;  &#37;-18s: &#37;&#43;12.5e  &#37;&#43;12.5e\n&quot; string&#40;Tuple&#40;mi&#41;&#41; real&#40;c&#41; imag&#40;c&#41;
+    c &#61; Rr_a.coefficients&#91;m&#93;
+    abs&#40;c&#41; &gt; 1e-10 &amp;&amp;
+        @printf &quot;  &#37;-18s: &#37;&#43;12.5e  &#37;&#43;12.5e\n&quot; string&#40;Tuple&#40;mi&#41;&#41; real&#40;c&#41; imag&#40;c&#41;
 end</code></pre>
 <p>Backbone coefficient &#40;resonant cubic monomial z₁²z̄₁ ↦ exponent &#40;2,1&#41;&#41;</p>
 <pre><code class="language-julia">let idx &#61; findfirst&#40;α -&gt; Tuple&#40;α&#41; &#61;&#61; &#40;2, 1&#41;, &#91;Tuple&#40;a&#41; for a in mset2.exponents&#93;&#41;
-	γ_bb &#61; R_a.poly.coefficients&#91;1, idx&#93;
-	@printf &quot;Backbone coefficient c&#40;z₁²z̄₁&#41; &#61; &#37;&#43;.6e &#37;&#43;.6eim\n&quot; real&#40;γ_bb&#41; imag&#40;γ_bb&#41;
-	@assert isfinite&#40;γ_bb&#41; &quot;backbone coefficient not finite&quot;
+    γ_bb &#61; R_a.poly.coefficients&#91;1, idx&#93;
+    @printf &quot;Backbone coefficient c&#40;z₁²z̄₁&#41; &#61; &#37;&#43;.6e &#37;&#43;.6eim\n&quot; real&#40;γ_bb&#41; imag&#40;γ_bb&#41;
+    @assert isfinite&#40;γ_bb&#41; &quot;backbone coefficient not finite&quot;
 end</code></pre>
 <p>─────────────────────────────────────────────────────────────────────────────</p>
 <ol start="6">
@@ -140,12 +141,12 @@ println&#40;&quot;\nMilestone 2 — forced reduction &#40;NVAR &#61; 4, degree �
 model_f &#61; build_model&#40;p, fe, bp; forced &#61; true, Ω &#61; Ω&#41;
 mset4 &#61; all_multiindices_up_to&#40;4, 5; min_degree &#61; 1&#41;
 res4 &#61; resonance_set_from_complex_normal_form_style&#40;
-	mset4, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05;
-	external_eigenvalues &#61; ComplexF64&#91;im * Ω, -im * Ω&#93;&#41;
+    mset4, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05;
+    external_eigenvalues &#61; ComplexF64&#91;im * Ω, -im * Ω&#93;&#41;
 @time W, R &#61; solve_cohomological_problem&#40;
-	model_f, mset4, master_eigenvalues, master_modes, left_eigenmodes, res4;
-	master_modes_derivatives &#61; mmd, left_modes_derivatives &#61; left_modes_derivatives,
-	conjugate_permutation &#61; &#91;2, 1, 4, 3&#93;&#41;</code></pre>
+    model_f, mset4, master_eigenvalues, master_modes, left_eigenmodes, res4;
+    master_modes_derivatives &#61; mmd, left_modes_derivatives &#61; left_modes_derivatives,
+    conjugate_permutation &#61; &#91;2, 1, 4, 3&#93;&#41;</code></pre>
 <p>─────────────────────────────────────────────────────────────────────────────</p>
 <ol start="7">
 <li><p>Acceptance checks &#43; realification</p>
@@ -153,36 +154,36 @@ res4 &#61; resonance_set_from_complex_normal_form_style&#40;
 </ol>
 <p>─────────────────────────────────────────────────────────────────────────────</p>
 <pre><code class="language-julia">if RUN_CHECKS
-	@assert all&#40;isfinite, W.poly.coefficients&#41; &quot;NaN/Inf in W&quot;
-	@assert all&#40;isfinite, R.poly.coefficients&#41; &quot;NaN/Inf in R&quot;
-	let exps &#61; &#91;Tuple&#40;a&#41; for a in mset4.exponents&#93;
-		targets &#61; &#40;&#40;1, 0, 0, 0&#41;, &#40;0, 1, 0, 0&#41;, &#40;0, 0, 1, 0&#41;, &#40;0, 0, 0, 1&#41;&#41;
-		lin &#61; &#91;findfirst&#40;&#61;&#61;&#40;t&#41;, exps&#41; for t in targets&#93;
-		Λdiag &#61; &#91;R.poly.coefficients&#91;i, lin&#91;i&#93;&#93; for i in 1:4&#93;
-		target &#61; &#91;λ1, conj&#40;λ1&#41;, im * Ω, -im * Ω&#93;
-		@assert all&#40;abs.&#40;Λdiag .- target&#41; .&lt; 1e-8 .* abs.&#40;target&#41;&#41; &quot;linear part of R wrong&quot;
-	end
+    @assert all&#40;isfinite, W.poly.coefficients&#41; &quot;NaN/Inf in W&quot;
+    @assert all&#40;isfinite, R.poly.coefficients&#41; &quot;NaN/Inf in R&quot;
+    let exps &#61; &#91;Tuple&#40;a&#41; for a in mset4.exponents&#93;
+        targets &#61; &#40;&#40;1, 0, 0, 0&#41;, &#40;0, 1, 0, 0&#41;, &#40;0, 0, 1, 0&#41;, &#40;0, 0, 0, 1&#41;&#41;
+        lin &#61; &#91;findfirst&#40;&#61;&#61;&#40;t&#41;, exps&#41; for t in targets&#93;
+        Λdiag &#61; &#91;R.poly.coefficients&#91;i, lin&#91;i&#93;&#93; for i in 1:4&#93;
+        target &#61; &#91;λ1, conj&#40;λ1&#41;, im * Ω, -im * Ω&#93;
+        @assert all&#40;abs.&#40;Λdiag .- target&#41; .&lt; 1e-8 .* abs.&#40;target&#41;&#41; &quot;linear part of R wrong&quot;
+    end
 end</code></pre>
 <p>Conjugate symmetry of the reduced dynamics: R₂&#40;z&#41; must equal conj&#40;R₁&#41; under the exponent permutation &#40;z₁↔z₂, r₁↔r₂&#41;. This is the invariant that makes the realified &#40;ẋ, ẏ&#41; system real — the realified ż₁ coefficients themselves are complex by design &#40;Re → ẋ₁, Im → ẏ₁&#41;.</p>
 <pre><code class="language-julia">let exps &#61; &#91;Tuple&#40;a&#41; for a in mset4.exponents&#93;
-	lookup &#61; Dict&#40;e &#61;&gt; i for &#40;i, e&#41; in enumerate&#40;exps&#41;&#41;
-	permc &#61; &#40;2, 1, 4, 3&#41;
-	worst &#61; 0.0
-	for &#40;m, e&#41; in enumerate&#40;exps&#41;
-		mbar &#61; lookup&#91;ntuple&#40;j -&gt; e&#91;permc&#91;j&#93;&#93;, 4&#41;&#93;
-		worst &#61; max&#40;worst,
-			abs&#40;R.poly.coefficients&#91;2, m&#93; - conj&#40;R.poly.coefficients&#91;1, mbar&#93;&#41;&#41;&#41;
-	end
-	@assert worst &lt; 1e-8 * maximum&#40;abs.&#40;R.poly.coefficients&#41;&#41; &quot;conjugate symmetry violated &#40;&#36;worst&#41;&quot;
+    lookup &#61; Dict&#40;e &#61;&gt; i for &#40;i, e&#41; in enumerate&#40;exps&#41;&#41;
+    permc &#61; &#40;2, 1, 4, 3&#41;
+    worst &#61; 0.0
+    for &#40;m, e&#41; in enumerate&#40;exps&#41;
+        mbar &#61; lookup&#91;ntuple&#40;j -&gt; e&#91;permc&#91;j&#93;&#93;, 4&#41;&#93;
+        worst &#61; max&#40;worst,
+            abs&#40;R.poly.coefficients&#91;2, m&#93; - conj&#40;R.poly.coefficients&#91;1, mbar&#93;&#41;&#41;&#41;
+    end
+    @assert worst &lt; 1e-8 * maximum&#40;abs.&#40;R.poly.coefficients&#41;&#41; &quot;conjugate symmetry violated &#40;&#36;worst&#41;&quot;
 end</code></pre>
 <p>Realified master equation in real variables &#40;x₁, x₂, y₁, y₂&#41; where &#40;x₁,y₁&#41; ↔ z-pair and &#40;x₂,y₂&#41; ↔ forcing pair r.</p>
 <pre><code class="language-julia">Rr &#61; realify&#40;extract_component&#40;R.poly, 1&#41;, &#91;2, 1, 4, 3&#93;&#41;
 println&#40;&quot;Forced reduced dynamics ż₁ in real variables &#40;x₁, x₂, y₁, y₂&#41;:&quot;&#41;
 println&#40;&quot;  exponents          :  ẋ₁-coeff      ẏ₁-coeff&quot;&#41;
 for &#40;m, mi&#41; in enumerate&#40;Rr.multiindex_set.exponents&#41;
-	c &#61; Rr.coefficients&#91;m&#93;
-	abs&#40;c&#41; &gt; 1e-6 &amp;&amp;
-		@printf &quot;  &#37;-18s: &#37;&#43;12.5e  &#37;&#43;12.5e\n&quot; string&#40;Tuple&#40;mi&#41;&#41; real&#40;c&#41; imag&#40;c&#41;
+    c &#61; Rr.coefficients&#91;m&#93;
+    abs&#40;c&#41; &gt; 1e-6 &amp;&amp;
+        @printf &quot;  &#37;-18s: &#37;&#43;12.5e  &#37;&#43;12.5e\n&quot; string&#40;Tuple&#40;mi&#41;&#41; real&#40;c&#41; imag&#40;c&#41;
 end
 println&#40;&quot;Phase 7 checks passed.&quot;&#41;</code></pre>
 <p>─────────────────────────────────────────────────────────────────────────────</p>

@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>API Reference</span></div>
   <h1>API Reference</h1>
-  <p class="lede">18 modules · 216 documented entries · generated 2 August 2026</p>
+  <p class="lede">18 modules · 218 documented entries · generated 3 August 2026</p>
 
   <div id="Multiindices" class="api-module-h">Multiindices</div>
   <div class="api-module-desc" data-module="Multiindices"><div class="markdown"><p>Module <code>Multiindices</code> — graded-lexicographic multiindex sets and combinatorial utilities.</p>
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 <li><p>Generators: <code>all_multiindices_up_to</code>, <code>multiindices_with_total_degree</code>, <code>all_multiindices_in_box</code>.</p>
 </li>
-<li><p>Non-mutating set operations: <code>delete_multiindices</code>, <code>Base.filter</code>, <code>is_downward_closed</code>.</p>
+<li><p>Non-mutating set operations: <code>delete_multiindices</code>, <code>Base.filter</code>, <code>is_downward_closed</code>, <code>is_conjugate_closed</code>.</p>
 </li>
 <li><p>Lookup: <code>find_in_set</code> &#40;degree-bracketed binary search&#41;, <code>build_exponent_index_map</code>.</p>
 </li>
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-type" id="Multiindices-FactorisationEntry">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L607" target="_blank" rel="noopener">FactorisationEntry</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L645" target="_blank" rel="noopener">FactorisationEntry</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>FactorisationEntry</code></pre>
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-type" id="Multiindices-MultiindexSet">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L50" target="_blank" rel="noopener">MultiindexSet</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L51" target="_blank" rel="noopener">MultiindexSet</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>MultiindexSet&#123;N&#125;</code></pre>
@@ -189,8 +189,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-_last_index_below_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L494" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L494" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64, allowed_indices::AbstractVector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L532" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L532" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64, allowed_indices::AbstractVector{Int64})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_last_index_below_degree&#40;set::MultiindexSet, max_total_deg::Int&#41; -&gt; Int</code></pre>
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-_lex_cmp_same_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L439" target="_blank" rel="noopener">_lex_cmp_same_degree</a>(v::StaticArraysCore.SVector{N, Int64}, e) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L477" target="_blank" rel="noopener">_lex_cmp_same_degree</a>(v::StaticArraysCore.SVector{N, Int64}, e) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_lex_cmp_same_degree&#40;v::SVector&#123;N,Int&#125;, e&#41; -&gt; Int</code></pre>
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-_multinomial">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L891" target="_blank" rel="noopener">_multinomial</a>(e::Int64, k::Vector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L929" target="_blank" rel="noopener">_multinomial</a>(e::Int64, k::Vector{Int64})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_multinomial&#40;e::Int, k::Vector&#123;Int&#125;&#41; -&gt; Int</code></pre>
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-_total_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L424" target="_blank" rel="noopener">_total_degree</a>(exp, ::Val{N}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L462" target="_blank" rel="noopener">_total_degree</a>(exp, ::Val{N}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_total_degree&#40;exp, ::Val&#123;N&#125;&#41; -&gt; Int</code></pre>
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-all_multiindices_in_box">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L222" target="_blank" rel="noopener">all_multiindices_in_box</a>(bound::Vector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L223" target="_blank" rel="noopener">all_multiindices_in_box</a>(bound::Vector{Int64})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>all_multiindices_in_box&#40;bound::Vector&#123;Int&#125;&#41; -&gt; MultiindexSet</code></pre>
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-all_multiindices_up_to">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L175" target="_blank" rel="noopener">all_multiindices_up_to</a>(nvars::Int64, max_degree::Int64; min_degree)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L176" target="_blank" rel="noopener">all_multiindices_up_to</a>(nvars::Int64, max_degree::Int64; min_degree)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>all_multiindices_up_to&#40;nvars::Int, max_degree::Int&#41; -&gt; MultiindexSet</code></pre>
@@ -259,8 +259,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-bounded_index_tuples">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L907" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{0, T}) where T</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L907" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{N, Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L945" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{0, T}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L945" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{N, Int64}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>bounded_index_tuples&#40;M, exp::SVector&#123;N,Int&#125;&#41;</code></pre>
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-build_exponent_index_map">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L875" target="_blank" rel="noopener">build_exponent_index_map</a>(set::MultiindexSet{N}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L913" target="_blank" rel="noopener">build_exponent_index_map</a>(set::MultiindexSet{N}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>build_exponent_index_map&#40;set::MultiindexSet&#41; -&gt; Dict&#123;SVector&#123;N,Int&#125;, Int&#125;</code></pre>
@@ -307,9 +307,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="api api-function" id="Multiindices-delete_multiindices">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L280" target="_blank" rel="noopener">delete_multiindices</a>(set::MultiindexSet{N}, victims::MultiindexSet{M}) where {N, M}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L280" target="_blank" rel="noopener">delete_multiindices</a>(set::MultiindexSet{N}, exps) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L280" target="_blank" rel="noopener">delete_multiindices</a>(pred, set::MultiindexSet{N}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L281" target="_blank" rel="noopener">delete_multiindices</a>(set::MultiindexSet{N}, victims::MultiindexSet{M}) where {N, M}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L281" target="_blank" rel="noopener">delete_multiindices</a>(set::MultiindexSet{N}, exps) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L281" target="_blank" rel="noopener">delete_multiindices</a>(pred, set::MultiindexSet{N}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>delete_multiindices&#40;set::MultiindexSet&#123;N&#125;, exps&#41; -&gt; MultiindexSet&#123;N&#125;</code></pre>
@@ -332,7 +332,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-divides">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L395" target="_blank" rel="noopener">divides</a>(a::AbstractVector{Int64}, b::AbstractVector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L433" target="_blank" rel="noopener">divides</a>(a::AbstractVector{Int64}, b::AbstractVector{Int64})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>divides&#40;a::AbstractVector&#123;Int&#125;, b::AbstractVector&#123;Int&#125;&#41; -&gt; Bool</code></pre>
@@ -343,7 +343,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-factorisations_asymmetric">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L633" target="_blank" rel="noopener">factorisations_asymmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L671" target="_blank" rel="noopener">factorisations_asymmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>factorisations_asymmetric&#40;set, exp, num_factors, candidate_indices&#41; -&gt; Vector&#123;FactorisationEntry&#125;</code></pre>
@@ -354,7 +354,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-factorisations_fully_symmetric">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L674" target="_blank" rel="noopener">factorisations_fully_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L712" target="_blank" rel="noopener">factorisations_fully_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>factorisations_fully_symmetric&#40;set, exp, num_factors, candidate_indices&#41; -&gt; Vector&#123;FactorisationEntry&#125;</code></pre>
@@ -366,7 +366,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-factorisations_groupwise_symmetric">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L745" target="_blank" rel="noopener">factorisations_groupwise_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, group_sizes::NTuple{M, Int64}, candidate_indices::AbstractVector{Int64}) where {N, M}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L783" target="_blank" rel="noopener">factorisations_groupwise_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, group_sizes::NTuple{M, Int64}, candidate_indices::AbstractVector{Int64}) where {N, M}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>factorisations_groupwise_symmetric&#40;set, exp, group_sizes, candidate_indices&#41; -&gt; Vector&#123;FactorisationEntry&#125;</code></pre>
@@ -378,8 +378,8 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-find_in_set">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L470" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L470" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L508" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L508" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::AbstractVector&#123;Int&#125;&#41; -&gt; Union&#123;Int, Nothing&#125;</code></pre>
@@ -393,7 +393,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-grlex_precede">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L31" target="_blank" rel="noopener">grlex_precede</a>(a::AbstractVector{&lt;:Integer}, b::AbstractVector{&lt;:Integer})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L32" target="_blank" rel="noopener">grlex_precede</a>(a::AbstractVector{&lt;:Integer}, b::AbstractVector{&lt;:Integer})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>grlex_precede&#40;a::AbstractVector&#123;&lt;:Integer&#125;, b::AbstractVector&#123;&lt;:Integer&#125;&#41; -&gt; Bool</code></pre>
@@ -404,8 +404,8 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-indices_in_box_with_bounded_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L527" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L527" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64, allowed_indices::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L565" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L565" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64, allowed_indices::AbstractVector{Int64}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>indices_in_box_with_bounded_degree&#40;set::MultiindexSet, box_upper::AbstractVector&#123;Int&#125;,
@@ -425,10 +425,26 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 </div>
   </div>
 </div>
+<div class="api api-function" id="Multiindices-is_conjugate_closed">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L398" target="_blank" rel="noopener">is_conjugate_closed</a>(set::MultiindexSet{N}, perm::AbstractVector{Int64}) where N</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>is_conjugate_closed&#40;set::MultiindexSet&#123;N&#125;, perm::AbstractVector&#123;Int&#125;&#41; -&gt; Bool</code></pre>
+<p>Return <code>true</code> when the conjugate partner of every member of <code>set</code> is itself a member.</p>
+<p><code>perm</code> is an <code>N</code>-length permutation pairing conjugate coordinates &#40;self-paired entries for real ones&#41;.  It acts on the <strong>components</strong> of an exponent,</p>
+<pre><code>&#40;P·α&#41;&#91;k&#93; &#61; α&#91;perm&#91;k&#93;&#93;,</code></pre>
+<p>the same convention the cohomological solve uses when it fills a conjugate monomial from its partner.  Monomials with <code>P·α &#61;&#61; α</code> are self-paired and trivially closed.</p>
+<p><code>parametrise&#40;...; mset &#61; ..., conjugate_permutation &#61; ...&#41;</code> requires this: a member whose partner is absent is solved directly instead of being filled by conjugation, which costs the pairing optimisation and returns a parametrisation without the conjugate structure the permutation asserts.  It is enforced through <code>validate_multiindex_set</code>, which reports <em>which</em> partner is missing; use this predicate when a plain <code>Bool</code> is enough.</p>
+<p>Throws an <code>ArgumentError</code> if <code>length&#40;perm&#41; &#33;&#61; N</code>.</p>
+</div>
+  </div>
+</div>
 <div class="api api-function" id="Multiindices-is_constant">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L402" target="_blank" rel="noopener">is_constant</a>(exp::AbstractVector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L440" target="_blank" rel="noopener">is_constant</a>(exp::AbstractVector{Int64})</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>is_constant&#40;exp::AbstractVector&#123;Int&#125;&#41; -&gt; Bool</code></pre>
@@ -439,12 +455,13 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-is_downward_closed">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L363" target="_blank" rel="noopener">is_downward_closed</a>(set::MultiindexSet{N}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L364" target="_blank" rel="noopener">is_downward_closed</a>(set::MultiindexSet{N}) where N</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>is_downward_closed&#40;set::MultiindexSet&#123;N&#125;&#41; -&gt; Bool</code></pre>
 <p>Return <code>true</code> when every divisor of every member of <code>set</code> is itself a member.</p>
 <p>This is the <em>downward closure</em> property that <code>parametrise&#40;...; mset &#61; ...&#41;</code> requires: the graded solve reads lower-order coefficients <code>W&#91;α - eᵢ&#93;</code> while working on <code>α</code>, so a missing divisor would be silently read as zero.  Combinatorial truncations &#40;<code>all_multiindices_up_to</code>, <code>all_multiindices_in_box</code>&#41; are closed by construction, but a spectral criterion such as <code>|⟨λ, α⟩| ≤ R</code> generally is not.</p>
+<p><code>parametrise</code> and <code>solve_cohomological_problem</code> enforce this through <code>validate_multiindex_set</code>, which reports <em>which</em> divisor is missing; use this predicate when a plain <code>Bool</code> is enough.</p>
 <p>The zero multiindex is <strong>exempt</strong>: DPIM sets are built with <code>min_degree &#61; 1</code>, so a degree-1 exponent is not asked to have its constant divisor present.</p>
 <p>Only the immediate predecessors <code>α - eᵢ</code> are probed; by induction over the total degree that is equivalent to checking every divisor.  Cost is <code>O&#40;N · |set| · log&#41;</code> through <a href="#Multiindices-find_in_set"><code>find_in_set</code></a>.</p>
 </div>
@@ -453,7 +470,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-monomial_rank">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L820" target="_blank" rel="noopener">monomial_rank</a>(exp::AbstractVector{Int64}, nvars::Int64, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L858" target="_blank" rel="noopener">monomial_rank</a>(exp::AbstractVector{Int64}, nvars::Int64, max_degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>monomial_rank&#40;exp::AbstractVector&#123;Int&#125;, nvars::Int, max_degree::Int&#41; -&gt; Int</code></pre>
@@ -466,7 +483,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-multiindex">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L142" target="_blank" rel="noopener">multiindex</a>(components::Int64...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L143" target="_blank" rel="noopener">multiindex</a>(components::Int64...)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>multiindex&#40;components::Int...&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -477,7 +494,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-multiindices_with_total_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L201" target="_blank" rel="noopener">multiindices_with_total_degree</a>(nvars::Int64, degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L202" target="_blank" rel="noopener">multiindices_with_total_degree</a>(nvars::Int64, degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>multiindices_with_total_degree&#40;nvars::Int, deg::Int&#41; -&gt; MultiindexSet</code></pre>
@@ -488,7 +505,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-num_multiindices_up_to">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L808" target="_blank" rel="noopener">num_multiindices_up_to</a>(nvars::Int64, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L846" target="_blank" rel="noopener">num_multiindices_up_to</a>(nvars::Int64, max_degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>num_multiindices_up_to&#40;nvars::Int, max_degree::Int&#41; -&gt; Integer</code></pre>
@@ -499,7 +516,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="api api-function" id="Multiindices-zero_multiindex">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L135" target="_blank" rel="noopener">zero_multiindex</a>(n::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L136" target="_blank" rel="noopener">zero_multiindex</a>(n::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>zero_multiindex&#40;n::Int&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -2941,7 +2958,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-type" id="ParametrisationMethod-Parametrisation">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L34" target="_blank" rel="noopener">Parametrisation</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L140" target="_blank" rel="noopener">Parametrisation</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>Parametrisation&#123;ORD, NVAR, T&#125;</code></pre>
@@ -2968,7 +2985,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-type" id="ParametrisationMethod-ReducedDynamics">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L72" target="_blank" rel="noopener">ReducedDynamics</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L178" target="_blank" rel="noopener">ReducedDynamics</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>ReducedDynamics&#123;ROM, NVAR, T&#125;</code></pre>
@@ -2995,7 +3012,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="ParametrisationMethod-compute_higher_derivative_coefficients!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L156" target="_blank" rel="noopener">compute_higher_derivative_coefficients!</a>(param_coeff::AbstractArray{T, 3}, red_coeff::AbstractMatrix{T}, external_dynamics::AbstractVector{T}, superharmonic::T, global_index::Int64, generalised_eigenmodes::AbstractMatrix{T}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L262" target="_blank" rel="noopener">compute_higher_derivative_coefficients!</a>(param_coeff::AbstractArray{T, 3}, red_coeff::AbstractMatrix{T}, external_dynamics::AbstractVector{T}, superharmonic::T, global_index::Int64, generalised_eigenmodes::AbstractMatrix{T}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}) where T</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>compute_higher_derivative_coefficients&#33;&#40;
@@ -3041,10 +3058,10 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="ParametrisationMethod-create_parametrisation_method_objects">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L109" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L109" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L109" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L109" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>create_parametrisation_method_objects&#40;mset::MultiindexSet&#123;NVAR&#125;, ORD::Int, FOM::Int, ROM::Int, external_system_size::Int, ::Type&#123;T&#125;&#61;Complex&#41;</code></pre>
@@ -3077,7 +3094,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="ParametrisationMethod-restrict_Parametrisation_to_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L236" target="_blank" rel="noopener">restrict_Parametrisation_to_degree</a>(W::Parametrisation, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L342" target="_blank" rel="noopener">restrict_Parametrisation_to_degree</a>(W::Parametrisation, max_degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>function restrict_Parametrisation_to_degree&#40;W::Parametrisation, max_degree::Int&#41; -&gt; Parametrisation</code></pre>
@@ -3088,11 +3105,37 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="ParametrisationMethod-restrict_ReducedDynamics_to_degree">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L246" target="_blank" rel="noopener">restrict_ReducedDynamics_to_degree</a>(R::ReducedDynamics, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L352" target="_blank" rel="noopener">restrict_ReducedDynamics_to_degree</a>(R::ReducedDynamics, max_degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>function restrict_ReducedDynamics_to_degree&#40;R::ReducedDynamics, max_degree::Int&#41; -&gt; ReducedDynamics</code></pre>
 <p>Returns a new ReducedDynamics that contains all the monomials of <code>poly</code> that are of degree lower or equal than <code>max_degree</code>. </p>
+</div>
+  </div>
+</div>
+<div class="api api-function" id="ParametrisationMethod-validate_multiindex_set">
+  <div class="api-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L36" target="_blank" rel="noopener">validate_multiindex_set</a>(mset::MultiindexSet{N}, nvar::Int64, rom::Int64; conjugate_permutation) where N</code>
+  </div>
+  <div class="api-body">
+<div class="markdown"><pre><code>validate_multiindex_set&#40;mset, nvar, rom; conjugate_permutation &#61; nothing&#41;</code></pre>
+<p>Check a custom multiindex set against everything the cohomological solve assumes, and throw an <code>ArgumentError</code> naming the offending exponent on the first violation.</p>
+<p>The clauses, and why each one matters:</p>
+<ol>
+<li><p><strong><code>nvar</code> variables</strong>, matching <code>ROM &#43; N_EXT</code>.</p>
+</li>
+<li><p><strong>Minimum total degree ≥ 1</strong> — the expansion is centred on the fixed point, so the constant monomial has no coefficient to solve for.</p>
+</li>
+<li><p><strong>Every unit multiindex <code>eᵢ</code></strong> — the linear part of the parametrisation is initialised from the eigenvectors, one column per unit multiindex.</p>
+</li>
+<li><p><strong>Downward closed</strong> — the graded solve reads <code>W&#91;α - β &#43; eᵢ&#93;</code> while working on <code>α</code> and factorises <code>α &#61; β₁ &#43; … &#43; β_d</code> over members of <code>mset</code>. A missing divisor is not an error at run time: it is read as zero, silently corrupting the right-hand side.</p>
+</li>
+<li><p>With a <code>conjugate_permutation</code>: that it is an involutive permutation of <code>1:nvar</code> mapping <code>1:rom</code> into itself, and that <code>mset</code> is <strong>closed under it</strong>. A member whose partner is absent is solved directly rather than filled by conjugation, so the result loses the conjugate structure the permutation asserts.</p>
+</li>
+</ol>
+<p>Returns <code>nothing</code>.  Cost is <code>O&#40;nvar · |mset| · log|mset|&#41;</code> — negligible beside a solve, but <code>parametrise</code> and <code>solve_cohomological_problem</code> both take a <code>validate_mset &#61; false</code> escape hatch for callers that have already checked.</p>
+<p>See <a href="#Multiindices-is_downward_closed"><code>is_downward_closed</code></a> and <a href="#Multiindices-is_conjugate_closed"><code>is_conjugate_closed</code></a> for the two closure predicates on their own.</p>
 </div>
   </div>
 </div>
@@ -3871,7 +3914,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-type" id="CohomologicalEquations-_SimpleProgress">
   <div class="api-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L164" target="_blank" rel="noopener">_SimpleProgress</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L165" target="_blank" rel="noopener">_SimpleProgress</a></code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_SimpleProgress</code></pre>
@@ -3964,7 +4007,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="CohomologicalEquations-_embed_external_dynamics!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L227" target="_blank" rel="noopener">_embed_external_dynamics!</a>(R::ReducedDynamics{ROM, NVAR, T}, ext_poly::DensePolynomial{T, N_EXT, 2, A} where A&lt;:AbstractMatrix{T}, mset::MultiindexSet{NVAR}) where {ROM, NVAR, T, N_EXT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L228" target="_blank" rel="noopener">_embed_external_dynamics!</a>(R::ReducedDynamics{ROM, NVAR, T}, ext_poly::DensePolynomial{T, N_EXT, 2, A} where A&lt;:AbstractMatrix{T}, mset::MultiindexSet{NVAR}) where {ROM, NVAR, T, N_EXT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_embed_external_dynamics&#33;&#40;R, ext_poly, mset&#41;</code></pre>
@@ -3994,7 +4037,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="CohomologicalEquations-_linear_monomial_indices">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L254" target="_blank" rel="noopener">_linear_monomial_indices</a>(mset::MultiindexSet{NVAR}) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L255" target="_blank" rel="noopener">_linear_monomial_indices</a>(mset::MultiindexSet{NVAR}) where NVAR</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_linear_monomial_indices&#40;mset&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -4005,7 +4048,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="CohomologicalEquations-_make_progress">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L186" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L187" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_make_progress&#40;n_total, show_progress&#41; -&gt; _SimpleProgress</code></pre>
@@ -4028,7 +4071,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="CohomologicalEquations-_progress_done!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L211" target="_blank" rel="noopener">_progress_done!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L212" target="_blank" rel="noopener">_progress_done!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_progress_done&#33;&#40;p, n_done&#41;</code></pre>
@@ -4039,7 +4082,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="CohomologicalEquations-_progress_tick!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L196" target="_blank" rel="noopener">_progress_tick!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64, degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L197" target="_blank" rel="noopener">_progress_tick!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64, degree::Int64)</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_progress_tick&#33;&#40;p, n_done, degree&#41;</code></pre>
@@ -4079,7 +4122,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="api api-function" id="CohomologicalEquations-_resonance_vector">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L272" target="_blank" rel="noopener">_resonance_vector</a>(resonance_set::ResonanceSet, monomial_idx::Int64, ::Val{ROM}) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L273" target="_blank" rel="noopener">_resonance_vector</a>(resonance_set::ResonanceSet, monomial_idx::Int64, ::Val{ROM}) where ROM</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>_resonance_vector&#40;resonance_set, monomial_idx, ::Val&#123;ROM&#125;&#41; -&gt; SVector&#123;ROM, Bool&#125;</code></pre>
@@ -4195,9 +4238,9 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_cohomological_equations!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L369" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L369" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L369" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L370" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L370" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L370" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_cohomological_equations&#33;&#40;W, R, ctx, model, ml_cache&#41; -&gt; nothing</code></pre>
@@ -4221,7 +4264,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_cohomological_problem">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L146" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, master_eigenvalues::StaticArraysCore.SVector{ROM, ComplexF64}, master_modes::Matrix{ComplexF64}, left_eigenmodes::AbstractMatrix{ComplexF64}, resonance_set::ResonanceSet; initial_W, initial_R, master_modes_derivatives, left_modes_derivatives, conjugate_permutation, show_progress, benchmark_dir) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L146" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, master_eigenvalues::StaticArraysCore.SVector{ROM, ComplexF64}, master_modes::Matrix{ComplexF64}, left_eigenmodes::AbstractMatrix{ComplexF64}, resonance_set::ResonanceSet; initial_W, initial_R, master_modes_derivatives, left_modes_derivatives, conjugate_permutation, validate_mset, show_progress, benchmark_dir) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_cohomological_problem&#40;
@@ -4268,6 +4311,8 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 </li>
 <li><p><code>conjugate_permutation</code> — optional <code>AbstractVector&#123;Int&#125;</code> of length NVAR encoding the conjugate permutation on modes.  <code>perm&#91;i&#93; &#61; j</code> means mode <code>j</code> is the complex conjugate of mode <code>i</code>.  When <code>nothing</code> &#40;default&#41;, no conjugate-symmetry exploitation is performed. The caller must verify that the eigenvectors satisfy the conjugate symmetry before passing this argument — two eigenvalues forming a conjugate pair is necessary but not sufficient &#40;the eigenspace must be one-dimensional, or the eigenvectors must be chosen conjugately&#41;.</p>
 </li>
+<li><p><code>validate_mset</code> — check <code>mset</code> against the contract the solve assumes &#40;variable count, minimum degree, unit multiindices, downward closure, and closure under <code>conjugate_permutation</code>&#41; via <a href="#ParametrisationMethod-validate_multiindex_set"><code>validate_multiindex_set</code></a>, throwing an <code>ArgumentError</code> naming the offending exponent.  Default <code>true</code>: every path into the solve passes through here, so this is where the contract is enforced.  <code>parametrise</code> checks first and passes <code>false</code> to avoid walking the set twice.</p>
+</li>
 <li><p><code>show_progress</code> — print a progress line to <code>stderr</code> while solving &#40;default: <code>true</code>&#41;. Suppressed automatically when <code>stderr</code> is not a TTY.</p>
 </li>
 </ul>
@@ -4279,8 +4324,8 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="api api-function" id="CohomologicalEquations-solve_single_monomial!">
   <div class="api-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L297" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, model, ml_cache)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L297" target="_blank" rel="noopener">solve_single_monomial!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L298" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, model, ml_cache)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L298" target="_blank" rel="noopener">solve_single_monomial!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NDOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="api-body">
 <div class="markdown"><pre><code>solve_single_monomial&#33;&#40;W, R, idx, ctx, model, ml_cache&#41; -&gt; nothing</code></pre>
@@ -4473,7 +4518,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 	</div>
 	<div style="display:flex;justify-content:space-between;align-items:center;margin-top:48px;padding-top:24px;border-top:1px solid var(--hair);color:var(--ink-3);font-size:12px;">
 	  <div>© MORFE contributors · MIT license</div>
-	  <div class="mono">generated · 2 August 2026 · julia 1.11</div>
+	  <div class="mono">generated · 3 August 2026 · julia 1.11</div>
 	</div>
   </div>
 </footer>
