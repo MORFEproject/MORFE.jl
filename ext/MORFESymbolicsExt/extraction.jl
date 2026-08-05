@@ -233,7 +233,7 @@ end
     extract_nonlinear_monomials(exprs, groups, linear_terms)
 
 Calculates the nonlinear part of `exprs` by substracting `linear_terms`.
-Seperates the nonlinear remander into monomials and saves them in the Vector `monomials` 
+Seperates the nonlinear remainder into monomials and saves them in the Vector `monomials` 
 and generates additional a Vector `multideg_monomials` that contains the multiindex_degree calculated by `multidegree_monomials`. 
 """
 function extract_nonlinear_monomials(
@@ -308,7 +308,14 @@ function extract_nonlinear_monomials(
     multideg_monomials = Vector{Vector{NTuple{NG_EXT, Int}}}(undef, N)
 
     for i in eachindex(F)
-        monomials[i] = seperate_into_monomials(F[i])
+        # monomials[i] = seperate_into_monomials(F[i])
+        raw = seperate_into_monomials(F[i])
+        # filter out zero and purely constant terms (degree 0)
+        filtered = filter(raw) do m
+            d = degree_of_monomial(m)
+            d > 0
+        end
+        monomials[i] = filtered
         deg_monomials[i] = Vector{Int}(undef, length(monomials[i]))
         multideg_monomials[i] = Vector{NTuple{NG_EXT, Int}}(undef, length(monomials[i]))
         for j in eachindex(monomials[i])

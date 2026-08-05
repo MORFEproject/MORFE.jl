@@ -1158,3 +1158,101 @@ end  # testset "externalsystem_from_symbolics"
         @test any(isequal(u, dz2) for u in unused)
     end
 end  # @testset "input validation"
+
+@testset "DifferentialEquations.jl formulation of ODEs" begin
+    @testset "_differential_equations_helper — order 1 linear system" begin
+        function linear1!(du, u, p, t)
+            du[1] = -u[1] + 2 * u[2]
+            du[2] = -3 * u[2]
+        end
+
+        exprs, groups = ext._differential_equations_helper(linear1!, 1, 2)
+
+        @test length(groups) == 2 # (u, du)
+        u, du = groups
+        expected = [du[1] - (-u[1] + 2u[2]), du[2] - (-3u[2])]
+
+        @test all(isequal.(Symbolics.expand.(exprs), Symbolics.expand.(expected)))
+    end
+
+    @testset "_differential_equations_helper — order 3 linear system" begin
+        function order3!(dddu, ddu, du, u, p, t)
+            dddu[1] = -du[1] + 2 * u[2] + ddu[1]*ddu[2]
+            dddu[2] = ddu[2] - 3 * u[2]
+        end
+
+        exprs, groups = ext._differential_equations_helper(order3!, 3, 2)
+
+        @test length(groups) == 4
+        u, du, ddu, dddu = groups
+        expected = [
+            dddu[1] - (-du[1] + 2 * u[2] + ddu[1]*ddu[2]), dddu[2] - (ddu[2] - 3 * u[2])]
+
+        @test all(isequal.(Symbolics.expand.(exprs), Symbolics.expand.(expected)))
+    end
+
+    @testset "_differential_equations_helper_external — retrun" begin
+        function f(r, p, t)
+            dx = 10.0 * (r[2] - r[1])
+            dy = r[1] * (28.0 - r[3]) - r[2]
+            dz = r[1] * r[2] - (8 / 3) * r[3]
+            return [dx, dy, dz]
+        end
+
+        exprs, r = ext._differential_equations_helper_external(f, 3)
+        expected = [
+            10.0 * (r[2] - r[1]), r[1] * (28.0 - r[3]) - r[2], r[1] * r[2] - (8 / 3) * r[3]]
+        @test all(isequal.(Symbolics.expand.(exprs), Symbolics.expand.(expected)))
+    end
+
+    @testset "_differential_equations_helper_external — inplace" begin
+        function f(dr, r, p, t)
+            dr[1] = 10.0 * (r[2] - r[1])
+            dr[2] = r[1] * (28.0 - r[3]) - r[2]
+            dr[3] = r[1] * r[2] - (8 / 3) * r[3]
+        end
+
+        exprs, r = ext._differential_equations_helper_external(f, 3)
+        expected = [
+            10.0 * (r[2] - r[1]), r[1] * (28.0 - r[3]) - r[2], r[1] * r[2] - (8 / 3) * r[3]]
+        @test all(isequal.(Symbolics.expand.(exprs), Symbolics.expand.(expected)))
+    end
+
+    @testset "wrong arity for the declared order" begin
+        # this is a valid order-1 signature, but we ask for order=2
+        wrong_order!(du, u, p, t) = (du[1] = -u[1])
+        @test_throws AssertionError ext._differential_equations_helper(wrong_order!, 2, 1)
+    end
+
+    @testset "out-of-place function passed to the in-place helper" begin
+        oop_f(u, p, t) = -u
+        @test_throws Exception ext._differential_equations_helper(oop_f, 1, 1)
+    end
+
+    @testset "function with more than one method" begin
+        # a generic function picks up 2 methods once both are defined
+        ambiguous!(du, u, p, t) = (du[1] = -u[1])
+        ambiguous!(du, u, v, p, t) = (du[1] = -u[1] - v[1])
+        @test_throws AssertionError ext._differential_equations_helper(ambiguous!, 1, 1)
+    end
+
+    @testset "non-autonomous main system is rejected" begin
+        nonautonomous!(du, u, p, t) = (du[1] = -u[1] + t)
+        @test_throws AssertionError ext._differential_equations_helper(nonautonomous!, 1, 1)
+    end
+
+    @testset "non-autonomous external system is rejected" begin
+        nonautonomous_ext!(dr, r, p, t) = (dr[1] = -r[1] + t)
+        @test_throws AssertionError ext._differential_equations_helper_external(nonautonomous_ext!, 1)
+    end
+
+    @testset "external out-of-place function returns wrong length" begin
+        bad_length(r, p, t) = [r[1]]        # nvars will be told as 2, only returns 1
+        @test_throws AssertionError ext._differential_equations_helper_external(bad_length, 2)
+    end
+
+    @testset "external function with unrecognized signature" begin
+        bad_sig(r, p) = -r                  # missing t
+        @test_throws Exception ext._differential_equations_helper_external(bad_sig, 1)
+    end
+end  # "DifferentialEquations.jl formulation of ODEs"

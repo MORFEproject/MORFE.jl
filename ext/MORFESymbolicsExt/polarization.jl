@@ -151,6 +151,9 @@ function polarize(F_by_multiindex::Dict{NTuple{ORD, Int}, Vector{MyNum}},
                 end
             end
         end
+        if isnothing(slotvars_ref)
+            continue
+        end
         F_by_multiindex_polarized[key] = tmp
         dict_slotvars[key] = slotvars_ref
     end

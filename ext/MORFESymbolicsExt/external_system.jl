@@ -85,7 +85,7 @@ function generate_polynomial(
 end
 
 """
-    externalsystem_from_symbolics(exprs, var)
+    MORFE.externalsystem_from_symbolics(exprs, var)
     
 Generates an MORFE.ExternalSystem. Expects the ODE describing the external system in the form
 
@@ -100,4 +100,47 @@ function MORFE.externalsystem_from_symbolics(exprs::Vector{<:MyNum}, var::Vector
     pol = generate_polynomial(F_dict, var, N)
     ex_system = ExternalSystem(pol)
     return ex_system
+end
+
+"""
+    _differential_equations_helper_external(f, order::Int, nvars::Int; p = ())
+
+Helper for mirroring DifferentialEquations.jl interface.
+Used in MORFE.externalsystem_from_symbolics(f, nvars::Int; p = ()).
+"""
+function _differential_equations_helper_external(f, nvars::Int; p = ())
+    @assert length(methods(f)) == 1 "f must have exactly one method — pass a plain function, not a closure with multiple dispatches"
+    arity = methods(f)[1].nargs - 1 - 2   # drop f itself, then p and t
+    t = Num(Symbolics.variable(:t))
+    r = Num.(Symbolics.variables(:r, 1:nvars))
+
+    if arity == 2                          # in-place: f(dr, r, p, t)
+        exprs = Vector{Num}(undef, nvars)
+        fill!(exprs, Num(0))
+        f(exprs, r, p, t)
+    elseif arity == 1                      # out-of-place: f(r, p, t) -> dr
+        exprs = Vector{Num}(f(r, p, t))
+    else
+        error("f needs to be one of these layouts: f(dr, r, p, t) or f(r, p, t)")
+    end
+
+    @assert length(exprs) == nvars "f must produce a vector of length $nvars"
+    used = reduce(union, Symbolics.get_variables.(exprs); init = Set())
+    @assert !(Symbolics.value(t) in used) "f depends on t — external systems must be autonomous"
+    return exprs, r
+end
+
+"""
+    MORFE.externalsystem_from_symbolics(f, nvars::Int; p=())
+
+Mirrors DifferentialEquations.jl's  convention of defining ODEs.
+There are the two options to define the function f.
+1) In-place, mutates the first argument:
+    f(dr, r, p, t)
+2) Returns dr
+    f(r, p, t) -> dr
+"""
+function MORFE.externalsystem_from_symbolics(f, nvars::Int; p = ())
+    exprs, r = _differential_equations_helper_external(f, nvars::Int; p = ())
+    return MORFE.externalsystem_from_symbolics(exprs, r)
 end

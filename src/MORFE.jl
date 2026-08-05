@@ -23,6 +23,7 @@ include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
 include("Export/RomIO.jl")
 include("Validation/RomComparison.jl")
+include("FullOrderModel/SymbolicsExtension.jl")
 
 # Re‑export public API from submodules
 using .Multiindices
@@ -45,6 +46,7 @@ using .BifurcationKitInterface
 using .InvarianceError
 using .RomIO
 using .RomComparison
+using .SymbolicsExtension
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
@@ -128,8 +130,6 @@ export compare_rom_coefficients
 export save_rom, read_rom_coefficients, write_rom_coefficients_csv
 
 # MORFESymbolicsExt
-function model_from_symbolics end
-function externalsystem_from_symbolics end
 export model_from_symbolics, externalsystem_from_symbolics
 
 # ParametrisationMethod high-level entry (also re-exported from the submodule)
