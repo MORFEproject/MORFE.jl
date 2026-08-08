@@ -19,6 +19,7 @@ using Statistics: median
 using ..Polynomials: DensePolynomial, evaluate
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics
 using ..FullOrderModel: NDOrderModel, evaluate_nonlinear_terms!
+using ..ExternalSystems: to_physical_external
 
 export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
 
@@ -119,13 +120,18 @@ function _invariance_error_at!(
     if max_deg >= 1
         fill!(buf_nl, zero(T))
         state_vectors = ntuple(k -> view(X_vals, :, k), Val(ORD))
-        r = if !isnothing(r_external)
+        # `z`'s external tail — and `r_external`, which substitutes for it — are *reduced*
+        # external coordinates r′.  The model's terms are defined in the physical r, so the
+        # change of basis is applied here, at the point the argument is materialised.  It is
+        # the identity for every system that was not re-based.
+        r_reduced = if !isnothing(r_external)
             r_external
         elseif N_EXT > 0
             z[(length(z) - N_EXT + 1):end]
         else
             nothing
         end
+        r = to_physical_external(model.external_system, r_reduced)
         for deg in 1:max_deg
             evaluate_nonlinear_terms!(buf_nl, model, deg, state_vectors, r)
         end

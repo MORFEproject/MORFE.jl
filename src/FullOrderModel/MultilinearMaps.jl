@@ -832,6 +832,15 @@ Evaluate a single `MultilinearMap` and accumulate (adds) the result into `res`.
 - `term`: multilinear term
 - `xs`: tuple `(x, x^(1), …, x^(ORD-1))` of state derivatives
 - `r`: external state vector (or `nothing` if not used). If `r` is `nothing` but the term expects external arguments, an error is thrown.
+
+!!! note "`r` is the *physical* external state"
+    See [`evaluate_nonlinear_terms!`](@ref): when the external system was re-based, the
+    caller must convert the reduced coordinates `r′` with
+    `ExternalSystems.to_physical_external` first.  During the cohomological solve this
+    argument is a *basis direction* rather than a state — a unit vector `eⱼ`, or the column
+    `Q[:, j]` after a re-basing — supplied by
+    `ExternalSystems.external_argument_vectors`, so `f!` may receive a complex-valued
+    external argument and must not assume an integer one.
 """
 @inline function evaluate_term!(res, term::MultilinearMap{ORD}, xs, r) where {ORD}
     inds = term.multiindex

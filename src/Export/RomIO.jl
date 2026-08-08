@@ -19,6 +19,7 @@ module RomIO
 
 using Serialization
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics
+using ..ExternalSystems: external_basis
 
 export save_rom, read_rom_coefficients, write_rom_coefficients_csv
 
@@ -49,25 +50,41 @@ function write_rom_coefficients_csv(path::AbstractString, exponents,
 end
 
 """
-	save_rom(dir, W, R; metadata = Pair{String, <:Any}[], drop_below = 1e-14)
+	save_rom(dir, W, R; external_system = nothing,
+	         metadata = Pair{String, <:Any}[], drop_below = 1e-14)
 
 Write the standard ROM result layout (see module docstring) under `dir`.
 `metadata` pairs are written first into `summary.txt`, followed by
 `julia_version`, the current git commit (when available) and a timestamp.
+
+Pass `external_system` whenever the model had one.  `W` and `R` record no external
+metadata of their own, so without it an archive of a **re-based** system cannot be mapped
+back to the physical external coordinates: its external columns and rows are expressed in
+`r′`, and only the basis `Q` recovers `r = Q r′`.  When the system carries a basis it is
+serialised to `data/external_basis.jls` and reported in `summary.txt`; a system that was
+never re-based writes nothing, since `r′` and `r` coincide.
 """
 function save_rom(dir::AbstractString, W::Parametrisation, R::ReducedDynamics;
+        external_system = nothing,
         metadata = Pair{String, Any}[], drop_below::Real = 1e-14)
     data = joinpath(dir, "data")
     mkpath(data)
     mkpath(joinpath(dir, "figures"))
     serialize(joinpath(data, "W.jls"), W)
     serialize(joinpath(data, "R.jls"), R)
+    basis = external_basis(external_system)
+    basis === nothing || serialize(joinpath(data, "external_basis.jls"), basis)
     write_rom_coefficients_csv(joinpath(data, "R_coefficients.csv"),
         R.poly.multiindex_set.exponents, R.poly.coefficients;
         drop_below = drop_below)
     open(joinpath(dir, "summary.txt"), "w") do io
         for (k, v) in metadata
             println(io, k, ": ", v)
+        end
+        if basis !== nothing
+            println(
+                io, "external_coordinates: re-based; reduced external coordinates are ",
+                "r′ with r = Q r′, Q in data/external_basis.jls")
         end
         println(io, "julia_version: ", VERSION)
         commit = try

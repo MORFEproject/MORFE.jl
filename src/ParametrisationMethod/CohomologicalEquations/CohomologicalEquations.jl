@@ -87,30 +87,31 @@ factorisation must re-pivot on every monomial.
 module CohomologicalEquations
 
 using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree,
-                      build_exponent_index_map
+	build_exponent_index_map
 using ..Polynomials: DensePolynomial
 using ..ParametrisationMethod: validate_multiindex_set,
-                               Parametrisation, ReducedDynamics,
-                               create_parametrisation_method_objects,
-                               compute_higher_derivative_coefficients!,
-                               multiindex_set
+	Parametrisation, ReducedDynamics,
+	create_parametrisation_method_objects,
+	compute_higher_derivative_coefficients!,
+	multiindex_set
 using ..LowerOrderCouplings: compute_lower_order_couplings
 using ..InvarianceEquation: assemble_cohomological_matrix_and_rhs!,
-                            precompute_master_column_polynomials,
-                            precompute_external_column_polynomials,
-                            build_sparse_L_and_rhs!,
-                            precompute_sparse_L_template,
-                            precompute_sparse_bordered_template,
-                            scatter_L_into_bordered!,
-                            evaluate_column!,
-                            evaluate_external_rhs!
+	precompute_master_column_polynomials,
+	precompute_external_column_polynomials,
+	build_sparse_L_and_rhs!,
+	precompute_sparse_L_template,
+	precompute_sparse_bordered_template,
+	scatter_L_into_bordered!,
+	evaluate_column!,
+	evaluate_external_rhs!
 using ..MasterModeOrthogonality: assemble_orthogonality_matrix_and_rhs!,
-                                 precompute_orthogonality_operator_coefficients,
-                                 precompute_orthogonality_column_polynomials
+	precompute_orthogonality_operator_coefficients,
+	precompute_orthogonality_column_polynomials
 using ..FullOrderModel: NDOrderModel
+using ..ExternalSystems: ExternalSystem, external_basis
 
 using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
-                          build_multilinear_terms_cache, MultilinearTermsCache
+	build_multilinear_terms_cache, MultilinearTermsCache
 using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using SparseArrays
@@ -134,7 +135,7 @@ _pardiso_factorise_solve!(args...) = error(_PARDISO_INACTIVE)  # phases 22 + 33,
 _pardiso_release!(args...) = nothing                           # phase -1, on finalisation
 
 export _try_build_pardiso_solver, _pardiso_prepare!, _pardiso_factorise_solve!,
-       _pardiso_release!
+	_pardiso_release!
 
 include("OperatorData.jl")
 include("SolverResources.jl")
@@ -144,19 +145,21 @@ include("CohomologicalSolver.jl")
 include("CohomologicalDriver.jl")
 
 export CohomologicalContext,
-       InvarianceOperators,
-       OrthogonalityOperators,
-       LowerOrderResources,
-       CohomologicalBuffers,
-       SparseLinearSolverState,
-       NoConjugatePermutation,
-       ConjugateSymmetryData,
-       fill_conjugate_monomial!,
-       detect_conjugate_permutation,
-       solve_cohomological_equations!,
-       solve_cohomological_equations_benchmarked!,
-       solve_single_monomial!,
-       solve_cohomological_problem
+	InvarianceOperators,
+	OrthogonalityOperators,
+	LowerOrderResources,
+	CohomologicalBuffers,
+	SparseLinearSolverState,
+	NoConjugatePermutation,
+	ConjugateSymmetryData,
+	fill_conjugate_monomial!,
+	detect_conjugate_permutation,
+	external_conjugate_permutation,
+	full_conjugate_permutation,
+	solve_cohomological_equations!,
+	solve_cohomological_equations_benchmarked!,
+	solve_single_monomial!,
+	solve_cohomological_problem
 
 # ==============================================================================
 # Progress indicator (stderr, \r-based, no external dependencies)
@@ -179,9 +182,9 @@ Lightweight progress state for the `\r`-based terminal progress indicator.
   displayed percentage track elapsed time rather than monomial count.
 """
 struct _SimpleProgress
-    n_total::Int
-    enabled::Bool
-    max_nl_degree::Int
+	n_total::Int
+	enabled::Bool
+	max_nl_degree::Int
 end
 
 """
@@ -191,7 +194,7 @@ Construct a `_SimpleProgress` tracker.  Disables output automatically when
 `stderr` is not a TTY (e.g. in CI or when piped).
 """
 function _make_progress(n_total::Int, show_progress::Bool, max_nl_degree::Int)
-    return _SimpleProgress(n_total, show_progress && stderr isa Base.TTY, max_nl_degree)
+	return _SimpleProgress(n_total, show_progress && stderr isa Base.TTY, max_nl_degree)
 end
 
 """
@@ -202,11 +205,11 @@ current polynomial degree and the fraction of monomials solved.
 No-op when `p.enabled == false`.
 """
 function _progress_tick!(p::_SimpleProgress, n_done::Int, degree::Int)
-    p.enabled || return
-    percentage = round(100.0 * (n_done / p.n_total)^p.max_nl_degree; digits = 2)
-    print(stderr,
-        "\rSolving: order $degree \t Monomials: $n_done/$(p.n_total) \t Progress: $percentage%   "
-    )
+	p.enabled || return
+	percentage = round(100.0 * (n_done / p.n_total)^p.max_nl_degree; digits = 2)
+	print(stderr,
+		"\rSolving: order $degree \t Monomials: $n_done/$(p.n_total) \t Progress: $percentage%   ",
+	)
 end
 
 """
@@ -217,8 +220,8 @@ any trailing characters from the last `_progress_tick!` call.
 No-op when `p.enabled == false`.
 """
 function _progress_done!(p::_SimpleProgress, n_done::Int)
-    p.enabled || return
-    println(stderr, "\rSolved $n_done monomials." * " "^50)
+	p.enabled || return
+	println(stderr, "\rSolved $n_done monomials." * " "^50)
 end
 
 # ==============================================================================
@@ -231,25 +234,43 @@ end
 Copy coefficients from the `N_EXT`-variable external polynomial `ext_poly` into
 the last `N_EXT` rows of `R`'s coefficient matrix, embedding them into the full
 `NVAR = ROM + N_EXT` multiindex set `mset`.  No-op when `N_EXT == 0`.
+
+Throws an `ArgumentError` when a *non-zero* external coefficient has no home in `mset`.
+Silently skipping it — as this did previously — drops part of the external dynamics
+without trace.  That is a live risk for a re-based external system: a change of external
+coordinates turns `r₁²` into `r₁², r₁r₂, r₂²`, and a per-parameter box `mset` (as built by
+`all_multiindices_in_box`) need not contain the cross terms even though it is downward
+closed.  A monomial whose coefficient is exactly zero is skipped, since dropping it changes
+nothing.
 """
 function _embed_external_dynamics!(
-        R::ReducedDynamics{ROM, NVAR, T},
-        ext_poly::DensePolynomial{T, N_EXT, 2},
-        mset::MultiindexSet{NVAR}
+	R::ReducedDynamics{ROM, NVAR, T},
+	ext_poly::DensePolynomial{T, N_EXT, 2},
+	mset::MultiindexSet{NVAR},
 ) where {ROM, NVAR, T, N_EXT}
-    N_EXT > 0 || return nothing
-    mdict = build_exponent_index_map(mset)
-    ext_coeffs = ext_poly.coefficients
-    for (j, α_ext) in enumerate(ext_poly.multiindex_set.exponents)
-        α_full = SVector{NVAR, Int}(ntuple(i -> i <= ROM ? 0 : α_ext[i - ROM], Val(NVAR)))
-        idx_full = get(mdict, α_full, nothing)
-        idx_full === nothing && continue
-        for e in 1:N_EXT
-            coeff = T(ext_coeffs[e, j])
-            iszero(coeff) || (R.poly.coefficients[ROM + e, idx_full] = coeff)
-        end
-    end
-    return nothing
+	N_EXT > 0 || return nothing
+	mdict = build_exponent_index_map(mset)
+	ext_coeffs = ext_poly.coefficients
+	for (j, α_ext) in enumerate(ext_poly.multiindex_set.exponents)
+		α_full = SVector{NVAR, Int}(ntuple(i -> i <= ROM ? 0 : α_ext[i-ROM], Val(NVAR)))
+		idx_full = get(mdict, α_full, nothing)
+		if idx_full === nothing
+			nz = [(e, ext_coeffs[e, j]) for e in 1:N_EXT if !iszero(ext_coeffs[e, j])]
+			isempty(nz) && continue
+			throw(ArgumentError("""
+				External dynamics carry the monomial r^$(Tuple(α_ext)) with non-zero \
+				coefficients $(nz) (as (row, value)), but the multiindex set has no entry \
+				for the corresponding full exponent $(Tuple(α_full)).
+				That term would be dropped without trace.  Enlarge `mset` to contain it — \
+				a re-based external system can generate additional cross monomials.
+				"""))
+		end
+		for e in 1:N_EXT
+			coeff = T(ext_coeffs[e, j])
+			iszero(coeff) || (R.poly.coefficients[ROM+e, idx_full] = coeff)
+		end
+	end
+	return nothing
 end
 
 """
@@ -260,14 +281,14 @@ Return the positions in `mset` of all unit-vector monomials `eᵣ` for `r = 1 �
 initialised from eigenvectors rather than solved.
 """
 function _linear_monomial_indices(mset::MultiindexSet{NVAR}) where {NVAR}
-    indices = Int[]
-    n_search = min(NVAR + 1, length(mset))
-    for r in 1:NVAR
-        e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
-        idx = findfirst(==(e_r), view(mset.exponents, 1:n_search))
-        idx !== nothing && push!(indices, idx)
-    end
-    return indices
+	indices = Int[]
+	n_search = min(NVAR + 1, length(mset))
+	for r in 1:NVAR
+		e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
+		idx = findfirst(==(e_r), view(mset.exponents, 1:n_search))
+		idx !== nothing && push!(indices, idx)
+	end
+	return indices
 end
 
 """
@@ -278,11 +299,11 @@ modes are resonant with the monomial at position `monomial_idx` in the multiinde
 set.  Using `Val{ROM}` enables the compiler to emit a fully unrolled ntuple loop.
 """
 @inline function _resonance_vector(
-        resonance_set::ResonanceSet,
-        monomial_idx::Int,
-        ::Val{ROM}
+	resonance_set::ResonanceSet,
+	monomial_idx::Int,
+	::Val{ROM},
 ) where {ROM}
-    return SVector{ROM, Bool}(ntuple(r -> is_resonant(resonance_set, monomial_idx, r), Val(ROM)))
+	return SVector{ROM, Bool}(ntuple(r -> is_resonant(resonance_set, monomial_idx, r), Val(ROM)))
 end
 
 # ==============================================================================
@@ -292,7 +313,7 @@ end
 # Singleton used by the no-sym public overload; skip_bits is never indexed inside
 # solve_single_monomial!, so a zero-length BitVector is correct here.
 const _NO_SYM = ConjugateSymmetryData{NoConjugatePermutation}(
-    NoConjugatePermutation(), Int[], BitVector(), NTuple{2, Int}[]
+	NoConjugatePermutation(), Int[], BitVector(), NTuple{2, Int}[],
 )
 
 """
@@ -304,63 +325,63 @@ Solve the cohomological equations for the monomial with multiindex-set position
 See the module docstring for a description of the algorithm.
 """
 function solve_single_monomial!(
-        W, R, idx::Int, ctx, model, ml_cache
+	W, R, idx::Int, ctx, model, ml_cache,
 )
-    solve_single_monomial!(W, R, idx, ctx, _NO_SYM, model, ml_cache)
+	solve_single_monomial!(W, R, idx, ctx, _NO_SYM, model, ml_cache)
 end
 
 # Canonical implementation: dispatches the solve step at compile time via sym.
 function solve_single_monomial!(
-        W::Parametrisation{ORD, NVAR, T},
-        R::ReducedDynamics{ROM, NVAR, T},
-        idx::Int,
-        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-        ::ConjugateSymmetryData,
-        model::NDOrderModel,
-        ml_cache::MultilinearTermsCache
+	W::Parametrisation{ORD, NVAR, T},
+	R::ReducedDynamics{ROM, NVAR, T},
+	idx::Int,
+	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+	::ConjugateSymmetryData,
+	model::NDOrderModel,
+	ml_cache::MultilinearTermsCache,
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
-    multi = multiindex_set(W)[idx]
+	multi = multiindex_set(W)[idx]
 
-    s = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
-    resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
+	s = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
+	resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
 
-    for v in ctx.lower_order.buffer
-        fill!(v, zero(T))
-    end
-    lower_order_couplings = compute_lower_order_couplings(
-        multi, W, R,
-        ctx.lower_order.multiindex_dict,
-        ctx.lower_order.buffer,
-        ctx.lower_order.candidate_indices[idx],
-        ctx.lower_order.unit_vectors
-    )
+	for v in ctx.lower_order.buffer
+		fill!(v, zero(T))
+	end
+	lower_order_couplings = compute_lower_order_couplings(
+		multi, W, R,
+		ctx.lower_order.multiindex_dict,
+		ctx.lower_order.buffer,
+		ctx.lower_order.candidate_indices[idx],
+		ctx.lower_order.unit_vectors,
+	)
 
-    compute_multilinear_terms!(ctx.buffers.ml_result, model, idx, W, ml_cache)
+	compute_multilinear_terms!(ctx.buffers.ml_result, model, idx, W, ml_cache)
 
-    external_dynamics = view(R.poly.coefficients, (ROM + 1):NVAR, idx)
-    n_sys = FOM + ROM
+	external_dynamics = view(R.poly.coefficients, (ROM+1):NVAR, idx)
+	n_sys = FOM + ROM
 
-    _solve_monomial!(ctx, s, resonance, lower_order_couplings, external_dynamics)
+	_solve_monomial!(ctx, s, resonance, lower_order_couplings, external_dynamics)
 
-    sol = view(ctx.buffers.rhs, 1:n_sys)
-    W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
+	sol = view(ctx.buffers.rhs, 1:n_sys)
+	W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
 
-    # Only resonant rows are read back.  `R[r, α] = 0` on non-resonant modes is the
-    # style choice that *defines* the parametrisation, not a computed quantity, so it
-    # is written directly rather than taken from the trivial rows of the solve — the
-    # hard zeros must not be able to pick up round-off from a pivot ordering, a row
-    # scaling, or a change of factoriser.
-    for r in 1:ROM
-        R.poly.coefficients[r, idx] = resonance[r] ? sol[FOM + r] : zero(T)
-    end
+	# Only resonant rows are read back.  `R[r, α] = 0` on non-resonant modes is the
+	# style choice that *defines* the parametrisation, not a computed quantity, so it
+	# is written directly rather than taken from the trivial rows of the solve — the
+	# hard zeros must not be able to pick up round-off from a pivot ordering, a row
+	# scaling, or a change of factoriser.
+	for r in 1:ROM
+		R.poly.coefficients[r, idx] = resonance[r] ? sol[FOM+r] : zero(T)
+	end
 
-    compute_higher_derivative_coefficients!(
-        W.poly.coefficients,
-        view(R.poly.coefficients, 1:ROM, :),
-        external_dynamics, s, idx,
-        ctx.generalised_eigenmodes, lower_order_couplings
-    )
-    return nothing
+	compute_higher_derivative_coefficients!(
+		W.poly.coefficients,
+		view(R.poly.coefficients, 1:ROM, :),
+		external_dynamics, s, idx,
+		ctx.generalised_eigenmodes, lower_order_couplings,
+	)
+	return nothing
 end
 
 # ==============================================================================
@@ -374,76 +395,76 @@ Solve the cohomological equations for **all** monomials in the multiindex set
 of `W` and `R`, processing them in *causal order* (ascending total degree).
 """
 function solve_cohomological_equations!(
-        W, R, ctx, model, ml_cache; show_progress::Bool = true)
-    nterms = length(multiindex_set(W))
-    sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
-    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
+	W, R, ctx, model, ml_cache; show_progress::Bool = true)
+	nterms = length(multiindex_set(W))
+	sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
+	solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
 end
 
 # Overload without active symmetry: skip_bits covers only linear monomials; uses sym-aware
 # solve_single_monomial! to enable compile-time dispatch on RB.
 function solve_cohomological_equations!(
-        W::Parametrisation{ORD, NVAR, T},
-        R::ReducedDynamics{ROM, NVAR, T},
-        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-        sym::ConjugateSymmetryData{NoConjugatePermutation},
-        model::NDOrderModel,
-        ml_cache::MultilinearTermsCache;
-        show_progress::Bool = true
+	W::Parametrisation{ORD, NVAR, T},
+	R::ReducedDynamics{ROM, NVAR, T},
+	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+	sym::ConjugateSymmetryData{NoConjugatePermutation},
+	model::NDOrderModel,
+	ml_cache::MultilinearTermsCache;
+	show_progress::Bool = true,
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
-    nterms = length(multiindex_set(W))
-    n_to_solve = count(!b for b in sym.skip_bits)
-    prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
-    n_done = 0
-    for idx in 1:nterms
-        @inbounds sym.skip_bits[idx] && continue
-        solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
-        n_done += 1
-        _progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
-    end
-    _progress_done!(prog, n_done)
-    return nothing
+	nterms = length(multiindex_set(W))
+	n_to_solve = count(!b for b in sym.skip_bits)
+	prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
+	n_done = 0
+	for idx in 1:nterms
+		@inbounds sym.skip_bits[idx] && continue
+		solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+		n_done += 1
+		_progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
+	end
+	_progress_done!(prog, n_done)
+	return nothing
 end
 
 # Overload with active symmetry: secondaries are in skip_bits; primaries are solved
 # then their conjugate is filled via fill_conjugate_monomial!.
 function solve_cohomological_equations!(
-        W::Parametrisation{ORD, NVAR, T},
-        R::ReducedDynamics{ROM, NVAR, T},
-        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-        sym::ConjugateSymmetryData{<:SVector},
-        model::NDOrderModel,
-        ml_cache::MultilinearTermsCache;
-        show_progress::Bool = true
+	W::Parametrisation{ORD, NVAR, T},
+	R::ReducedDynamics{ROM, NVAR, T},
+	ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+	sym::ConjugateSymmetryData{<:SVector},
+	model::NDOrderModel,
+	ml_cache::MultilinearTermsCache;
+	show_progress::Bool = true,
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
-    nterms = length(multiindex_set(W))
-    pairs = sym.primary_pairs
-    ptr = 1
+	nterms = length(multiindex_set(W))
+	pairs = sym.primary_pairs
+	ptr = 1
 
-    n_to_solve = count(!b for b in sym.skip_bits)
-    prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
-    n_done = 0
+	n_to_solve = count(!b for b in sym.skip_bits)
+	prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
+	n_done = 0
 
-    for idx in 1:nterms
-        @inbounds sym.skip_bits[idx] && continue   # skips linears AND secondary monomials
+	for idx in 1:nterms
+		@inbounds sym.skip_bits[idx] && continue   # skips linears AND secondary monomials
 
-        solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
-        n_done += 1
-        _progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
+		solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+		n_done += 1
+		_progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
 
-        # Advance ptr past any pairs whose primary was already handled before this loop
-        # (e.g. external linear monomials solved by _solve_external_directions!).
-        while ptr <= length(pairs) && @inbounds sym.skip_bits[pairs[ptr][1]]
-            ptr += 1
-        end
-        if ptr <= length(pairs) && @inbounds pairs[ptr][1] == idx
-            (src, dst) = @inbounds pairs[ptr]
-            fill_conjugate_monomial!(W, R, dst, src, sym)
-            ptr += 1
-        end
-    end
-    _progress_done!(prog, n_done)
-    return nothing
+		# Advance ptr past any pairs whose primary was already handled before this loop
+		# (e.g. external linear monomials solved by _solve_external_directions!).
+		while ptr <= length(pairs) && @inbounds sym.skip_bits[pairs[ptr][1]]
+			ptr += 1
+		end
+		if ptr <= length(pairs) && @inbounds pairs[ptr][1] == idx
+			(src, dst) = @inbounds pairs[ptr]
+			fill_conjugate_monomial!(W, R, dst, src, sym)
+			ptr += 1
+		end
+	end
+	_progress_done!(prog, n_done)
+	return nothing
 end
 
 include("CohomologicalBenchmark.jl")

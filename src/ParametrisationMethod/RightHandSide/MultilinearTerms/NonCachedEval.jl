@@ -57,7 +57,7 @@ end
 
 """
 	accumulate_multilinear_term!(result, scratch, temp, t, parametrisation,
-								  exp, candidate_indices, external_exp, unit_vectors)
+								  exp, candidate_indices, external_exp, external_arguments)
 
 Add the contribution of nonlinear term `t` for exponent `exp` to `result`.
 
@@ -68,7 +68,8 @@ so we skip `bounded_index_tuples` and write directly into `result`, saving one
 """
 function accumulate_multilinear_term!(result, scratch, temp,
         t::MultilinearMap{ORD}, parametrisation::Parametrisation{ORD, NVAR},
-        exp::SVector{NVAR}, candidate_indices, external_exp, unit_vectors) where {ORD, NVAR}
+        exp::SVector{NVAR}, candidate_indices, external_exp,
+        external_arguments) where {ORD, NVAR}
     W = parametrisation.poly.coefficients
     set = parametrisation.poly.multiindex_set
     me = t.multiplicity_external
@@ -84,7 +85,7 @@ function accumulate_multilinear_term!(result, scratch, temp,
                 i -> i <= ROM ? 0 :
                      ext_multiindex_external[i - ROM], Val(NVAR)))
             rem = exp - ext_multiindex
-            args_ext = ntuple(i -> unit_vectors[ext_idx[i]], me)
+            args_ext = ntuple(i -> external_arguments[ext_idx[i]], me)
             fill!(temp, 0)
             _accumulate_split!(
                 temp, scratch, t, sym, W, set, rem, deg, candidate_indices, args_ext)
@@ -102,7 +103,7 @@ end
 
 Return the sum of all nonlinear-term contributions for exponent `exp`.
 
-Scratch buffers and shared data (`unit_vectors`, `candidate_indices`,
+Scratch buffers and shared data (`external_arguments`, `candidate_indices`,
 `external_exp`) are allocated once and reused across all terms.
 """
 function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::SVector{NVAR},
@@ -118,15 +119,16 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::SVector{NVAR},
 
     external_system_size = parametrisation.external_system_size
     ROM = NVAR - external_system_size
-    unit_vectors = [SVector(ntuple(k -> k == j ? 1 : 0, external_system_size))
-                    for j in 1:external_system_size]
+    # Unit vectors eⱼ, or the columns Q[:, j] of the change of basis when the external
+    # system was re-based — see `ExternalSystems.external_argument_vectors`.
+    external_arguments = external_argument_vectors(model.external_system, external_system_size)
     candidate_indices = indices_in_box_with_bounded_degree(set, exp, 1, deg_max)
     external_exp = SVector(ntuple(i -> exp[ROM + i], external_system_size))
 
     for t in model.nonlinear_terms
         t.deg > deg_max && continue
         accumulate_multilinear_term!(result, scratch, temp, t, parametrisation,
-            exp, candidate_indices, external_exp, unit_vectors)
+            exp, candidate_indices, external_exp, external_arguments)
     end
     return result
 end

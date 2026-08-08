@@ -17,22 +17,13 @@ using StaticArrays: SVector, MVector
 using ..Polynomials: DensePolynomial, nvars, each_term, similar_poly, coefficient
 using ..Polynomials: coefficients, multiindex_set, coeff_shape
 
+# `compose_linear` and the coefficient-shape helpers live in `Polynomials`: they are pure
+# polynomial algebra with no realification content, and `ExternalSystems` — which loads
+# long before this module — needs `compose_linear` for its change of external coordinates.
+# Re-exported below so `MORFE.Realification.compose_linear` keeps resolving.
+using ..Polynomials: compose_linear, _coeff_type, _zero_like, _materialise
+
 export realify, compose_linear, realify_via_linear
-
-# ── Helpers for coefficient-type introspection ──────────────────────────────
-# With the new DensePolynomial{T,NVAR,N,A}, eltype returns T (the scalar element
-# type).  These helpers reconstruct the coefficient type (what one monomial's
-# worth of data looks like) without relying on the old SVector-based eltype.
-_coeff_type(::DensePolynomial{T, NVAR, 1}) where {T, NVAR} = T
-_coeff_type(::DensePolynomial{T, NVAR, N}) where {T, NVAR, N} = Vector{T}
-
-# Zero value of the same shape as a coefficient (works for Numbers and arrays).
-_zero_like(c::Number) = zero(c)
-_zero_like(c::AbstractArray) = zeros(eltype(c), size(c))
-
-# Materialise a coefficient (convert an `each_term` view to a concrete Vector).
-_materialise(c::Number) = c
-_materialise(c::AbstractArray) = collect(c)
 
 # ------------------------------------------------------------
 #  Internal helper functions
@@ -198,127 +189,6 @@ function realify(poly::DensePolynomial, conj_map::Vector{Int})::DensePolynomial
 end
 
 """
-	compose_linear(poly::DensePolynomial, M::Matrix{TA}) where TA -> DensePolynomial
-
-Compose a multivariate polynomial with a linear map.
-
-# Arguments
-- `poly`: polynomial in variables `x₁, …, x_n`. (The coefficient type can be
-  numeric or array‑valued.)
-- `M`: an `n × p` matrix. Composition means replacing `x_i` by
-  `∑_{j=1}^p M[i,j] * y_j`, where `y₁, …, y_p` are new variables.
-
-# Returns
-A new polynomial in the variables `y₁, …, y_p`. The returned polynomial has
-the same coefficient type as the input `poly`.
-"""
-function compose_linear(poly::DensePolynomial, M::Matrix{TA}) where {TA}
-    n = nvars(poly)
-    p = size(M, 2)
-    @assert size(M, 1) == n "First dimension of M must match number of variables"
-
-    # --- 1. Determine coefficient type ---
-    C = _coeff_type(poly)               # T for scalar, Vector{T} for vector polys
-
-    # --- 2. Compute maximum exponent for each original variable ---
-    max_exp = zeros(Int, n)
-    for (a, _) in each_term(poly)
-        for i in 1:n
-            max_exp[i] = max(max_exp[i], a[i])
-        end
-    end
-
-    # --- 3. Precompute powers of M[i,j] for each i,j ---
-    # pow_M[i][j][d] = M[i,j]^d   for d = 1..max_exp[i]
-    pow_M = [[Vector{TA}(undef, max_exp[i]) for _ in 1:p] for i in 1:n]
-    for i in 1:n
-        for j in 1:p
-            if max_exp[i] >= 1
-                pow = pow_M[i][j]
-                pow[1] = M[i, j]
-                for d in 2:max_exp[i]
-                    pow[d] = pow[d - 1] * M[i, j]
-                end
-            end
-        end
-    end
-
-    # --- 4. Precompute expansions (∑ M[i,j] y_j)^e for each i and e ---
-    # expansions[i][e] :: Dict{Vector{Int}, TA}  where keys are compositions of e into p parts
-    expansions = Vector{Vector{Dict{Vector{Int}, TA}}}(undef, n)
-    for i in 1:n
-        exp_i = Vector{Dict{Vector{Int}, TA}}(undef, max_exp[i] + 1)
-        for e in 0:max_exp[i]
-            exp_dict = Dict{Vector{Int}, TA}()
-            for k in _compositions(e, p)
-                mult = _multinomial(e, k)
-                factor = mult
-                for j in 1:p
-                    kj = k[j]
-                    if kj > 0
-                        factor *= pow_M[i][j][kj]
-                    end
-                end
-                exp_dict[k] = factor
-            end
-            exp_i[e + 1] = exp_dict
-        end
-        expansions[i] = exp_i
-    end
-
-    # --- 5. Initialise current dictionary: keys are [a; zeros(p)] ---
-    current_dict = Dict{Vector{Int}, C}()
-    for (a, coeff) in each_term(poly)
-        mat_coeff = _materialise(coeff)   # concrete copy (no-op for scalars)
-        key = vcat(collect(a), zeros(Int, p))
-        current_dict[key] = get(current_dict, key, _zero_like(mat_coeff)) + mat_coeff
-    end
-
-    # --- 6. Compose variable by variable ---
-    for i in 1:n
-        next_dict = Dict{Vector{Int}, C}()
-        expansions_i = expansions[i]
-        for (key, coeff) in current_dict
-            e = key[1]                     # exponent of the current variable
-            rest = key[2:end]              # remaining variables + y
-            if e == 0
-                # nothing to do for this variable, just pass through
-                next_dict[rest] = get(next_dict, rest, _zero_like(coeff)) + coeff
-            else
-                exp_dict = expansions_i[e + 1]
-                for (k, factor) in exp_dict
-                    scaled_coeff = coeff .* factor
-                    # Update y‑exponents: last p entries of rest
-                    y_part = rest[(end - p + 1):end]
-                    new_y = y_part .+ k
-                    new_rest = vcat(rest[1:(end - p)], new_y)
-                    next_dict[new_rest] = get(next_dict, new_rest, _zero_like(scaled_coeff)) +
-                                          scaled_coeff
-                end
-            end
-        end
-        current_dict = next_dict
-    end
-
-    # --- 7. Convert to final dictionary with SVector{p,Int} keys ---
-    final_dict = Dict{SVector{p, Int}, C}()
-    for (key, coeff) in current_dict
-        # key is now a vector of length p (only y exponents)
-        @assert length(key) == p
-        sv_key = SVector{p, Int}(key)
-        final_dict[sv_key] = get(final_dict, sv_key, _zero_like(coeff)) + coeff
-    end
-
-    # --- 8. Return polynomial of same coefficient type ---
-    if isempty(final_dict)
-        # Zero polynomial with p variables
-        return similar_poly(Dict{SVector{p, Int}, C}())
-    else
-        return similar_poly(final_dict)
-    end
-end
-
-"""
 	realify_via_linear(poly::DensePolynomial, conj_map::Vector{Int}) -> DensePolynomial
 
 Transform a complex‑valued polynomial into a polynomial in real variables by
@@ -346,37 +216,6 @@ function realify_via_linear(poly::DensePolynomial, conj_map::Vector{Int})::Dense
     end
 
     return compose_linear(canonical_poly, M)
-end
-
-# ------------------------------------------------------------
-#  Helper functions for integer compositions
-# ------------------------------------------------------------
-function _multinomial(e::Int, k::Vector{Int})::Int
-    res = 1
-    rem = e
-    for ki in k
-        res *= binomial(rem, ki)
-        rem -= ki
-    end
-    return res
-end
-
-function _compositions(e::Int, p::Int)
-    out = Vector{Int}(undef, p)
-    Channel() do ch
-        function gen(pos::Int, remaining::Int)
-            if pos == p
-                out[pos] = remaining
-                put!(ch, copy(out))
-            else
-                for v in 0:remaining
-                    out[pos] = v
-                    gen(pos+1, remaining - v)
-                end
-            end
-        end
-        gen(1, e)
-    end
 end
 
 end # module

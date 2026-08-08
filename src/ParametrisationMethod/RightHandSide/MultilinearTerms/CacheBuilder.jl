@@ -32,14 +32,17 @@ function _collect_entries(::GroupwiseSymmetric, t, mset, rem, deg, cands)
 end
 
 """
-	_build_fem_cached_split(::Val{DEG}, cs) -> FEMCachedSplit{DEG}
+	_build_fem_cached_split(::Val{DEG}, ::Val{ME}, cs) -> FEMCachedSplit{DEG, ME}
 
-Convert a `CachedSplit` to a `FEMCachedSplit{DEG}` for the FEM-batched replay path.
+Convert a `CachedSplit` to a `FEMCachedSplit{DEG, ME}` for the FEM-batched replay path.
 Deduplicates `(derivative_order, W_col_idx)` pairs across all entries and remaps
 each entry's factor slots to local indices into the `unique_cols` table.
+`DEG` is the internal degree and `ME` the external multiplicity, carried as a type
+parameter so `_replay_fem_split!` can append the external arguments with a
+compile-time-known count.
 Called once at cache-build time; produces zero allocations in the hot path.
 """
-function _build_fem_cached_split(::Val{DEG}, cs::CachedSplit) where {DEG}
+function _build_fem_cached_split(::Val{DEG}, ::Val{ME}, cs::CachedSplit) where {DEG, ME}
     # 1. Enumerate unique (derivative_order, W_col_idx) pairs across all entries.
     unique_cols = Tuple{Int, Int}[]
     col_to_local = Dict{Tuple{Int, Int}, Int}()
@@ -58,7 +61,8 @@ function _build_fem_cached_split(::Val{DEG}, cs::CachedSplit) where {DEG}
                        ntuple(k -> col_to_local[(cs.orders[k], entry.factor_indices[k])], Val(DEG))
                    )
                    for entry in cs.entries]
-    return FEMCachedSplit{DEG}(cs.ext_count, cs.args_ext_indices, unique_cols, fem_entries)
+    return FEMCachedSplit{DEG, ME}(
+        cs.ext_count, cs.args_ext_indices, unique_cols, fem_entries)
 end
 
 """
@@ -207,7 +211,7 @@ function build_multilinear_terms_cache(
                     end
                 end
                 term_splits[t_idx] = raw_splits  # kept for reference / fallback
-                fem_term_splits[t_idx] = [_build_fem_cached_split(Val(deg), cs)
+                fem_term_splits[t_idx] = [_build_fem_cached_split(Val(deg), Val(me), cs)
                                           for cs in raw_splits]
             else
                 sym = symmetry_type(t)
@@ -240,8 +244,12 @@ function build_multilinear_terms_cache(
 
     T = eltype(parametrisation.poly)
     FOM = size(parametrisation)
-    unit_vectors = [SVector(ntuple(k -> k == j ? 1 : 0, external_system_size))
-                    for j in 1:external_system_size]
+    # The external argument for each external variable: the unit vector eⱼ, or the column
+    # Q[:, j] of the change of basis when the external system was re-based.  Built once per
+    # solve, so a re-based system costs nothing in the inner loop and no term needs to know
+    # about the change of coordinates.
+    external_arguments = external_argument_vectors(
+        model.external_system, external_system_size)
 
     # Compute the element-residual buffer size from the FEM terms in the model.
     # The qp gradient buffer (∇W_qp) is term-specific and lives inside each FEMMultilinearMap.
@@ -282,7 +290,8 @@ function build_multilinear_terms_cache(
                                             zeros(T, fem_ndofs_per_cell(t)) : T[])
                                            for t in model.nonlinear_terms])
 
-    return MultilinearTermsCache{T, QP}(all_splits, all_fem_splits, global_fem_splits,
+    return MultilinearTermsCache{T, QP, eltype(external_arguments)}(
+        all_splits, all_fem_splits, global_fem_splits,
         zeros(T, FOM), zeros(T, FOM), zeros(T, FOM),
-        unit_vectors, fem_Fe, global_∇W_qp, global_Fe_buffers)
+        external_arguments, fem_Fe, global_∇W_qp, global_Fe_buffers)
 end

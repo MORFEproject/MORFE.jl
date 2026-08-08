@@ -59,6 +59,8 @@ export DensePolynomial, evaluate, extract_component
 
 # MultilinearMaps
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, ExternalSystem
+# ExternalSystems — change of external coordinates
+export external_basis, external_argument_vectors, to_physical_external
 # FEMMultilinearMap interface methods (to be extended by FEM backends,
 # e.g. MORFEFerrite's StructuralSVK / FluidNavierStokes)
 export fem_elements, fem_n_qp, fem_ndofs_per_cell,
@@ -99,7 +101,8 @@ export CohomologicalContext,
        InvarianceOperators, OrthogonalityOperators,
        LowerOrderResources, CohomologicalBuffers, SparseLinearSolverState
 export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
-       detect_conjugate_permutation
+       detect_conjugate_permutation,
+       external_conjugate_permutation, full_conjugate_permutation
 export solve_cohomological_equations!, solve_cohomological_equations_benchmarked!,
        solve_single_monomial!, solve_cohomological_problem
 

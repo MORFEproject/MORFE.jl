@@ -297,8 +297,10 @@ function write_thumbnail(path::AbstractString, curves::AbstractVector{Curve};
     sy(v) = height - pad - (v - y0) / ((y1 - y0) == 0 ? 1 : y1 - y0) * (height - 2pad)
     body = map(curves) do c
         # One decimal is a tenth of a pixel at this size — finer than the card can show.
-        d = join((string(i == 1 ? "M" : "L", round(sx(c.x[i]), digits = 1), " ",
-                     round(sy(c.y[i]), digits = 1)) for i in eachindex(c.x)), " ")
+        d = join(
+            (string(i == 1 ? "M" : "L", round(sx(c.x[i]), digits = 1), " ",
+                 round(sy(c.y[i]), digits = 1)) for i in eachindex(c.x)),
+            " ")
         string("<path d=\"", d, "\" fill=\"none\" stroke=\"", _hex(c.colour),
             "\" stroke-width=\"", round(1.7 * c.width, digits = 2),
             "\" stroke-linejoin=\"round\" stroke-linecap=\"round\" opacity=\"",
@@ -365,8 +367,9 @@ end
 
 _surface_js(::Nothing) = "null"
 function _surface_js(s::Surface3D)
-    rows = join(("[" * join((_num(s.z[i, j]) for j in axes(s.z, 2)), ",") * "]"
-                 for i in axes(s.z, 1)), ",")
+    rows = join(
+        ("[" * join((_num(s.z[i, j]) for j in axes(s.z, 2)), ",") * "]"
+        for i in axes(s.z, 1)), ",")
     return "{x:$(_arr(s.x)),y:$(_arr(s.y)),z:[$rows]}"
 end
 

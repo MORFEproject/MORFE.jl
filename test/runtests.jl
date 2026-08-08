@@ -15,6 +15,7 @@ should_run(group) = GROUP == "all" || GROUP == group
             include("FullOrderModel/test_full_order_model.jl")
             include("FullOrderModel/test_external_system.jl")
             include("FullOrderModel/test_multilinear_maps.jl")
+            include("FullOrderModel/test_fem_external_arguments.jl")
         end
     end
     if should_run("parametrisation_method")

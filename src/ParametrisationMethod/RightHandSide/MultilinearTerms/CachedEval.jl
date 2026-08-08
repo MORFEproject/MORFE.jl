@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------
 
 """
-	_replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
+	_replay_split!(result, scratch, temp, t, W, split, deg, external_arguments)
 
 Replay one `CachedSplit` into `result` using precomputed factorisation bookkeeping.
 
@@ -12,14 +12,15 @@ Replay one `CachedSplit` into `result` using precomputed factorisation bookkeepi
 
 Dispatches asymmetric/symmetric accumulation via `split.is_asymmetric`.
 """
-function _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
+function _replay_split!(result, scratch, temp, t, W, split, deg, external_arguments)
     if isempty(split.args_ext_indices)
         accum = result
         args_ext = ()
     else
         fill!(temp, 0)
         accum = temp
-        args_ext = ntuple(i -> unit_vectors[split.args_ext_indices[i]], length(split.args_ext_indices))
+        args_ext = ntuple(i -> external_arguments[split.args_ext_indices[i]],
+            length(split.args_ext_indices))
     end
 
     if split.is_asymmetric
@@ -40,28 +41,41 @@ function _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
 end
 
 """
-	_replay_fem_split!(result, t, W, fem_split, Fe)
+	_replay_fem_split!(result, t, W, fem_split, Fe, temp, external_arguments)
 
-Replay one `FEMCachedSplit{DEG}` using the FEM-batched element loop.
+Replay one `FEMCachedSplit{DEG, ME}` using the FEM-batched element loop.
 
 For each element: calls `fem_reinit!` once, scatters each unique `(order, col)` W
 column to qp-level field values via `scatter_qp!`, accumulates all qp contributions
 via `accumulate_qp!`, and assembles the element residual into `result` via
 `assemble_element!`.  The qp gradient buffer `∇W_qp` is obtained from the term
 via `fem_qp_buffer(t)` and is owned by the term, not allocated here.
+
+`accumulate_qp!` receives `DEG` internal arguments followed by `ME` external ones, so the
+tuple has length `t.deg` — matching what `evaluate_term!`'s direct FEM overload
+(`_eval_fem_term_direct!`) passes.  Before this, the external slots were omitted here and
+`ext_count` was applied as a bare scalar multiplier, so an `me > 0` FEM term could not
+tell one external direction from another and disagreed with the direct path.  The external
+arguments are hoisted out of the element loop, exactly as in `_replay_split!`.
 """
 function _replay_fem_split!(
-        result, t::FEMMultilinearMap, W, fem_split::FEMCachedSplit{DEG},
-        Fe) where {DEG}
+        result, t::FEMMultilinearMap, W, fem_split::FEMCachedSplit{DEG, ME},
+        Fe, temp, external_arguments) where {DEG, ME}
     ∇W_qp = fem_qp_buffer(t)   # Matrix{QP_TYPE}(max_unique, n_qp) — owned by the term
 
-    if isempty(fem_split.args_ext_indices)
+    if ME == 0
         accum = result
+        args_ext = ()
     else
-        # External-forcing case: accumulate into a temporary slice of Fe, then axpy!.
-        # (Handling is analogous to _replay_split! for the me>0 branch.)
-        fill!(Fe, zero(eltype(Fe)))
-        accum = Fe   # will be axpy!-ed into result after the loop
+        # External-forcing case: accumulate into `temp`, then axpy! into `result` — exactly
+        # as `_replay_split!` does for its me>0 branch.
+        #
+        # `temp` must be a *separate* FOM-length buffer, never `Fe`: `Fe` is the
+        # element-local residual that `assemble_element!` scatters *from*, so using it as
+        # the accumulator too makes the call `Fe .+= Fe` and doubles every contribution.
+        fill!(temp, zero(eltype(temp)))
+        accum = temp   # will be axpy!-ed into result after the loop
+        args_ext = ntuple(i -> external_arguments[fem_split.args_ext_indices[i]], Val(ME))
     end
 
     n_qp = fem_n_qp(t)
@@ -84,7 +98,9 @@ function _replay_fem_split!(
         for q in 1:n_qp
             dΩ = fem_getdetJdV(element, q, t)
             for fem_entry in fem_split.fem_entries
-                @inbounds ∇W_args = ntuple(k -> ∇W_qp[fem_entry.local_factor_indices[k], q], Val(DEG))
+                @inbounds ∇W_args = (
+                    ntuple(k -> ∇W_qp[fem_entry.local_factor_indices[k], q], Val(DEG))...,
+                    args_ext...)
                 accumulate_qp!(
                     @view(Fe[1:n_dofs]), ∇W_args, fem_entry.multiplier, element, q, dΩ, t)
             end
@@ -94,7 +110,7 @@ function _replay_fem_split!(
         assemble_element!(accum, @view(Fe[1:n_dofs]), element, t)
     end
 
-    isempty(fem_split.args_ext_indices) || axpy!(fem_split.ext_count, Fe, result)
+    ME == 0 || axpy!(fem_split.ext_count, temp, result)
 end
 
 # -----------------------------------------------------------------------
@@ -205,7 +221,7 @@ function _replay_term!(result, t::MultilinearMap, W, exp_index, t_idx,
     deg = t.deg - t.multiplicity_external
     for split in cache.splits[exp_index][t_idx]
         _replay_split!(result, cache.scratch_buffer, cache.temp_buffer,
-            t, W, split, deg, cache.unit_vectors)
+            t, W, split, deg, cache.external_arguments)
     end
 end
 
@@ -215,7 +231,8 @@ function _replay_term!(result, t::FEMMultilinearMap, W, exp_index, t_idx,
     # Only the me>0 fallback splits need processing here.
     for fem_split in cache.fem_splits[exp_index][t_idx]
         isempty(fem_split.args_ext_indices) && continue
-        _replay_fem_split!(result, t, W, fem_split, cache.fem_Fe)
+        _replay_fem_split!(result, t, W, fem_split, cache.fem_Fe, cache.temp_buffer,
+            cache.external_arguments)
     end
 end
 
@@ -239,15 +256,15 @@ function compute_multilinear_terms(model::NDOrderModel{ORD}, exp_index::Int,
     scratch = similar(result)
     temp = similar(result)
 
-    external_system_size = parametrisation.external_system_size
-    unit_vectors = [SVector(ntuple(k -> k == j ? 1 : 0, external_system_size))
-                    for j in 1:external_system_size]
+    # The cache already holds these (unit vectors, or Q's columns after a re-basing);
+    # rebuilding them here would both re-allocate and silently ignore the change of basis.
+    external_arguments = cache.external_arguments
 
     for (t_idx, t) in enumerate(model.nonlinear_terms)
         t.deg > deg_max && continue
         deg = t.deg - t.multiplicity_external
         for split in cache.splits[exp_index][t_idx]
-            _replay_split!(result, scratch, temp, t, W, split, deg, unit_vectors)
+            _replay_split!(result, scratch, temp, t, W, split, deg, external_arguments)
         end
     end
     return result
@@ -257,7 +274,7 @@ end
 	compute_multilinear_terms!(result, model, exp_index, parametrisation, cache) → nothing
 
 In-place variant: zeros `result` then accumulates all nonlinear contributions into it.
-Uses `cache.scratch_buffer`, `cache.temp_buffer`, and `cache.unit_vectors` so that no
+Uses `cache.scratch_buffer`, `cache.temp_buffer`, and `cache.external_arguments` so that no
 heap allocation occurs during the inner solve loop.
 """
 function compute_multilinear_terms!(

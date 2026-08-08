@@ -204,3 +204,83 @@ end
         @test A_from_R ≈ A_coupled
     end
 end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A *non*-triangular external system, re-based automatically by `ExternalSystem`.
+#
+# The reference is the same physical model transformed by hand: if the constructor picks
+# basis Q, then feeding it (A_full, F) must produce exactly what feeding it (Q⁻¹A_full Q,
+# F·Q) produces directly — same manifold, same coordinates, so W and R agree to round-off.
+# This is sharper than comparing against a diagonalisation, because it pins the *whole*
+# pipeline: the polynomial transformation, the external argument columns fed to the
+# forcing term, and the solve.
+# ─────────────────────────────────────────────────────────────────────────────
+@testset "Non-triangular external system is re-based to an equivalent model" begin
+    λ₊, λ₋ = _EC_λ_ext
+    # A genuinely non-triangular matrix with the same spectrum: conjugate it by a full,
+    # non-triangular S so both off-diagonal entries are non-zero.
+    S = ComplexF64[1.0 0.6; -0.4 1.0]
+    A_full = S * ComplexF64[λ₊ 0.0; 0.0 λ₋] * inv(S)
+
+    @testset "the test matrix really is non-triangular" begin
+        @test !istriu(A_full)
+        @test !istril(A_full)
+    end
+
+    # What the constructor decides, obtained once so the manual reference can mirror it.
+    ext_auto = ExternalSystem(_ec_linear_external_polynomial(A_full))
+    Q = Matrix(external_basis(ext_auto))
+    @test Q !== nothing
+    @test istriu(ext_auto.linear_matrix)
+
+    # Manual reference: same system, already expressed in the re-based coordinates.
+    U = Matrix(ext_auto.linear_matrix)
+    W_auto, R_auto = _ec_solve(A_full, _EC_F)
+    W_ref, R_ref = _ec_solve(U, _EC_F * Q)
+
+    @testset "auto-rebased solve ≡ manually transformed solve" begin
+        @test W_auto.poly.coefficients≈W_ref.poly.coefficients rtol=1e-9
+        @test R_auto.poly.coefficients≈R_ref.poly.coefficients rtol=1e-9
+    end
+
+    @testset "external directions pick up Q, so they differ from the untransformed ones" begin
+        # Guard against the comparison above passing trivially: had the forcing not been
+        # re-expressed through Q, the external blocks would coincide with the ones for the
+        # untransformed forcing matrix.
+        Φ_auto = _ec_external_blocks(W_auto)
+        W_naive, _ = _ec_solve(U, _EC_F)
+        Φ_naive = _ec_external_blocks(W_naive)
+        @test norm(Φ_auto - Φ_naive) > 1e-6 * norm(Φ_auto)
+    end
+
+    @testset "external rows of R carry the re-based linear matrix, not the original" begin
+        offset = findfirst(α -> sum(α) == 1, _EC_mset.exponents) - 1
+        A_from_R = R_auto.poly.coefficients[
+            (_EC_ROM + 1):_EC_NVAR, (offset + _EC_ROM + 1):(offset + _EC_NVAR)]
+        @test A_from_R ≈ U
+        @test !isapprox(A_from_R, A_full)
+    end
+
+    @testset "a stale external_eigenvalues literal is rejected, not silently used" begin
+        # Resonance detection contracts these against multiindex components *position by
+        # position*, so a vector whose ordering no longer matches the re-based coordinates
+        # silently detects the wrong resonances.  The check compares elementwise for
+        # exactly that reason, and a permutation is the failure it has to catch.
+        model = _ec_make_model(A_full, _EC_F)
+        actual = Vector(model.external_system.eigenvalues)
+
+        @test_throws ArgumentError MORFE.Resonance._check_external_eigenvalues(
+            reverse(actual), model.external_system)
+        # Right multiset, wrong length is also rejected.
+        @test_throws ArgumentError MORFE.Resonance._check_external_eigenvalues(
+            actual[1:1], model.external_system)
+        # The system's own eigenvalues are of course accepted.
+        @test MORFE.Resonance._check_external_eigenvalues(
+            actual, model.external_system) === nothing
+        # And a system that was never re-based is never second-guessed, whatever is passed:
+        # its coordinates are the caller's own.
+        untouched = ExternalSystem((_EC_λ_ext[1], _EC_λ_ext[2]))
+        @test MORFE.Resonance._check_external_eigenvalues(
+            ComplexF64[99.0, 88.0], untouched) === nothing
+    end
+end

@@ -5,7 +5,10 @@ using StaticArrays: SVector
 using MORFE.Multiindices
 using MORFE.Polynomials
 using MORFE.Realification
-using MORFE.Realification: _multinomial, _compositions, _reorder_canonical, _realify_term
+using MORFE.Realification: _reorder_canonical, _realify_term
+# `compose_linear` and its integer-composition helpers live in `Polynomials`; `Realification`
+# re-exports the former so both paths below must resolve to the same binding.
+using MORFE.Polynomials: _multinomial, _compositions
 
 # ---------- Helper functions for testing ----------
 
@@ -62,6 +65,33 @@ end
 end
 
 # ---------- Tests for compose_linear on all implemented polynomial types ----------
+
+# `compose_linear` was moved to `Polynomials` so that `ExternalSystems` — which loads long
+# before `Realification` — can use it for the external change of coordinates.  It must stay
+# reachable under both names, and be the *same* binding, or `MORFE.jl`'s export list would
+# silently start shadowing one with the other.
+@testset "compose_linear is re-exported from Realification after the move" begin
+    @test MORFE.Realification.compose_linear === MORFE.Polynomials.compose_linear
+    @test MORFE.compose_linear === MORFE.Polynomials.compose_linear
+end
+
+@testset "compose_linear types its accumulators from the polynomial" begin
+    # `C = _coeff_type(poly)` fixes the dictionary element type, so a *real* polynomial
+    # composed with a *complex* map cannot store the products back.  Callers that need a
+    # complex change of basis (`ExternalSystems._rebase`) must promote the polynomial
+    # first; this pins the requirement so it is not rediscovered as a confusing error.
+    p_real = DensePolynomial(Dict([1, 0] => 1.0, [0, 1] => 2.0))
+    M_complex = ComplexF64[1.0 0.0; 0.0 1.0im]
+
+    @test_throws InexactError compose_linear(p_real, M_complex)
+
+    # Promoting first is the documented fix, and then composition is exact.
+    p_complex = DensePolynomial(
+        ComplexF64.(coefficients(p_real)), multiindex_set(p_real))
+    q = compose_linear(p_complex, M_complex)
+    y = SVector{2, ComplexF64}(0.7 + 0.1im, -1.2 + 0.5im)
+    @test evaluate(q, y) ≈ evaluate(p_complex, SVector{2, ComplexF64}(M_complex * y))
+end
 
 @testset "compose_linear" begin
     @testset "for $PolyType" for PolyType in [DensePolynomial]

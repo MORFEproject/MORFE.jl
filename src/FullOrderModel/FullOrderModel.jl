@@ -212,6 +212,15 @@ Evaluate all nonlinear terms of a given polynomial degree for an `NDOrderModel`.
 - `order`: degree of the nonlinear terms to evaluate
 - `state_vectors`: tuple `(x, x^(1), …, x^(ORD-1))` of state derivatives
 - `r`: external state vector (default `nothing`). Must be provided if any term uses external variables.
+
+!!! note "`r` is the *physical* external state"
+    Terms are defined in the external coordinates the model was written in.  When the
+    external system was re-based (its linear matrix was not upper triangular, so
+    `ExternalSystem` chose a new basis `Q`), the solver's *reduced* external coordinates
+    `r′` are related to these by `r = Q r′`, and it is the caller's job to convert:
+    `ExternalSystems.to_physical_external(model.external_system, r′)` does it, and is the
+    identity for every system that was not re-based.  Passing `r′` where `r` is expected
+    silently evaluates the terms at the wrong point.
 """
 function evaluate_nonlinear_terms!(res, model::NDOrderModel{ORD, ORDP1, N_NL},
         order, state_vectors, r = nothing) where {ORD, ORDP1, N_NL}

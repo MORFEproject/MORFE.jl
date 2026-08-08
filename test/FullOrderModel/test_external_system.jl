@@ -98,24 +98,126 @@ end
             @test collect(sys.eigenvalues) == diag(A)   # exact, not merely ≈
         end
 
-        @testset "non-upper-triangular linear matrix is rejected" begin
-            A = [0.0 -1.0; 1.0 0.0]   # rotation generator; not triangular
-            poly = _linear_polynomial(A)
+        # ── Re-basing ────────────────────────────────────────────────────────────
+        # A non-triangular linear part is repaired by a change of external coordinates
+        # rather than rejected.  The property that must hold afterwards is not "close to
+        # triangular" but *exactly* triangular, since `istriu` tests exact zeros and the
+        # solver silently drops anything below the diagonal.
 
-            @test_throws ArgumentError ExternalSystem(poly)
-            # The message must name the offending entry and the GrLex reason.
-            err = try
-                ExternalSystem(poly)
-            catch e
-                e
-            end
-            @test occursin("(2, 1)", err.msg)
-            @test occursin("GrLex", err.msg)
+        @testset "non-upper-triangular linear matrix is re-based, not rejected" begin
+            A = [0.0 -1.0; 1.0 0.0]   # rotation generator; not triangular
+            sys = ExternalSystem(_linear_polynomial(A))
+            Q = external_basis(sys)
+
+            @test Q !== nothing
+            @test istriu(sys.linear_matrix)
+            # Exactly zero, not merely small: round-off left below the diagonal would make
+            # the system non-triangular by the package's own predicate.
+            @test all(iszero, tril(Matrix(sys.linear_matrix), -1))
+            # Q U Q⁻¹ recovers the matrix we started from.
+            @test Matrix(Q) * Matrix(sys.linear_matrix) * inv(Matrix(Q)) ≈ A
+            # Same spectrum, as a multiset — the ordering is the new basis's, not the old.
+            @test sort(collect(sys.eigenvalues), by = imag) ≈ sort(eigvals(A), by = imag)
+            @test collect(sys.eigenvalues) == diag(sys.linear_matrix)
         end
 
-        @testset "lower-triangular linear matrix is rejected" begin
+        @testset "a real matrix keeps its conjugate structure exactly" begin
+            # `realify` applies one conj_map across all variables, so a re-basing that broke
+            # the external conjugate pairing would silently invalidate it.  A real matrix
+            # takes the eigenvector route, where LAPACK returns bit-exactly conjugate
+            # adjacent pairs — hence `==`, not `≈`.
+            A = [0.0 -1.0; 1.0 0.0]
+            sys = ExternalSystem(_linear_polynomial(A))
+            Q = external_basis(sys)
+            σ = external_conjugate_permutation(sys)
+
+            @test σ !== nothing
+            for k in eachindex(σ)
+                @test Q[:, σ[k]] == conj(Q[:, k])
+                @test sys.eigenvalues[σ[k]] == conj(sys.eigenvalues[k])
+            end
+            # The eigenvector route also diagonalises, which lets the solver take its
+            # uncoupled external fast path.
+            @test isdiag(Matrix(sys.linear_matrix))
+        end
+
+        @testset "lower-triangular linear matrix is re-based" begin
             A = ComplexF64[-1.0 0.0; 3.0 -2.0]
-            @test_throws ArgumentError ExternalSystem(_linear_polynomial(A))
+            sys = ExternalSystem(_linear_polynomial(A))
+
+            @test external_basis(sys) !== nothing
+            @test istriu(sys.linear_matrix)
+            @test sort(real(collect(sys.eigenvalues))) ≈ sort(real(eigvals(A)))
+            # Real spectrum ⇒ every variable is its own conjugate.
+            @test external_conjugate_permutation(sys) == [1, 2]
+        end
+
+        @testset "complex matrix takes the Schur route" begin
+            A = ComplexF64[0.0 -1.0; 1.0+0.3im 0.0]
+            sys = ExternalSystem(_linear_polynomial(A))
+            Q = external_basis(sys)
+
+            @test istriu(sys.linear_matrix)
+            @test Matrix(Q)' * Matrix(Q) ≈ I           # Schur basis is unitary
+            @test Matrix(Q) * Matrix(sys.linear_matrix) * Matrix(Q)' ≈ A
+            # Schur vectors are not eigenvectors, so there is no conjugate pairing to offer.
+            @test external_conjugate_permutation(sys) === nothing
+        end
+
+        @testset "near-defective real matrix falls back to Schur" begin
+            # An eigenvector basis here would have cond(V) ~ 1e10 and corrupt every
+            # transformed coefficient, so the conditioning guard must reject it.
+            A = ComplexF64[1.0 1.0; 1e-20 1.0]
+            sys = ExternalSystem(_linear_polynomial(A))
+            Q = external_basis(sys)
+
+            @test istriu(sys.linear_matrix)
+            @test Matrix(Q)' * Matrix(Q) ≈ I           # unitary ⇒ Schur was chosen
+        end
+
+        @testset "an already-triangular system is left completely untouched" begin
+            # The regression guard for every existing caller: nothing about this path may
+            # change, down to object identity and element type.
+            A = ComplexF64[-1.0 5.0; 0.0 -2.0]
+            poly = _linear_polynomial(A)
+            sys = ExternalSystem(poly)
+
+            @test external_basis(sys) === nothing
+            @test sys.first_order_dynamics === poly        # same object, not a copy
+            @test eltype(sys.linear_matrix) === eltype(A)  # element type unpromoted
+            @test sys.linear_matrix == A                   # exact, not ≈
+            @test collect(sys.eigenvalues) == diag(A)
+        end
+
+        @testset "linear_matrix stays consistent with the polynomial" begin
+            # `linear_matrix` is documented as the Jacobian at the origin of
+            # `first_order_dynamics`.  It is re-derived from the (possibly re-based)
+            # polynomial rather than taken from the decomposition, so the two cannot drift.
+            for A in (ComplexF64[-1.0 5.0; 0.0 -2.0],       # untouched path
+                ComplexF64[0.0 -1.0; 1.0 0.0])              # re-based path
+                sys = ExternalSystem(_linear_polynomial(A))
+                rederived = linear_matrix_of_polynomial(sys.first_order_dynamics)
+                @test Matrix(sys.linear_matrix) == rederived   # exact
+            end
+        end
+
+        @testset "re-basing transforms the whole polynomial, not just the linear part" begin
+            # ṙ′ = U r′ + Q⁻¹ g(Q r′): the higher-order terms must move too, or the stored
+            # system would describe different dynamics from the one supplied.
+            A = ComplexF64[0.0 -1.0; 2.0 0.0]
+            poly = _nonlinear_polynomial(A)
+            sys = ExternalSystem(poly)
+            Q = Matrix(external_basis(sys))
+            Qi = inv(Q)
+
+            err = 0.0
+            for _ in 1:100
+                r = SVector{2, ComplexF64}(randn(ComplexF64, 2))
+                lhs = evaluate(sys.first_order_dynamics, SVector{2, ComplexF64}(Qi * r))
+                rhs = Qi * evaluate(poly, r)
+                err = max(err, norm(lhs - rhs))
+            end
+            @test err < 1e-12
         end
 
         @testset "polynomial field stored correctly" begin
@@ -134,64 +236,18 @@ end
             @test sys.linear_matrix ≈ A
         end
     end
-    @testset "ExternalSystem Constructor 2: from polynomial + precomputed eigenvalues" begin
-        @testset "correct eigenvalues accepted without error" begin
-            λ1, λ2 = -2.0 + 1.0im, -2.0 - 1.0im
-            A = ComplexF64[λ1 0; 0 λ2]
-            poly = _linear_polynomial(A)
-            evs = SVector{2, ComplexF64}(λ1, λ2)
+    # The `ExternalSystem(first_order_dynamics, eigenvalues)` constructor was removed: it
+    # re-derived `linear_matrix` from the polynomial anyway and only *checked* the supplied
+    # eigenvalues, so it added a failure mode without adding information — and after a
+    # re-basing the supplied ordering describes coordinates that no longer exist.
+    @testset "the polynomial + eigenvalues constructor no longer exists" begin
+        A = ComplexF64[-1.0 0.0; 0.0 -2.0]
+        poly = _linear_polynomial(A)
+        evs = SVector{2, ComplexF64}(-1.0 + 0im, -2.0 + 0im)
 
-            # Should not throw
-            sys = @test_nowarn ExternalSystem(poly, evs)
-            @test sys.eigenvalues ≈ evs
-        end
-        @testset "wrong eigenvalues raise an error (check=true)" begin
-            A = ComplexF64[-1.0 0; 0 -2.0]
-            poly = _linear_polynomial(A)
-            bad_evs = SVector{2, ComplexF64}(99.0 + 0im, 88.0 + 0im)
-
-            @test_throws ErrorException ExternalSystem(poly, bad_evs; check = true)
-        end
-        @testset "check=false bypasses eigenvalue validation" begin
-            A = ComplexF64[-1.0 0; 0 -2.0]
-            poly = _linear_polynomial(A)
-            bad_evs = SVector{2, ComplexF64}(99.0 + 0im, 88.0 + 0im)
-
-            # Skipping the check should not throw
-            sys = @test_nowarn ExternalSystem(poly, bad_evs; check = false)
-            @test sys.eigenvalues == bad_evs
-        end
-
-        @testset "linear matrix computed same as constructor 1" begin
-            λ1, λ2 = -1.0 + 2.0im, -1.0 - 2.0im
-            A = ComplexF64[λ1 0; 0 λ2]
-            poly = _linear_polynomial(A)
-            evs = SVector{2, ComplexF64}(λ1, λ2)
-
-            sys1 = ExternalSystem(poly)
-            sys2 = ExternalSystem(poly, evs)
-            @test sys1.linear_matrix ≈ sys2.linear_matrix
-        end
-
-        @testset "permuted eigenvalues are rejected: ordering carries meaning" begin
-            λ1, λ2 = -1.0 + 2.0im, -1.0 - 2.0im
-            A = ComplexF64[λ1 0; 0 λ2]
-            poly = _linear_polynomial(A)
-            permuted = SVector{2, ComplexF64}(λ2, λ1)   # right set, wrong positions
-
-            @test_throws ErrorException ExternalSystem(poly, permuted; check = true)
-            sys = ExternalSystem(poly, permuted; check = false)
-            @test sys.eigenvalues == permuted
-        end
-
-        @testset "triangularity is enforced even when check = false" begin
-            A = ComplexF64[-1.0 0.0; 3.0 -2.0]
-            poly = _linear_polynomial(A)
-            evs = SVector{2, ComplexF64}(-1.0 + 0im, -2.0 + 0im)
-
-            @test_throws ArgumentError ExternalSystem(poly, evs; check = false)
-        end
+        @test_throws MethodError ExternalSystem(poly, evs)
     end
+
     @testset "ExternalSystem Constructor 3: from eigenvalues only (purely linear diagonal)" begin
         @testset "1D: single complex eigenvalue" begin
             λ = -3.0 + 0.5im
@@ -269,23 +325,23 @@ end
         end
     end
     @testset "Consistency across constructors" begin
-        @testset "all three constructors agree for a diagonal system" begin
+        @testset "both constructors agree for a diagonal system" begin
             λ1, λ2 = -1.0 + 2.0im, -1.0 - 2.0im
             A = ComplexF64[λ1 0; 0 λ2]
             poly = _linear_polynomial(A)
-            evs = SVector{2, ComplexF64}(λ1, λ2)
 
             sys1 = ExternalSystem(poly)
-            sys2 = ExternalSystem(poly, evs)
             sys3 = ExternalSystem((λ1, λ2))
 
-            @test sys1.linear_matrix ≈ sys2.linear_matrix
             @test sys1.linear_matrix ≈ sys3.linear_matrix
 
-            # No sorting: all three constructors must agree position by position, since
+            # No sorting: both constructors must agree position by position, since
             # eigenvalues[e] is the eigenvalue of external variable e.
-            @test sys1.eigenvalues ≈ sys2.eigenvalues
             @test sys1.eigenvalues ≈ sys3.eigenvalues
+
+            # Diagonal input ⇒ nothing to re-base, on either path.
+            @test external_basis(sys1) === nothing
+            @test external_basis(sys3) === nothing
         end
 
         @testset "linear_matrix matches linear_matrix_of_polynomial" begin
@@ -297,5 +353,70 @@ end
             A_extracted = linear_matrix_of_polynomial(sys.first_order_dynamics)
             @test Matrix(sys.linear_matrix) ≈ A_extracted
         end
+    end
+
+    # ── Physical external arguments ──────────────────────────────────────────────
+    # The solver works in reduced external coordinates r′ but evaluates terms at the
+    # physical r = Q r′.  The conversion lives at the point the argument is materialised,
+    # so these two helpers are the whole mechanism — no term is ever wrapped.
+    @testset "external arguments are materialised in physical coordinates" begin
+        @testset "untouched system yields the plain integer unit vectors" begin
+            sys = ExternalSystem((im * 2.0, -im * 2.0))
+            v = external_argument_vectors(sys, 2)
+
+            @test v == [SVector{2, Int}(1, 0), SVector{2, Int}(0, 1)]
+            @test eltype(eltype(v)) === Int      # exactly what the solver used before
+            # And the state form is the identity, not a copy through a matrix.
+            r = ComplexF64[3.0, -1.0]
+            @test to_physical_external(sys, r) === r
+        end
+
+        @testset "a model without an external system still works" begin
+            @test external_argument_vectors(nothing, 0) == SVector{0, Int}[]
+            @test to_physical_external(nothing, nothing) === nothing
+        end
+
+        @testset "re-based system yields the columns of Q" begin
+            A = [0.0 -1.0; 1.0 0.0]
+            sys = ExternalSystem(_linear_polynomial(A))
+            Q = external_basis(sys)
+            v = external_argument_vectors(sys, 2)
+
+            # Q eⱼ = Q[:, j], exactly — this is what makes the substitution in the
+            # multilinear terms correct without touching the terms.
+            for j in 1:2
+                @test v[j] == Q[:, j]
+            end
+            r = SVector{2, ComplexF64}(0.4, -1.3)
+            @test to_physical_external(sys, r) ≈ Q * r
+        end
+
+        @testset "materialising an argument allocates nothing on the heap" begin
+            # The vectors are built once per solve, but indexing them happens in the
+            # innermost loop, so the elements must stay stack-allocated statics.
+            sys = ExternalSystem((im * 2.0, -im * 2.0))
+            v = external_argument_vectors(sys, 2)
+            f(vs) = @inbounds (vs[1], vs[2])
+            f(v)                                   # compile
+            @test @allocated(f(v)) == 0
+        end
+    end
+
+    @testset "conjugate permutation is derived, not hand-written" begin
+        # These are the literals callers write today; the helper must reproduce them, and
+        # additionally handle an odd N_EXT, which `ROM + 2k, ROM + 2k - 1` cannot express.
+        karman = ExternalSystem((0.0 + 0.0im,))                  # η′ real ⇒ self-conjugate
+        dielectric = ExternalSystem((im * 3.0, -im * 3.0))
+        odd = ExternalSystem((im * 2.0, -im * 2.0, 0.0 + 0.0im))
+
+        @test full_conjugate_permutation([2, 1], karman) == [2, 1, 3]
+        @test full_conjugate_permutation([2, 1], dielectric) == [2, 1, 4, 3]
+        @test full_conjugate_permutation([2, 1], odd) == [2, 1, 4, 3, 5]
+
+        # A Schur-re-based system has no conjugate structure, and must say so rather than
+        # hand back a permutation that would silently corrupt the conjugate fill.
+        schur_sys = ExternalSystem(_linear_polynomial(ComplexF64[0.0 -1.0; 1.0+0.3im 0.0]))
+        @test external_conjugate_permutation(schur_sys) === nothing
+        @test_throws ArgumentError full_conjugate_permutation([2, 1], schur_sys)
     end
 end #@testset "ExternalSystem"

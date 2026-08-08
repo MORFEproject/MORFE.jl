@@ -94,6 +94,53 @@ function _solve_external_directions!(
 end
 
 """
+	_check_external_conjugate_block(conjugate_permutation, sys, ROM, NVAR)
+
+Reject a `conjugate_permutation` whose external block disagrees with the external system's
+own conjugate involution.
+
+Only checked when the system was **re-based** (`external_basis(sys) !== nothing`), because
+that is the only situation in which a hand-written permutation can be stale: the caller's
+external indices then refer to coordinates `r′` that the constructor chose, not the ones
+they wrote down.  For every system left in its own coordinates this is a no-op, so no
+existing model can trip it.
+
+Getting this wrong is silent — `fill_conjugate_monomial!` would fill external monomials from
+the wrong partner — hence an error rather than a warning.  Use
+[`full_conjugate_permutation`](@ref) to build the vector instead of writing it by hand.
+"""
+function _check_external_conjugate_block(
+        conjugate_permutation, sys, ROM::Int, NVAR::Int)
+    conjugate_permutation === nothing && return nothing
+    external_basis(sys) === nothing && return nothing
+    NVAR > ROM || return nothing
+
+    supplied = collect(conjugate_permutation[(ROM + 1):NVAR]) .- ROM
+    σ = external_conjugate_permutation(sys)
+
+    if σ === nothing
+        supplied == collect(1:(NVAR - ROM)) || throw(ArgumentError("""
+           The external system was re-based onto a basis whose columns are not conjugate \
+           pairs, so its external variables have no conjugate structure, but the supplied \
+           `conjugate_permutation` pairs them as $(supplied).
+           Either drop `conjugate_permutation`, or use an external system whose linear \
+           matrix is real so the conjugate-preserving eigenvector route is taken.
+           """))
+        return nothing
+    end
+
+    supplied == σ || throw(ArgumentError("""
+       The external block of `conjugate_permutation` is $(ROM .+ supplied), but the \
+       re-based external system pairs its variables as $(ROM .+ σ).
+       A change of external coordinates was applied (the supplied linear matrix was not \
+       upper triangular), so an external pairing written for the original coordinates no \
+       longer holds.  Build the permutation with \
+       `full_conjugate_permutation(master_block, model.external_system)`.
+       """))
+    return nothing
+end
+
+"""
 	_make_sparse_solver(MT, linear_terms, FOM, ROM) -> Union{SparseLinearSolverState, Nothing}
 
 Dispatch helper: returns a `SparseLinearSolverState` when `MT <: SparseMatrixCSC`
@@ -159,9 +206,11 @@ The external dynamics enter through `model.external_system.first_order_dynamics`
 `_embed_external_dynamics!` copies into the external rows of `R`; the superharmonics `s`
 are then contracted against `diag(Λ)` read back from `R`, so the external part of `s` is
 the diagonal of the external linear matrix.  That matrix must be upper triangular — the
-requirement is enforced by the `ExternalSystem` constructors and explained in the
-`ExternalSystems` module docstring.  The linear-operator tuple is read from
-`model.linear_terms`.
+`ExternalSystem` constructors guarantee it, re-basing the external coordinates when the
+supplied matrix is not, as explained in the `ExternalSystems` module docstring.  When that
+happens the reduced external coordinates returned here are the re-based `r′`, related to the
+physical `r` by `r = Q r′` with `Q = external_basis(model.external_system)`.  The
+linear-operator tuple is read from `model.linear_terms`.
 
 ## Steps
 
@@ -228,6 +277,7 @@ function solve_cohomological_problem(
     # enforced. `parametrise` checks first and passes validate_mset = false.
     validate_mset && validate_multiindex_set(mset, NVAR, ROM;
         conjugate_permutation = conjugate_permutation)
+    _check_external_conjugate_block(conjugate_permutation, model.external_system, ROM, NVAR)
     FOM = size(master_modes, 1)
     @assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
     T = ComplexF64

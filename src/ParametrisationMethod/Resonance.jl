@@ -39,6 +39,7 @@ module Resonance
 using ..Multiindices: MultiindexSet, find_in_set
 using ..FullOrderModel: NDOrderModel
 using ..Eigenproblems: Eigenproblem
+using ..ExternalSystems: external_basis
 
 export ResonanceSet,
        build_resonance_set,
@@ -672,6 +673,37 @@ function Base.show(io::IO, rs::ResonanceSet{ROM, N_EXT, M}) where {ROM, N_EXT, M
 end
 
 """
+	_check_external_eigenvalues(supplied, sys)
+
+Reject an explicitly-supplied `external_eigenvalues` vector that disagrees with the external
+system's own eigenvalues, when the system was re-based.
+
+Resonance detection contracts these against multiindex components **position by position**
+(`_superharmonics`), so a permuted or stale vector does not fail — it silently detects the
+wrong resonances and yields a wrong ROM.  A change of external coordinates re-orders the
+spectrum into the new basis, which is exactly what makes a hand-written literal go stale.
+
+Only checked when `external_basis(sys) !== nothing`, so no system that was left in its own
+coordinates can trip it.
+"""
+function _check_external_eigenvalues(supplied, sys)
+    sys === nothing && return nothing
+    external_basis(sys) === nothing && return nothing
+    actual = Vector(sys.eigenvalues)
+    length(supplied) == length(actual) && all(isapprox.(supplied, actual)) && return nothing
+    throw(ArgumentError("""
+       `external_eigenvalues` was given as $(supplied), but the external system's \
+       eigenvalues are $(actual).
+       The external system was re-based (its linear matrix was not upper triangular), so \
+       its spectrum is now expressed in the new coordinates and an explicit vector written \
+       for the original ones is stale.  Resonance detection contracts these against \
+       multiindex components position by position, so a stale vector silently detects the \
+       wrong resonances.
+       Drop the `external_eigenvalues` argument — the default reads them from the model.
+       """))
+end
+
+"""
 	build_resonance_set(model, style, mset, eigenproblem, tol, conjugacy_map;
 	                    external_eigenvalues = nothing)
 
@@ -700,6 +732,8 @@ function build_resonance_set(
     if external_eigenvalues === nothing
         external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
                                Vector(model.external_system.eigenvalues)
+    else
+        _check_external_eigenvalues(external_eigenvalues, model.external_system)
     end
 
     if style === :graph

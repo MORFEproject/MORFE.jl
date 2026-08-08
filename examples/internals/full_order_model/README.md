@@ -30,19 +30,25 @@ unconstrained. The reason is causality: the cohomological equations are solved m
 by monomial in GrLex order, and the `|β| = 1` lower-order coupling reads only the strictly
 upper triangle of `Λ`, so an entry below the diagonal would be discarded without trace.
 
-Lorenz fails this at the origin, and no reordering of its variables helps. The repair is
-the one the error message suggests, applied to the full nonlinear system rather than to a
-linearisation:
+Lorenz fails this at the origin, and no reordering of its variables helps — both
+off-diagonal entries of the x–y block are non-zero, so one is always below the diagonal.
+But the constraint is a property of the *coordinates*, not of the system, so the
+constructor repairs it instead of rejecting it: it finds a basis `Q` in which the linear
+part is triangular and re-expresses the **whole** polynomial as `ṙ′ = U r′ + Q⁻¹g(Q r′)`,
+storing `Q` in the `basis` field. Because Lorenz's Jacobian is real, the eigenvector basis
+is chosen — which additionally makes `U` diagonal and preserves the conjugate pairing that
+realification depends on.
 
-1. shift the origin to a non-trivial fixed point `C₊`, which removes the constant term —
-   an `ExternalSystem` polynomial has none;
-2. diagonalise the Jacobian there, `J = T Λ T⁻¹`, so the linear part becomes diagonal and
-   therefore triangular.
+Section 3 still shifts the origin to a non-trivial fixed point `C₊`, because that is *not*
+something a change of basis can do: it removes the constant term, and an `ExternalSystem`
+polynomial has none. It then diagonalises the Jacobian by hand, `J = T Λ T⁻¹`, so the
+automatic result has something independent to be checked against.
 
-The script checks the change of coordinates rather than asserting it: the modal RHS mapped
-back through `T` matches Lorenz's own to `~1e-13`, and an orbit integrated as an
-`ExternalSystem` tracks a direct integration of Lorenz to the same order. The figure draws
-both, so the butterfly is visibly the same curve.
+The script checks both coordinate changes rather than asserting them: the hand-derived
+modal RHS mapped back through `T` matches Lorenz's own to `~1e-13`, the automatic basis
+reproduces the centred field to the same order, and an orbit integrated as an
+`ExternalSystem` tracks a direct integration of Lorenz. The figure draws both, so the
+butterfly is visibly the same curve.
 
 ## Output
 

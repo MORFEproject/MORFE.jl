@@ -39,6 +39,9 @@ using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap,
                          fem_elements, fem_n_qp, fem_ndofs_per_cell,
                          fem_reinit!, scatter_qp!, accumulate_qp!, assemble_element!,
                          fem_getdetJdV, fem_qp_buffer
+# The external argument a term receives is materialised here, in *physical* external
+# coordinates: unit vectors normally, the columns of Q after a change of external basis.
+using ..ExternalSystems: external_argument_vectors
 
 export compute_multilinear_terms, compute_multilinear_terms!, build_multilinear_terms_cache,
        MultilinearTermsCache
