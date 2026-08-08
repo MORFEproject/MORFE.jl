@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl": {
-    "mtime": 1786205241.2761722,
-    "ast_hash": "45a267af3b40fe5ae91a2d9c02f29f39",
+    "mtime": 1786217807.6574779,
+    "ast_hash": "436a63017ac4eb5d6adefd6c43cc5fd8",
     "semantic_hash": ""
   },
   "src/ParametrisationMethod/CohomologicalEquations/CohomologicalSolver.jl": {
@@ -1150,13 +1150,13 @@
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/main.jl": {
-    "mtime": 1786207779.6377475,
-    "ast_hash": "b361f76828b6ac9f88486488950ebc64",
+    "mtime": 1786219053.161809,
+    "ast_hash": "74c900f9587d329134e190fadee97248",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/viz.jl": {
-    "mtime": 1786207779.65601,
-    "ast_hash": "afd964f41b4efed4c3b36fc77f7145bd",
+    "mtime": 1786218722.248502,
+    "ast_hash": "5cdfa26a23da7406c2fde2690fa53a00",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/README.md": {
@@ -1165,48 +1165,48 @@
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig1_nonlinear_terms.html": {
-    "mtime": 1786188316.5160158,
-    "ast_hash": "b1b5f2da7779198b2d367b72a66252c2",
+    "mtime": 1786218956.0648956,
+    "ast_hash": "a6da3afa7fbc8665fcf2177d23055980",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig2_external_systems.html": {
-    "mtime": 1786188319.079002,
-    "ast_hash": "98e7e4a3c3fed200992b618483ae4e44",
+    "mtime": 1786218964.5994866,
+    "ast_hash": "4e7a2a5c4befdf7e5507205520704da4",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig3_lorenz.html": {
-    "mtime": 1786188323.815301,
-    "ast_hash": "28ec2f80a229155d40b41b0eb077c126",
+    "mtime": 1786218969.1192653,
+    "ast_hash": "3b10649abce4ca961bf9fd5b9a3cd2f5",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig4_forced_response.html": {
-    "mtime": 1786188325.427994,
-    "ast_hash": "74680f63b635c5b7c5d52f6bf48ef7e7",
+    "mtime": 1786218970.662631,
+    "ast_hash": "e399c28e27d0a2ee5b852dd2c67ac419",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig1_nonlinear_terms.html": {
-    "mtime": 1786188446.0422459,
-    "ast_hash": "b1b5f2da7779198b2d367b72a66252c2",
+    "mtime": 1786218974.268158,
+    "ast_hash": "a6da3afa7fbc8665fcf2177d23055980",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig2_external_systems.html": {
-    "mtime": 1786188448.8483603,
-    "ast_hash": "98e7e4a3c3fed200992b618483ae4e44",
+    "mtime": 1786218982.6172974,
+    "ast_hash": "4e7a2a5c4befdf7e5507205520704da4",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig3_lorenz.html": {
-    "mtime": 1786188453.7275007,
-    "ast_hash": "28ec2f80a229155d40b41b0eb077c126",
+    "mtime": 1786218986.867159,
+    "ast_hash": "3b10649abce4ca961bf9fd5b9a3cd2f5",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig4_forced_response.html": {
-    "mtime": 1786188455.4396107,
-    "ast_hash": "74680f63b635c5b7c5d52f6bf48ef7e7",
+    "mtime": 1786218988.4840915,
+    "ast_hash": "e399c28e27d0a2ee5b852dd2c67ac419",
     "semantic_hash": ""
   },
   "website/tutorials/full_order_model.html": {
-    "mtime": 1786188481.3179126,
-    "ast_hash": "9bdfc595f276f6f7e14e3d12d022f3e2",
+    "mtime": 1786218559.6437418,
+    "ast_hash": "43f9358cce54ee82c1ea6af3ac3df0ed",
     "semantic_hash": ""
   },
   "website/tutorials/literate/full_order_model.html": {
@@ -1220,12 +1220,12 @@
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/thumb.svg": {
-    "mtime": 1786188325.598596,
+    "mtime": 1786218970.8824747,
     "ast_hash": "ddd76f2c87425697cd9bef53f7a12736",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/thumb.svg": {
-    "mtime": 1786188455.6211965,
+    "mtime": 1786218988.6724124,
     "ast_hash": "ddd76f2c87425697cd9bef53f7a12736",
     "semantic_hash": ""
   },

@@ -1,16 +1,16 @@
 # Graph Report - MORFE_jl  (2026-08-08)
 
 ## Corpus Check
-- 158 files · ~475,829 words
+- 158 files · ~479,219 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1419 nodes · 1538 edges · 156 communities (134 shown, 22 thin omitted)
+- 1420 nodes · 1544 edges · 156 communities (134 shown, 22 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `69e4ac96`
+- Built from commit: `4a31904f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -352,7 +352,7 @@ Nodes (3): How to run, multiindex_sets — Constructing MultiindexSets, Output
 
 ### Community 50 - "main.jl"
 Cohesion: 0.08
-Nodes (16): duffing_rhs(), external_rhs(), force(), LinearAlgebra, MORFE, MORFE.Multiindices, MORFE.MultilinearMaps, MORFE.Polynomials (+8 more)
+Nodes (15): duffing_rhs(), external_rhs(), force(), LinearAlgebra, MORFE, MORFE.Multiindices, MORFE.MultilinearMaps, MORFE.Polynomials (+7 more)
 
 ### Community 52 - "Sparse Solve"
 Cohesion: 0.83
@@ -368,7 +368,7 @@ Nodes (38): §1 — Thread-parallel solve by degree group *(Critical)*, 1a. `deg
 
 ### Community 65 - "viz.jl"
 Cohesion: 0.16
-Nodes (31): _arr(), _base_css(), _base_js(), ChartPanel, _charts_html(), Curve, _hex(), Bool (+23 more)
+Nodes (33): _arr(), Arrow3D, _arrow_js(), _base_css(), _base_js(), ChartPanel, _charts_html(), Curve (+25 more)
 
 ### Community 67 - "Conjugate Symmetry Exploitation — Implementation Plan"
 Cohesion: 0.06
@@ -619,7 +619,7 @@ Nodes (3): LinearAlgebra, MORFE.InvarianceEquation, StaticArrays
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AbstractEigensolver` connect `Eigensolvers` to `benchmark_speedup.jl`, `profile_after_opt.jl`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **Why does `Mechanical_Problem_Solver` connect `Eigensolvers` to `main.jl`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `Pkg`, `MORFE`, `Ferrite` to the rest of the system?**

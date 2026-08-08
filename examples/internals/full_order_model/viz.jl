@@ -66,6 +66,29 @@ function Orbit3D(label, x, y, z; colour::Integer = 1, dashed::Bool = false)
 end
 
 """
+	Arrow3D(from, to; label, colour)
+
+A straight arrow in phase space, for annotating a 3-D pane with a direction the trajectory
+itself does not show — a translation, an axis, an equilibrium offset.
+
+Drawn after the polylines and never depth-sorted against them: an annotation that a fold of
+the orbit could hide would be worse than one that always reads. `label`, if given, sits at
+the tip.
+"""
+struct Arrow3D
+    from::NTuple{3, Float64}
+    to::NTuple{3, Float64}
+    label::String
+    colour::Int
+end
+
+function Arrow3D(from, to; label::AbstractString = "", colour::Integer = 3)
+    f = NTuple{3, Float64}(Float64.(Tuple(from)))
+    t = NTuple{3, Float64}(Float64.(Tuple(to)))
+    return Arrow3D(f, t, String(label), Int(colour))
+end
+
+"""
 	Surface3D(x, y, z)
 
 A surface sampled on a grid: `z[i, j]` is the height above `(x[i], y[j])`. Drawn with a
@@ -200,6 +223,7 @@ struct SplitPanel
     name::String
     orbits::Vector{Orbit3D}
     series::Vector{Curve}
+    arrows::Vector{Arrow3D}
     axes::NTuple{3, String}
     xlabel::String
     ylabel::String
@@ -207,11 +231,12 @@ struct SplitPanel
 end
 
 function SplitPanel(name, orbits::AbstractVector{Orbit3D}, series::AbstractVector{Curve};
+        arrows::AbstractVector{Arrow3D} = Arrow3D[],
         axes = ("x", "y", "z"),
         xlabel::AbstractString = "t",
         ylabel::AbstractString = "",
         note::AbstractString = "")
-    return SplitPanel(String(name), collect(orbits), collect(series),
+    return SplitPanel(String(name), collect(orbits), collect(series), collect(arrows),
         (String(axes[1]), String(axes[2]), String(axes[3])),
         String(xlabel), String(ylabel), String(note))
 end
@@ -350,6 +375,12 @@ function _orbit_js(o::Orbit3D)
            "x:$(_arr(o.x)),y:$(_arr(o.y)),z:$(_arr(o.z))}"
 end
 
+function _arrow_js(a::Arrow3D)
+    return "{f:[$(_num(a.from[1])),$(_num(a.from[2])),$(_num(a.from[3]))]," *
+           "t:[$(_num(a.to[1])),$(_num(a.to[2])),$(_num(a.to[3]))]," *
+           "l:$(_str(a.label)),c:$(a.colour - 1)}"
+end
+
 function _panel_js(p::ChartPanel)
     return "{n:$(_str(p.name)),xl:$(_str(p.xlabel)),yl:$(_str(p.ylabel))," *
            "note:$(_str(p.note)),eq:$(p.equal_aspect ? 1 : 0)," *
@@ -386,6 +417,7 @@ function _split_js(p::SplitPanel)
     return "{n:$(_str(p.name)),note:$(_str(p.note))," *
            "ax:[$(_str(p.axes[1])),$(_str(p.axes[2])),$(_str(p.axes[3]))]," *
            "o:[" * join((_orbit_js(o) for o in p.orbits), ",") * "]," *
+           "ar:[" * join((_arrow_js(a) for a in p.arrows), ",") * "]," *
            "t:{xl:$(_str(p.xlabel)),yl:$(_str(p.ylabel)),eq:0," *
            "s:[" * join((_series_js(s) for s in p.series), ",") * "]}}"
 end
@@ -433,6 +465,14 @@ function _base_js()
     const JULIA = ["#9558B2", "#389826", "#CB3C33", "#4063D8"];
     const colour = k => JULIA[((k % JULIA.length) + JULIA.length) % JULIA.length];
     const NS = "http://www.w3.org/2000/svg";
+
+    // Blend a hex colour towards the tooltip background, so a readout can be tinted by
+    // the curve it belongs to: `t` near 0 is almost the background, near 1 the colour.
+    const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const mix = (h, t) => {
+      const [r, g, b] = hex2rgb(h), bg = [20, 20, 28];
+      return "rgb(" + [r, g, b].map((v, i) => Math.round(bg[i] + (v - bg[i]) * t)).join(",") + ")";
+    };
 
     const fmt = v => {
       if (Math.abs(v) < 1e-12) return "0";
@@ -565,6 +605,11 @@ function _base_js()
         const head = (v.p.s.length > 1 || v.p.yl !== s.l) ? s.l + "\\n" : "";
         tip.textContent = `\${head}\${xn} = \${fmt(s.x[i])}\n\${v.p.yl || "y"} = \${fmt(s.y[i])}`;
         tip.style.opacity = 1;
+        // Tint the box with the hovered curve's colour, so a readout over a panel of
+        // several curves says which one it belongs to without being read.
+        const col = colour(s.c);
+        tip.style.background = mix(col, 0.18);
+        tip.style.borderColor = mix(col, 0.62);
         const tw = tip.offsetWidth, th = tip.offsetHeight;
         tip.style.left = Math.min(Math.max(4, v.X(s.x[i]) + 12), host.clientWidth - tw - 4) + "px";
         tip.style.top = Math.min(Math.max(4, v.Y(s.y[i]) - th - 10), host.clientHeight - th - 4) + "px";
@@ -650,16 +695,21 @@ function _base_js()
         commit: () => host.insertBefore(svg, host.firstChild) };
     }
 
-    // ── 3-D polylines (trajectories).
-    function draw3D(host, curves, axes, cam, markers) {
+    // ── 3-D polylines (trajectories), plus any annotation arrows.
+    function draw3D(host, curves, axes, cam, markers, arrows) {
+      arrows = arrows || [];
       let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-      for (const s of curves) for (let i = 0; i < s.x.length; i++) {
-        const p = [s.x[i], s.y[i], s.z[i]];
+      const grow = p => {
         for (let k = 0; k < 3; k++) {
           if (p[k] < lo[k]) lo[k] = p[k];
           if (p[k] > hi[k]) hi[k] = p[k];
         }
-      }
+      };
+      for (const s of curves) for (let i = 0; i < s.x.length; i++)
+        grow([s.x[i], s.y[i], s.z[i]]);
+      // Arrow endpoints stretch the box too: an annotation reaching past the trajectory
+      // would otherwise be drawn outside the frame and silently clipped.
+      for (const a of arrows) { grow(a.f); grow(a.t); }
       if (!isFinite(lo[0])) { lo = [0, 0, 0]; hi = [1, 1, 1]; }
       // Nothing here answers a 2-D readout, and a stale one from a previous panel would
       // otherwise keep firing over this drawing.
@@ -682,6 +732,33 @@ function _base_js()
           F.svg.appendChild(el("circle", { cx:q0[0], cy:q0[1], r:3, fill:"none",
             stroke:colour(s.c), "stroke-width":1.4 }));
           F.svg.appendChild(el("circle", { cx:q1[0], cy:q1[1], r:3, fill:colour(s.c) }));
+        }
+      }
+      // Arrows last, over the trajectory.  The head is built in screen space from the
+      // projected direction: a 3-D cone would need its own depth sort against the polyline
+      // for no gain, since the arrow is an annotation rather than part of the orbit.
+      for (const a of arrows) {
+        const p0 = F.P(a.f[0], a.f[1], a.f[2]);
+        const p1 = F.P(a.t[0], a.t[1], a.t[2]);
+        const dx = p1[0] - p0[0], dy = p1[1] - p0[1];
+        const L = Math.hypot(dx, dy);
+        if (L < 1e-6) continue;                       // degenerate on this projection
+        const ux = dx / L, uy = dy / L, head = Math.min(13, L * 0.3);
+        const col = colour(a.c);
+        F.svg.appendChild(el("circle", { cx:p0[0], cy:p0[1], r:2.6, fill:col }));
+        F.svg.appendChild(el("line", { x1:p0[0], y1:p0[1],
+          x2:p1[0] - ux * head * 0.85, y2:p1[1] - uy * head * 0.85,
+          stroke:col, "stroke-width":2, "stroke-linecap":"round" }));
+        F.svg.appendChild(el("polygon", { points:
+            [p1[0], p1[1],
+             p1[0] - head * ux + head * 0.42 * uy, p1[1] - head * uy - head * 0.42 * ux,
+             p1[0] - head * ux - head * 0.42 * uy, p1[1] - head * uy + head * 0.42 * ux]
+            .map(v => v.toFixed(2)).join(" "), fill:col }));
+        if (a.l) {
+          // Push the label past the tip along the arrow, so it never sits under the head.
+          F.svg.appendChild(el("text", { x:p1[0] + ux * 14, y:p1[1] + uy * 14 + 4,
+            fill:col, "font-size":12, "text-anchor":"middle",
+            "font-family":"ui-monospace, Menlo, monospace" }, a.l));
         }
       }
       F.drawLabels();
@@ -831,7 +908,7 @@ function _charts_html(title, caption, data)
     const cam = { yaw: -0.62, pitch: 0.30 };
     const is3D = p => p.sf || (p.o && p.o.length > 0);
     const redraw3D = p => p.sf ? drawSurface3D(stage, p.sf, p.ln, p.ax, cam)
-                               : draw3D(stage, p.o, p.ax, cam, false);
+                               : draw3D(stage, p.o, p.ax, cam, false, p.ar);
 
     function render() {
       const p = PANELS[cur];
@@ -1008,7 +1085,7 @@ function _split_html(title, caption, data)
 
     function render() {
       const p = PANELS[cur];
-      draw3D(s3, p.o, p.ax, cam, true);
+      draw3D(s3, p.o, p.ax, cam, true, p.ar);
       // One stacked plot per coordinate: each gets its own vertical scale, which is the
       // point — a shared axis would flatten whichever coordinate has the smaller range.
       rows.innerHTML = "";
@@ -1068,9 +1145,12 @@ function _split_html(title, caption, data)
       note.textContent = p.note || baseCaption;
     }
 
-    attachOrbit(s3, cam, () => draw3D(s3, PANELS[cur].o, PANELS[cur].ax, cam, true));
+    attachOrbit(s3, cam,
+      () => draw3D(s3, PANELS[cur].o, PANELS[cur].ax, cam, true, PANELS[cur].ar));
 
-    PANELS.forEach((p, k) => {
+    // A lone panel needs no switcher — the button would name the only thing on screen and
+    // do nothing when pressed.
+    if (PANELS.length > 1) PANELS.forEach((p, k) => {
       const b = document.createElement("button");
       b.textContent = p.n;
       b.className = k === 0 ? "on" : "";
