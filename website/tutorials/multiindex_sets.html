@@ -83,9 +83,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="ver"><span>Tutorials</span></div>
     <h4>Getting started</h4>
     <ul>
-      <li><a href="../api.html#install">Installation</a></li>
-      <li><a href="../api.html#current-api">Current API</a></li>
-      <li><a href="../api.html#concepts">Concepts &amp; vocabulary</a></li>
+      <li><a href="../index.html#install">Installation</a></li>
+      <li><a href="../documentation.html">Code documentation</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
     </ul>
 
     <h4>Demos</h4>
@@ -110,11 +110,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Manual</h4>
     <ul>
-      <li><a href="../api.html#fe-input">FE input format</a></li>
-      <li><a href="../api.html#master">Master subspace</a></li>
-      <li><a href="../api.html#order">Choosing order</a></li>
-      <li><a href="../api.html#forcing">Forcing &amp; resonances</a></li>
-      <li><a href="../api.html#continuation">Continuation</a></li>
+      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
+      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
+      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
+      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
     </ul>
 
   </aside>
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
   <main class="docs-main">
 
     <div class="crumbs">
-      <a href="../api.html">MORFE.jl</a>
+      <a href="../documentation.html">MORFE.jl</a>
       <span class="sep">/</span>
       <a href="index.html">Tutorials</a>
       <span class="sep">/</span>
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
-      <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> CORE API</span>
+      <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> CORE LIBRARY</span>
       <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
       <span class="tag" style="color:var(--ink-3);">&lt; 5 S · NO FEM</span>
     </div>
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div class="adm tip">
-      <div class="adm-head">Runs today — current API</div>
+      <div class="adm-head">Runs today — current code</div>
       <div class="adm-body">
         <p>Every line on this page comes from
         <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/multiindex_sets" target="_blank" rel="noopener"><code>examples/internals/multiindex_sets</code></a>.
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">01</div>
       <div class="body">
-        <h3 id="step-generators">Start from a generator</h3>
+        <h3 id="step-generators">Start from a constructor</h3>
         <p>
           Three functions cover the usual shapes. All three return a <code>MultiindexSet</code>
           already in GrLex order.
@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <ul>
       <li><a href="parametric.html">Geometry as a coordinate</a> — an anisotropic set driving a real parametric ROM.</li>
       <li><a href="karman.html">Kármán vortex street</a> — the complete workflow, resonance set included.</li>
-      <li><a href="../api.html">API reference</a> — <code>Multiindices</code> in full.</li>
+      <li><a href="../documentation.html">Code documentation</a> — <code>Multiindices</code> in full.</li>
     </ul>
 
   </main>
@@ -500,7 +500,8 @@ document.addEventListener('DOMContentLoaded', function () {
     <h5 style="margin-top:32px;">Links</h5>
     <ul>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/multiindex_sets" target="_blank" rel="noopener">Example folder ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl" target="_blank" rel="noopener">Multiindices.jl ↗</a></li>
+      <li><a href="../documentation.html#Multiindices">Multiindices docs</a></li>
+      <li><a href="../documentation.html#Resonance">Resonance docs</a></li>
     </ul>
   </aside>
 

@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "test/runtests.jl": {
-    "mtime": 1785794664.5801291,
-    "ast_hash": "a51112ca3f21aafefddf6f5ff2711ab6",
+    "mtime": 1785752542.5843673,
+    "ast_hash": "4735db7aa05c96b4e2df1efc9c3fd048",
     "semantic_hash": ""
   },
   "website/assets/dpim-scheme.jsx": {
@@ -580,22 +580,22 @@
     "semantic_hash": ""
   },
   "website/assets/feat-grid.js": {
-    "mtime": 1786131239.4947891,
-    "ast_hash": "fd3def377c52ed7a3f93a3b76bdc5329",
+    "mtime": 1779744547.926638,
+    "ast_hash": "3cffc25ed16b871a549b1ad2698ab1a8",
     "semantic_hash": ""
   },
   "website/assets/manifold-bg.js": {
-    "mtime": 1786131239.4806325,
+    "mtime": 1778882477.0,
     "ast_hash": "37491d7181d611a0e24d5c0a69de97dc",
     "semantic_hash": ""
   },
   "website/assets/nav.js": {
-    "mtime": 1786131239.4903648,
-    "ast_hash": "0a22439015c1a3125a80ea5848d8ff8f",
+    "mtime": 1783213436.8173778,
+    "ast_hash": "5d5a67467ab52f680cc08676a8d89069",
     "semantic_hash": ""
   },
   "website/assets/team-data.js": {
-    "mtime": 1786131239.4757936,
+    "mtime": 1780674417.5804465,
     "ast_hash": "6b0b4c06b65e97e3a544387febf628c9",
     "semantic_hash": ""
   },
@@ -604,9 +604,49 @@
     "ast_hash": "0b67b9bfbe4e2860262209d25beb3067",
     "semantic_hash": ""
   },
+  "website/docs/.documenter-siteinfo.json": {
+    "mtime": 1778890970.1517422,
+    "ast_hash": "797ebb5199143b57e69baaa072b0f401",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/documenter.js": {
+    "mtime": 1778890967.8207185,
+    "ast_hash": "96d214a940c32693855b7618e7dbf0a3",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/mermaid.js": {
+    "mtime": 1778890953.2642314,
+    "ast_hash": "9cb8439e29ff2cbebccef43c361fe8ff",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/nav-inject.js": {
+    "mtime": 1783213574.2280738,
+    "ast_hash": "9d006cb18b67a989ecda22f269e2f9fc",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/themeswap.js": {
+    "mtime": 1778890967.6109297,
+    "ast_hash": "3e1ebdf21f9e0b5a2869bc667105221d",
+    "semantic_hash": ""
+  },
+  "website/docs/assets/warner.js": {
+    "mtime": 1778890967.6115475,
+    "ast_hash": "83f621a9bcf7d81c7bdbe675b240e69b",
+    "semantic_hash": ""
+  },
+  "website/docs/search_index.js": {
+    "mtime": 1778890970.1414504,
+    "ast_hash": "fd16ab676edff73e277de381d04521c7",
+    "semantic_hash": ""
+  },
+  "website/generate_api.jl": {
+    "mtime": 1785604412.2786713,
+    "ast_hash": "fb975da4bd785e9d9857f8f79506d738",
+    "semantic_hash": ""
+  },
   ".github/workflows/Documentation.yml": {
-    "mtime": 1786131326.6102908,
-    "ast_hash": "6cbb18e9183948742a7225bfbff92a5e",
+    "mtime": 1779741865.5590541,
+    "ast_hash": "8594184cc6b591154814706bf60d5898",
     "semantic_hash": ""
   },
   ".github/workflows/tests.yml": {
@@ -704,38 +744,173 @@
     "ast_hash": "02bacadd7905522ded642f1b561c272b",
     "semantic_hash": ""
   },
+  "website/docs/api.html": {
+    "mtime": 1778890969.6860833,
+    "ast_hash": "366c84da4198d48416c534df91cabb29",
+    "semantic_hash": ""
+  },
+  "website/docs/api/cohomological_equations.html": {
+    "mtime": 1778890969.593882,
+    "ast_hash": "a377ce01d24703bbcc533890dcc41358",
+    "semantic_hash": ""
+  },
+  "website/docs/api/eigenproblems.html": {
+    "mtime": 1778890969.702532,
+    "ast_hash": "ad1ea8c5aa196073e4751abd001f32bf",
+    "semantic_hash": ""
+  },
+  "website/docs/api/eigensolvers.html": {
+    "mtime": 1778890970.140499,
+    "ast_hash": "963a8459595acc40bcf40b3b6c1f2bd8",
+    "semantic_hash": ""
+  },
+  "website/docs/api/external_systems.html": {
+    "mtime": 1778890969.4690337,
+    "ast_hash": "9136a6402e18601091ff8d0cd7cdf2c1",
+    "semantic_hash": ""
+  },
+  "website/docs/api/full_order_model.html": {
+    "mtime": 1778890970.137634,
+    "ast_hash": "240e1d00f787dc1b19d792bb6c100cb4",
+    "semantic_hash": ""
+  },
+  "website/docs/api/invariance_equation.html": {
+    "mtime": 1778890970.0197332,
+    "ast_hash": "715f8654e05409e0eb6fce44eaabe079",
+    "semantic_hash": ""
+  },
+  "website/docs/api/invariance_error.html": {
+    "mtime": 1778890969.7055254,
+    "ast_hash": "c6358a28267ca0f658f6935db2f82db9",
+    "semantic_hash": ""
+  },
+  "website/docs/api/jordan_chain.html": {
+    "mtime": 1778890969.575599,
+    "ast_hash": "921c0a45a22b3f0d9ca972decd8712de",
+    "semantic_hash": ""
+  },
+  "website/docs/api/lower_order_couplings.html": {
+    "mtime": 1778890969.6993,
+    "ast_hash": "c0b4a33c4a0debad57bfd746aee394e1",
+    "semantic_hash": ""
+  },
+  "website/docs/api/master_mode_orthogonality.html": {
+    "mtime": 1778890969.6783392,
+    "ast_hash": "c43d400ae26587f34bd3dc20adf536ff",
+    "semantic_hash": ""
+  },
+  "website/docs/api/multiindices.html": {
+    "mtime": 1778890969.6838088,
+    "ast_hash": "dfe94cf44a074fc57b0dec91c7c0a8c2",
+    "semantic_hash": ""
+  },
+  "website/docs/api/multilinear_maps.html": {
+    "mtime": 1778890969.708894,
+    "ast_hash": "9da68bf7103d35be98bb49419f6af1ec",
+    "semantic_hash": ""
+  },
+  "website/docs/api/multilinear_terms.html": {
+    "mtime": 1778890969.4378407,
+    "ast_hash": "3154bbf76e6848752455e566bae50818",
+    "semantic_hash": ""
+  },
+  "website/docs/api/parametrisation_method.html": {
+    "mtime": 1778890969.4480996,
+    "ast_hash": "cf5a302e9bd4a5d7a2f9503b65c6e78e",
+    "semantic_hash": ""
+  },
+  "website/docs/api/polynomials.html": {
+    "mtime": 1778890969.6740532,
+    "ast_hash": "0a44ff005199aef274494af25568a89e",
+    "semantic_hash": ""
+  },
+  "website/docs/api/propagate_eigenmodes.html": {
+    "mtime": 1778890969.6685376,
+    "ast_hash": "076d812cc151e172aecb4c501bf4dd32",
+    "semantic_hash": ""
+  },
+  "website/docs/api/realification.html": {
+    "mtime": 1778890970.0146263,
+    "ast_hash": "852d3b07af3d617c80f83ef3dbd3bd0b",
+    "semantic_hash": ""
+  },
+  "website/docs/api/resonance.html": {
+    "mtime": 1778890969.4665666,
+    "ast_hash": "78bc81df4f9e5b9f5ac08e5a25c96549",
+    "semantic_hash": ""
+  },
+  "website/docs/index.html": {
+    "mtime": 1784103281.8485541,
+    "ast_hash": "ffddc1a1216094181029a56d8ecfe10a",
+    "semantic_hash": ""
+  },
+  "website/docs/project-overview.html": {
+    "mtime": 1778890969.5889122,
+    "ast_hash": "17cbc24a6b4df5d7ea22674b3f1c7410",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/cohomological_equations.html": {
+    "mtime": 1778890969.5729234,
+    "ast_hash": "1c6827b82360e41da599e2a2b3cf193d",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/dpim.html": {
+    "mtime": 1784103281.84923,
+    "ast_hash": "7ef56539373a4cf5caf7366c6cd21ce2",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/multiindices.html": {
+    "mtime": 1778890970.0238936,
+    "ast_hash": "2e1c9de71a178e6852b38a789006dbd7",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/polynomials.html": {
+    "mtime": 1778890970.0265653,
+    "ast_hash": "c0c8ce9916bf2060744277573ab711c2",
+    "semantic_hash": ""
+  },
+  "website/docs/theory/realification.html": {
+    "mtime": 1778890969.6635332,
+    "ast_hash": "b7bd3dfbc26caf8352983c7bdc1138ba",
+    "semantic_hash": ""
+  },
+  "website/docs/tutorials/multilinear_terms.html": {
+    "mtime": 1778890970.0101902,
+    "ast_hash": "a83df40ca28d0e00460575583f42e8cd",
+    "semantic_hash": ""
+  },
   "website/dpim-preview.html": {
-    "mtime": 1786131239.4240353,
-    "ast_hash": "824b17a02ffa582cc6e5b7bb07a833ca",
+    "mtime": 1783213453.4195921,
+    "ast_hash": "c1870f06384f5301cc58d728caa3e077",
     "semantic_hash": ""
   },
   "website/features.html": {
-    "mtime": 1786131239.4195962,
-    "ast_hash": "99e6b83c98317f7dda5dc684c7cfca6c",
+    "mtime": 1783213453.3896751,
+    "ast_hash": "6ae0a1810dc36c8148d98660e8bd4037",
     "semantic_hash": ""
   },
   "website/gallery.html": {
-    "mtime": 1786131239.4149578,
-    "ast_hash": "f366f54d2092b4d70bec095f36e022ef",
+    "mtime": 1783213453.411351,
+    "ast_hash": "dc6d659ca96f321b8b50ee319a019d1c",
     "semantic_hash": ""
   },
   "website/index.html": {
-    "mtime": 1786131239.401191,
-    "ast_hash": "47b1534d3a8dee8b73c61d4a020c1e5a",
+    "mtime": 1784102990.17642,
+    "ast_hash": "2eb6ebfd43beb1042eb42dd441075156",
     "semantic_hash": ""
   },
   "website/publications.html": {
-    "mtime": 1786131239.4287472,
-    "ast_hash": "4a5b88ec655dd19197858e1bc0696b22",
+    "mtime": 1783213453.3951566,
+    "ast_hash": "9f838757a2b6e20f513f1618e62744b7",
     "semantic_hash": ""
   },
   "website/team.html": {
-    "mtime": 1786131239.395785,
-    "ast_hash": "df339aa03beb8628ded2f000664a20e5",
+    "mtime": 1784103211.8728125,
+    "ast_hash": "9be3bd7730f53d88d18be729e67e1adf",
     "semantic_hash": ""
   },
   "website/uploads/dpim-preview.html": {
-    "mtime": 1786131239.4334788,
+    "mtime": 1778882477.0,
     "ast_hash": "a425501bb75690391e3f8af703a69f7d",
     "semantic_hash": ""
   },
@@ -899,6 +1074,11 @@
     "ast_hash": "c4ec3a895009821bd864e2a3dc87df8d",
     "semantic_hash": ""
   },
+  "website/docs/assets/logo.svg": {
+    "mtime": 1778890953.2636194,
+    "ast_hash": "e2538e8f7032ee62a7efa2974102e102",
+    "semantic_hash": ""
+  },
   "website/uploads/DPIM.svg": {
     "mtime": 1778882477.0,
     "ast_hash": "e54a4f200b0c7280fe4be1cb52337ef7",
@@ -955,23 +1135,23 @@
     "semantic_hash": ""
   },
   "website/tutorials/index.html": {
-    "mtime": 1786131239.4438107,
-    "ast_hash": "ca33d5d90b507b64ea376ec9279b84fc",
+    "mtime": 1785776863.0498223,
+    "ast_hash": "83ef85a3401e4c813dafa78ef59b5a51",
     "semantic_hash": ""
   },
   "website/tutorials/karman.html": {
-    "mtime": 1786131239.4383512,
-    "ast_hash": "6c6ae0bb93a122710481d3fce25fc965",
+    "mtime": 1785774562.9395776,
+    "ast_hash": "512e1ff2848e12ed82453f4ed1875a52",
     "semantic_hash": ""
   },
   "website/tutorials/micromirror.html": {
-    "mtime": 1786131239.4488943,
-    "ast_hash": "96d65c0e799d34dffca159001f2389ca",
+    "mtime": 1785774562.9452238,
+    "ast_hash": "963224e6c1297b6e6acf093d7d37bc29",
     "semantic_hash": ""
   },
   "website/tutorials/roadmap.html": {
-    "mtime": 1786131239.4580164,
-    "ast_hash": "3a5db4ec20c7de85c752c6710870731f",
+    "mtime": 1785774562.9507103,
+    "ast_hash": "0c49c84fe5f2e299039fdb9101f8f2d0",
     "semantic_hash": ""
   },
   "website/tutorials/assets/karman/karman_thumb.svg": {
@@ -1015,58 +1195,58 @@
     "semantic_hash": ""
   },
   "website/generate_literate.jl": {
-    "mtime": 1786131239.4056456,
+    "mtime": 1785753002.1323428,
     "ast_hash": "a7d862fe6c9de4fa74d8377947fb367b",
     "semantic_hash": ""
   },
   "website/tutorials/literate/01_clamped_beam_ferrite.html": {
-    "mtime": 1786131239.516828,
+    "mtime": 1785778737.7221627,
     "ast_hash": "3de35ace3baf7c8d030e9504610ff56d",
     "semantic_hash": ""
   },
   "website/tutorials/literate/02_clamped_beam_gridap.html": {
-    "mtime": 1786131239.55028,
+    "mtime": 1785778737.7506037,
     "ast_hash": "c7365ba86d2f0f01f992c234f7c02463",
     "semantic_hash": ""
   },
   "website/tutorials/literate/03_arch_comsol_wedge.html": {
-    "mtime": 1786131239.5397022,
+    "mtime": 1785778737.7647645,
     "ast_hash": "3c0cfec6358a3daa99e198f03ac9147d",
     "semantic_hash": ""
   },
   "website/tutorials/literate/04_parametric_clamped_beam.html": {
-    "mtime": 1786131239.5216992,
+    "mtime": 1785778737.788934,
     "ast_hash": "839dd1fb9631a0e34e1d2bf01c6950e1",
     "semantic_hash": ""
   },
   "website/tutorials/literate/05_karman_vortex_street.html": {
-    "mtime": 1786131239.5083313,
+    "mtime": 1785778737.8035717,
     "ast_hash": "ca8a2e6b9569bb883b32c9f97cfcb120",
     "semantic_hash": ""
   },
   "website/tutorials/literate/06_dielectric_elastomer_actuator.html": {
-    "mtime": 1786131239.503918,
+    "mtime": 1785778737.8170917,
     "ast_hash": "c78ff211bcfb87b89ec19c76c545aa93",
     "semantic_hash": ""
   },
   "website/tutorials/literate/07_parametric_arch.html": {
-    "mtime": 1786131239.526193,
+    "mtime": 1785778737.8301556,
     "ast_hash": "9bfc5f3f48878256f19dbf5bcd6dc44c",
     "semantic_hash": ""
   },
   "website/tutorials/literate/08_mems_micromirror.html": {
-    "mtime": 1786131239.5126073,
+    "mtime": 1785778737.8419755,
     "ast_hash": "031af9f0c33e5dcd2038ca805ece2aac",
     "semantic_hash": ""
   },
   "website/tutorials/parametric.html": {
-    "mtime": 1786131239.4628654,
-    "ast_hash": "a319e3827d1e0995dbf2eacca7192407",
+    "mtime": 1785774562.9563487,
+    "ast_hash": "a1890356af6865136b8a287de5cc3a4f",
     "semantic_hash": ""
   },
   "website/tutorials/structural_svk.html": {
-    "mtime": 1786131239.471455,
-    "ast_hash": "3c44dbb9734f9a197a0ef3858cb146c2",
+    "mtime": 1785774562.961977,
+    "ast_hash": "417eff551292f601ccb339952410d8c5",
     "semantic_hash": ""
   },
   "format/format.jl": {
@@ -1090,8 +1270,8 @@
     "semantic_hash": ""
   },
   "examples/internals/multiindex_sets/viz.jl": {
-    "mtime": 1786130579.0335457,
-    "ast_hash": "e7caaae1e36be5c17683b3718bed7276",
+    "mtime": 1785753134.0198228,
+    "ast_hash": "f15d2126a73e17ae13a9a6b1dcaaafef",
     "semantic_hash": ""
   },
   "examples/internals/multiindex_sets/README.md": {
@@ -1100,63 +1280,63 @@
     "semantic_hash": ""
   },
   "examples/internals/multiindex_sets/results/figures/fig1_generators.html": {
-    "mtime": 1786130614.6435368,
-    "ast_hash": "9f21fea07ac3b99d2f43e285c508f84b",
+    "mtime": 1785775008.2817793,
+    "ast_hash": "53ffda56a3d9078bf4d1889d0184a54e",
     "semantic_hash": ""
   },
   "examples/internals/multiindex_sets/results/figures/fig2_anisotropic.html": {
-    "mtime": 1786130616.192064,
-    "ast_hash": "e9aaafebc1a0f7357d68baaf5c874d90",
+    "mtime": 1785775009.8955421,
+    "ast_hash": "d99b07bd9090537ccf3454fd148e87c5",
     "semantic_hash": ""
   },
   "examples/internals/multiindex_sets/results/figures/fig3_deletion.html": {
-    "mtime": 1786130616.3854535,
-    "ast_hash": "e00915a84f001c6ad5686eeff8aed395",
+    "mtime": 1785775010.1408532,
+    "ast_hash": "5fee395ee370394ce6d4597efe60083a",
     "semantic_hash": ""
   },
   "examples/internals/multiindex_sets/results/figures/fig4_spectral.html": {
-    "mtime": 1786130617.183358,
-    "ast_hash": "0713fb66a7b81e6e02a2eb00731421a1",
+    "mtime": 1785775010.9975572,
+    "ast_hash": "ee4c60a0c427c0bfaf449f3586a884f6",
     "semantic_hash": ""
   },
   "website/tutorials/assets/multiindex/fig1_generators.html": {
-    "mtime": 1786130620.213835,
-    "ast_hash": "9f21fea07ac3b99d2f43e285c508f84b",
+    "mtime": 1785775014.0842173,
+    "ast_hash": "53ffda56a3d9078bf4d1889d0184a54e",
     "semantic_hash": ""
   },
   "website/tutorials/assets/multiindex/fig2_anisotropic.html": {
-    "mtime": 1786130621.6814296,
-    "ast_hash": "e9aaafebc1a0f7357d68baaf5c874d90",
+    "mtime": 1785775015.5860133,
+    "ast_hash": "d99b07bd9090537ccf3454fd148e87c5",
     "semantic_hash": ""
   },
   "website/tutorials/assets/multiindex/fig3_deletion.html": {
-    "mtime": 1786130621.8730245,
-    "ast_hash": "e00915a84f001c6ad5686eeff8aed395",
+    "mtime": 1785775015.779269,
+    "ast_hash": "5fee395ee370394ce6d4597efe60083a",
     "semantic_hash": ""
   },
   "website/tutorials/assets/multiindex/fig4_spectral.html": {
-    "mtime": 1786130622.720025,
-    "ast_hash": "0713fb66a7b81e6e02a2eb00731421a1",
+    "mtime": 1785775016.5127707,
+    "ast_hash": "ee4c60a0c427c0bfaf449f3586a884f6",
     "semantic_hash": ""
   },
   "website/tutorials/literate/multiindex_sets.html": {
-    "mtime": 1786131239.5351245,
+    "mtime": 1785778737.692454,
     "ast_hash": "9ed12fa90571362b63de318bf3457fd4",
     "semantic_hash": ""
   },
   "website/tutorials/multiindex_sets.html": {
-    "mtime": 1786131239.4672,
-    "ast_hash": "91bd7e02dcbe49afef0ebe6c49e85356",
+    "mtime": 1785774900.4265935,
+    "ast_hash": "a85280ad3543f4b2b46de4591cacd45e",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/main.jl": {
-    "mtime": 1786131156.6046903,
-    "ast_hash": "a45d04e0c1ddeaac8ebf860d8cfe3371",
+    "mtime": 1785779040.3971124,
+    "ast_hash": "a8c9a32e9b9c956ee8d29f8b2e63741d",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/viz.jl": {
-    "mtime": 1785874043.1678605,
-    "ast_hash": "486d0a3292365bbb6809b680330dfa1d",
+    "mtime": 1785777976.7501974,
+    "ast_hash": "3266a6d87b2be536a7ba2f121ed5626f",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/README.md": {
@@ -1165,68 +1345,53 @@
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig1_nonlinear_terms.html": {
-    "mtime": 1785873716.3509011,
-    "ast_hash": "b1b5f2da7779198b2d367b72a66252c2",
+    "mtime": 1785779046.8848896,
+    "ast_hash": "fcc52b8fcdbeae72b3d527e95fae7d69",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig2_external_systems.html": {
-    "mtime": 1785873719.1395042,
-    "ast_hash": "98e7e4a3c3fed200992b618483ae4e44",
+    "mtime": 1785779049.1666164,
+    "ast_hash": "2026e84c32576c59fe687c522de75be5",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig3_lorenz.html": {
-    "mtime": 1785873724.3236542,
-    "ast_hash": "28ec2f80a229155d40b41b0eb077c126",
+    "mtime": 1785779053.4439797,
+    "ast_hash": "de9e312bd36c4e314f4fa9f0315768fc",
     "semantic_hash": ""
   },
   "examples/internals/full_order_model/results/figures/fig4_forced_response.html": {
-    "mtime": 1785873725.9670553,
-    "ast_hash": "74680f63b635c5b7c5d52f6bf48ef7e7",
+    "mtime": 1785779055.0958288,
+    "ast_hash": "695bf11a06c483895ae0ac9ef4a5888f",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig1_nonlinear_terms.html": {
-    "mtime": 1785873836.5248,
-    "ast_hash": "b1b5f2da7779198b2d367b72a66252c2",
+    "mtime": 1785778619.2496624,
+    "ast_hash": "fcc52b8fcdbeae72b3d527e95fae7d69",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig2_external_systems.html": {
-    "mtime": 1785873839.2008822,
-    "ast_hash": "98e7e4a3c3fed200992b618483ae4e44",
+    "mtime": 1785778621.7906656,
+    "ast_hash": "2026e84c32576c59fe687c522de75be5",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig3_lorenz.html": {
-    "mtime": 1785873843.981348,
-    "ast_hash": "28ec2f80a229155d40b41b0eb077c126",
+    "mtime": 1785778626.0615196,
+    "ast_hash": "d2cf42546f0b6361538aef745b2a7098",
     "semantic_hash": ""
   },
   "website/tutorials/assets/full_order_model/fig4_forced_response.html": {
-    "mtime": 1785873845.6387165,
-    "ast_hash": "74680f63b635c5b7c5d52f6bf48ef7e7",
+    "mtime": 1785778627.646414,
+    "ast_hash": "695bf11a06c483895ae0ac9ef4a5888f",
     "semantic_hash": ""
   },
   "website/tutorials/full_order_model.html": {
-    "mtime": 1786132252.2189972,
-    "ast_hash": "65341d5585f9ba98281c61cf24260335",
+    "mtime": 1785778642.7546468,
+    "ast_hash": "80062a1a2c44fe71ca6dba75a496f7db",
     "semantic_hash": ""
   },
   "website/tutorials/literate/full_order_model.html": {
-    "mtime": 1786131239.5305955,
-    "ast_hash": "4d0d9ebdb12ffe7cdf90501b278e6f3e",
-    "semantic_hash": ""
-  },
-  "website/generate_documentation.jl": {
-    "mtime": 1786132333.8948245,
-    "ast_hash": "ecabf79fd9601dc32355938de0846362",
-    "semantic_hash": ""
-  },
-  "examples/internals/full_order_model/results/figures/thumb.svg": {
-    "mtime": 1785873726.1435814,
-    "ast_hash": "ddd76f2c87425697cd9bef53f7a12736",
-    "semantic_hash": ""
-  },
-  "website/tutorials/assets/full_order_model/thumb.svg": {
-    "mtime": 1785873845.8248656,
-    "ast_hash": "ddd76f2c87425697cd9bef53f7a12736",
+    "mtime": 1785778737.565855,
+    "ast_hash": "b68ddd041d0d22a4ad9f660c109d36f0",
     "semantic_hash": ""
   }
 }

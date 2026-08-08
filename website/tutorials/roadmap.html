@@ -30,9 +30,9 @@
 
     <h4>Getting started</h4>
     <ul>
-      <li><a href="nopage.html#install">Installation</a></li>
-      <li><a href="../api.html">Current API</a></li>
-      <li><a href="nopage.html#concepts">Concepts &amp; vocabulary</a></li>
+      <li><a href="../index.html#install">Installation</a></li>
+      <li><a href="../documentation.html">Code documentation</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
     </ul>
 
     <h4>Demos</h4>
@@ -57,18 +57,18 @@
 
     <h4>Manual</h4>
     <ul>
-      <li><a href="nopage.html#fe-input">FE input format</a></li>
-      <li><a href="nopage.html#master">Master subspace</a></li>
-      <li><a href="nopage.html#order">Choosing order</a></li>
-      <li><a href="nopage.html#forcing">Forcing &amp; resonances</a></li>
-      <li><a href="nopage.html#continuation">Continuation</a></li>
+      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
+      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
+      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
+      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
     </ul>
   </aside>
 
   <main class="docs-main">
 
     <div class="crumbs">
-      <a href="../api.html">MORFE.jl</a>
+      <a href="../documentation.html">MORFE.jl</a>
       <span class="sep">/</span>
       <a href="index.html">Tutorials</a>
       <span class="sep">/</span>
@@ -77,13 +77,13 @@
 
     <div style="display:flex; gap:10px; margin-bottom:14px;">
       <span class="tag" style="color:var(--jl-purple); border-color:rgba(149,88,178,0.3); background:rgba(149,88,178,0.06);">ROADMAP</span>
-      <span class="tag" style="color:var(--ink-3);">TARGET API</span>
+      <span class="tag" style="color:var(--ink-3);">PLANNED INTERFACE</span>
     </div>
 
     <h1 id="overview">Tutorial in development</h1>
     <p class="lede">
       This tutorial is on the roadmap — the method, mesh, and reference results are all planned,
-      but the high-level API it depends on is not yet implemented. Check back as MORFE.jl matures.
+      but the high-level interface it depends on is not yet implemented. Check back as MORFE.jl matures.
     </p>
 
     <!-- Construction zone figure -->
@@ -242,7 +242,7 @@
 
           <!-- annotations -->
           <g font-family="JetBrains Mono" font-size="10" fill="#6e6e7e">
-            <text x="40" y="36">TARGET API · IN DEVELOPMENT</text>
+            <text x="40" y="36">PLANNED INTERFACE · IN DEVELOPMENT</text>
           </g>
         </svg>
       </div>
@@ -250,22 +250,22 @@
     </div>
 
     <div class="adm warn" style="border-left:4px solid #f59e0b; background:rgba(245,158,11,0.06); border-radius:0 4px 4px 0; padding:0.6rem 1rem; margin:0 0 1.8rem;">
-      <div class="adm-head" style="font-weight:600; font-size:0.88rem; color:var(--ink); margin-bottom:0.3rem;">Target API — not yet runnable</div>
-      <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">This tutorial depends on the planned high-level API (<code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>) which is still under development. For a working entry point today, see <code>MORFEFerrite.StructuralSVK</code> (<code>mechanical_model</code> + <code>parametrise</code>), the <a href="../api.html">current API docs</a>, and the <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">MORFEFerrite examples</a>.</div>
+      <div class="adm-head" style="font-weight:600; font-size:0.88rem; color:var(--ink); margin-bottom:0.3rem;">Planned interface — not yet runnable</div>
+      <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">This tutorial depends on the planned high-level interface (<code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>) which is still under development. For a working entry point today, see <code>MORFEFerrite.StructuralSVK</code> (<code>mechanical_model</code> + <code>parametrise</code>), the <a href="../documentation.html">code documentation</a>, and the <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">MORFEFerrite examples</a>.</div>
     </div>
 
     <h2 id="today">What works today</h2>
-    <p>While this tutorial is being written, the best starting point is the parametrisation method demo — it covers the same core pipeline against the current API and runs end-to-end on any Julia 1.10+ installation.</p>
+    <p>While this tutorial is being written, the best starting point is the parametrisation method demo — it covers the same core pipeline against the current code and runs end-to-end on any Julia 1.10+ installation.</p>
 
     <div style="margin-top:32px; padding:24px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
       <div style="flex:1; min-width:200px;">
         <div class="kicker">Works today</div>
         <h3 style="margin-top:12px; font-size:18px;">Demo scripts</h3>
-        <p style="font-size:14px; color:var(--ink-2); margin:6px 0 0;">Full pipeline examples running against the current API, shipping inside the package.</p>
+        <p style="font-size:14px; color:var(--ink-2); margin:6px 0 0;">Full pipeline examples running against the current code, shipping inside the package.</p>
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">View examples <span class="arrow">→</span></a>
-        <a class="btn" href="../api.html">Current API</a>
+        <a class="btn" href="../documentation.html">Code documentation</a>
       </div>
     </div>
 

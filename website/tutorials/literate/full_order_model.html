@@ -54,7 +54,7 @@ commands in the script header; expected numbers are asserted by the example's
 <li><p><code>NDOrderModel</code>: assemble a forced Duffing oscillator and integrate it</p>
 </li>
 </ol>
-<p>Everything is evaluated through the real API — the curves come from <code>evaluate_term&#33;</code> and <code>evaluate</code>, never from a formula written out a second time — and the two coordinate changes are checked numerically rather than asserted.</p>
+<p>Everything is evaluated through the real library code — the curves come from <code>evaluate_term&#33;</code> and <code>evaluate</code>, never from a formula written out a second time — and the two coordinate changes are checked numerically rather than asserted.</p>
 <p>Each section writes an interactive figure to <code>results/figures/</code>. Nothing is solved here: the script runs in a couple of seconds and needs no FEM backend.</p>
 <p>Run it from the repository root:</p>
 <pre><code>julia --project -e &#39;include&#40;&quot;examples/internals/full_order_model/main.jl&quot;&#41;&#39;</code></pre>
@@ -123,7 +123,7 @@ hardening&#33;&#40;res, x1, x2, x3&#41; &#61; &#40;res .&#43;&#61; -K3 .* x1 .* 
 softening&#33;&#40;res, x1, x2, x3&#41; &#61; &#40;res .&#43;&#61; &#43;K3 .* x1 .* x2 .* x3&#41;
 drag&#33;&#40;res, v1, v2&#41; &#61; &#40;res .&#43;&#61; -C_DRAG .* v1 .* v2&#41;</code></pre>
 <p>A term that mixes the state with the external state: F &#61; k·x·&#40;r₁&#43;r₂&#41;. <code>f&#33;</code> receives the whole external vector in its last slot, so <code>sum&#40;r&#41;</code> is r₁ &#43; r₂ &#61; 2cos&#40;Ωt&#41;.</p>
-<pre><code class="language-julia">const K_MIX &#61; 1.5
+<pre><code class="language-julia">const K_MIX &#61; -1.5
 mixed&#33;&#40;res, x, r&#41; &#61; &#40;res .&#43;&#61; K_MIX .* x .* real&#40;sum&#40;r&#41;&#41;&#41;
 
 term_quad &#61; MultilinearMap&#40;quadratic&#33;; multiindex &#61; &#40;2, 0&#41;,
@@ -157,36 +157,41 @@ vs &#61; collect&#40;range&#40;-1.5, 1.5, length &#61; 241&#41;&#41;</code></pre
 <pre><code class="language-julia">restoring&#40;term, x&#41; &#61; K_LIN * x - force&#40;term, x, 0.0&#41;
 
 panel_force &#61; ChartPanel&#40;&quot;restoring force&quot;,
-	&#91;Curve&#40;&quot;linear  K x&quot;, xs, K_LIN .* xs; colour &#61; 4, dashed &#61; true&#41;,
-		Curve&#40;&quot;hardening  K x &#43; k₃x³&quot;, xs, restoring.&#40;Ref&#40;term_hard&#41;, xs&#41;; colour &#61; 1&#41;,
-		Curve&#40;&quot;softening  K x − k₃x³&quot;, xs, restoring.&#40;Ref&#40;term_soft&#41;, xs&#41;; colour &#61; 3&#41;,
-		Curve&#40;&quot;quadratic  K x &#43; k₂x²&quot;, xs, restoring.&#40;Ref&#40;term_quad&#41;, xs&#41;; colour &#61; 2&#41;&#93;;
-	xlabel &#61; &quot;displacement x&quot;, ylabel &#61; &quot;restoring force&quot;,
-	note &#61; &quot;multiindex &#40;3, 0&#41; is f&#33;&#40;res, x, x, x&#41;; &#40;2, 0&#41; is f&#33;&#40;res, x, x&#41;. &quot; *
-		   &quot;Hardening stiffens with amplitude, softening goes the other way.&quot;&#41;</code></pre>
+	&#91;Curve&#40;&quot;linear  K u&quot;, xs, K_LIN .* xs; colour &#61; 4, dashed &#61; true&#41;,
+		Curve&#40;&quot;hardening  K u &#43; k₃ u³&quot;, xs, restoring.&#40;Ref&#40;term_hard&#41;, xs&#41;; colour &#61; 1&#41;,
+		Curve&#40;&quot;softening  K u − k₃ u³&quot;, xs, restoring.&#40;Ref&#40;term_soft&#41;, xs&#41;; colour &#61; 3&#41;,
+		Curve&#40;&quot;quadratic  K u &#43; k₂ u²&quot;, xs, restoring.&#40;Ref&#40;term_quad&#41;, xs&#41;; colour &#61; 2&#41;&#93;;
+	xlabel &#61; &quot;displacement u&quot;, ylabel &#61; &quot;restoring force&quot;,
+	note &#61; &quot;A multiindex &#40;3, 0&#41; is for cubic f&#33;&#40;res, u, u, u&#41;; and &#40;2, 0&#41; is for quadratic f&#33;&#40;res, u, u&#41;. &quot; *
+		   &quot;Hardening stiffens with amplitude, softening goes the other way. K &#61; 4, k₂ &#61; 3, k₃ &#61; 6.&quot;&#41;</code></pre>
 <p>A <em>multilinear</em> quadratic drag is v·v, which is even — it decelerates for v &gt; 0 and accelerates for v &lt; 0. Physical drag is |v|·v, which is odd but not multilinear, so it cannot be a <code>MultilinearMap</code> at all: it would have to be approximated by odd terms.</p>
 <pre><code class="language-julia">panel_drag &#61; ChartPanel&#40;&quot;quadratic drag&quot;,
 	&#91;
-		Curve&#40;&quot;multilinear  −c v·v  &#40;0, 2&#41;&quot;, vs, &#91;force&#40;term_drag, 0.0, v&#41; for v in vs&#93;;
+		Curve&#40;&quot;smooth  −0.8 u̇²&quot;, vs, &#91;force&#40;term_drag, 0.0, v&#41; for v in vs&#93;;
 			colour &#61; 1&#41;,
-		Curve&#40;
-			&quot;physical  −c |v|v&quot;, vs, -C_DRAG .* abs.&#40;vs&#41; .* vs; colour &#61; 3, dashed &#61; true&#41;&#93;;
-	xlabel &#61; &quot;velocity ẋ&quot;, ylabel &#61; &quot;force F&quot;,
-	note &#61; &quot;A multilinear map is linear in each slot separately, so v·v is even. &quot; *
-		   &quot;Physical |v|v is not multilinear and needs an odd expansion instead.&quot;&#41;</code></pre>
+		Curve&#40;&quot;not smooth  −0.8 |u̇| u̇&quot;, vs, -C_DRAG .* abs.&#40;vs&#41; .* vs; colour &#61; 3, dashed &#61; true&#41;&#93;;
+	xlabel &#61; &quot;velocity u̇&quot;, ylabel &#61; &quot;force F&quot;,
+	note &#61; &quot;The multilinear map F&#40;u̇₁,u̇₂&#41; &#61; u̇₁ u̇₂ is linear in each argument separately; and describes a quadratic function on repeated inputs: F&#40;u̇,u̇&#41; &#61; u̇². &quot; *
+		   &quot;F&#40;u̇,u̇&#41; &#61; |u̇| u̇ is not twice differentiable @ u̇ &#61; 0.&quot;&#41;</code></pre>
 <p>F&#40;x, t&#41; &#61; k·x·&#40;r₁&#43;r₂&#41; with r &#61; &#40;e^&#123;iΩt&#125;, e^&#123;−iΩt&#125;&#41;, so r₁ &#43; r₂ &#61; 2cos&#40;Ωt&#41;. It is a surface over the &#40;x, t&#41; plane, drawn as a wireframe: straight lines along x — the term is linear in the state — and cosines along t.</p>
 <pre><code class="language-julia">force_ext&#40;term, x, t&#41; &#61; &#40;res &#61; zeros&#40;1&#41;;
-evaluate_term&#33;&#40;res, term, &#40;&#91;x&#93;, &#91;0.0&#93;&#41;, SVector&#40;cis&#40;Ω * t&#41;, cis&#40;-Ω * t&#41;&#41;&#41;;
-res&#91;1&#93;&#41;
+	evaluate_term&#33;&#40;res, term, &#40;&#91;x&#93;, &#91;0.0&#93;&#41;, SVector&#40;cis&#40;Ω * t&#41;, cis&#40;-Ω * t&#41;&#41;&#41;;
+	res&#91;1&#93;&#41;
 
 x_mix &#61; collect&#40;range&#40;-1.0, 1.0, length &#61; 33&#41;&#41;
 t_mix &#61; collect&#40;range&#40;0, 2 * 2π / Ω, length &#61; 65&#41;&#41;       # two forcing periods
-surf_mixed &#61; Surface3D&#40;x_mix, t_mix, &#40;x, t&#41; -&gt; force_ext&#40;term_mixed, x, t&#41;&#41;
-panel_mixed &#61; ChartPanel&#40;&quot;mixed term  F &#61; k·x·&#40;r₁&#43;r₂&#41;&quot;, surf_mixed;
-	axes &#61; &#40;&quot;x&quot;, &quot;t&quot;, &quot;F&quot;&#41;,
-	note &#61; &quot;multiindex &#40;1, 0&#41; with one external factor: f&#33;&#40;res, x, r&#41;, and &quot; *
-		   &quot;r₁ &#43; r₂ &#61; 2cos&#40;Ωt&#41;. Ruled straight along x because the term is linear in &quot; *
-		   &quot;the state, and a cosine along t because the driver is. Drag to orbit.&quot;&#41;
+surf_mixed &#61; Surface3D&#40;x_mix, t_mix, &#40;x, t&#41; -&gt; force_ext&#40;term_mixed, x, t&#41;&#41;</code></pre>
+<p>The swept line is the law at one instant, F &#61; 2k·cos&#40;Ωt&#41;·u, which is a straight line through the origin pivoting with the phase. It needs no grid: two endpoints and the closed form are exact. <code>offset</code> lifts it by ~1&#37; of the force range, just enough to sit on the surface rather than inside it.</p>
+<pre><code class="language-julia">line_mixed &#61; SweptLine&#40;&#91;first&#40;x_mix&#41;, last&#40;x_mix&#41;&#93;,
+	&#91;2K_MIX * first&#40;x_mix&#41;, 2K_MIX * last&#40;x_mix&#41;&#93;;
+	omega &#61; Ω, offset &#61; 0.01 * &#40;maximum&#40;surf_mixed.z&#41; - minimum&#40;surf_mixed.z&#41;&#41;&#41;
+
+panel_mixed &#61; ChartPanel&#40;&quot;time-varying stiffness&quot;, surf_mixed;
+	line &#61; line_mixed,
+	axes &#61; &#40;&quot;displacement u&quot;, &quot;time t&quot;, &quot;force F&quot;&#41;,
+	note &#61; &quot;Periodically time-varying stiffness: F &#61; k · u · &#40;r₁ &#43; r₂&#41;, with &quot; *
+		   &quot;r₁ &#43; r₂ &#61; 2 cos&#40;Ωt&#41;. The swept line is the force–displacement law at one &quot; *
+		   &quot;instant. Drag to orbit.&quot;&#41;
 
 write_charts&#40;joinpath&#40;FOM_FIGDIR, &quot;fig1_nonlinear_terms.html&quot;&#41;,
 	&#91;panel_force, panel_drag, panel_mixed&#93;;
@@ -273,10 +278,8 @@ write_pairs&#40;joinpath&#40;FOM_FIGDIR, &quot;fig2_external_systems.html&quot;&
 			&#91;Curve&#40;&quot;r₁&quot;, real.&#40;component&#40;corb, 1&#41;&#41;&#91;ic&#93;,
 				imag.&#40;component&#40;corb, 1&#41;&#41;&#91;ic&#93;; colour &#61; 1&#41;&#93;;
 			tylabel &#61; &quot;r₁&quot;, pxlabel &#61; &quot;Re r₁&quot;, pylabel &#61; &quot;Im r₁&quot;,
-			note &#61; &quot;ṙ₁ &#61; iΩ₁r₁ &#43; i c r₁r₃ with ṙ₃ &#61; iΩ₂r₃: the slow pair modulates the &quot; *
-				   &quot;fast one and never the reverse, which is the triangular structure &quot; *
-				   &quot;itself. The envelope |r₁| is sustained, not decaying, so the orbit &quot; *
-				   &quot;keeps sweeping an annulus instead of settling on one circle.&quot;&#41;&#93;;
+			note &#61; &quot;ṙ₁ &#61; iΩ₁r₁ &#43; i c r₁r₃ and ṙ₃ &#61; iΩ₂r₃ with r₂ &#61; r̄₁ and r₄ &#61; r̄₃: &quot; *
+				   &quot;the slow pair &#40;r₃, r₄&#41; modulates the fast one &#40;r₁, r₂&#41;.&quot;&#41;&#93;;
 	title &#61; &quot;External systems&quot;,
 	caption &#61; &quot;Time plot left, phase portrait right. Orbits integrated with RK4 through &quot; *
 			  &quot;&#96;evaluate&#40;sys.first_order_dynamics, r&#41;&#96;.&quot;&#41;</code></pre>
@@ -485,13 +488,13 @@ xD &#61; real.&#40;component&#40;dorb, 1&#41;&#41;
 vD &#61; real.&#40;component&#40;dorb, 2&#41;&#41;</code></pre>
 <p>The steady state is the final forcing period, drawn as 1.01 of one so the curve laps itself slightly and the loop visibly closes rather than leaving a hairline gap. The transient is everything before it, and the two share their boundary point so the time trace reads as one continuous curve.</p>
 <pre><code class="language-julia">n_steady &#61; round&#40;Int, 1.01 * STEPS_PER_PERIOD&#41;
-steady &#61; &#40;length&#40;xD&#41; - n_steady&#41;:length&#40;xD&#41;
+steady &#61; &#40;length&#40;xD&#41;-n_steady&#41;:length&#40;xD&#41;
 transient &#61; 1:steady&#91;1&#93;
 itr &#61; transient&#91;thin&#40;length&#40;transient&#41;, 1600&#41;&#93;
 ist &#61; steady</code></pre>
 <p>A closed loop is the claim the phase portrait makes, so measure it: how far is the state from where it was exactly one period earlier, relative to the size of the loop?</p>
-<pre><code class="language-julia">closure &#61; hypot&#40;xD&#91;end&#93; - xD&#91;end - STEPS_PER_PERIOD&#93;,
-	vD&#91;end&#93; - vD&#91;end - STEPS_PER_PERIOD&#93;&#41;
+<pre><code class="language-julia">closure &#61; hypot&#40;xD&#91;end&#93; - xD&#91;end-STEPS_PER_PERIOD&#93;,
+	vD&#91;end&#93; - vD&#91;end-STEPS_PER_PERIOD&#93;&#41;
 loop &#61; hypot&#40;maximum&#40;xD&#91;steady&#93;&#41; - minimum&#40;xD&#91;steady&#93;&#41;,
 	maximum&#40;vD&#91;steady&#93;&#41; - minimum&#40;vD&#91;steady&#93;&#41;&#41;
 println&#40;&quot;\nintegrated &quot;, round&#40;hD * nD, digits &#61; 1&#41;, &quot; s &#61; &quot;, nD ÷ STEPS_PER_PERIOD,

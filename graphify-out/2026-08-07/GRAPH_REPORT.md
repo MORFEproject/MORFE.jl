@@ -1,16 +1,16 @@
-# Graph Report - MORFE_jl  (2026-08-07)
+# Graph Report - MORFE_jl  (2026-08-03)
 
 ## Corpus Check
-- 157 files · ~468,826 words
+- 164 files · ~510,836 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1394 nodes · 1509 edges · 157 communities (134 shown, 23 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.5)
+- 1407 nodes · 1502 edges · 163 communities (139 shown, 24 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c2209cea`
+- Built from commit: `295488e9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -74,16 +74,17 @@
 - [[_COMMUNITY_test_forces.jl|test_forces.jl]]
 - [[_COMMUNITY_full_order_model — Building a full-order model|full_order_model — Building a full-order model]]
 - [[_COMMUNITY_main.jl|main.jl]]
-- [[_COMMUNITY_generate_documentation.jl|generate_documentation.jl]]
 - [[_COMMUNITY_benchmark_speedup.jl|benchmark_speedup.jl]]
 - [[_COMMUNITY_Python_Scipy.py|Python_Scipy.py]]
 - [[_COMMUNITY_Julia_Arpack.jl|Julia_Arpack.jl]]
 - [[_COMMUNITY_Analytic Performance Analysis — MORFE.jl Cohomological Solver|Analytic Performance Analysis — MORFE.jl Cohomological Solver]]
 - [[_COMMUNITY_Multi-threaded cohomological solve — analysis|Multi-threaded cohomological solve — analysis]]
+- [[_COMMUNITY_generate_api.jl|generate_api.jl]]
 - [[_COMMUNITY_demo_parametrisation_method.jl|demo_parametrisation_method.jl]]
 - [[_COMMUNITY_duffing_demo.jl|duffing_demo.jl]]
 - [[_COMMUNITY_MORFE.jl Profiling Analysis — Detailed|MORFE.jl Profiling Analysis — Detailed]]
 - [[_COMMUNITY_profile_after_opt.jl|profile_after_opt.jl]]
+- [[_COMMUNITY_documenter.js|documenter.js]]
 - [[_COMMUNITY_Julia_Krylov.jl|Julia_Krylov.jl]]
 - [[_COMMUNITY_benchmark_ferrite.jl|benchmark_ferrite.jl]]
 - [[_COMMUNITY_benchmark_suite.jl|benchmark_suite.jl]]
@@ -145,6 +146,7 @@
 - [[_COMMUNITY_mesh_import — FEM mesh format conversion utilities|mesh_import — FEM mesh format conversion utilities]]
 - [[_COMMUNITY_test_morfe_symbolics.jl|test_morfe_symbolics.jl]]
 - [[_COMMUNITY_test_resonances.jl|test_resonances.jl]]
+- [[_COMMUNITY_mermaid.js|mermaid.js]]
 - [[_COMMUNITY_generate_beam_meshes.jl|generate_beam_meshes.jl]]
 - [[_COMMUNITY_validate.jl|validate.jl]]
 
@@ -173,7 +175,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (157 total, 23 thin omitted)
+## Communities (163 total, 24 thin omitted)
 
 ### Community 0 - "Eigensolvers"
 Cohesion: 0.17
@@ -348,7 +350,7 @@ Cohesion: 0.50
 Nodes (3): How to run, multiindex_sets — Constructing MultiindexSets, Output
 
 ### Community 50 - "main.jl"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (16): duffing_rhs(), external_rhs(), force(), LinearAlgebra, MORFE, MORFE.Multiindices, MORFE.MultilinearMaps, MORFE.Polynomials (+8 more)
 
 ### Community 52 - "Sparse Solve"
@@ -364,8 +366,8 @@ Cohesion: 0.05
 Nodes (38): §1 — Thread-parallel solve by degree group *(Critical)*, 1a. `degree_boundaries` in `ConjugateSymmetryData`, 1b. Per-thread compute buffers, 1c. Thread-parallel solve loop, 1d. Integration strategy, §2 — `solve_jobs` flat work list *(Medium)*, §3 — `detect_conjugate_permutation` utility function *(Medium — UX)*, §4 — FEM O4: combined element loop across all FEM terms *(Critical for FEM)* ✅ (+30 more)
 
 ### Community 65 - "viz.jl"
-Cohesion: 0.16
-Nodes (31): _arr(), _base_css(), _base_js(), ChartPanel, _charts_html(), Curve, _hex(), Bool (+23 more)
+Cohesion: 0.23
+Nodes (20): _arr(), _base_css(), _base_js(), ChartPanel, _charts_html(), Curve, Bool, Int (+12 more)
 
 ### Community 66 - "AbstractEigensolver"
 Cohesion: 0.20
@@ -387,10 +389,6 @@ Nodes (5): full_order_model — Building a full-order model, How to run, Output,
 Cohesion: 0.09
 Nodes (23): cubic_nonlinearity!(), E_nl(), g_quad(), h_cube(), Arpack, Float64, Gmsh, Gridap (+15 more)
 
-### Community 71 - "generate_documentation.jl"
-Cohesion: 0.14
-Nodes (21): build_ref_index(), Entry, extract_all(), get_doc_html(), get_module_doc_html(), get_signatures(), get_source_url(), has_own_doc() (+13 more)
-
 ### Community 73 - "benchmark_speedup.jl"
 Cohesion: 0.10
 Nodes (17): Arpack, BenchmarkTools, KrylovKit, LinearAlgebra, LinearMaps, MORFE, Morfe_2_0, MORFE.CohomologicalEquations (+9 more)
@@ -411,6 +409,10 @@ Nodes (21): Additional cost for the resonant case (nR > 0), Analytic Performance
 Cohesion: 0.11
 Nodes (18): 1. What the change does, 2.1 Monomial distribution by degree (NVAR = 4, degree ≤ 9, conjugate symmetry active), 2.2 Effective serial solves under `Threads.@threads`, 2.3 NVAR = 2 (Ferrite beam demo, single conjugate pair), 2. Parallelism structure, 3. Profiling context (from existing data), 4.1 Ideal parallel speedup (Amdahl's Law), 4.2 Conservative estimates (+10 more)
 
+### Community 82 - "generate_api.jl"
+Cohesion: 0.14
+Nodes (21): build_ref_index(), Entry, extract_all(), get_doc_html(), get_module_doc_html(), get_signatures(), get_source_url(), has_own_doc() (+13 more)
+
 ### Community 83 - "demo_parametrisation_method.jl"
 Cohesion: 0.11
 Nodes (17): Arpack, LinearAlgebra, MORFE.CohomologicalEquations, MORFE.Eigenproblems, MORFE.Eigensolvers, MORFE.ExternalSystems, MORFE.FullOrderModel, MORFE.InvarianceError (+9 more)
@@ -426,6 +428,10 @@ Nodes (16): 1. Overall cost distribution, 2. Call-tree structure, 3.1  LU factor
 ### Community 86 - "profile_after_opt.jl"
 Cohesion: 0.12
 Nodes (14): Arpack, Float64, Int, KrylovKit, LinearAlgebra, LinearMaps, MORFE, Morfe_2_0 (+6 more)
+
+### Community 88 - "documenter.js"
+Cohesion: 0.17
+Nodes (10): accordion(), addCopyButtonCallbacks(), checkURLForSearch(), collapseAll(), copyToClipboard(), expandAll(), noccordion(), openModal() (+2 more)
 
 ### Community 96 - "Julia_Krylov.jl"
 Cohesion: 0.16
@@ -614,17 +620,17 @@ Nodes (3): LinearAlgebra, MORFE.InvarianceEquation, StaticArrays
 ## Knowledge Gaps
 - **631 isolated node(s):** `Pkg`, `MORFE`, `Ferrite`, `FerriteGmsh`, `SparseArrays` (+626 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AbstractEigensolver` connect `AbstractEigensolver` to `Eigensolvers`, `main.jl`, `profile_after_opt.jl`, `benchmark_o4.jl`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `Mechanical_Problem_Solver` connect `main.jl` to `AbstractEigensolver`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **Why does `Eigenproblems` connect `Eigensolvers` to `AbstractEigensolver`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
+- **Why does `MechSolver` connect `benchmark_o4.jl` to `AbstractEigensolver`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `Pkg`, `MORFE`, `Ferrite` to the rest of the system?**
   _644 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Cohomological Equations` be split into smaller, more focused modules?**

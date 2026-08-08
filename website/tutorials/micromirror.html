@@ -64,9 +64,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="ver"><span>Tutorials</span></div>
     <h4>Getting started</h4>
     <ul>
-      <li><a href="../api.html#install">Installation</a></li>
-      <li><a href="../api.html#current-api">Current API</a></li>
-      <li><a href="../api.html#concepts">Concepts &amp; vocabulary</a></li>
+      <li><a href="../index.html#install">Installation</a></li>
+      <li><a href="../documentation.html">Code documentation</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
     </ul>
 
     <h4>Demos</h4>
@@ -91,11 +91,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Manual</h4>
     <ul>
-      <li><a href="../api.html#fe-input">FE input format</a></li>
-      <li><a href="../api.html#master">Master subspace</a></li>
-      <li><a href="../api.html#order">Choosing order</a></li>
-      <li><a href="../api.html#forcing">Forcing &amp; resonances</a></li>
-      <li><a href="../api.html#continuation">Continuation</a></li>
+      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
+      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
+      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
+      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
     </ul>
 
   </aside>
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
   <main class="docs-main">
 
     <div class="crumbs">
-      <a href="../api.html">MORFE.jl</a>
+      <a href="../documentation.html">MORFE.jl</a>
       <span class="sep">/</span>
       <a href="index.html">Tutorials</a>
       <span class="sep">/</span>
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <strong>runs today</strong> — it is
       <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/08_mems_micromirror" target="_blank" rel="noopener"><code>examples/08_mems_micromirror</code></a>
       in MORFEFerrite.jl (<code>mesh.jl</code> → <code>mechanical_model</code> → <code>parametrise</code>).
-      Only the closing <strong>FRF continuation</strong> section uses a planned API and is marked as such.</div>
+      Only the closing <strong>FRF continuation</strong> section uses a planned interface and is marked as such.</div>
     </div>
 
     <h2 id="goal">What you will build</h2>
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <span class="var">forcing</span> <span class="op">=</span> <span class="fn">Harmonic</span>(<span class="var">ω</span><span class="op">=</span><span class="num">2π</span><span class="op">*</span><span class="num">24e3</span>, <span class="var">F</span><span class="op">=</span><span class="num">1.4e-4</span>, <span class="var">mode</span><span class="op">=</span><span class="num">1</span>)
 
-<span class="var">rom</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">M</span>, <span class="var">C</span>, <span class="var">K</span>, <span class="var">G</span>, <span class="var">H</span>;  <span class="cm"># target API</span>
+<span class="var">rom</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">M</span>, <span class="var">C</span>, <span class="var">K</span>, <span class="var">G</span>, <span class="var">H</span>;  <span class="cm"># planned interface</span>
                   <span class="var">master</span><span class="op">=</span><span class="var">master</span>,
                   <span class="var">order</span><span class="op">=</span><span class="num">7</span>,
                   <span class="var">forcing</span><span class="op">=</span><span class="var">forcing</span>,
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <ul>
       <li>Cantilever beam (coming soon) — if you want a single-mode example to internalise the math.</li>
       <li>Cylindrical shell (coming soon) — for the 1:1:1 internal-resonance case with companion modes.</li>
-      <li><a class="inline" href="../api.html#current-api">Current API reference</a> — the working entry points available today.</li>
+      <li><a class="inline" href="../documentation.html">Code documentation</a> — the working entry points available today.</li>
     </ul>
 
     <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
@@ -483,6 +483,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <h5 style="margin-top:32px;">Links</h5>
     <ul>
       <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">Demo scripts ↗</a></li>
+      <li><a href="../documentation.html#Eigenproblems">Eigenproblems docs</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">ParametrisationMethod docs</a></li>
+      <li><a href="../documentation.html#BifurcationKitInterface">BifurcationKitInterface docs</a></li>
     </ul>
   </aside>
 

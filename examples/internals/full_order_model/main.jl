@@ -17,7 +17,7 @@ The arc is: nonlinear terms → the driver → the assembled model → its respo
  3. Lorenz: why it is rejected, and the coordinate change that repairs it
  4. `NDOrderModel`: assemble a forced Duffing oscillator and integrate it
 
-Everything is evaluated through the real API — the curves come from `evaluate_term!` and
+Everything is evaluated through the real library code — the curves come from `evaluate_term!` and
 `evaluate`, never from a formula written out a second time — and the two coordinate
 changes are checked numerically rather than asserted.
 
@@ -78,6 +78,22 @@ end
 
 component(ys, k) = [y[k] for y in ys]
 
+# An external system's polynomial written from its non-zero terms alone: the pair
+# `(i, exponent) => c` says the monomial r^exponent contributes c to ṙᵢ.  Everything else
+# is zero, which spelling the coefficient vectors out in full does not make clearer — most
+# of a driver's coefficients are zero, and only the handful that are not carry the physics.
+function external_polynomial(nvar, degree, terms::Pair...)
+	ms = all_multiindices_up_to(nvar, degree)
+	deleteat!(ms.exponents, 1)              # an ExternalSystem carries no constant term
+	coeffs = [zeros(ComplexF64, nvar) for _ in ms.exponents]
+	for ((i, exponent), c) in terms
+		k = findfirst(e -> Tuple(e) == exponent, ms.exponents)
+		k === nothing && throw(ArgumentError("exponent $exponent is not in the set"))
+		coeffs[k][i] += c
+	end
+	return DensePolynomial([SVector{nvar, ComplexF64}(c) for c in coeffs], ms)
+end
+
 # Orbits are integrated finely for accuracy but drawn coarsely: a screen cannot resolve
 # 24 000 points, and shipping them would make the figure a megabyte instead of a page.
 thin(len::Integer, n::Integer = 1500) = 1:cld(len, n):len
@@ -105,9 +121,12 @@ hardening!(res, x1, x2, x3) = (res .+= -K3 .* x1 .* x2 .* x3)
 softening!(res, x1, x2, x3) = (res .+= +K3 .* x1 .* x2 .* x3)
 drag!(res, v1, v2) = (res .+= -C_DRAG .* v1 .* v2)
 # A term that mixes the state with the external state: F = k·x·(r₁+r₂). `f!` receives the
-# whole external vector in its last slot, so `sum(r)` is r₁ + r₂ = 2cos(Ωt).
-const K_MIX = 1.5
-mixed!(res, x, r) = (res .+= K_MIX .* x .* real(sum(r)))
+# whole external vector in its last slot, and r₂ = r̄₁, so r₁ + r₂ = 2cos(Ωt) is already
+# real along the physical orbit.  Taking `real` here instead would break multilinearity:
+# Re is not complex-linear — it is not even complex-differentiable — and the whole method
+# rests on each slot being linear.
+const K_MIX = -1.5
+mixed!(res, x, r) = (res .+= K_MIX .* x .* (r[1] + r[2]))
 
 term_quad = MultilinearMap(quadratic!; multiindex = (2, 0),
 	multiplicity_external = 0, fully_asymmetric = false)
@@ -147,42 +166,51 @@ vs = collect(range(-1.5, 1.5, length = 241))
 restoring(term, x) = K_LIN * x - force(term, x, 0.0)
 
 panel_force = ChartPanel("restoring force",
-	[Curve("linear  K x", xs, K_LIN .* xs; colour = 4, dashed = true),
-		Curve("hardening  K x + k₃x³", xs, restoring.(Ref(term_hard), xs); colour = 1),
-		Curve("softening  K x − k₃x³", xs, restoring.(Ref(term_soft), xs); colour = 3),
-		Curve("quadratic  K x + k₂x²", xs, restoring.(Ref(term_quad), xs); colour = 2)];
-	xlabel = "displacement x", ylabel = "restoring force",
-	note = "multiindex (3, 0) is f!(res, x, x, x); (2, 0) is f!(res, x, x). " *
-		   "Hardening stiffens with amplitude, softening goes the other way.")
+	[Curve("linear  K u", xs, K_LIN .* xs; colour = 4, dashed = true),
+		Curve("hardening  K u + k₃ u³", xs, restoring.(Ref(term_hard), xs); colour = 1),
+		Curve("softening  K u − k₃ u³", xs, restoring.(Ref(term_soft), xs); colour = 3),
+		Curve("quadratic  K u + k₂ u²", xs, restoring.(Ref(term_quad), xs); colour = 2)];
+	xlabel = "displacement u", ylabel = "restoring force",
+	note = "A multiindex (3, 0) is for cubic f!(res, u, u, u); and (2, 0) is for quadratic f!(res, u, u). " *
+		   "Hardening stiffens with amplitude, softening goes the other way. K = 4, k₂ = 3, k₃ = 6.")
 
 # A *multilinear* quadratic drag is v·v, which is even — it decelerates for v > 0 and
 # accelerates for v < 0. Physical drag is |v|·v, which is odd but not multilinear, so it
 # cannot be a `MultilinearMap` at all: it would have to be approximated by odd terms.
 panel_drag = ChartPanel("quadratic drag",
 	[
-		Curve("multilinear  −c v·v  (0, 2)", vs, [force(term_drag, 0.0, v) for v in vs];
+		Curve("smooth  −0.8 u̇²", vs, [force(term_drag, 0.0, v) for v in vs];
 			colour = 1),
-		Curve(
-			"physical  −c |v|v", vs, -C_DRAG .* abs.(vs) .* vs; colour = 3, dashed = true)];
-	xlabel = "velocity ẋ", ylabel = "force F",
-	note = "A multilinear map is linear in each slot separately, so v·v is even. " *
-		   "Physical |v|v is not multilinear and needs an odd expansion instead.")
+		Curve("not smooth  −0.8 |u̇| u̇", vs, -C_DRAG .* abs.(vs) .* vs; colour = 3, dashed = true)];
+	xlabel = "velocity u̇", ylabel = "force F",
+	note = "The multilinear map F(u̇₁,u̇₂) = u̇₁ u̇₂ is linear in each argument separately; and describes a quadratic function on repeated inputs: F(u̇,u̇) = u̇². " *
+		   "F(u̇,u̇) = |u̇| u̇ is not twice differentiable @ u̇ = 0.")
 
 # F(x, t) = k·x·(r₁+r₂) with r = (e^{iΩt}, e^{−iΩt}), so r₁ + r₂ = 2cos(Ωt). It is a
 # surface over the (x, t) plane, drawn as a wireframe: straight lines along x — the term is
 # linear in the state — and cosines along t.
 force_ext(term, x, t) = (res = zeros(1);
-evaluate_term!(res, term, ([x], [0.0]), SVector(cis(Ω * t), cis(-Ω * t)));
-res[1])
+	evaluate_term!(res, term, ([x], [0.0]), SVector(cis(Ω * t), cis(-Ω * t)));
+	res[1])
 
 x_mix = collect(range(-1.0, 1.0, length = 33))
 t_mix = collect(range(0, 2 * 2π / Ω, length = 65))       # two forcing periods
 surf_mixed = Surface3D(x_mix, t_mix, (x, t) -> force_ext(term_mixed, x, t))
-panel_mixed = ChartPanel("mixed term  F = k·x·(r₁+r₂)", surf_mixed;
-	axes = ("x", "t", "F"),
-	note = "multiindex (1, 0) with one external factor: f!(res, x, r), and " *
-		   "r₁ + r₂ = 2cos(Ωt). Ruled straight along x because the term is linear in " *
-		   "the state, and a cosine along t because the driver is. Drag to orbit.")
+
+# The swept line is the law at one instant, F = 2k·cos(Ωt)·u, which is a straight line
+# through the origin pivoting with the phase. It needs no grid: two endpoints and the
+# closed form are exact. `offset` lifts it by ~1% of the force range, just enough to sit
+# on the surface rather than inside it.
+line_mixed = SweptLine([first(x_mix), last(x_mix)],
+	[2K_MIX * first(x_mix), 2K_MIX * last(x_mix)];
+	omega = Ω, offset = 0.01 * (maximum(surf_mixed.z) - minimum(surf_mixed.z)))
+
+panel_mixed = ChartPanel("time-varying stiffness", surf_mixed;
+	line = line_mixed,
+	axes = ("displacement u", "time t", "force F"),
+	note = "Periodically time-varying stiffness: F = k · u · (r₁ + r₂), with " *
+		   "r₁ + r₂ = 2 cos(Ωt). The swept line is the force–displacement law at one " *
+		   "instant. Drag to orbit.")
 
 write_charts(joinpath(FOM_FIGDIR, "fig1_nonlinear_terms.html"),
 	[panel_force, panel_drag, panel_mixed];
@@ -236,18 +264,13 @@ iq = thin(length(qorb), 2000)
 # r₁ = exp(iΩ₁t + (c/Ω₂)(e^{iΩ₂t} − 1)), so |r₁| swings between exp(−2c/Ω₂) and 1: the
 # modulation is *sustained*, not a transient that decays onto the linear system's circle.
 const Ω_SLOW, C_MOD = 0.4, 0.25
-ms_casc = all_multiindices_up_to(4, 2)
-deleteat!(ms_casc.exponents, 1)                     # drop the constant term
-const _CASC = Dict(
-	(1, 0, 0, 0) => SVector(im * Ω, 0, 0, 0),         # ṙ₁ ← iΩ₁ r₁
-	(0, 1, 0, 0) => SVector(0, -im * Ω, 0, 0),        # ṙ₂ ← −iΩ₁ r₂
-	(0, 0, 1, 0) => SVector(0, 0, im * Ω_SLOW, 0),    # ṙ₃ ← iΩ₂ r₃
-	(0, 0, 0, 1) => SVector(0, 0, 0, -im * Ω_SLOW),   # ṙ₄ ← −iΩ₂ r₄
-	(1, 0, 1, 0) => SVector(im * C_MOD, 0, 0, 0),     # ṙ₁ ← i c r₁r₃
-	(0, 1, 0, 1) => SVector(0, -im * C_MOD, 0, 0))    # ṙ₂ ← −i c r₂r₄
-casc_coeffs = [ComplexF64.(get(_CASC, Tuple(e), SVector(0, 0, 0, 0)))
-			   for e in ms_casc.exponents]
-cascade = ExternalSystem(DensePolynomial(casc_coeffs, ms_casc))
+cascade = ExternalSystem(external_polynomial(4, 2,
+	(1, (1, 0, 0, 0)) => im * Ω,          # ṙ₁ ← iΩ₁ r₁
+	(2, (0, 1, 0, 0)) => -im * Ω,         # ṙ₂ ← −iΩ₁ r₂
+	(3, (0, 0, 1, 0)) => im * Ω_SLOW,     # ṙ₃ ← iΩ₂ r₃
+	(4, (0, 0, 0, 1)) => -im * Ω_SLOW,    # ṙ₄ ← −iΩ₂ r₄
+	(1, (1, 0, 1, 0)) => im * C_MOD,      # ṙ₁ ← i c r₁r₃
+	(2, (0, 1, 0, 1)) => -im * C_MOD))    # ṙ₂ ← −i c r₂r₄
 println("cascade        eigenvalues = ", cascade.eigenvalues)
 println("               diagonal ⇒ upper triangular ⇒ accepted, nonlinear part free")
 hc = 0.01
@@ -283,10 +306,8 @@ write_pairs(joinpath(FOM_FIGDIR, "fig2_external_systems.html"),
 			[Curve("r₁", real.(component(corb, 1))[ic],
 				imag.(component(corb, 1))[ic]; colour = 1)];
 			tylabel = "r₁", pxlabel = "Re r₁", pylabel = "Im r₁",
-			note = "ṙ₁ = iΩ₁r₁ + i c r₁r₃ with ṙ₃ = iΩ₂r₃: the slow pair modulates the " *
-				   "fast one and never the reverse, which is the triangular structure " *
-				   "itself. The envelope |r₁| is sustained, not decaying, so the orbit " *
-				   "keeps sweeping an annulus instead of settling on one circle.")];
+			note = "ṙ₁ = iΩ₁r₁ + i c r₁r₃ and ṙ₃ = iΩ₂r₃ with r₂ = r̄₁ and r₄ = r̄₃: " *
+				   "the slow pair (r₃, r₄) modulates the fast one (r₁, r₂).")];
 	title = "External systems",
 	caption = "Time plot left, phase portrait right. Orbits integrated with RK4 through " *
 			  "`evaluate(sys.first_order_dynamics, r)`.")
@@ -499,7 +520,7 @@ const C_MAT = fill(0.08, 1, 1)
 const K_MAT = fill(K_LIN, 1, 1)
 const F_AMP = 2.5
 
-forcing!(res, r) = (res .+= F_AMP * real(sum(r)))
+forcing!(res, r) = (res .+= F_AMP * (r[1] + r[2]))
 term_forcing = MultilinearMap(forcing!; multiindex = (0, 0), multiplicity_external = 1)
 
 model = NDOrderModel((K_MAT, C_MAT, M_MAT), (term_hard, term_forcing), harmonic)
@@ -550,15 +571,15 @@ vD = real.(component(dorb, 2))
 # transient is everything before it, and the two share their boundary point so the time
 # trace reads as one continuous curve.
 n_steady = round(Int, 1.01 * STEPS_PER_PERIOD)
-steady = (length(xD) - n_steady):length(xD)
+steady = (length(xD)-n_steady):length(xD)
 transient = 1:steady[1]
 itr = transient[thin(length(transient), 1600)]
 ist = steady
 
 # A closed loop is the claim the phase portrait makes, so measure it: how far is the state
 # from where it was exactly one period earlier, relative to the size of the loop?
-closure = hypot(xD[end] - xD[end - STEPS_PER_PERIOD],
-	vD[end] - vD[end - STEPS_PER_PERIOD])
+closure = hypot(xD[end] - xD[end-STEPS_PER_PERIOD],
+	vD[end] - vD[end-STEPS_PER_PERIOD])
 loop = hypot(maximum(xD[steady]) - minimum(xD[steady]),
 	maximum(vD[steady]) - minimum(vD[steady]))
 println("\nintegrated ", round(hD * nD, digits = 1), " s = ", nD ÷ STEPS_PER_PERIOD,

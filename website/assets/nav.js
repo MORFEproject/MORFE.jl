@@ -6,7 +6,7 @@
     { href: 'features.html',     label: 'Features' },
     { href: 'publications.html', label: 'Publications' },
     { href: 'tutorials/',        label: 'Tutorials' },
-    { href: 'api.html',          label: 'API' },
+    { href: 'documentation.html',          label: 'Documentation' },
   ];
 
   // data-base prefixes every internal link (for pages in sub-folders, e.g. "../")
@@ -40,4 +40,15 @@
     '      GitHub\n' +
     '    </a>\n' +
     '  </div>';
+
+  // Publish the rendered height as --nav-h, which site.css turns into
+  // scroll-padding-top so in-page anchors clear the sticky nav.  Measured rather
+  // than assumed: the links wrap to a second row on a narrow viewport, and a
+  // stale constant would leave every anchor short by exactly one row.
+  function publishNavHeight() {
+    var h = nav.getBoundingClientRect().height;
+    if (h) document.documentElement.style.setProperty('--nav-h', h + 'px');
+  }
+  publishNavHeight();
+  addEventListener('resize', publishNavHeight);
 })();

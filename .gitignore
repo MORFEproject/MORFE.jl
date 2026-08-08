@@ -19,7 +19,7 @@ docs/Manifest.toml
 # Generated documentation
 docs/build/
 docs/site/
-website/api.html
+website/documentation.html
 website/*.zip
 
 # Temporary files from editors and OS
@@ -43,7 +43,6 @@ website/*.zip
 
 .claude
 CLAUDE.md
-/website_copy
 /publications
 /legacy_morfe
 # Generated example/benchmark outputs — ignore contents but allow results/reference/

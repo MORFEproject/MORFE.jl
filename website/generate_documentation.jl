@@ -1,7 +1,7 @@
-# website/generate_api.jl
-# Run from repo root:  julia --project website/generate_api.jl
+# website/generate_documentation.jl
+# Run from repo root:  julia --project website/generate_documentation.jl
 # Loads MORFE, extracts every documented symbol via Base.Docs,
-# writes website/api.html in the site's own style.
+# writes website/documentation.html in the site's own style.
 
 using Pkg: Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
@@ -307,8 +307,8 @@ badge(kind) = kind == "type" ? "badge t" : kind == "macro" ? "badge m" : kind ==
 
 function write_entry(io, modlabel, e::Entry)
 	anchor = "$(modlabel)-$(e.name)"
-	print(io, """<div class="api api-$(e.kind)" id="$(anchor)">\n""")
-	print(io, """  <div class="api-sig">\n""")
+	print(io, """<div class="doc doc-$(e.kind)" id="$(anchor)">\n""")
+	print(io, """  <div class="doc-sig">\n""")
 	print(io, """    <span class="$(badge(e.kind))">$(e.kind)</span>\n""")
 	if isempty(e.signatures)
 		name_html = isempty(e.source_url) ? html_escape(e.name) :
@@ -326,7 +326,7 @@ function write_entry(io, modlabel, e::Entry)
 		end
 	end
 	print(io, """  </div>\n""")
-	print(io, """  <div class="api-body">\n$(e.doc_html)\n  </div>\n""")
+	print(io, """  <div class="doc-body">\n$(e.doc_html)\n  </div>\n""")
 	print(io, """</div>\n""")
 end
 
@@ -344,7 +344,7 @@ function write_page(mods::Vector{ModData}, outpath::String)
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>API Reference — MORFE.jl</title>
+<title>Code Documentation — MORFE.jl</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -354,45 +354,45 @@ function write_page(mods::Vector{ModData}, outpath::String)
 <link rel="stylesheet" href="assets/site.css" />
 <link rel="stylesheet" href="assets/docs.css" />
 <style>
-/* API-page overrides */
+/* documentation-page overrides */
 html { scroll-padding-top: var(--nav-h, 60px); }
-.api-module-h { font-size: 24px; font-weight: 500; letter-spacing: -0.02em; margin: 50px 0 6px; padding: 20px 0 12px; border-top: 1px solid var(--hair-2); border-bottom: 1px solid var(--hair); position: sticky; top: var(--nav-h, 60px); background: var(--bg); z-index: 10; }
-.api-module-desc { font-size: 14.5px; color: var(--ink-2); margin: 0 0 16px; line-height: 1.6; }
-.api-module-desc p, .api-module-desc ul, .api-module-desc ol { max-width: none; font-size: 14.5px; }
-.api-module-desc h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin: 20px 0 6px; }
-.api-module-desc h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin: 16px 0 6px; }
-.api-module-desc h3 { font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 12px 0 4px; }
-.api-module-desc table { font-size: 13px; border-collapse: collapse; margin: 8px 0; }
-.api-module-desc td, .api-module-desc th { padding: 4px 12px 4px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
-.api-module-desc th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
-.api-module-desc pre { background: #07070b; border: 1px solid var(--hair); border-radius: 4px; padding: 10px 14px; font-size: 12px; overflow-x: auto; margin: 8px 0; }
-.api-module-desc hr { border: 0; border-top: 1px solid var(--hair); margin: 16px 0; }
-.api { margin: 24px 0; position: relative; }
-.api .api-sig { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.doc-module-h { font-size: 24px; font-weight: 500; letter-spacing: -0.02em; margin: 50px 0 6px; padding: 20px 0 12px; border-top: 1px solid var(--hair-2); border-bottom: 1px solid var(--hair); position: sticky; top: var(--nav-h, 60px); background: var(--bg); z-index: 10; }
+.doc-module-desc { font-size: 14.5px; color: var(--ink-2); margin: 0 0 16px; line-height: 1.6; }
+.doc-module-desc p, .doc-module-desc ul, .doc-module-desc ol { max-width: none; font-size: 14.5px; }
+.doc-module-desc h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin: 20px 0 6px; }
+.doc-module-desc h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin: 16px 0 6px; }
+.doc-module-desc h3 { font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 12px 0 4px; }
+.doc-module-desc table { font-size: 13px; border-collapse: collapse; margin: 8px 0; }
+.doc-module-desc td, .doc-module-desc th { padding: 4px 12px 4px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+.doc-module-desc th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.doc-module-desc pre { background: #07070b; border: 1px solid var(--hair); border-radius: 4px; padding: 10px 14px; font-size: 12px; overflow-x: auto; margin: 8px 0; }
+.doc-module-desc hr { border: 0; border-top: 1px solid var(--hair); margin: 16px 0; }
+.doc { margin: 24px 0; position: relative; }
+.doc .doc-sig { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
 /* Per-kind colour tints */
-.api.api-function { background: rgba(64,99,216,0.05); border-color: rgba(64,99,216,0.18); }
-.api.api-function .api-sig { background: rgba(64,99,216,0.12); }
-.api.api-type     { background: rgba(56,152,38,0.05);  border-color: rgba(56,152,38,0.18); }
-.api.api-type .api-sig     { background: rgba(56,152,38,0.12); }
-.api.api-macro    { background: rgba(149,88,178,0.05); border-color: rgba(149,88,178,0.18); }
-.api.api-macro .api-sig    { background: rgba(149,88,178,0.12); }
-.api.api-constant { background: rgba(203,60,51,0.05);  border-color: rgba(203,60,51,0.18); }
-.api.api-constant .api-sig { background: rgba(203,60,51,0.12); }
-.api .api-sig .badge { position: absolute; top: 14px; right: 18px; }
-.api .api-sig .badge.f { background: rgba(64,99,216,0.15); color: var(--jl-blue); border: 1px solid rgba(64,99,216,0.3); }
-.api .api-sig .badge.t { background: rgba(56,152,38,0.15); color: var(--jl-green); border: 1px solid rgba(56,152,38,0.3); }
-.api .api-sig .badge.m { background: rgba(149,88,178,0.15); color: var(--jl-purple); border: 1px solid rgba(149,88,178,0.3); }
-.api .api-sig .badge.c { background: rgba(203,60,51,0.15); color: var(--jl-red); border: 1px solid rgba(203,60,51,0.3); }
-.api .api-sig code { display: block; }
-.api .api-sig code a { color: inherit; text-decoration: none; border-bottom: 1px dashed rgba(255,255,255,0.25); transition: border-color 0.15s, color 0.15s; }
-.api .api-sig code a:hover { border-bottom-color: currentColor; }
-.api-body p:last-child { margin-bottom: 0; }
-.api-body pre { background: #07070b; border: 1px solid var(--hair); border-radius: 6px; padding: 14px 18px; overflow-x: auto; color: #d6d6df; font-size: 13px; margin: 10px 0; }
-.api-body pre code { font-size: inherit; background: transparent; border: 0; padding: 0; color: inherit; }
-.api-body p code, .api-body li code { font-family: var(--mono); font-size: 0.9em; background: #07070b; border: 1px solid var(--hair); padding: 1px 5px; border-radius: 3px; color: #d6d6df; }
-.api-body h1, .api-body h2, .api-body h3, .api-body h4 { font-size: 14px; font-weight: 600; margin: 14px 0 4px; color: var(--ink); border: 0; padding: 0; letter-spacing: 0; }
-.api-body ul, .api-body ol { color: var(--ink-2); font-size: 14px; line-height: 1.65; padding-left: 20px; margin: 6px 0 10px; }
-.api-body blockquote { border-left: 2px solid var(--jl-purple); padding: 6px 12px; margin: 10px 0; background: rgba(149,88,178,0.05); color: var(--ink-2); }
+.doc.doc-function { background: rgba(64,99,216,0.05); border-color: rgba(64,99,216,0.18); }
+.doc.doc-function .doc-sig { background: rgba(64,99,216,0.12); }
+.doc.doc-type     { background: rgba(56,152,38,0.05);  border-color: rgba(56,152,38,0.18); }
+.doc.doc-type .doc-sig     { background: rgba(56,152,38,0.12); }
+.doc.doc-macro    { background: rgba(149,88,178,0.05); border-color: rgba(149,88,178,0.18); }
+.doc.doc-macro .doc-sig    { background: rgba(149,88,178,0.12); }
+.doc.doc-constant { background: rgba(203,60,51,0.05);  border-color: rgba(203,60,51,0.18); }
+.doc.doc-constant .doc-sig { background: rgba(203,60,51,0.12); }
+.doc .doc-sig .badge { position: absolute; top: 14px; right: 18px; }
+.doc .doc-sig .badge.f { background: rgba(64,99,216,0.15); color: var(--jl-blue); border: 1px solid rgba(64,99,216,0.3); }
+.doc .doc-sig .badge.t { background: rgba(56,152,38,0.15); color: var(--jl-green); border: 1px solid rgba(56,152,38,0.3); }
+.doc .doc-sig .badge.m { background: rgba(149,88,178,0.15); color: var(--jl-purple); border: 1px solid rgba(149,88,178,0.3); }
+.doc .doc-sig .badge.c { background: rgba(203,60,51,0.15); color: var(--jl-red); border: 1px solid rgba(203,60,51,0.3); }
+.doc .doc-sig code { display: block; }
+.doc .doc-sig code a { color: inherit; text-decoration: none; border-bottom: 1px dashed rgba(255,255,255,0.25); transition: border-color 0.15s, color 0.15s; }
+.doc .doc-sig code a:hover { border-bottom-color: currentColor; }
+.doc-body p:last-child { margin-bottom: 0; }
+.doc-body pre { background: #07070b; border: 1px solid var(--hair); border-radius: 6px; padding: 14px 18px; overflow-x: auto; color: #d6d6df; font-size: 13px; margin: 10px 0; }
+.doc-body pre code { font-size: inherit; background: transparent; border: 0; padding: 0; color: inherit; }
+.doc-body p code, .doc-body li code { font-family: var(--mono); font-size: 0.9em; background: #07070b; border: 1px solid var(--hair); padding: 1px 5px; border-radius: 3px; color: #d6d6df; }
+.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4 { font-size: 14px; font-weight: 600; margin: 14px 0 4px; color: var(--ink); border: 0; padding: 0; letter-spacing: 0; }
+.doc-body ul, .doc-body ol { color: var(--ink-2); font-size: 14px; line-height: 1.65; padding-left: 20px; margin: 6px 0 10px; }
+.doc-body blockquote { border-left: 2px solid var(--jl-purple); padding: 6px 12px; margin: 10px 0; background: rgba(149,88,178,0.05); color: var(--ink-2); }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	// --nav-h stays the bare nav height because the sticky module heading's `top`
 	// is keyed to it. Scroll padding also has to clear that heading, so any
 	// scroll the JS handler below does not intercept still lands in view.
-	var mh = document.querySelector('.api-module-h');
+	var mh = document.querySelector('.doc-module-h');
 	document.documentElement.style.scrollPaddingTop =
 	  (navH + (mh ? mh.getBoundingClientRect().height : 0)) + 'px';
   }
@@ -431,10 +431,10 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="docs-shell">
 
 <aside class="docs-side">
-  <div class="ver"><span><a href="api.html">API Reference</a></span></div>
+  <div class="ver"><span><a href="documentation.html">Code Documentation</a></span></div>
   <div class="search">
 	<span class="ic mono">⌕</span>
-	<input type="search" id="api-search" placeholder="Filter…" autocomplete="off" />
+	<input type="search" id="doc-search" placeholder="Filter…" autocomplete="off" />
   </div>
 
   <h4>Modules</h4>
@@ -451,14 +451,14 @@ document.addEventListener('DOMContentLoaded', function () {
   <h4>Resources</h4>
   <ul>
 	<li><a href="index.html">Getting started</a></li>
-	<li><a href="tutorials.html">Demo scripts</a></li>
+	<li><a href="tutorials/index.html">Demo scripts</a></li>
 	<li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li>
   </ul>
 </aside>
 
 <main class="docs-main">
-  <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>API Reference</span></div>
-  <h1>API Reference</h1>
+  <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
+  <h1>Code Documentation</h1>
   <p class="lede">$(n_mods) modules · $(n_total) documented entries · generated $(generated)</p>
 
 """,
@@ -466,9 +466,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		# ── content sections ───────────────────────────────────────────────
 		for md in mods
-			print(io, "  <div id=\"$(md.label)\" class=\"api-module-h\">$(md.label)</div>\n")
+			print(io, "  <div id=\"$(md.label)\" class=\"doc-module-h\">$(md.label)</div>\n")
 			if !isempty(md.desc_html)
-				print(io, "  <div class=\"api-module-desc\" data-module=\"$(md.label)\">$(md.desc_html)</div>\n")
+				print(io, "  <div class=\"doc-module-desc\" data-module=\"$(md.label)\">$(md.desc_html)</div>\n")
 			end
 			for e in md.entries
 				write_entry(io, md.label, e)
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		<div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
 		<p style="color:var(--ink-3);font-size:13px;max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
 	  </div>
-	  <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="tutorials.html">Tutorials</a></li><li><a href="api.html">API Reference</a></li></ul></div>
+	  <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="tutorials/index.html">Tutorials</a></li><li><a href="documentation.html">Code Documentation</a></li></ul></div>
 	  <div><h4>Code</h4><ul><li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/issues" target="_blank" rel="noopener">Issues</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li></ul></div>
 	  <div><h4>Cite</h4><ul><li><a href="publications.html">Publications</a></li><li style="color:var(--ink-3);font-size:12px;">Citation details will appear with first publication.</li></ul></div>
 	</div>
@@ -505,12 +505,12 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 // Live filter by text content
 (function () {
-  var input = document.getElementById('api-search');
+  var input = document.getElementById('doc-search');
   if (!input) return;
-  var entries  = document.querySelectorAll('.api[id]');
-  var headings = document.querySelectorAll('.api-module-h[id]');
+  var entries  = document.querySelectorAll('.doc[id]');
+  var headings = document.querySelectorAll('.doc-module-h[id]');
   var descMap  = {};
-  document.querySelectorAll('.api-module-desc[data-module]').forEach(function (d) {
+  document.querySelectorAll('.doc-module-desc[data-module]').forEach(function (d) {
 	descMap[d.getAttribute('data-module')] = d;
   });
   input.addEventListener('input', function () {
@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // Sidebar scrollspy
 (function () {
   var links    = document.querySelectorAll('.docs-side a[href^="#"]');
-  var headings = document.querySelectorAll('.api-module-h[id]');
+  var headings = document.querySelectorAll('.doc-module-h[id]');
   function update() {
 	var scrollY = window.scrollY + 90, active = null;
 	headings.forEach(function (h) { if (h.offsetTop <= scrollY) active = h.id; });
@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function stickyHeadingHeight() {
-	var h = document.querySelector('.api-module-h');
+	var h = document.querySelector('.doc-module-h');
 	return h ? h.getBoundingClientRect().height : 0;
   }
 
@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function scrollToTarget(target) {
-	var isHeading = target.classList.contains('api-module-h');
+	var isHeading = target.classList.contains('doc-module-h');
 
 	// Temporarily switch to relative (same JS task, no repaint) so
 	// getBoundingClientRect returns the natural flow top even when stuck.
@@ -625,5 +625,5 @@ end
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 mods    = resolve_all_refs(extract_all())
-outpath = joinpath(@__DIR__, "api.html")
+outpath = joinpath(@__DIR__, "documentation.html")
 write_page(mods, outpath)

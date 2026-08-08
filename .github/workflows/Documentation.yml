@@ -30,8 +30,8 @@ jobs:
       - name: Install dependencies
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
-      - name: Generate API reference
-        run: julia --project=. website/generate_api.jl
+      - name: Generate code documentation
+        run: julia --project=. website/generate_documentation.jl
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -472,7 +472,7 @@ section { padding: 110px 0; position: relative; }
         <span class="arrow">→</span>
       </a>
       <a class="btn" href="features.html">Why MORFE</a>
-      <a class="btn mono" href="api.html#install" style="border-style:dashed">
+      <a class="btn mono" href="#install" style="border-style:dashed">
         <span class="code-prompt" style="color:var(--jl-green)">julia&gt;</span>
         Pkg.add(url="…/MORFE.jl")
       </a>
@@ -529,8 +529,8 @@ section { padding: 110px 0; position: relative; }
     <span style="font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); flex-shrink:0;">pre-alpha</span>
     <p style="margin:0; font-size:14px; color:var(--ink-2);">
       The cohomological solver, eigenproblem pipeline, and FEM backend interface are fully functional today.
-      The high-level <code>mechanical_model</code> / <code>parametrise</code> / <code>HarmonicForcing</code> API shown below is implemented
-      for SVK + Ferrite via the <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite.jl</code></a> companion package (<code>MORFEFerrite.StructuralSVK</code>); FRF <code>continuation</code> is roadmap. See <a href="api.html#current-api">the docs</a> for all entry points.
+      The high-level <code>mechanical_model</code> / <code>parametrise</code> / <code>HarmonicForcing</code> interface shown below is implemented
+      for SVK + Ferrite via the <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite.jl</code></a> companion package (<code>MORFEFerrite.StructuralSVK</code>); FRF <code>continuation</code> is roadmap. See <a href="documentation.html">the docs</a> for all entry points.
     </p>
   </div>
 </div>
@@ -786,14 +786,14 @@ section { padding: 110px 0; position: relative; }
   <div class="wrap">
     <span class="kicker">06 — Examples</span>
     <h2 style="margin: 18px 0 12px;">Running today.</h2>
-    <p style="max-width: 60ch; margin-bottom: 40px;">These demo scripts work with the current low-level API. Each is a self-contained Julia file you can run directly.</p>
+    <p style="max-width: 60ch; margin-bottom: 40px;">These demo scripts work with the current low-level interface. Each is a self-contained Julia file you can run directly.</p>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
 
       <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener"
          style="display: block; border: 1px solid var(--hair); border-radius: 6px; padding: 26px 28px; background: rgba(10,10,15,0.55); transition: border-color .2s, transform .2s;"
          onmouseover="this.style.borderColor='var(--hair-2)';this.style.transform='translateY(-2px)'"
          onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
-        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current API</div>
+        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
         <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Parametrisation method</h3>
         <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">End-to-end DPIM on a two-degree-of-freedom Duffing system. Covers <code style="font-family:var(--mono);font-size:0.88em;background:#07070b;border:1px solid var(--hair);padding:1px 4px;border-radius:3px;">NDOrderModel</code>, eigenpairs, resonance set, and solver.</p>
         <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/ParametrisationMethod/ →</span>
@@ -803,7 +803,7 @@ section { padding: 110px 0; position: relative; }
          style="display: block; border: 1px solid var(--hair); border-radius: 6px; padding: 26px 28px; background: rgba(10,10,15,0.55); transition: border-color .2s, transform .2s;"
          onmouseover="this.style.borderColor='var(--hair-2)';this.style.transform='translateY(-2px)'"
          onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
-        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current API</div>
+        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
         <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Ferrite beam</h3>
         <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">Nonlinear beam with the Ferrite.jl FEM backend. Uses <code>FEMMultilinearMap</code> for element-by-element assembly — no full tensor formed.</p>
         <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/Ferrite/ →</span>
@@ -813,7 +813,7 @@ section { padding: 110px 0; position: relative; }
          style="display: block; border: 1px solid var(--hair); border-radius: 6px; padding: 26px 28px; background: rgba(10,10,15,0.55); transition: border-color .2s, transform .2s;"
          onmouseover="this.style.borderColor='var(--hair-2)';this.style.transform='translateY(-2px)'"
          onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
-        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current API</div>
+        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
         <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Gridap beam</h3>
         <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">Same beam benchmark using the Gridap.jl backend. Demonstrates the FEM backend interface and interchangeability.</p>
         <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/Gridap/ →</span>
@@ -852,7 +852,7 @@ section { padding: 110px 0; position: relative; }
     </p>
     <div class="actions">
       <a class="btn btn-primary" href="tutorials/">Read the tutorial <span class="arrow">→</span></a>
-      <a class="btn" href="api.html">Browse the API</a>
+      <a class="btn" href="documentation.html">Browse the code documentation</a>
     </div>
   </div>
 </section>
@@ -871,7 +871,7 @@ section { padding: 110px 0; position: relative; }
           <li><a href="features.html">Features</a></li>
           <li><a href="gallery.html">Gallery</a></li>
           <li><a href="tutorials/">Tutorials</a></li>
-          <li><a href="api.html">Documentation</a></li>
+          <li><a href="documentation.html">Documentation</a></li>
         </ul>
       </div>
       <div>

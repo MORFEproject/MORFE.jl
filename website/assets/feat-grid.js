@@ -55,7 +55,7 @@
           'Ferrite.jl and Gridap.jl backends included in <code>demo/</code>',
           '<code>fem_elements</code>, <code>scatter_qp!</code>, <code>accumulate_qp!</code> interface'
         ],
-        link: { href: 'api.html', label: 'FEMMultilinearMap API →' }
+        link: { href: 'documentation.html', label: 'FEMMultilinearMap docs →' }
       }
     },
     {
@@ -103,7 +103,7 @@
           'Nonlinear terms defined by multiindex + user-supplied <code>f!</code>',
           'No physics assumptions hard-coded in the solver'
         ],
-        link: { href: 'api.html', label: 'NDOrderModel →' }
+        link: { href: 'documentation.html', label: 'NDOrderModel →' }
       }
     },
     {

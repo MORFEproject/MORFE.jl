@@ -220,15 +220,15 @@ body.docs-page .backdrop { opacity: 0.18; }
 .adm.danger .adm-head::before { background: var(--jl-red); }
 .adm .adm-body p:last-child { margin: 0; }
 
-/* API entry */
-.api {
+/* documentation entry */
+.doc {
   margin: 22px 0;
   border: 1px solid var(--hair);
   border-radius: 6px;
   background: rgba(7,7,11,0.6);
   overflow: hidden;
 }
-.api .api-sig {
+.doc .doc-sig {
   padding: 14px 18px;
   font-family: var(--mono);
   font-size: 14px;
@@ -239,7 +239,7 @@ body.docs-page .backdrop { opacity: 0.18; }
   align-items: center;
   gap: 10px;
 }
-.api .api-sig .badge {
+.doc .doc-sig .badge {
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -249,14 +249,14 @@ body.docs-page .backdrop { opacity: 0.18; }
   color: var(--jl-purple);
   border: 1px solid rgba(149,88,178,0.3);
 }
-.api .api-sig .badge.t { background: rgba(56,152,38,0.12); color: var(--jl-green); border-color: rgba(56,152,38,0.3); }
-.api .api-body { padding: 16px 18px 18px; font-size: 14.5px; color: var(--ink-2); }
-.api .api-body p { margin: 0 0 10px; font-size: 14.5px; }
-.api .api-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-.api .api-body th, .api .api-body td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--hair); }
-.api .api-body th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
-.api .api-body td.arg { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
-.api .api-body td.typ { font-family: var(--mono); color: var(--jl-purple); white-space: nowrap; }
+.doc .doc-sig .badge.t { background: rgba(56,152,38,0.12); color: var(--jl-green); border-color: rgba(56,152,38,0.3); }
+.doc .doc-body { padding: 16px 18px 18px; font-size: 14.5px; color: var(--ink-2); }
+.doc .doc-body p { margin: 0 0 10px; font-size: 14.5px; }
+.doc .doc-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.doc .doc-body th, .doc .doc-body td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--hair); }
+.doc .doc-body th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.doc .doc-body td.arg { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
+.doc .doc-body td.typ { font-family: var(--mono); color: var(--jl-purple); white-space: nowrap; }
 
 /* On this page */
 .docs-toc {

@@ -104,7 +104,16 @@ const fmtC = (re, im) => {
 };
 const finite = v => v !== null && v === v;
 const sub = n => String(n).split("").map(d => "₀₁₂₃₄₅₆₇₈₉"[+d]).join("");
+const sup = n => String(n).split("").map(d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[+d]).join("");
 const axisName = slot => "α" + sub(axes[slot] + 1);
+
+// The monomial as it would be typeset: exponent 0 drops the factor, exponent 1 drops
+// the superscript, and the empty product is 1.
+const monomialOf = a => {
+  const factors = a.map((e, i) => e === 0 ? "" : "z" + sub(i + 1) + (e === 1 ? "" : sup(e)))
+					  .filter(s => s);
+  return factors.length ? factors.join(" ") : "1";
+};
 
 function panelPoints(P) {
   // Aggregate onto the displayed coordinates; a point is a member if any exponent
@@ -127,11 +136,12 @@ function tooltipFor(P, e) {
   const lines = [];
   if (e.reps.length === 1) {
 	const p = e.reps[0];
-	lines.push("α = (" + p.a.join(", ") + ")", "|α| = " + p.d);
+	lines.push("α = (" + p.a.join(", ") + ")",
+			   "z^α = " + monomialOf(p.a), "|α| = " + p.d);
 	if (p.re !== undefined) lines.push("s = " + fmtC(p.re, p.im));
 	else if (finite(p.v) && P.valueLabel) lines.push(P.valueLabel + " = " + p.v.toFixed(4));
-	if (p.m === "dropped") lines.push("outside the band");
-	if (p.m === "needed") lines.push("outside the band —", "the closure must add it back");
+	if (p.m === "dropped") lines.push("outside the set");
+	if (p.m === "needed") lines.push("outside the set —", "the closure must add it back");
 	if (p.m === "resonant") lines.push("(resonant: s ≈ λᵣ)");
   } else {
 	lines.push("(" + axes.map((_, s) => axisName(s)).join(", ") + ") = (" +
@@ -508,7 +518,7 @@ function renderLegend(P, pts) {
   }
   if (seen.has("dropped"))
 	bits.push('<span><i style="border:1px dashed #4a4a58"></i>' +
-	  (P.lam ? "outside the band" : "removed") + "</span>");
+	  (P.lam ? "outside the set" : "removed") + "</span>");
   if (seen.has("needed"))
 	bits.push('<span><i style="background:transparent;border:2px solid ' + NEEDED +
 	  '"></i>divisor the closure must add</span>');

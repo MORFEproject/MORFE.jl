@@ -83,9 +83,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="ver"><span>Tutorials</span></div>
     <h4>Getting started</h4>
     <ul>
-      <li><a href="../api.html#install">Installation</a></li>
-      <li><a href="../api.html#current-api">Current API</a></li>
-      <li><a href="../api.html#concepts">Concepts &amp; vocabulary</a></li>
+      <li><a href="../index.html#install">Installation</a></li>
+      <li><a href="../documentation.html">Code documentation</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
     </ul>
 
     <h4>Demos</h4>
@@ -110,11 +110,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h4>Manual</h4>
     <ul>
-      <li><a href="../api.html#fe-input">FE input format</a></li>
-      <li><a href="../api.html#master">Master subspace</a></li>
-      <li><a href="../api.html#order">Choosing order</a></li>
-      <li><a href="../api.html#forcing">Forcing &amp; resonances</a></li>
-      <li><a href="../api.html#continuation">Continuation</a></li>
+      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
+      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
+      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
+      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
     </ul>
 
   </aside>
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
   <main class="docs-main">
 
     <div class="crumbs">
-      <a href="../api.html">MORFE.jl</a>
+      <a href="../documentation.html">MORFE.jl</a>
       <span class="sep">/</span>
       <a href="index.html">Tutorials</a>
       <span class="sep">/</span>
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
-      <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> CORE API</span>
+      <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> CORE LIBRARY</span>
       <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
       <span class="tag" style="color:var(--ink-3);">&lt; 15 S · NO FEM</span>
     </div>
@@ -138,26 +138,22 @@ document.addEventListener('DOMContentLoaded', function () {
     <h1 id="overview">Building a full-order model</h1>
     <p style="margin:6px 0 14px;"><a class="btn" href="literate/full_order_model.html" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Literate script — standardized walkthrough ↗</a></p>
     <p class="lede">
-      Every DPIM computation starts from the same three objects: the nonlinear terms, the
-      external system that drives them, and the model that holds them together. This tutorial
-      builds all three from scratch and draws what each one means.
+      In MORFE.jl full-order models have 3 components: the matrices of the linear terms, the nonlinear terms, and (optionally) a
+      external system. This tutorial
+      builds all three from scratch, draws what each one means and builds a model that holds them together.
     </p>
 
     <div class="fig">
       <iframe src="assets/full_order_model/fig1_nonlinear_terms.html"
         title="Restoring-force curves, quadratic drag and a bilinear term, all evaluated through evaluate_term!"></iframe>
       <div class="fig-cap"><span class="lab">FIG · 01</span>
-        A <code>MultilinearMap</code> is one term of the equation of motion. Its
-        <code>multiindex</code> says which derivative fills each argument slot of
-        <code>f!</code>; every curve here is produced by <code>evaluate_term!</code> on a real
-        term, not by writing the formula out a second time. The third panel is a term mixing
-        state and external state, $F = k\,x\,(r_1+r_2)$ with $r_1+r_2 = 2\cos\Omega t$, drawn
-        over the $(x, t)$ plane — straight along $x$ because the term is linear in the state,
-        a cosine along $t$ because the driver is. Drag it to orbit.</div>
+        A <code>MultilinearMap</code> is one term of the right-hand side of the full-order dynamics. 
+        All smooth curves here are produced by <code>evaluate_term!</code> on a concrete <code>MultilinearMap</code>. 
+        The third panel is a term mixing state and external state, $F = k\,u\,(r_1+r_2)$ with $r_1+r_2 = 2\cos\Omega t$. Drag it to orbit.</div>
     </div>
 
     <div class="adm tip">
-      <div class="adm-head">Runs today — current API</div>
+      <div class="adm-head">Runs today — current code</div>
       <div class="adm-body">
         <p>Every line on this page comes from
         <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/full_order_model" target="_blank" rel="noopener"><code>examples/internals/full_order_model</code></a>.
@@ -166,24 +162,27 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
-    <h2 id="goal">What this tutorial demonstrates</h2>
+    <h2 id="goal">What this tutorial covers</h2>
     <ul>
-      <li>The <code>multiindex</code> as a calling convention — which derivative goes into which argument slot of <code>f!</code>.</li>
-      <li>Three kinds of <code>ExternalSystem</code>: harmonic, quasi-periodic, and a nonlinear one.</li>
-      <li>Why the Lorenz system is rejected outright, and the change of coordinates that repairs it.</li>
+      <li>How a <code>multiindex</code> describes which derivatives go into a <code>MultilinearMap</code>.</li>
+      <li>Multiple kinds of <code>ExternalSystem</code>: harmonic, quasi-periodic, and nonlinear ones.</li>
       <li>Assembling an <code>NDOrderModel</code> and integrating its forced response.</li>
     </ul>
 
-    <h2 id="why">The shape of a model</h2>
+    <h2 id="why">Mathematical formulation</h2>
     <p>
-      MORFE writes an $\mathrm{ORD}$-th order system as
+      MORFE considers $\mathrm{ORD}$-th order ODEs of the form
     </p>
-    <div class="math-block">$$B_{\mathrm{ORD}}\, x^{(\mathrm{ORD})} + \cdots + B_1 \dot x + B_0 x \;=\; F\!\left(x, \dot x, \ldots, r\right)$$</div>
+    <div class="math-block">$$ \mathbf{B}_0\,\mathbf{u} + \mathbf{B}_1\,\dot{\mathbf{u}} + \mathbf{B}_{2} \, \ddot{\mathbf{u}} + \cdots 
+        = \sum_j \mathbf{T}_{j} (\underbrace{\mathbf{u}, \dotsc, \mathbf{u}}_{m_{j,0}}, \underbrace{\dot{\mathbf{u}}, \dotsc, \dot{\mathbf{u}}}_{m_{j,1}},  
+        \dotsc, \underbrace{\mathbf{r}, \dotsc, \mathbf{r}}_{\widehat{m}_{j}})
+          \\[10pt] \dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$$</div>
     <p>
-      The matrices $B_i$ carry the linear part. Everything nonlinear lives in $F$, as a
-      collection of <code>MultilinearMap</code>s — one per monomial. The external state $r$
-      satisfies its own autonomous dynamics $\dot r = f(r)$ and enters $F$ as extra arguments,
-      which is how forcing is expressed without ever writing $\cos(\Omega t)$.
+      The matrices $\mathbf{B}_j$ describe the internal linear part; and the $\mathbf{T}_j$ express the remaining nonlinear and external
+      terms as <code>MultilinearMap</code>s. The external state $\mathbf{r}$
+      satisfies its own autonomous dynamics $\dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$ and enters $\mathbf{T}_j$ to express non-autonomous terms.
+      The first $m_{j,0}$ arguments of $\mathbf{T}_j$ have the zeroth derivative $\mathbf{u}$, the following $m_{j,1}$ arguments have the first derivative $\dot{\mathbf{u}}$, and so on. 
+      This defines the multiindex $(m_{j,0}, m_{j,1}, \dotsc, m_{j, \mathrm{ORD}-1})$. The external multiplicity $\widehat{m}_j$ counts how many copies of the external state $\mathbf{r}$ enter the term $\mathbf{T}_j$.
     </p>
 
     <hr style="margin: 56px 0;"/>
@@ -192,48 +191,43 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">01</div>
       <div class="body">
-        <h3 id="step-terms">The multiindex is a calling convention</h3>
+        <h3 id="step-terms">Multilinear terms</h3>
         <p>
-          <code>multiindex[k]</code> counts how many argument slots of <code>f!</code> take the
-          derivative $x^{(k-1)}$. Its length is the order of the system. So for a second-order
-          model, <code>(3, 0)</code> means <code>f!(res, x, x, x)</code> and <code>(1, 1)</code>
-          means <code>f!(res, x, ẋ)</code>.
+          The $k$-th entry of <code>multiindex</code> defines $m_{j,k-1}$ which counts how many arguments of <code>f!</code> take the
+          derivative $u^{(k-1)}$. The length of a <code>multiindex</code> is the order of the system. So for a second-order
+          model, <code>(3, 0)</code> means <code>f!(res, u, u, u)</code> and <code>(1, 1)</code>
+          means <code>f!(res, u, u̇)</code>.
         </p>
 <pre class="code"><span class="kw">using</span> MORFE
 
-<span class="cm"># M ẍ + C ẋ + K x = F(x, ẋ, r), so a *hardening* spring contributes F = −k₃x³</span>
-<span class="fn">hardening!</span>(<span class="var">res</span>, <span class="var">x1</span>, <span class="var">x2</span>, <span class="var">x3</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="var">k₃</span> <span class="op">.*</span> <span class="var">x1</span> <span class="op">.*</span> <span class="var">x2</span> <span class="op">.*</span> <span class="var">x3</span>)
-<span class="fn">drag!</span>(<span class="var">res</span>, <span class="var">v1</span>, <span class="var">v2</span>)          <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="var">c</span> <span class="op">.*</span> <span class="var">v1</span> <span class="op">.*</span> <span class="var">v2</span>)
-<span class="fn">mixed!</span>(<span class="var">res</span>, <span class="var">x</span>, <span class="var">v</span>)             <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">0.9</span> <span class="op">.*</span> <span class="var">x</span> <span class="op">.*</span> <span class="var">v</span>)
+<span class="cm"># M ü + C u̇ + K u = F(u, u̇, r), so a *hardening* Duffing spring contributes F = −k₃ u³</span>
+<span class="fn">duff!</span>(<span class="var">res</span>, <span class="var">u1</span>, <span class="var">u2</span>, <span class="var">u3</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">6.0</span> <span class="op">.*</span> <span class="var">u1</span> <span class="op">.*</span> <span class="var">u2</span> <span class="op">.*</span> <span class="var">u3</span>)
+<span class="fn">drag!</span>(<span class="var">res</span>, <span class="var">v1</span>, <span class="var">v2</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">0.8</span> <span class="op">.*</span> <span class="var">v1</span> <span class="op">.*</span> <span class="var">v2</span>)
+<span class="fn">mixed!</span>(<span class="var">res</span>, <span class="var">u</span>, <span class="var">r</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">1.5</span> <span class="op">.*</span> <span class="var">u</span> <span class="op">.*</span> (<span class="var">r</span>[<span class="num">1</span>] <span class="op">+</span> <span class="var">r</span>[<span class="num">2</span>]))
 
-<span class="var">term_hard</span>  <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">hardening!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">3</span>, <span class="num">0</span>),
-                             <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>, <span class="var">fully_asymmetric</span> <span class="op">=</span> <span class="kw">false</span>)
-<span class="var">term_drag</span>  <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">drag!</span>;  <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">0</span>, <span class="num">2</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>)
-<span class="var">term_mixed</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">mixed!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">1</span>, <span class="num">1</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>)</pre>
+<span class="var">term_duff</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">duff!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">3</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>, <span class="var">fully_asymmetric</span> <span class="op">=</span> <span class="kw">false</span>)
+<span class="var">term_drag</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">drag!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">0</span>, <span class="num">2</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>)
+<span class="var">term_mixed</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">mixed!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">1</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">1</span>)</pre>
         <table class="mi">
-          <thead><tr><th>multiindex</th><th>f! is called as</th><th>degree</th></tr></thead>
+          <thead><tr><th>multiindex</th><th>the arguments are</th><th>degree</th></tr></thead>
           <tbody>
-            <tr><td>(2, 0)</td><td>f!(res, x, x)</td><td>2</td></tr>
-            <tr><td>(3, 0)</td><td>f!(res, x, x, x)</td><td>3</td></tr>
-            <tr><td>(0, 2)</td><td>f!(res, ẋ, ẋ)</td><td>2</td></tr>
-            <tr><td>(1, 1)</td><td>f!(res, x, ẋ)</td><td>2</td></tr>
-            <tr><td>(1, 0) + me 1</td><td>f!(res, x, r)</td><td>2</td></tr>
-            <tr><td>(0, 0) + me 1</td><td>f!(res, r)</td><td>1</td></tr>
+            <tr><td>(2, 0)</td><td>$\mathbf{u}$, $\mathbf{u}$</td><td>2</td></tr>
+            <tr><td>(3, 0)</td><td>$\mathbf{u}$, $\mathbf{u}$, $\mathbf{u}$</td><td>3</td></tr>
+            <tr><td>(0, 2)</td><td>$\dot{\mathbf{u}}$, $\dot{\mathbf{u}}$</td><td>2</td></tr>
+            <tr><td>(1, 1)</td><td>$\mathbf{u}$, $\dot{\mathbf{u}}$</td><td>2</td></tr>
+            <tr><td>(1, 0), 1</td><td>$\mathbf{u}$, $\mathbf{r}$</td><td>2</td></tr>
+            <tr><td>(0, 0), 1</td><td>$\mathbf{r}$</td><td>1</td></tr>
           </tbody>
         </table>
         <p>
-          The keyword constructor reports anything it had to assume — the system order, the
-          external multiplicity, the shape itself. Naming those keywords keeps it silent; leaving
-          them out is fine too, and it tells you exactly what it decided on your behalf.
+          When keyword arguments are missing, the constructor any the assumed values.
         </p>
-        <div class="adm">
-          <div class="adm-head">A multilinear drag is not $|v|v$</div>
+        <div class="adm warn">
+          <div class="adm-head">The parametrisation method requires smooth maps</div>
           <div class="adm-body">
-            <p>A <code>MultilinearMap</code> is linear in each slot separately, so a quadratic
-            drag term is $v\cdot v$ — an <em>even</em> function that decelerates for $v&gt;0$ and
-            accelerates for $v&lt;0$. The physical $|v|\,v$ is odd but not multilinear, so it cannot
-            be a <code>MultilinearMap</code> at all and has to be approximated by odd terms.
-            Panel two of Figure 1 puts the two side by side.</p>
+            <p>MORFE assumes <code>MultilinearMap</code> is linear in each argument; but cannot explicitly enforce this property. 
+                The user is responsible for ensuring multilinearity. 
+                For instance, MORFE cannot handle non-smooth functions like $F(u̇) = |u̇| u̇$ of Figure 1, panel 2. </p>
           </div>
         </div>
       </div>
@@ -243,20 +237,51 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">02</div>
       <div class="body">
-        <h3 id="step-external">The driver</h3>
+        <h3 id="step-external">External drivers</h3>
         <p>
-          An <code>ExternalSystem</code> is an autonomous ODE $\dot r = f(r)$ whose state enters
-          the model's nonlinear terms as an extra argument. The canonical MORFE forcing is a
-          conjugate pair of purely imaginary eigenvalues: the orbit $r_1(t) = e^{i\Omega t}$ is a
-          unit circle, which is harmonic forcing expressed as a dynamical system.
+          An <code>ExternalSystem</code> is an autonomous ODE $\dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$ whose state enters
+          the model's multilinear terms as an extra argument. The classical case of harmomic forcing considers 
+          $\dot{r}_{1} = + i\Omega \, r_{1}$ and $\dot{r}_{2} = - i\Omega \, r_{2}$ 
+          with solutions $r_{1}(t) = r_{1,0} \, e^{ i\Omega t}$ and $r_{2}(t) = r_{2,0} \, e^{- i\Omega t}$. 
+          Fixing $r_{1,0} = r_{2,0} = 1$ and adding both states yields $r_1 + r_2 = 2 \cos(\Omega t)$.
         </p>
-<pre class="code"><span class="var">harmonic</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="fn">im</span><span class="op">*</span><span class="var">Ω</span>, <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω</span>))                    <span class="cm"># a circle</span>
-<span class="var">quasi</span>    <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="fn">im</span><span class="op">*</span><span class="var">Ω₁</span>, <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω₁</span>, <span class="fn">im</span><span class="op">*</span><span class="var">Ω₂</span>, <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω₂</span>))   <span class="cm"># a torus</span></pre>
+<pre class="code"><span class="var">harmonic</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="fn">im</span><span class="op">*</span><span class="var">Ω</span>, <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω</span>)) <span class="cm"># a circle</span>
+<span class="var">quasi</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="fn">im</span><span class="op">*</span><span class="var">Ω₁</span>, <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω₁</span>, <span class="fn">im</span><span class="op">*</span><span class="var">Ω₂</span>, <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω₂</span>)) <span class="cm"># the closure is a torus</span></pre>
         <p>
-          The dynamics are stored as a polynomial, so integrating one needs nothing more than
-          <code>evaluate</code> and ten lines of Runge–Kutta. For the diagonal cases the closed
-          form $r(t) = e^{\lambda t} r_0$ is available, and the script checks the integrator
-          against it rather than trusting a picture that merely looks right.
+          The tuple constructor covers the linear case. A driver may also be
+          <strong>nonlinear</strong> — only its <em>linear</em> part has to be upper triangular — and
+          that is what the third panel of the figure shows: a slow pair $(r_3, r_4)$ modulating a
+          fast pair, and never the reverse. That one-way coupling <em>is</em> the triangular
+          structure, made visible.
+        </p>
+        <div class="math-block">$$\begin{aligned}
+          \dot r_1 &amp;= i\Omega_1 r_1 + i c\, r_1 r_3 &amp;\qquad \dot r_3 &amp;= i\Omega_2 r_3 \\
+          \dot r_2 &amp;= -i\Omega_1 r_2 - i c\, r_2 r_4 &amp;\qquad \dot r_4 &amp;= -i\Omega_2 r_4
+        \end{aligned}$$</div>
+        <p>
+          A nonlinear driver is given as a polynomial rather than a tuple of eigenvalues, so the
+          quadratic coefficients have somewhere to live. Most of that polynomial is zero, so the
+          example writes only the terms that are not — the pair
+          <code>(i, exponent) =&gt; c</code> saying that the monomial $r^{\alpha}$ contributes $c$
+          to $\dot r_i$:
+        </p>
+<pre class="code"><span class="var">cascade</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>(<span class="fn">external_polynomial</span>(<span class="num">4</span>, <span class="num">2</span>,
+    (<span class="num">1</span>, (<span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>)) <span class="op">=&gt;</span> <span class="fn">im</span><span class="op">*</span><span class="var">Ω₁</span>,     <span class="cm"># ṙ₁ ← iΩ₁ r₁</span>
+    (<span class="num">2</span>, (<span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>)) <span class="op">=&gt;</span> <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω₁</span>,    <span class="cm"># ṙ₂ ← −iΩ₁ r₂</span>
+    (<span class="num">3</span>, (<span class="num">0</span>, <span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>)) <span class="op">=&gt;</span> <span class="fn">im</span><span class="op">*</span><span class="var">Ω₂</span>,     <span class="cm"># ṙ₃ ← iΩ₂ r₃</span>
+    (<span class="num">4</span>, (<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">1</span>)) <span class="op">=&gt;</span> <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω₂</span>,    <span class="cm"># ṙ₄ ← −iΩ₂ r₄</span>
+    (<span class="num">1</span>, (<span class="num">1</span>, <span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>)) <span class="op">=&gt;</span> <span class="fn">im</span><span class="op">*</span><span class="var">c</span>,      <span class="cm"># ṙ₁ ← i c r₁r₃</span>
+    (<span class="num">2</span>, (<span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>, <span class="num">1</span>)) <span class="op">=&gt;</span> <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">c</span>))    <span class="cm"># ṙ₂ ← −i c r₂r₄</span></pre>
+        <p>
+          Its linear part is diagonal — hence upper triangular — so the constructor accepts it,
+          and the quadratic coefficients are left entirely free. Integrating the $r_3$ term gives
+          $r_1 = \exp\!\big(i\Omega_1 t + (c/\Omega_2)(e^{i\Omega_2 t} - 1)\big)$, so $|r_1|$ swings
+          between $e^{-2c/\Omega_2}$ and $1$: the modulation is <em>sustained</em>, not a transient
+          that decays back onto the linear system's circle.
+        </p>
+        <p>
+          In all three cases the dynamics are stored as a polynomial, so solving one needs nothing
+          more than <code>evaluate</code> and a standard solver; e.g. Runge–Kutta for time integration.
         </p>
         <div class="fig">
           <iframe src="assets/full_order_model/fig2_external_systems.html"
@@ -265,10 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="fig-cap"><span class="lab">FIG · 02</span>
             Three drivers — switch tabs to compare. Time plot on the left, phase portrait on
             the right. A purely imaginary pair gives a circle; two incommensurate frequencies
-            beat and never repeat, filling an annulus. The third is genuinely nonlinear:
-            $\dot r_1 = i\Omega_1 r_1 + i c\, r_1 r_3$ with $\dot r_3 = i\Omega_2 r_3$, so the
-            slow pair modulates the fast one and never the reverse — which is the triangular
-            structure itself, made visible.</div>
+            define a quasi-periodic orbit. In the third panel a slow harmonic oscillator nonlinearly modulates a fast oscillator.</div>
         </div>
       </div>
     </div>
@@ -277,7 +299,12 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">03</div>
       <div class="body">
-        <h3 id="step-lorenz">Lorenz, rejected — then repaired</h3>
+        <h3 id="step-lorenz">Lorenz system — rejected then repaired</h3>
+        <div class="math-block">$$\begin{aligned}
+          \dot x &amp;= \sigma (y - x) \\
+          \dot y &amp;= x(\rho - z) - y \\
+          \dot z &amp;= xy - \beta z
+        \end{aligned}$$</div>
         <p>
           There is one hard constraint: the <strong>linear part</strong> of an external system
           must be upper triangular. Its nonlinear part is unconstrained. Try the Lorenz system
@@ -322,6 +349,21 @@ triangular; non-zero entries below the diagonal at [(2, 1)].</pre>
           is exactly the Jacobian at $C_+$. Note the $(2,1)$ entry has become $1$ instead of
           $\rho$, but it is still not zero, which is why the shift alone does not make the
           matrix triangular and the diagonalisation is needed as well.
+        </p>
+        <p>
+          Diagonalising that Jacobian, $J = T \Lambda T^{-1}$, and setting $v = T^{-1}u$ gives the
+          equations the <code>ExternalSystem</code> is actually built from:
+        </p>
+        <div class="math-block">$$\begin{aligned}
+          \dot v_1 &amp;= \lambda_1 v_1 &amp;&amp;+ \big[T^{-1} Q(Tv, Tv)\big]_1 \\
+          \dot v_2 &amp;= \lambda_2 v_2 &amp;&amp;+ \big[T^{-1} Q(Tv, Tv)\big]_2 \\
+          \dot v_3 &amp;= \overline{\lambda_2}\, v_3 &amp;&amp;+ \big[T^{-1} Q(Tv, Tv)\big]_3
+        \end{aligned}$$</div>
+        <p>
+          with $Q(u, u) = (0,\, -XZ,\, XY)$ the unchanged quadratic part. The linear part is now
+          $\Lambda = \mathrm{diag}(\lambda_1, \lambda_2, \overline{\lambda_2})$ — diagonal, hence
+          upper triangular, hence accepted. The quadratic part is dense and stays completely
+          unconstrained.
         </p>
         <p>
           Stability is not what is needed here — only an equilibrium. At the familiar
@@ -391,7 +433,7 @@ triangular; non-zero entries below the diagonal at [(2, 1)].</pre>
           Duffing oscillator is two terms — the hardening cubic from step 1 and a forcing term
           that reads the external state.
         </p>
-<pre class="code"><span class="fn">forcing!</span>(<span class="var">res</span>, <span class="var">r</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="var">f</span> <span class="op">*</span> <span class="fn">real</span>(<span class="fn">sum</span>(<span class="var">r</span>)))
+<pre class="code"><span class="fn">forcing!</span>(<span class="var">res</span>, <span class="var">r</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="var">f</span> <span class="op">*</span> (<span class="var">r</span>[<span class="num">1</span>] <span class="op">+</span> <span class="var">r</span>[<span class="num">2</span>]))
 <span class="var">term_forcing</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">forcing!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">0</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">1</span>)
 
 <span class="var">model</span> <span class="op">=</span> <span class="fn">NDOrderModel</span>((<span class="var">K</span>, <span class="var">C</span>, <span class="var">M</span>), (<span class="var">term_hard</span>, <span class="var">term_forcing</span>), <span class="var">harmonic</span>)
@@ -435,7 +477,7 @@ triangular; non-zero entries below the diagonal at [(2, 1)].</pre>
     <ul>
       <li><a href="multiindex_sets.html">Constructing MultiindexSets</a> — which monomials the solve will compute.</li>
       <li><a href="structural_svk.html">From a mesh to a ROM</a> — the same objects, built for you by a FEM backend.</li>
-      <li><a href="../api.html">API reference</a> — <code>FullOrderModel</code> and <code>MultilinearMaps</code> in full.</li>
+      <li><a href="../documentation.html">Code documentation</a> — <code>FullOrderModel</code> and <code>MultilinearMaps</code> in full.</li>
     </ul>
 
   </main>
@@ -444,11 +486,11 @@ triangular; non-zero entries below the diagonal at [(2, 1)].</pre>
     <h5>On this page</h5>
     <ul id="toc-list">
       <li><a href="#overview" class="active">Overview</a></li>
-      <li><a href="#goal">What you will learn</a></li>
-      <li><a href="#why">The shape of a model</a></li>
-      <li><a href="#step-terms">01 · Nonlinear terms</a></li>
-      <li><a href="#step-external">02 · The driver</a></li>
-      <li><a href="#step-lorenz">03 · Lorenz, repaired</a></li>
+      <li><a href="#goal">What this tutorial covers</a></li>
+      <li><a href="#why">Mathematical formulation</a></li>
+      <li><a href="#step-terms">01 · Multilinear terms</a></li>
+      <li><a href="#step-external">02 · External drivers</a></li>
+      <li><a href="#step-lorenz">03 · Lorenz system</a></li>
       <li><a href="#step-model">04 · Assemble the model</a></li>
       <li><a href="#recap">Recap</a></li>
       <li><a href="#next">Where to next?</a></li>
@@ -456,8 +498,9 @@ triangular; non-zero entries below the diagonal at [(2, 1)].</pre>
     <h5 style="margin-top:32px;">Links</h5>
     <ul>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/full_order_model" target="_blank" rel="noopener">Example folder ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl" target="_blank" rel="noopener">MultilinearMaps.jl ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/ExternalSystems.jl" target="_blank" rel="noopener">ExternalSystems.jl ↗</a></li>
+      <li><a href="../documentation.html#MultilinearMaps">MultilinearMaps docs</a></li>
+      <li><a href="../documentation.html#ExternalSystems">ExternalSystems docs</a></li>
+      <li><a href="../documentation.html#FullOrderModel">FullOrderModel docs</a></li>
     </ul>
   </aside>
 

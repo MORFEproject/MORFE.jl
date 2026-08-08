@@ -93,6 +93,38 @@ Sample `f(xᵢ, yⱼ)` over the grid.
 Surface3D(x, y, f::Function) = Surface3D(x, y, [f(a, b) for a in x, b in y])
 
 """
+	SweptLine(x, amplitude; omega, phase, offset)
+
+A line that sweeps across a surface as its parameter advances, given in closed form:
+
+	F(xᵢ, t) = amplitude[i] · cos(omega · t + phase) + offset
+
+No grid and no interpolation — `x` needs only as many points as the law has curvature in
+it, which for a straight line is two. The line lies exactly on the surface; it is drawn
+after it, so it reads as painted onto the sheet.
+
+`offset` lifts it clear of the surface by a constant. At `offset = 0` the line and the
+sheet are the same points, so which one a pixel shows is left to depth-buffer rounding and
+the line stitches in and out of the surface; a lift of about 1% of the z-range is enough to
+keep it consistently on top without reading as detached.
+"""
+struct SweptLine
+    x::Vector{Float64}
+    amplitude::Vector{Float64}
+    omega::Float64
+    phase::Float64
+    offset::Float64
+end
+
+function SweptLine(x, amplitude; omega::Real, phase::Real = 0.0, offset::Real = 0.0)
+    xs, as = Float64.(collect(x)), Float64.(collect(amplitude))
+    length(xs) == length(as) ||
+        throw(ArgumentError("SweptLine: x and amplitude have lengths " *
+                            "$(length(xs)) and $(length(as))"))
+    return SweptLine(xs, as, Float64(omega), Float64(phase), Float64(offset))
+end
+
+"""
 	ChartPanel(name, series; xlabel, ylabel, note, equal_aspect)
 
 One switchable panel of a `write_charts` figure.
@@ -111,6 +143,7 @@ struct ChartPanel
     series::Vector{Curve}
     curves3d::Vector{Orbit3D}
     surface::Union{Nothing, Surface3D}
+    line::Union{Nothing, SweptLine}
     axes::NTuple{3, String}
     xlabel::String
     ylabel::String
@@ -123,8 +156,8 @@ function ChartPanel(name, series::AbstractVector{Curve};
         ylabel::AbstractString = "",
         note::AbstractString = "",
         equal_aspect::Bool = false)
-    return ChartPanel(String(name), collect(series), Orbit3D[], nothing, ("x", "y", "z"),
-        String(xlabel), String(ylabel), String(note), equal_aspect)
+    return ChartPanel(String(name), collect(series), Orbit3D[], nothing, nothing,
+        ("x", "y", "z"), String(xlabel), String(ylabel), String(note), equal_aspect)
 end
 
 ChartPanel(name, s::Curve; kwargs...) = ChartPanel(name, [s]; kwargs...)
@@ -137,19 +170,23 @@ A 3-D panel: a wireframe of `curves3d`, drag to orbit.
 function ChartPanel(name, curves3d::AbstractVector{Orbit3D};
         axes = ("x", "y", "z"),
         note::AbstractString = "")
-    return ChartPanel(String(name), Curve[], collect(curves3d), nothing,
+    return ChartPanel(String(name), Curve[], collect(curves3d), nothing, nothing,
         (String(axes[1]), String(axes[2]), String(axes[3])), "", "", String(note), false)
 end
 
 """
 	ChartPanel(name, surface; axes, note)
 
-A 3-D panel showing a shaded, self-occluding surface. Drag to orbit.
+A 3-D panel showing a shaded, self-occluding surface. Drag to orbit. A line sweeps across
+it at constant speed, showing the law at one value of the second coordinate. The line is
+read from the same grid the surface is drawn from, so it lies exactly on the surface as
+rendered rather than on the underlying law.
 """
 function ChartPanel(name, surface::Surface3D;
+        line::Union{Nothing, SweptLine} = nothing,
         axes = ("x", "y", "z"),
         note::AbstractString = "")
-    return ChartPanel(String(name), Curve[], Orbit3D[], surface,
+    return ChartPanel(String(name), Curve[], Orbit3D[], surface, line,
         (String(axes[1]), String(axes[2]), String(axes[3])), "", "", String(note), false)
 end
 
@@ -315,9 +352,15 @@ function _panel_js(p::ChartPanel)
     return "{n:$(_str(p.name)),xl:$(_str(p.xlabel)),yl:$(_str(p.ylabel))," *
            "note:$(_str(p.note)),eq:$(p.equal_aspect ? 1 : 0)," *
            "ax:[$(_str(p.axes[1])),$(_str(p.axes[2])),$(_str(p.axes[3]))]," *
-           "sf:$(_surface_js(p.surface))," *
+           "sf:$(_surface_js(p.surface)),ln:$(_line_js(p.line))," *
            "o:[" * join((_orbit_js(o) for o in p.curves3d), ",") * "]," *
            "s:[" * join((_series_js(s) for s in p.series), ",") * "]}"
+end
+
+_line_js(::Nothing) = "null"
+function _line_js(l::SweptLine)
+    return "{x:$(_arr(l.x)),a:$(_arr(l.amplitude)),w:$(_num(l.omega))," *
+           "p:$(_num(l.phase)),o:$(_num(l.offset))}"
 end
 
 _surface_js(::Nothing) = "null"
@@ -455,6 +498,7 @@ function _base_js()
       const X = v => M.l + (v - x0) / (x1 - x0) * iw;
       const Y = v => M.t + (1 - (v - y0) / (y1 - y0)) * ih;
       host._view = { p, X, Y };
+      host._surf = null;      // a 2-D panel has no surface to interrogate
 
       for (const t of ticks(x0, x1, 6)) {
         svg.appendChild(el("line", { x1:X(t), x2:X(t), y1:M.t, y2:M.t + ih,
@@ -599,7 +643,8 @@ function _base_js()
           });
         });
       };
-      return { svg, P, depth, drawLabels, commit: () => host.insertBefore(svg, host.firstChild) };
+      return { svg, P, depth, drawLabels,
+        commit: () => host.insertBefore(svg, host.firstChild) };
     }
 
     // ── 3-D polylines (trajectories).
@@ -613,6 +658,10 @@ function _base_js()
         }
       }
       if (!isFinite(lo[0])) { lo = [0, 0, 0]; hi = [1, 1, 1]; }
+      // Nothing here answers a 2-D readout, and a stale one from a previous panel would
+      // otherwise keep firing over this drawing.
+      host._view = null;
+      host._surf = null;
       const F = frame3D(host, lo, hi, cam, axes);
       for (const s of curves) {
         let d = "";
@@ -640,7 +689,8 @@ function _base_js()
     // sorting them far-to-near before drawing is what gives the occlusion a wireframe
     // cannot have.  Colour is diverging in the height, so the sign of the force is legible,
     // and a Lambert term off the facet normal keeps the corrugation readable.
-    function drawSurface3D(host, sf, axes, cam) {
+    function drawSurface3D(host, sf, line, axes, cam) {
+      host._view = null;                  // no 2-D readout over a surface
       const nx = sf.x.length, ny = sf.y.length;
       let zlo = Infinity, zhi = -Infinity;
       for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
@@ -688,8 +738,40 @@ function _base_js()
         F.svg.appendChild(el("path", { d, fill:col, stroke:col,
           "stroke-width":0.6, "shape-rendering":"crispEdges" }));
       }
+      // The swept line is drawn after the surface and never depth-sorted against it: it
+      // lies on the surface by construction, offset by a hair, so anything that hid part
+      // of it would only be hiding the sheet it is painted on.
+      const hl = el("path", { fill:"none", stroke:"#f2f2f7", "stroke-width":3,
+        "stroke-linejoin":"round", "stroke-linecap":"round" });
+      const hlt = el("text", { fill:"#f2f2f7", "font-size":11.5, "text-anchor":"middle",
+        "font-family":"ui-monospace, Menlo, monospace" });
+      F.svg.appendChild(hl);
+      F.svg.appendChild(hlt);
+      host._surf = { line, P: F.P, hl, hlt, name: axes[1],
+        y0: sf.y[0], y1: sf.y[ny - 1],
+        t: (host._surf && host._surf.line === line) ? host._surf.t : sf.y[0] };
+      if (line) drawSweptLine(host); else { hl.setAttribute("opacity", 0); hlt.setAttribute("opacity", 0); }
       F.drawLabels();
       F.commit();
+    }
+
+    // The line has a closed form, so it needs no grid and no interpolation:
+    //     F(xᵢ, t) = amplitude[i]·cos(ω t + φ) + offset
+    // For a straight line two endpoints are exact, whatever the surface's resolution.
+    function drawSweptLine(host) {
+      const S = host._surf; if (!S || !S.line) return;
+      const L = S.line, n = L.x.length;
+      const c = Math.cos(L.w * S.t + L.p);
+      let d = "", last = null;
+      for (let i = 0; i < n; i++) {
+        const q = S.P(L.x[i], S.t, L.a[i] * c + L.o);
+        d += (i ? "L" : "M") + q[0].toFixed(1) + " " + q[1].toFixed(1) + " ";
+        last = q;
+      }
+      S.hl.setAttribute("d", d);
+      S.hlt.textContent = S.name + " = " + fmt(S.t);
+      S.hlt.setAttribute("x", last[0]);
+      S.hlt.setAttribute("y", last[1] - 10);
     }
 
     // Drag the host to orbit the camera; `redraw` is called on every move.
@@ -745,7 +827,7 @@ function _charts_html(title, caption, data)
     let cur = 0;
     const cam = { yaw: -0.62, pitch: 0.30 };
     const is3D = p => p.sf || (p.o && p.o.length > 0);
-    const redraw3D = p => p.sf ? drawSurface3D(stage, p.sf, p.ax, cam)
+    const redraw3D = p => p.sf ? drawSurface3D(stage, p.sf, p.ln, p.ax, cam)
                                : draw3D(stage, p.o, p.ax, cam, false);
 
     function render() {
@@ -753,6 +835,7 @@ function _charts_html(title, caption, data)
       if (is3D(p)) {
         redraw3D(p);
         stage.classList.add("rot");
+        tip.style.opacity = 0;      // a readout left over from a 2-D panel
       } else {
         draw2D(stage, p);
         stage.classList.remove("rot");
@@ -771,6 +854,28 @@ function _charts_html(title, caption, data)
     attachOrbit(stage, cam, () => {
       if (is3D(PANELS[cur])) redraw3D(PANELS[cur]);
     });
+
+    // The surface's line sweeps on its own, at a constant speed — one pass over the whole
+    // range every SWEEP seconds.  Only the line is rebuilt per frame; the quads are static
+    // and merely get the line re-slotted among them, so this stays cheap.
+    const SWEEP = 14;
+    let last = null;
+    function tick(now) {
+      const S = stage._surf;
+      if (S) {
+        if (last !== null && S.line) {
+          const step = (S.y1 - S.y0) * (now - last) / (SWEEP * 1000);
+          S.t += step;
+          if (S.t > S.y1) S.t = S.y0 + (S.t - S.y1);
+          drawSweptLine(stage);
+        }
+        last = now;
+      } else {
+        last = null;
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
     PANELS.forEach((p, k) => {
       const b = document.createElement("button");
       b.textContent = p.n;

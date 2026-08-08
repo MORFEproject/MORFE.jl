@@ -123,6 +123,7 @@ function draw2D(host, p) {
   const X = v => M.l + (v - x0) / (x1 - x0) * iw;
   const Y = v => M.t + (1 - (v - y0) / (y1 - y0)) * ih;
   host._view = { p, X, Y };
+  host._surf = null;      // a 2-D panel has no surface to interrogate
 
   for (const t of ticks(x0, x1, 6)) {
     svg.appendChild(el("line", { x1:X(t), x2:X(t), y1:M.t, y2:M.t + ih,
@@ -268,7 +269,8 @@ function frame3D(host, lo, hi, cam, axes) {
       });
     });
   };
-  return { svg, P, depth, drawLabels, commit: () => host.insertBefore(svg, host.firstChild) };
+  return { svg, P, depth, drawLabels,
+    commit: () => host.insertBefore(svg, host.firstChild) };
 }
 
 // ── 3-D polylines (trajectories).
@@ -282,6 +284,10 @@ function draw3D(host, curves, axes, cam, markers) {
     }
   }
   if (!isFinite(lo[0])) { lo = [0, 0, 0]; hi = [1, 1, 1]; }
+  // Nothing here answers a 2-D readout, and a stale one from a previous panel would
+  // otherwise keep firing over this drawing.
+  host._view = null;
+  host._surf = null;
   const F = frame3D(host, lo, hi, cam, axes);
   for (const s of curves) {
     let d = "";
@@ -309,7 +315,8 @@ function draw3D(host, curves, axes, cam, markers) {
 // sorting them far-to-near before drawing is what gives the occlusion a wireframe
 // cannot have.  Colour is diverging in the height, so the sign of the force is legible,
 // and a Lambert term off the facet normal keeps the corrugation readable.
-function drawSurface3D(host, sf, axes, cam) {
+function drawSurface3D(host, sf, line, axes, cam) {
+  host._view = null;                  // no 2-D readout over a surface
   const nx = sf.x.length, ny = sf.y.length;
   let zlo = Infinity, zhi = -Infinity;
   for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
@@ -357,8 +364,40 @@ function drawSurface3D(host, sf, axes, cam) {
     F.svg.appendChild(el("path", { d, fill:col, stroke:col,
       "stroke-width":0.6, "shape-rendering":"crispEdges" }));
   }
+  // The swept line is drawn after the surface and never depth-sorted against it: it
+  // lies on the surface by construction, offset by a hair, so anything that hid part
+  // of it would only be hiding the sheet it is painted on.
+  const hl = el("path", { fill:"none", stroke:"#f2f2f7", "stroke-width":3,
+    "stroke-linejoin":"round", "stroke-linecap":"round" });
+  const hlt = el("text", { fill:"#f2f2f7", "font-size":11.5, "text-anchor":"middle",
+    "font-family":"ui-monospace, Menlo, monospace" });
+  F.svg.appendChild(hl);
+  F.svg.appendChild(hlt);
+  host._surf = { line, P: F.P, hl, hlt, name: axes[1],
+    y0: sf.y[0], y1: sf.y[ny - 1],
+    t: (host._surf && host._surf.line === line) ? host._surf.t : sf.y[0] };
+  if (line) drawSweptLine(host); else { hl.setAttribute("opacity", 0); hlt.setAttribute("opacity", 0); }
   F.drawLabels();
   F.commit();
+}
+
+// The line has a closed form, so it needs no grid and no interpolation:
+//     F(xᵢ, t) = amplitude[i]·cos(ω t + φ) + offset
+// For a straight line two endpoints are exact, whatever the surface's resolution.
+function drawSweptLine(host) {
+  const S = host._surf; if (!S || !S.line) return;
+  const L = S.line, n = L.x.length;
+  const c = Math.cos(L.w * S.t + L.p);
+  let d = "", last = null;
+  for (let i = 0; i < n; i++) {
+    const q = S.P(L.x[i], S.t, L.a[i] * c + L.o);
+    d += (i ? "L" : "M") + q[0].toFixed(1) + " " + q[1].toFixed(1) + " ";
+    last = q;
+  }
+  S.hl.setAttribute("d", d);
+  S.hlt.textContent = S.name + " = " + fmt(S.t);
+  S.hlt.setAttribute("x", last[0]);
+  S.hlt.setAttribute("y", last[1] - 10);
 }
 
 // Drag the host to orbit the camera; `redraw` is called on every move.
