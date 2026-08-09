@@ -47,6 +47,7 @@ should_run(group) = GROUP == "all" || GROUP == group
     if should_run("spectral_decomposition")
         @testset "SpectralDecomposition" begin
             include("SpectralDecomposition/test_eigenproblems.jl")
+            include("SpectralDecomposition/test_spectral_data.jl")
         end
     end
     if should_run("utils")

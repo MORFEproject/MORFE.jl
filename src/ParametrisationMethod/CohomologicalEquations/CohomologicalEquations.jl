@@ -115,6 +115,9 @@ using ..ExternalSystems: ExternalSystem, external_basis
 using ..ConjugatePermutation: detect_conjugate_permutation,
                               external_conjugate_permutation,
                               full_conjugate_permutation
+using ..SpectralDataTypes: SpectralData, right_modes, left_modes,
+                           right_mode_derivatives, left_mode_blocks,
+                           master_eigenvalues
 
 using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
                           build_multilinear_terms_cache, MultilinearTermsCache

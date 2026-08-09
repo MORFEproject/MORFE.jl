@@ -451,3 +451,59 @@ function solve_cohomological_problem(
 
     return W, R
 end
+
+"""
+	solve_cohomological_problem(model, mset, spectral::SpectralData, resonance_set; …) -> (W, R)
+
+Solve the cohomological equations from a [`SpectralData`](@ref) bundle.
+
+This is the same solve as the positional method; it exists so callers pass **one**
+spectral object instead of five separately-maintained arrays (`master_eigenvalues`,
+`master_modes`, `left_eigenmodes`, `master_modes_derivatives`, `left_modes_derivatives`).
+The mirrored right/left index conventions are handled by `SpectralData`'s accessors rather
+than at the call site.
+
+`conjugate_permutation` defaults to the one carried by `spectral`, extended over the
+external variables — pass an explicit vector to override it, or `nothing` to disable
+conjugate symmetry for this solve.
+"""
+function solve_cohomological_problem(
+        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
+        mset::MultiindexSet{NVAR},
+        spectral::SpectralData{ORD, ROM},
+        resonance_set::ResonanceSet;
+        conjugate_permutation = :from_spectral,
+        validate_mset::Bool = true,
+        show_progress::Bool = true,
+        benchmark_dir::Union{Nothing, AbstractString} = nothing
+) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
+    # Bind to concrete locals here, at the setup boundary. The bundle's block fields are
+    # `Union{Nothing, Array}` so that ORD == 1 is representable, and every access to them
+    # is a type-unstable branch — harmless once, unacceptable inside the graded loop.
+    master_modes = right_modes(spectral)::Matrix{ComplexF64}
+    left_eigenmodes = left_modes(spectral)::Matrix{ComplexF64}
+    mmd = right_mode_derivatives(spectral)
+    lmd = left_mode_blocks(spectral)
+
+    perm = _spectral_conjugate_permutation(
+        conjugate_permutation, spectral, model.external_system)
+
+    return solve_cohomological_problem(
+        model, mset, master_eigenvalues(spectral), master_modes, left_eigenmodes,
+        resonance_set;
+        master_modes_derivatives = mmd,
+        left_modes_derivatives = lmd,
+        conjugate_permutation = perm,
+        validate_mset = validate_mset,
+        show_progress = show_progress,
+        benchmark_dir = benchmark_dir)
+end
+
+# `:from_spectral` — take the bundle's master-block permutation and append the external
+# block derived from the external system. Anything else is used verbatim.
+function _spectral_conjugate_permutation(request, spectral::SpectralData, sys)
+    request === :from_spectral || return request
+    master_perm = spectral.conjugate_permutation
+    master_perm === nothing && return nothing
+    return full_conjugate_permutation(master_perm, sys)
+end
