@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-terms">Multilinear terms</h3>
         <p>
-          The $k$-th entry of <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> defines $m_{j,k-1}$ which counts how many arguments of <code>f!</code> take the
+          The $k$-th entry of <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> defines $m_{j,k-1}$ which counts how many arguments take the
           derivative $u^{(k-1)}$. The length of a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> is the order of the system. So for a second-order
           model, <code>(3, 0)</code> means <code>f!(res, u, u, u)</code> and <code>(1, 1)</code>
           means <code>f!(res, u, u̇)</code>.
@@ -201,11 +201,11 @@ document.addEventListener('DOMContentLoaded', function () {
 <pre class="code"><span class="kw">using</span> MORFE
 
 <span class="cm"># M ü + C u̇ + K u = F(u, u̇, r), so a *hardening* Duffing spring contributes F = −k₃ u³</span>
-<span class="fn">duff!</span>(<span class="var">res</span>, <span class="var">u1</span>, <span class="var">u2</span>, <span class="var">u3</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">6.0</span> <span class="op">.*</span> <span class="var">u1</span> <span class="op">.*</span> <span class="var">u2</span> <span class="op">.*</span> <span class="var">u3</span>)
+<span class="fn">hard!</span>(<span class="var">res</span>, <span class="var">u1</span>, <span class="var">u2</span>, <span class="var">u3</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">6.0</span> <span class="op">.*</span> <span class="var">u1</span> <span class="op">.*</span> <span class="var">u2</span> <span class="op">.*</span> <span class="var">u3</span>)
 <span class="fn">drag!</span>(<span class="var">res</span>, <span class="var">v1</span>, <span class="var">v2</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">0.8</span> <span class="op">.*</span> <span class="var">v1</span> <span class="op">.*</span> <span class="var">v2</span>)
 <span class="fn">mixed!</span>(<span class="var">res</span>, <span class="var">u</span>, <span class="var">r</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="op">-</span><span class="num">1.5</span> <span class="op">.*</span> <span class="var">u</span> <span class="op">.*</span> (<span class="var">r</span>[<span class="num">1</span>] <span class="op">+</span> <span class="var">r</span>[<span class="num">2</span>]))
 
-<span class="var">term_duff</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">duff!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">3</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>, <span class="var">fully_asymmetric</span> <span class="op">=</span> <span class="kw">false</span>)
+<span class="var">term_hard</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">duff!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">3</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>, <span class="var">fully_asymmetric</span> <span class="op">=</span> <span class="kw">false</span>)
 <span class="var">term_drag</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">drag!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">0</span>, <span class="num">2</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>)
 <span class="var">term_mixed</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">mixed!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">1</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">1</span>)</pre>
         <table class="mi">
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
           Duffing oscillator is two terms — the hardening cubic from step 1 and a forcing term
           that reads the external state.
         </p>
-<pre class="code"><span class="fn">forcing!</span>(<span class="var">res</span>, <span class="var">r</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="var">f</span> <span class="op">*</span> (<span class="var">r</span>[<span class="num">1</span>] <span class="op">+</span> <span class="var">r</span>[<span class="num">2</span>]))
+<pre class="code"><span class="fn">forcing!</span>(<span class="var">res</span>, <span class="var">r</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="num">2.5</span> <span class="op">*</span> (<span class="var">r</span>[<span class="num">1</span>] <span class="op">+</span> <span class="var">r</span>[<span class="num">2</span>])) <span class="cm"># 2.5 (r₁+r₂) = 5 cos(Ωt)</span>
 <span class="var">term_forcing</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">forcing!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">0</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">1</span>)
 
 <span class="var">model</span> <span class="op">=</span> <span class="fn">NDOrderModel</span>((<span class="var">K</span>, <span class="var">C</span>, <span class="var">M</span>), (<span class="var">term_hard</span>, <span class="var">term_forcing</span>), <span class="var">harmonic</span>)

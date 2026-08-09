@@ -255,7 +255,7 @@ println("RK4 vs closed form exp(λt)r₀: max error = ", round(err_harm, sigdigi
 # `ExternalSystem` no longer rejects that: it finds a basis Q in which the linear part is
 # triangular and re-expresses the whole polynomial in r′ = Q⁻¹r.  Here A is real and
 # diagonalisable, so the eigenvector route applies and U comes out diagonal.
-A_multiharmonic = [               0.0 0.0 Ω 0.0;
+A_multiharmonic = [                              0.0 0.0 Ω 0.0;
 	-0.03Ω 0.0 0.0 4Ω;
 	-Ω 0.0 0.0 0.0;
 	0.0 -4Ω 0.12Ω 0.0]        # 0.12 = 4a
@@ -580,7 +580,7 @@ write_charts(joinpath(FOM_FIGDIR, "fig4_forced_response.html"),
 			[Curve("transient", t_D[itr], xD[itr]; colour = 1),
 				Curve("steady state — last period", t_D[ist], xD[ist]; colour = 3)];
 			xlabel = "t", ylabel = "x",
-			note = "Forced Duffing: M ẍ + C ẋ + K x = −k₃x³ + f·(r₁+r₂), with r from " *
+			note = "Forced Duffing: M ẍ + C ẋ + K x = −k₃x³ + 5cos(Ωt), with 2cos(Ωt) = r₁+r₂ using " *
 				   "the harmonic ExternalSystem of section 2."),
 		# No equal_aspect here: x and ẋ are different physical quantities whose ranges
 		# differ by a factor of a few, so forcing one scale on both would letterbox the
