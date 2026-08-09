@@ -109,6 +109,12 @@ using ..MasterModeOrthogonality: assemble_orthogonality_matrix_and_rhs!,
                                  precompute_orthogonality_column_polynomials
 using ..FullOrderModel: NDOrderModel
 using ..ExternalSystems: ExternalSystem, external_basis
+# Conjugate-involution detection lives in the spectral layer (it is a statement about
+# the spectrum and the external system, not about the solve). Imported here so the
+# driver can use it, and re-exported below so the public names are unchanged.
+using ..ConjugatePermutation: detect_conjugate_permutation,
+                              external_conjugate_permutation,
+                              full_conjugate_permutation
 
 using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
                           build_multilinear_terms_cache, MultilinearTermsCache

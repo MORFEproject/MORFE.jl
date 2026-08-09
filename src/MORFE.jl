@@ -7,6 +7,7 @@ include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
 include("SpectralDecomposition/Eigensolvers.jl")
 include("SpectralDecomposition/Eigenproblems.jl")
+include("SpectralDecomposition/ConjugatePermutation.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl")
@@ -33,6 +34,7 @@ using .ExternalSystems
 using .FullOrderModel
 using .Eigensolvers
 using .Eigenproblems
+using .ConjugatePermutation
 using .Realification
 using .Resonance
 using .InvarianceEquation
