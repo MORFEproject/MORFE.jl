@@ -157,6 +157,12 @@ body.docs-page .backdrop { opacity: 0.18; }
 .docs-main strong { color: #fff; }
 .docs-main a.inline { color: var(--jl-purple); border-bottom: 1px solid rgba(149,88,178,0.4); }
 .docs-main a.inline:hover { color: #fff; border-bottom-color: #fff; }
+/* API names linked into documentation.html by website/link_tutorials.jl.  The colour is
+   inherited so the <code> styling underneath is untouched; only the dashed underline says
+   "this is a link", the same signal the documentation page gives its signature links. */
+.docs-main a.doc-link { color: inherit; text-decoration: none;
+  border-bottom: 1px dashed rgba(149,88,178,0.55); transition: border-color .15s; }
+.docs-main a.doc-link:hover { border-bottom-color: var(--jl-purple); }
 
 .docs-main .lede {
   font-size: 19px;

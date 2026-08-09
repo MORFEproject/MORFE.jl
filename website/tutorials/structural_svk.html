@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
           One call reads the mesh, builds the FE space, applies the Dirichlet constraints,
           assembles $\mathbf K$ and $\mathbf M$ on the free DOFs, forms
           $\mathbf C = \alpha\mathbf M + \beta\mathbf K$, and prepares the SVK
-          nonlinearity as a batched <code>FEMMultilinearMap</code>.
+          nonlinearity as a batched <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a>.
         </p>
 <pre class="code"><span class="var">model</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="var">MESH</span>;
     <span class="var">material</span> <span class="op">=</span> <span class="var">MATERIAL</span>, <span class="var">damping</span> <span class="op">=</span> <span class="var">DAMPING</span>, <span class="var">dirichlet</span> <span class="op">=</span> <span class="var">DIRICHLET</span>,
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h2 id="recap">Recap</h2>
     <ul>
-      <li>A structural ROM is <code>mechanical_model</code> then <code>parametrise</code> — two calls.</li>
+      <li>A structural ROM is <code>mechanical_model</code> then <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> — two calls.</li>
       <li>The case block is the only thing you edit; the pipeline is library code you re-use.</li>
       <li>Mesh provenance (Gmsh, COMSOL, CAD) is a case detail, not a pipeline concern.</li>
       <li>Graded solves make a fast low-order run a genuine truncation of the production run.</li>

@@ -1,16 +1,16 @@
-# Graph Report - MORFE_jl  (2026-08-09)
+# Graph Report - MORFE_jl  (2026-08-08)
 
 ## Corpus Check
-- 159 files · ~479,426 words
+- 158 files · ~479,219 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1424 nodes · 1549 edges · 157 communities (135 shown, 22 thin omitted)
+- 1420 nodes · 1544 edges · 156 communities (134 shown, 22 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c31db9fd`
+- Built from commit: `4a31904f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -69,7 +69,6 @@
 - [[_COMMUNITY_benchmark_o4.jl|benchmark_o4.jl]]
 - [[_COMMUNITY_MORFE.jl — Next Steps|MORFE.jl — Next Steps]]
 - [[_COMMUNITY_viz.jl|viz.jl]]
-- [[_COMMUNITY_link_tutorials.jl|link_tutorials.jl]]
 - [[_COMMUNITY_Conjugate Symmetry Exploitation — Implementation Plan|Conjugate Symmetry Exploitation — Implementation Plan]]
 - [[_COMMUNITY_test_forces.jl|test_forces.jl]]
 - [[_COMMUNITY_full_order_model — Building a full-order model|full_order_model — Building a full-order model]]
@@ -173,7 +172,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (157 total, 22 thin omitted)
+## Communities (156 total, 22 thin omitted)
 
 ### Community 0 - "Eigensolvers"
 Cohesion: 0.06
@@ -370,10 +369,6 @@ Nodes (38): §1 — Thread-parallel solve by degree group *(Critical)*, 1a. `deg
 ### Community 65 - "viz.jl"
 Cohesion: 0.16
 Nodes (33): _arr(), Arrow3D, _arrow_js(), _base_css(), _base_js(), ChartPanel, _charts_html(), Curve (+25 more)
-
-### Community 66 - "link_tutorials.jl"
-Cohesion: 0.83
-Nodes (3): main(), rewrite(), symbol_map()
 
 ### Community 67 - "Conjugate Symmetry Exploitation — Implementation Plan"
 Cohesion: 0.06

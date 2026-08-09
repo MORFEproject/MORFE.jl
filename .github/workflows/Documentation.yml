@@ -33,6 +33,13 @@ jobs:
       - name: Generate code documentation
         run: julia --project=. website/generate_documentation.jl
 
+      # Must follow the step above: the symbol map is scraped from the documentation.html
+      # it just wrote, so the links can never point at a stale anchor.  Needs no packages,
+      # hence plain `julia`.  Only the uploaded artifact is affected — nothing is committed,
+      # so the tutorials stay free of link markup in git.
+      - name: Link API mentions in tutorials
+        run: julia website/link_tutorials.jl
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

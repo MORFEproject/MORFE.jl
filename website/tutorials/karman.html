@@ -160,9 +160,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <ul>
       <li>Defining up the full-order model for MORFE from <em>your own</em> FEM code.</li>
       <li>Centering the analysis on a steady state — here Newton–Raphson solves the base flow.</li>
-      <li>Defining nonlinearities: a FEM-assembled quadratic term via the <code>FEMMultilinearMap</code> interface, matrix- and vector-based terms via <code>MultilinearMap</code> closures, and a bifurcation parameter via <code>ExternalSystem</code>.</li>
+      <li>Defining nonlinearities: a FEM-assembled quadratic term via the <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a> interface, matrix- and vector-based terms via <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> closures, and a bifurcation parameter via <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>.</li>
       <li>Selecting master modes and building the resonance set.</li>
-      <li>Running <code>solve_cohomological_problem</code> and <em>using</em> the outputs $(W, R)$.</li>
+      <li>Running <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a> and <em>using</em> the outputs $(W, R)$.</li>
     </ul>
 
     <div class="adm note">
@@ -252,7 +252,7 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
         <p>
           The three terms of $\mathbf F$ from the previous section — $\mathbf T_1$, $\mathbf T_2$,
           $\mathbf T_3$ — are declared one by one. Each states its <em>signature</em>: the number
-          of state arguments it consumes (<code>multiindex</code>, one entry per derivative order —
+          of state arguments it consumes (<a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a>, one entry per derivative order —
           here just $m_{j,0}$) and the number of external arguments (<code>multiplicity_external</code>,
           the count $\widehat m_j$). MORFE needs nothing more than a callback that evaluates the map on
           the supplied arguments, and it exploits symmetry in repeated arguments automatically.
@@ -261,7 +261,7 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
         <p>($-(u'\!\cdot\!\nabla)u'$; <code>multiindex=(2,)</code>, <code>multiplicity_external=0</code>) </p>
         <p>It is evaluated by
         element-level callbacks rather than stored as a dense, high-dimensional tensor: the example
-        subtypes <code>FEMMultilinearMap</code>, and MORFE calls it with the manifold columns it
+        subtypes <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a>, and MORFE calls it with the manifold columns it
         needs, batched over the mesh:</p>
 <pre class="code"><span class="kw">struct</span> <span class="var">FluidConvection</span>{<span class="var">DH</span>, <span class="var">CV</span>} <span class="op">&lt;:</span> <span class="var">MORFE</span>.<span class="var">FEMMultilinearMap</span>{<span class="num">1</span>}
     <span class="cm"># … FEM handles and buffers …</span>
@@ -292,7 +292,7 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
         at neighbouring Re:</p>
 <pre class="code"><span class="var">h₀!</span>(<span class="var">acc</span>, <span class="var">r</span>) <span class="op">=</span> <span class="fn">axpy!</span>(<span class="fn">eltype</span>(<span class="var">acc</span>)(<span class="var">r</span>[<span class="num">1</span>]), <span class="var">h₀_vec</span>, <span class="var">acc</span>)
 <span class="var">h₀</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="var">h₀!</span>, (<span class="num">0</span>,), <span class="num">1</span>)</pre>
-        <p>Finally the external state $\mathbf r = \eta'$ is an <code>ExternalSystem</code> with a
+        <p>Finally the external state $\mathbf r = \eta'$ is an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> with a
         single eigenvalue 0 ($\dot\eta' = 0$), and the maps are collected into the model:</p>
 <pre class="code"><span class="var">ext_sys</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="num">0.0</span> <span class="op">+</span> <span class="num">0.0im</span>,))
 <span class="var">model</span> <span class="op">=</span> <span class="fn">NDOrderModel</span>((<span class="var">B₀</span>, <span class="var">B₁</span>), (<span class="var">convection</span>, <span class="var">g₁</span>, <span class="var">h₀</span>), <span class="var">ext_sys</span>)</pre>
@@ -431,17 +431,17 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
     <h2 id="recap">Recap</h2>
     <ol>
       <li><strong>Fixed point</strong> — converge a steady state (Newton–Raphson) and linearise around it: $(\mathbf B_0, \mathbf B_1)$.</li>
-      <li><strong>Nonlinearities</strong> — declare each term of $F(x,r)$ as a <code>MultilinearMap</code> (matrix/vector) or <code>FEMMultilinearMap</code> (element-level assembly), with its state/external signature.</li>
-      <li><strong>Parameters</strong> — anything that enters (multi)linearly can be carried as an <code>ExternalSystem</code> coordinate; the ROM becomes parametric.</li>
+      <li><strong>Nonlinearities</strong> — declare each term of $F(x,r)$ as a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> (matrix/vector) or <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a> (element-level assembly), with its state/external signature.</li>
+      <li><strong>Parameters</strong> — anything that enters (multi)linearly can be carried as an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> coordinate; the ROM becomes parametric.</li>
       <li><strong>Masters</strong> — pick the eigenpairs that span the physics (here the Hopf pair) and hand MORFE both right and left eigenvectors.</li>
       <li><strong>Style</strong> — the resonance set decides what survives in $\dot z = R(z)$; normal-form style keeps the minimal resonant core.</li>
-      <li><strong>Solve &amp; use</strong> — <code>solve_cohomological_problem</code> returns $(W, R)$; continuation runs on $R$, physical quantities come from projections of $W$.</li>
+      <li><strong>Solve &amp; use</strong> — <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a> returns $(W, R)$; continuation runs on $R$, physical quantities come from projections of $W$.</li>
     </ol>
 
     <h2 id="next">Where to next?</h2>
     <ul>
       <li><a class="inline" href="micromirror.html">MEMS micromirror</a> — the structural counterpart with a 1:2 internal resonance (planned-interface preview).</li>
-      <li><a class="inline" href="../documentation.html">Code documentation</a> — <code>NDOrderModel</code>, multilinear maps, resonance sets, <code>solve_cohomological_problem</code>.</li>
+      <li><a class="inline" href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel-NDOrderModel"><code>NDOrderModel</code></a>, multilinear maps, resonance sets, <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a>.</li>
       <li><a class="inline" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
     </ul>
 

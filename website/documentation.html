@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">18 modules · 229 documented entries · generated 9 August 2026</p>
+  <p class="lede">18 modules · 230 documented entries · generated 9 August 2026</p>
 
   <div id="Multiindices" class="doc-module-h">Multiindices</div>
   <div class="doc-module-desc" data-module="Multiindices"><div class="markdown"><p>Module <code>Multiindices</code> — graded-lexicographic multiindex sets and combinatorial utilities.</p>
@@ -3076,7 +3076,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-type" id="ParametrisationMethod-Parametrisation">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L140" target="_blank" rel="noopener">Parametrisation</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L204" target="_blank" rel="noopener">Parametrisation</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>Parametrisation&#123;ORD, NVAR, T&#125;</code></pre>
@@ -3103,7 +3103,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-type" id="ParametrisationMethod-ReducedDynamics">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L178" target="_blank" rel="noopener">ReducedDynamics</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L242" target="_blank" rel="noopener">ReducedDynamics</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>ReducedDynamics&#123;ROM, NVAR, T&#125;</code></pre>
@@ -3130,7 +3130,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="ParametrisationMethod-compute_higher_derivative_coefficients!">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L262" target="_blank" rel="noopener">compute_higher_derivative_coefficients!</a>(param_coeff::AbstractArray{T, 3}, red_coeff::AbstractMatrix{T}, external_dynamics::AbstractVector{T}, superharmonic::T, global_index::Int64, generalised_eigenmodes::AbstractMatrix{T}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L326" target="_blank" rel="noopener">compute_higher_derivative_coefficients!</a>(param_coeff::AbstractArray{T, 3}, red_coeff::AbstractMatrix{T}, external_dynamics::AbstractVector{T}, superharmonic::T, global_index::Int64, generalised_eigenmodes::AbstractMatrix{T}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}) where T</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>compute_higher_derivative_coefficients&#33;&#40;
@@ -3176,10 +3176,10 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="ParametrisationMethod-create_parametrisation_method_objects">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64) where NVAR</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L215" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L279" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L279" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ROM::Int64, external_system_size::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L279" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L279" target="_blank" rel="noopener">create_parametrisation_method_objects</a>(mset::MultiindexSet{NVAR}, ORD::Int64, FOM::Int64, ::Type{T}) where {T&lt;:Number, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>create_parametrisation_method_objects&#40;mset::MultiindexSet&#123;NVAR&#125;, ORD::Int, FOM::Int, ROM::Int, external_system_size::Int, ::Type&#123;T&#125;&#61;Complex&#41;</code></pre>
@@ -3209,10 +3209,65 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="ParametrisationMethod-parametrise">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L38" target="_blank" rel="noopener">parametrise</a>(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, order::Int64, eigenproblem::Eigenproblem; resonance, resonance_tol, conjugacy_map, mset, conjugate_permutation, validate_mset, external_eigenvalues, master_modes_derivatives, left_modes_derivatives) where {ORD, ORDP1, N_NL, N_EXT, LT, MT}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>parametrise&#40;model, order, eigenproblem; resonance, resonance_tol, conjugacy_map&#41; -&gt; &#40;W, R&#41;</code></pre>
+<p>Convenience entry point for the parametrisation method. Assembles all required inputs from a solved <code>Eigenproblem</code> and calls <code>solve_cohomological_problem</code> internally.</p>
+<h2>Arguments</h2>
+<ul>
+<li><p><code>model::NDOrderModel</code>: full-order model providing linear and nonlinear terms.</p>
+</li>
+<li><p><code>order::Int</code>: polynomial order of the parametrisation &#40;must be &gt; 0&#41;.</p>
+</li>
+<li><p><code>eigenproblem::Eigenproblem</code>: solved eigenproblem with master modes selected via one of the <code>select_master_modes_*</code> functions.</p>
+</li>
+</ul>
+<h2>Keyword Arguments</h2>
+<ul>
+<li><p><code>resonance::Union&#123;Symbol, ResonanceSet&#125; &#61; :graph</code>: resonance style. Either a pre-built <code>ResonanceSet</code> &#40;passed through unchanged&#41; or one of the symbols:</p>
+<ul>
+<li><p><code>:graph</code> — graph style; every monomial of degree ≥ 2 is resonant with all master</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code>modes.</code></pre>
+<ul>
+<li><p><code>:complex_normal_form</code> — inner resonances determined by eigenvalue proximity.</p>
+</li>
+<li><p><code>:real_normal_form</code> — like <code>:complex_normal_form</code> but conjugate pairs share the</p>
+</li>
+</ul>
+<pre><code>resonance flag. Requires &#96;conjugacy_map&#96; to be set.</code></pre>
+<ul>
+<li><p><code>resonance_tol::Float64 &#61; 1e-2</code>: tolerance used in eigenvalue-proximity resonance checks. Only used when <code>resonance</code> is a <code>Symbol</code>.</p>
+</li>
+<li><p><code>conjugacy_map::Union&#123;Nothing, Vector&#123;Int&#125;&#125; &#61; nothing</code>: local conjugacy map of length <code>ROM &#43; n_outer</code>; required when <code>resonance &#61; :real_normal_form</code>, ignored otherwise.</p>
+</li>
+<li><p><code>mset::Union&#123;Nothing, MultiindexSet&#125; &#61; nothing</code>: custom multiindex set &#40;e.g. an anisotropic z-total × θ-box set for parametric ROMs&#41;. Must have <code>NVAR &#61; ROM &#43; N_EXT</code> variables, minimum total degree ≥ 1, contain every unit multiindex, and be <strong>downward closed</strong> &#40;every divisor of a member is a member&#41; as well as closed under the conjugate permutation when one is used — the graded solve relies on both. All of this is <strong>enforced</strong> by <a href="#ParametrisationMethod-validate_multiindex_set"><code>validate_multiindex_set</code></a>, which throws an <code>ArgumentError</code> naming the offending exponent. <code>nothing</code> → <code>all_multiindices_up_to&#40;NVAR, order; min_degree &#61; 1&#41;</code>.</p>
+</li>
+<li><p><code>validate_mset::Bool &#61; true</code>: check a custom <code>mset</code> against the contract above before solving. Set <code>false</code> only when the set has already been validated, or when the check itself is too costly on a very large set; an invalid set then produces a silently wrong parametrisation rather than an error.</p>
+</li>
+<li><p><code>conjugate_permutation::Union&#123;Nothing, Vector&#123;Int&#125;&#125; &#61; nothing</code>: NVAR-length permutation pairing conjugate coordinates &#40;self-paired entries for real modes&#41;; passed through to the cohomological solve to enforce conjugate symmetry.</p>
+</li>
+<li><p><code>external_eigenvalues::Union&#123;Nothing, Vector&#123;ComplexF64&#125;&#125; &#61; nothing</code>: override for the external eigenvalues used in resonance detection &#40;default: taken from <code>model.external_system</code>&#41;.</p>
+</li>
+<li><p><code>master_modes_derivatives &#61; nothing</code>, <code>left_modes_derivatives &#61; nothing</code>: explicit <code>&#40;FOM, ORD-1, ROM&#41;</code> derivative/order blocks. Needed when the <code>Eigenproblem</code> was solved on a <em>lower-order</em> operator than <code>model</code> &#40;e.g. an augmented <code>&#40;K, C, M, 0&#41;</code> ORD-3 model with a second-order structural eigenproblem&#41;: the internal slices then don&#39;t match <code>ORD</code>, and callers supply blocks built from the eigenpairs &#40;right: <code>λ^&#123;k-1&#125;·Y&#91;:, 2, r&#93;</code>; left: via <code>left_eigenmode_orders_from_slice&#40;model.linear_terms, …&#41;</code>&#41;. Default <code>nothing</code> → sliced from the <code>Eigenproblem</code> storage as before.</p>
+</li>
+</ul>
+<h2>Returns</h2>
+<p><code>&#40;W, R&#41;</code> — the solved <a href="#ParametrisationMethod-Parametrisation"><code>Parametrisation</code></a> and <a href="#ParametrisationMethod-ReducedDynamics"><code>ReducedDynamics</code></a>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="ParametrisationMethod-restrict_Parametrisation_to_degree">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L342" target="_blank" rel="noopener">restrict_Parametrisation_to_degree</a>(W::Parametrisation, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L406" target="_blank" rel="noopener">restrict_Parametrisation_to_degree</a>(W::Parametrisation, max_degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>function restrict_Parametrisation_to_degree&#40;W::Parametrisation, max_degree::Int&#41; -&gt; Parametrisation</code></pre>
@@ -3223,7 +3278,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="ParametrisationMethod-restrict_ReducedDynamics_to_degree">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L352" target="_blank" rel="noopener">restrict_ReducedDynamics_to_degree</a>(R::ReducedDynamics, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L416" target="_blank" rel="noopener">restrict_ReducedDynamics_to_degree</a>(R::ReducedDynamics, max_degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>function restrict_ReducedDynamics_to_degree&#40;R::ReducedDynamics, max_degree::Int&#41; -&gt; ReducedDynamics</code></pre>
@@ -3234,7 +3289,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="ParametrisationMethod-validate_multiindex_set">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L36" target="_blank" rel="noopener">validate_multiindex_set</a>(mset::MultiindexSet{N}, nvar::Int64, rom::Int64; conjugate_permutation) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L100" target="_blank" rel="noopener">validate_multiindex_set</a>(mset::MultiindexSet{N}, nvar::Int64, rom::Int64; conjugate_permutation) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>validate_multiindex_set&#40;mset, nvar, rom; conjugate_permutation &#61; nothing&#41;</code></pre>

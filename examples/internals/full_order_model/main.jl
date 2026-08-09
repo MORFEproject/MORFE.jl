@@ -255,8 +255,7 @@ println("RK4 vs closed form exp(λt)r₀: max error = ", round(err_harm, sigdigi
 # `ExternalSystem` no longer rejects that: it finds a basis Q in which the linear part is
 # triangular and re-expresses the whole polynomial in r′ = Q⁻¹r.  Here A is real and
 # diagonalisable, so the eigenvector route applies and U comes out diagonal.
-A_multiharmonic = [
-	0.0 0.0 Ω 0.0;
+A_multiharmonic = [               0.0 0.0 Ω 0.0;
 	-0.03Ω 0.0 0.0 4Ω;
 	-Ω 0.0 0.0 0.0;
 	0.0 -4Ω 0.12Ω 0.0]        # 0.12 = 4a
@@ -591,7 +590,7 @@ write_charts(joinpath(FOM_FIGDIR, "fig4_forced_response.html"),
 			[Curve("transient", xD[itr], vD[itr]; colour = 1),
 				# The closed loop is the point of this panel, so draw it twice as heavy as
 				# the spiral that leads into it.
-				Curve("steady state — last period", xD[ist], vD[ist];
+				Curve("steady state; last period", xD[ist], vD[ist];
 					colour = 3, width = 2)];
 			xlabel = "x", ylabel = "ẋ",
 			note = "Damping pulls the orbit onto the periodic response, a closed loop; " *

@@ -147,8 +147,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <iframe src="assets/full_order_model/fig1_nonlinear_terms.html"
         title="Restoring-force curves, quadratic drag and a bilinear term, all evaluated through evaluate_term!"></iframe>
       <div class="fig-cap"><span class="lab">FIG · 01</span>
-        A <code>MultilinearMap</code> is one term of the right-hand side of the full-order dynamics. 
-        All smooth curves here are produced by <code>evaluate_term!</code> on a concrete <code>MultilinearMap</code>. 
+        A <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> is one term of the right-hand side of the full-order dynamics. 
+        All smooth curves here are produced by <a class="doc-link" href="../documentation.html#MultilinearMaps-evaluate_term!"><code>evaluate_term!</code></a> on a concrete <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>. 
         The third panel is a term mixing state and external state, $F = k\,u\,(r_1+r_2)$ with $r_1+r_2 = 2\cos\Omega t$. Drag it to orbit.</div>
     </div>
 
@@ -164,9 +164,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h2 id="goal">What this tutorial covers</h2>
     <ul>
-      <li>How a <code>multiindex</code> describes which derivatives go into a <code>MultilinearMap</code>.</li>
-      <li>Multiple kinds of <code>ExternalSystem</code>: (multi) harmonic, quasi-periodic and chaotic.</li>
-      <li>Assembling an <code>NDOrderModel</code> and integrating its forced response.</li>
+      <li>How a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> describes which derivatives go into a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>.</li>
+      <li>Multiple kinds of <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>: (multi) harmonic, quasi-periodic and chaotic.</li>
+      <li>Assembling an <a class="doc-link" href="../documentation.html#FullOrderModel-NDOrderModel"><code>NDOrderModel</code></a> and integrating its forced response.</li>
     </ul>
 
     <h2 id="why">Mathematical formulation</h2>
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
           \\[10pt] \dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$$</div>
     <p>
       The matrices $\mathbf{B}_j$ describe the internal linear part; and the $\mathbf{T}_j$ express the remaining nonlinear and external
-      terms as <code>MultilinearMap</code>s. The external state $\mathbf{r}$
+      terms as <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>s. The external state $\mathbf{r}$
       satisfies its own autonomous dynamics $\dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$ and enters $\mathbf{T}_j$ to express non-autonomous terms.
       The first $m_{j,0}$ arguments of $\mathbf{T}_j$ have the zeroth derivative $\mathbf{u}$, the following $m_{j,1}$ arguments have the first derivative $\dot{\mathbf{u}}$, and so on. 
       This defines the multiindex $(m_{j,0}, m_{j,1}, \dotsc, m_{j, \mathrm{ORD}-1})$. The external multiplicity $\widehat{m}_j$ counts how many copies of the external state $\mathbf{r}$ enter the term $\mathbf{T}_j$.
@@ -193,8 +193,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-terms">Multilinear terms</h3>
         <p>
-          The $k$-th entry of <code>multiindex</code> defines $m_{j,k-1}$ which counts how many arguments of <code>f!</code> take the
-          derivative $u^{(k-1)}$. The length of a <code>multiindex</code> is the order of the system. So for a second-order
+          The $k$-th entry of <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> defines $m_{j,k-1}$ which counts how many arguments of <code>f!</code> take the
+          derivative $u^{(k-1)}$. The length of a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> is the order of the system. So for a second-order
           model, <code>(3, 0)</code> means <code>f!(res, u, u, u)</code> and <code>(1, 1)</code>
           means <code>f!(res, u, u̇)</code>.
         </p>
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="adm warn">
           <div class="adm-head">The parametrisation method requires smooth maps</div>
           <div class="adm-body">
-            <p>MORFE assumes <code>MultilinearMap</code> is linear in each argument; but cannot explicitly enforce this property. 
+            <p>MORFE assumes <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> is linear in each argument; but cannot explicitly enforce this property. 
                 The user is responsible for ensuring multilinearity. 
                 For instance, MORFE cannot handle non-smooth functions like $F(u̇) = |u̇| u̇$ of Figure 1, panel 2. </p>
           </div>
@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-external">Periodic excitation</h3>
         <p>
-          An <code>ExternalSystem</code> is an autonomous ODE $\dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$ whose state enters
+          An <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> is an autonomous ODE $\dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$ whose state enters
           the model's multilinear terms as an extra argument. The classical case of harmonic forcing considers
           $\dot{r}_{1} = + i\Omega \, r_{1}$ and $\dot{r}_{2} = - i\Omega \, r_{2}$
           with solutions $r_{1}(t) = r_{1,0} \, e^{ i\Omega t}$ and $r_{2}(t) = r_{2,0} \, e^{- i\Omega t}$.
@@ -280,12 +280,12 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="cm">    `external_basis(sys)` returns Q.</span></pre>
         <p>
           Nothing else has to change: nonlinear terms are still fed the <em>physical</em> external
-          argument, and <code>to_physical_external</code> maps a state back whenever you want to
+          argument, and <a class="doc-link" href="../documentation.html#ExternalSystems-to_physical_external"><code>to_physical_external</code></a> maps a state back whenever you want to
           read one.
         </p>
         <p>
           In every case the dynamics are stored as a polynomial, so solving one needs nothing
-          more than <code>evaluate</code> and a standard solver; e.g. Runge–Kutta for time integration.
+          more than <a class="doc-link" href="../documentation.html#Polynomials-evaluate"><code>evaluate</code></a> and a standard solver; e.g. Runge–Kutta for time integration.
         </p>
         <div class="fig">
           <iframe src="assets/full_order_model/fig2_external_systems.html"
@@ -332,8 +332,8 @@ document.addEventListener('DOMContentLoaded', function () {
           <iframe src="assets/full_order_model/fig3_lorenz.html" style="aspect-ratio: 1000/580;"
             title="The Lorenz attractor in physical coordinates: rotatable 3-D phase space beside the three coordinates against time, with an arrow marking the translation to the equilibrium"></iframe>
           <div class="fig-cap"><span class="lab">FIG · 03</span>
-            Integrating the <code>ExternalSystem</code> and reading back with
-            <code>to_physical_external</code> yields the famous butterfly of the Lorenz system. Left, the trajectory in phase space — drag to
+            Integrating the <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> and reading back with
+            <a class="doc-link" href="../documentation.html#ExternalSystems-to_physical_external"><code>to_physical_external</code></a> yields the famous butterfly of the Lorenz system. Left, the trajectory in phase space — drag to
             orbit; right, each coordinate against time. The arrow is the translation to the equilibrium point
             $C_+$.</div>
         </div>
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-model">Assemble the model</h3>
         <p>
-          An <code>NDOrderModel</code> takes the linear matrices as a tuple $(B_0, \ldots,
+          An <a class="doc-link" href="../documentation.html#FullOrderModel-NDOrderModel"><code>NDOrderModel</code></a> takes the linear matrices as a tuple $(B_0, \ldots,
           B_{\mathrm{ORD}})$, the nonlinear terms as a tuple, and the external system. A forced
           Duffing oscillator is two terms — the hardening cubic from step 1 and a forcing term
           that reads the external state.
@@ -372,11 +372,11 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">A</span>, <span class="var">B</span> <span class="op">=</span> <span class="fn">linear_first_order_matrices</span>(<span class="var">model</span>)   <span class="cm"># companion pair for the eigensolver</span></pre>
         <p>
           A term that reads the external state needs a model that has one. Leave the
-          <code>ExternalSystem</code> out and construction fails immediately, naming the term —
+          <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> out and construction fails immediately, naming the term —
           rather than surviving to fail much later, during evaluation.
         </p>
         <p>
-          <code>evaluate_nonlinear_terms!</code> assembles $F$ at a given state, one degree at a
+          <a class="doc-link" href="../documentation.html#FullOrderModel-evaluate_nonlinear_terms!"><code>evaluate_nonlinear_terms!</code></a> assembles $F$ at a given state, one degree at a
           time, which is all the right-hand side of a time integration needs. Driving the model
           with the harmonic system of step 2 gives the forced response:
         </p>
@@ -386,21 +386,18 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="fig-cap"><span class="lab">FIG · 04</span>
             Damping pulls the orbit onto the periodic response — a closed loop, which the
             hardening cubic bends away from an ellipse. Twenty-five forcing periods are
-            integrated; purple is the transient, red the final period, drawn as 1.01 of one so
-            the curve laps itself and the loop closes visibly. It closes to 0.5% of its own
-            diameter — the transient decays with a 25 s time constant, so after 121 s well
-            under a percent of it survives. The nonlinear force at every step comes from
-            <code>evaluate_nonlinear_terms!</code> on the model itself.</div>
+            integrated; purple is the transient, red the final period. The nonlinear force at every step comes from
+            <a class="doc-link" href="../documentation.html#FullOrderModel-evaluate_nonlinear_terms!"><code>evaluate_nonlinear_terms!</code></a> on the model itself.</div>
         </div>
       </div>
     </div>
 
     <h2 id="recap">Recap</h2>
     <ul>
-      <li>A <code>multiindex</code> is a calling convention: <code>multiindex[k]</code> slots take $x^{(k-1)}$, and its length is the system order.</li>
+      <li>A <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> is a calling convention: <code>multiindex[k]</code> slots take $x^{(k-1)}$, and its length is the system order.</li>
       <li>Multilinear means linear in each slot separately — which rules out non-smooth terms.</li>
-      <li>An <code>ExternalSystem</code> may be nonlinear.</li>
-      <li>Internally, MORFE changes the coordinates of the <code>ExternalSystem</code> to make its linear part upper triangular. You can read states back with <code>to_physical_external</code>.</li>
+      <li>An <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> may be nonlinear.</li>
+      <li>Internally, MORFE changes the coordinates of the <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> to make its linear part upper triangular. You can read states back with <a class="doc-link" href="../documentation.html#ExternalSystems-to_physical_external"><code>to_physical_external</code></a>.</li>
       <li>You must centre the polynomial expansion at an equilibrium, as it cannot have a constant term.</li>
     </ul>
 
@@ -408,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <ul>
       <li><a href="multiindex_sets.html">Constructing MultiindexSets</a> — which monomials the solve will compute.</li>
       <li><a href="structural_svk.html">From a mesh to a ROM</a> — the same objects, built for you by a FEM backend.</li>
-      <li><a href="../documentation.html">Code documentation</a> — <code>FullOrderModel</code> and <code>MultilinearMaps</code> in full.</li>
+      <li><a href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel"><code>FullOrderModel</code></a> and <a class="doc-link" href="../documentation.html#MultilinearMaps"><code>MultilinearMaps</code></a> in full.</li>
     </ul>
 
   </main>

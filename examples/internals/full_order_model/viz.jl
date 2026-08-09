@@ -1035,6 +1035,12 @@ function _pairs_html(title, caption, data)
       };
       bar.appendChild(b);
     });
+    if (PANELS.length > 1) {
+      const m = document.createElement("span");
+      m.id = "meta";
+      m.textContent = PANELS.length + " panels";
+      bar.appendChild(m);
+    }
     addEventListener("resize", render);
     render();
     </script></body></html>

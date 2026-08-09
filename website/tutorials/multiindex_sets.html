@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <h1 id="overview">Constructing MultiindexSets</h1>
     <p style="margin:6px 0 14px;"><a class="btn" href="literate/multiindex_sets.html" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Literate script — standardized walkthrough ↗</a></p>
     <p class="lede">
-      A <code>MultiindexSet</code> decides <strong>which monomials the DPIM solve computes</strong>.
+      A <a class="doc-link" href="../documentation.html#Multiindices-MultiindexSet"><code>MultiindexSet</code></a> decides <strong>which monomials the DPIM solve computes</strong>.
       It is the one argument that separates an isotropic expansion from an anisotropic parametric
       ROM or a spectrally truncated one — and you can build it yourself.
     </p>
@@ -167,8 +167,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <li>The three automatic generators, and the graded-lexicographic order they produce.</li>
       <li>Building the same sets by hand, straight from a vector of exponents.</li>
       <li>Combining conditions — total degree in the master coordinates, a box in each parameter.</li>
-      <li>Removing multiindices with <code>delete_multiindices</code> and <code>filter</code>.</li>
-      <li>Bounding the superharmonics $s(\alpha) = \langle \lambda, \alpha\rangle$ by a spectral radius — and why that breaks the one invariant <code>parametrise</code> depends on.</li>
+      <li>Removing multiindices with <a class="doc-link" href="../documentation.html#Multiindices-delete_multiindices"><code>delete_multiindices</code></a> and <code>filter</code>.</li>
+      <li>Bounding the superharmonics $s(\alpha) = \langle \lambda, \alpha\rangle$ by a spectral radius — and why that breaks the one invariant <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> depends on.</li>
     </ul>
 
     <h2 id="why">Why the set matters</h2>
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-generators">Start from a constructor</h3>
         <p>
-          Three functions cover the usual shapes. All three return a <code>MultiindexSet</code>
+          Three functions cover the usual shapes. All three return a <a class="doc-link" href="../documentation.html#Multiindices-MultiindexSet"><code>MultiindexSet</code></a>
           already in GrLex order.
         </p>
 <pre class="code"><span class="kw">using</span> MORFE.Multiindices
@@ -202,13 +202,13 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">exact_deg</span> <span class="op">=</span> <span class="fn">multiindices_with_total_degree</span>(<span class="num">2</span>, <span class="num">4</span>)           <span class="cm"># |α| = 4</span>
 <span class="var">box</span> <span class="op">=</span> <span class="fn">filter</span>(<span class="var">α</span> <span class="op">-></span> <span class="fn">sum</span>(<span class="var">α</span>) <span class="op">≥</span> <span class="num">1</span>, <span class="fn">all_multiindices_in_box</span>([<span class="num">3</span>, <span class="num">3</span>]))   <span class="cm"># 0 ≤ αᵢ ≤ 3</span></pre>
         <p>
-          The first is what <code>parametrise</code> builds when you pass no <code>mset</code>.
+          The first is what <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> builds when you pass no <code>mset</code>.
           Note <code>min_degree = 1</code> on every one of them: the constant monomial is
           excluded, because the expansion is centred on the fixed point.
         </p>
         <p>
           Position in the GrLex order <em>is</em> the column index used everywhere else in MORFE.
-          <code>find_in_set</code> recovers it with a binary search bracketed to a single degree
+          <a class="doc-link" href="../documentation.html#Multiindices-find_in_set"><code>find_in_set</code></a> recovers it with a binary search bracketed to a single degree
           block, and returns <code>nothing</code> for a non-member:
         </p>
 <pre class="code"><span class="fn">find_in_set</span>(<span class="var">total_deg</span>, [<span class="num">1</span>, <span class="num">1</span>])   <span class="cm"># 5</span>
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-delete">Remove multiindices</h3>
         <p>
-          <code>delete_multiindices</code> returns a <strong>new</strong> set. There is no
+          <a class="doc-link" href="../documentation.html#Multiindices-delete_multiindices"><code>delete_multiindices</code></a> returns a <strong>new</strong> set. There is no
           in-place variant, so a set already handed to a parametrisation can never be mutated
           underneath it.
         </p>
@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="cm"># the closure added exactly [2,0,0] and [0,2,0]</span></pre>
         <p>The full contract for a custom <code>mset</code>:</p>
         <table class="mi">
-          <thead><tr><th>Clause</th><th>Why</th><th>Checked by <code>parametrise</code>?</th></tr></thead>
+          <thead><tr><th>Clause</th><th>Why</th><th>Checked by <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>?</th></tr></thead>
           <tbody>
             <tr><td>NVAR = ROM + N_EXT</td><td>one coordinate per reduced variable</td><td>yes</td></tr>
             <tr><td>min total degree ≥ 1</td><td>the expansion is centred on the fixed point</td><td>yes</td></tr>
@@ -436,8 +436,8 @@ document.addEventListener('DOMContentLoaded', function () {
           </tbody>
         </table>
         <p>
-          All five are enforced by <code>validate_multiindex_set</code>, which
-          <code>parametrise</code> and <code>solve_cohomological_problem</code> both run
+          All five are enforced by <a class="doc-link" href="../documentation.html#ParametrisationMethod-validate_multiindex_set"><code>validate_multiindex_set</code></a>, which
+          <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> and <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a> both run
           before solving. It takes no model, so you can check a set the moment you build it,
           and it names the offending exponent rather than just refusing:
         </p>
@@ -467,17 +467,17 @@ document.addEventListener('DOMContentLoaded', function () {
     <h2 id="recap">Recap</h2>
     <ul>
       <li>Generators cover the simplex and the box; the plain constructor covers everything else.</li>
-      <li><code>filter</code> and <code>delete_multiindices</code> are complements, both non-mutating, both preserving GrLex order and the degree boundary table.</li>
+      <li><code>filter</code> and <a class="doc-link" href="../documentation.html#Multiindices-delete_multiindices"><code>delete_multiindices</code></a> are complements, both non-mutating, both preserving GrLex order and the degree boundary table.</li>
       <li>Anisotropy is just an intersection of conditions — total degree in $z$, a box in each $\theta$.</li>
-      <li>A spectral bound is the one truncation that uses the eigenvalues — and the one whose downward closure you must take, because $|s|$ is not monotone under divisibility. <code>parametrise</code> will reject it otherwise.</li>
-      <li>The contract is enforced, not assumed: <code>validate_multiindex_set</code> checks all five clauses and names the exponent that breaks one.</li>
+      <li>A spectral bound is the one truncation that uses the eigenvalues — and the one whose downward closure you must take, because $|s|$ is not monotone under divisibility. <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> will reject it otherwise.</li>
+      <li>The contract is enforced, not assumed: <a class="doc-link" href="../documentation.html#ParametrisationMethod-validate_multiindex_set"><code>validate_multiindex_set</code></a> checks all five clauses and names the exponent that breaks one.</li>
     </ul>
 
     <h2 id="next">Where to next?</h2>
     <ul>
       <li><a href="parametric.html">Geometry as a coordinate</a> — an anisotropic set driving a real parametric ROM.</li>
       <li><a href="karman.html">Kármán vortex street</a> — the complete workflow, resonance set included.</li>
-      <li><a href="../documentation.html">Code documentation</a> — <code>Multiindices</code> in full.</li>
+      <li><a href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#Multiindices"><code>Multiindices</code></a> in full.</li>
     </ul>
 
   </main>

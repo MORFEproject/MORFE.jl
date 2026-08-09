@@ -29,6 +29,70 @@ export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
 # High-level entry point. The generic function is owned here; its method is
 # defined in `parametrise_entry.jl`, included after `CohomologicalEquations`
 # (which it calls) is available — see src/MORFE.jl.
+#
+# The docstring sits here, on the generic function, rather than on the method: that
+# file is included at MORFE top level, so a docstring written there registers against
+# the `MORFE` binding, and website/generate_documentation.jl — which scans the
+# submodules — never sees it.  Nothing may come between the docstring and the
+# definition below; a stray comment silently voids it.
+"""
+	parametrise(model, order, eigenproblem; resonance, resonance_tol, conjugacy_map) -> (W, R)
+
+Convenience entry point for the parametrisation method. Assembles all required inputs
+from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
+
+## Arguments
+
+- `model::NDOrderModel`: full-order model providing linear and nonlinear terms.
+- `order::Int`: polynomial order of the parametrisation (must be > 0).
+- `eigenproblem::Eigenproblem`: solved eigenproblem with master modes selected via one
+  of the `select_master_modes_*` functions.
+
+## Keyword Arguments
+
+- `resonance::Union{Symbol, ResonanceSet} = :graph`: resonance style. Either a
+  pre-built `ResonanceSet` (passed through unchanged) or one of the symbols:
+  - `:graph` — graph style; every monomial of degree ≥ 2 is resonant with all master
+	modes.
+  - `:complex_normal_form` — inner resonances determined by eigenvalue proximity.
+  - `:real_normal_form` — like `:complex_normal_form` but conjugate pairs share the
+	resonance flag. Requires `conjugacy_map` to be set.
+- `resonance_tol::Float64 = 1e-2`: tolerance used in eigenvalue-proximity resonance
+  checks. Only used when `resonance` is a `Symbol`.
+- `conjugacy_map::Union{Nothing, Vector{Int}} = nothing`: local conjugacy map of length
+  `ROM + n_outer`; required when `resonance = :real_normal_form`, ignored otherwise.
+- `mset::Union{Nothing, MultiindexSet} = nothing`: custom multiindex set (e.g. an
+  anisotropic z-total × θ-box set for parametric ROMs). Must have `NVAR = ROM + N_EXT`
+  variables, minimum total degree ≥ 1, contain every unit multiindex, and be
+  **downward closed** (every divisor of a member is a member) as well as closed
+  under the conjugate permutation when one is used — the graded solve relies on
+  both. All of this is **enforced** by [`validate_multiindex_set`](@ref), which throws
+  an `ArgumentError` naming the offending exponent.
+  `nothing` → `all_multiindices_up_to(NVAR, order; min_degree = 1)`.
+- `validate_mset::Bool = true`: check a custom `mset` against the contract above before
+  solving. Set `false` only when the set has already been validated, or when the check
+  itself is too costly on a very large set; an invalid set then produces a silently
+  wrong parametrisation rather than an error.
+- `conjugate_permutation::Union{Nothing, Vector{Int}} = nothing`: NVAR-length
+  permutation pairing conjugate coordinates (self-paired entries for real modes);
+  passed through to the cohomological solve to enforce conjugate symmetry.
+- `external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing`: override for
+  the external eigenvalues used in resonance detection (default: taken from
+  `model.external_system`).
+- `master_modes_derivatives = nothing`, `left_modes_derivatives = nothing`:
+  explicit `(FOM, ORD-1, ROM)` derivative/order blocks. Needed when the
+  `Eigenproblem` was solved on a *lower-order* operator than `model` (e.g. an
+  augmented `(K, C, M, 0)` ORD-3 model with a second-order structural
+  eigenproblem): the internal slices then don't match `ORD`, and callers supply
+  blocks built from the eigenpairs (right: `λ^{k-1}·Y[:, 2, r]`; left: via
+  `left_eigenmode_orders_from_slice(model.linear_terms, …)`). Default `nothing`
+  → sliced from the `Eigenproblem` storage as before.
+
+## Returns
+
+`(W, R)` — the solved [`Parametrisation`](@ref) and [`ReducedDynamics`](@ref).
+
+"""
 function parametrise end
 
 # ==================== Multiindex-set contract ====================
