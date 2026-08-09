@@ -341,11 +341,35 @@ only when a slice is all you have.
 
 The slice may carry an arbitrary per-mode scale: the blocks scale with it, and
 the orthogonality equations are invariant under per-mode row scaling.
+
+## `apply` — which operator each block is hit with
+
+`apply(B_j)` is what multiplies `ℓ`; it defaults to `adjoint`, giving the `B_jᴴ`
+form derived above, which is correct for a general pencil.
+
+Pass `apply = identity` when the pencil is **self-adjoint** — `B_j` real symmetric
+for every `j`, so `L(s)ᵀ = L(s)`.  Two things then hold simultaneously: `B_jᴴ = B_j`,
+and the left eigenvector is the conjugate of the right one, so a *right* position
+mode may legitimately be handed in as `left_slice`.  That is exactly the structural
+case, and [`_structural_left_eigenmode_orders`](@ref) is the thin wrapper for it.
+
+The keyword exists rather than hard-coding `adjoint` because exact symmetry is
+*expected* of assembled `M`, `C` but not *guaranteed*.  When `B` is exactly symmetric
+the two routes agree bitwise (measured, dense and sparse alike: symmetry makes the
+scatter and gather traversals visit the same indices in the same order).  But a single
+ulp of asymmetry — `Ke[i, j]` and `Ke[j, i]` are separate floating-point expressions in
+an element routine — makes `B * x` and `B' * x` differ at round-off.  `apply = identity`
+therefore keeps the structural path bit-for-bit unconditionally, without resting on an
+assumption about the assembler, and states the self-adjointness claim at the call site.
+
+Sharing the recurrence is the point: the `φ_ORD = ℓ` fill-downward index convention is
+the easy thing to get backwards, and it is now written once.
 """
 function left_eigenmode_orders_from_slice(
-        linear_terms::NTuple{ORDP1, <:AbstractMatrix},
+        linear_terms::Tuple{Vararg{AbstractMatrix, ORDP1}},
         left_slice::AbstractMatrix,      # FOM × n
-        eigenvalues::AbstractVector     # length n — reported (right) eigenvalues
+        eigenvalues::AbstractVector;    # length n — reported (right) eigenvalues
+        apply = adjoint
 ) where {ORDP1}
     ORD = ORDP1 - 1
     FOM = size(left_slice, 1)
@@ -357,11 +381,11 @@ function left_eigenmode_orders_from_slice(
         ν = conj(eigenvalues[k])
         blocks[:, ORD, k] .= ℓ
         if ORD > 1
-            @views blocks[:, ORD - 1, k] .= ν .* (linear_terms[ORDP1]' * ℓ) .+
-                                            linear_terms[ORD]' * ℓ
+            @views blocks[:, ORD - 1, k] .= ν .* (apply(linear_terms[ORDP1]) * ℓ) .+
+                                            apply(linear_terms[ORD]) * ℓ
             for j in (ORD - 2):-1:1
                 @views blocks[:, j, k] .= ν .* blocks[:, j + 1, k] .+
-                                          linear_terms[j + 1]' * ℓ
+                                          apply(linear_terms[j + 1]) * ℓ
             end
         end
     end
@@ -394,16 +418,18 @@ function _structural_left_eigenmode_orders(
         mass::AbstractMatrix,
         damping::AbstractMatrix
 )
-    FOM = size(Y, 1)
-    n_eigs = size(Y, 3)
     @assert size(Y, 2) == 2 "structural left blocks require a second-order model (ORD = 2)"
-    left = Array{ComplexF64}(undef, FOM, 2, n_eigs)
-    for k in 1:n_eigs
-        ϕ = view(Y, :, 1, k)
-        left[:, 2, k] .= ϕ
-        left[:, 1, k] .= conj(λ[k]) .* (mass * ϕ) .+ damping * ϕ
-    end
-    return left
+    # Same recurrence as the general builder, specialised twice over:
+    #   · the slice is the RIGHT position mode ϕ, valid because the pencil is
+    #     self-adjoint so the left eigenvector is the conjugate of the right one
+    #     (and ϕ is real), which is what spares us an adjoint eigensolve;
+    #   · `apply = identity`, because Mᴴ = M and Cᴴ = C for real symmetric M, C.
+    # `K` is never read at ORD = 2, so the good conditioning of building from the
+    # moderate-norm M, C rather than K is preserved — see the note above.
+    # B_0 (the stiffness slot) is never read at ORD = 2, so `mass` stands in purely to
+    # keep the tuple the right length.
+    return left_eigenmode_orders_from_slice(
+        (mass, damping, mass), view(Y, :, 1, :), λ; apply = identity)
 end
 
 """

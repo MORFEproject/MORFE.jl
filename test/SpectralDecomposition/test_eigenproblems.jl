@@ -265,5 +265,46 @@ end
                 end
             end
         end
+
+        # The structural left-block builder is a specialisation of the general
+        # recurrence: same formula, with the right position mode standing in for the
+        # left slice and `apply = identity` instead of `adjoint`. Both substitutions
+        # are licensed by self-adjointness of the pencil (M, K real symmetric,
+        # C = αM + βK). These tests pin that equivalence down.
+        @testset "left_eigenmode_orders_from_slice ≡ structural specialisation" begin
+            n = 6
+            K = Matrix(SymTridiagonal(fill(2.0, n), fill(-1.0, n - 1)))
+            M = Matrix(1.0I, n, n)
+            C = 0.01 * M + 0.002 * K
+            λ = ComplexF64[0.3 + 1.1im, 0.3 - 1.1im]
+            Y = zeros(ComplexF64, n, 2, 2)
+            for k in 1:2
+                Y[:, 1, k] .= ComplexF64.(1:n) ./ n
+                Y[:, 2, k] .= λ[k] .* Y[:, 1, k]
+            end
+
+            structural = MORFE.Eigenproblems._structural_left_eigenmode_orders(λ, Y, M, C)
+
+            # The formula the structural builder is documented to implement:
+            #   φ_2 = ϕ,  φ_1 = (conj(λ) M + C) ϕ
+            reference = Array{ComplexF64}(undef, n, 2, 2)
+            for k in 1:2
+                ϕ = view(Y, :, 1, k)
+                reference[:, 2, k] .= ϕ
+                reference[:, 1, k] .= conj(λ[k]) .* (M * ϕ) .+ C * ϕ
+            end
+            # Bit-identical, not just ≈: routing through the shared recurrence must
+            # not perturb the structural path at all.
+            @test structural == reference
+
+            # With exactly symmetric M and C the adjoint route agrees too. It is
+            # `apply = identity` that makes this hold *unconditionally* — one ulp of
+            # assembly asymmetry is enough to separate them, which is why the
+            # structural path pins the operator rather than relying on symmetry.
+            @test M == transpose(M) && C == transpose(C)
+            adjoint_route = left_eigenmode_orders_from_slice(
+                (M, C, M), view(Y, :, 1, :), λ)
+            @test adjoint_route == reference
+        end
     end
 end
