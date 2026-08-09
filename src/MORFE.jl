@@ -11,10 +11,14 @@ include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl")
 include("ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl")
-include("ParametrisationMethod/ParametrisationMethod.jl")
+# Coefficient containers + the mset contract. Must precede CohomologicalEquations,
+# which imports them; ParametrisationMethod (which owns `parametrise`) follows the
+# solver instead, because it *calls* it.
+include("ParametrisationMethod/ParametrisationObjects.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl")
+include("ParametrisationMethod/ParametrisationMethod.jl")
 include("FEMUtility.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
@@ -33,20 +37,16 @@ using .Realification
 using .Resonance
 using .InvarianceEquation
 using .MasterModeOrthogonality
-using .ParametrisationMethod
+using .ParametrisationObjects
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 using .CohomologicalEquations
+using .ParametrisationMethod
 using .FEMUtility
 using .BifurcationKitInterface
 using .InvarianceError
 using .RomIO
 using .RomComparison
-
-# High-level `parametrise(model, order, eigenproblem; …)` method. Included here
-# (after the using-block above) so its body can resolve `solve_cohomological_problem`,
-# `build_resonance_set`, `all_multiindices_up_to`, etc. from the re-exported scope.
-include("ParametrisationMethod/parametrise_entry.jl")
 
 # Multiindices
 export MultiindexSet, zero_multiindex,
@@ -127,6 +127,6 @@ function externalsystem_from_symbolics end
 export model_from_symbolics, externalsystem_from_symbolics
 
 # ParametrisationMethod high-level entry (also re-exported from the submodule)
-export parametrise, validate_multiindex_set
+export parametrise, build_multiindex_set, validate_multiindex_set
 
 end # module

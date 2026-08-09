@@ -89,11 +89,11 @@ module CohomologicalEquations
 using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree,
                       build_exponent_index_map
 using ..Polynomials: DensePolynomial
-using ..ParametrisationMethod: validate_multiindex_set,
-                               Parametrisation, ReducedDynamics,
-                               create_parametrisation_method_objects,
-                               compute_higher_derivative_coefficients!,
-                               multiindex_set
+using ..ParametrisationObjects: validate_multiindex_set,
+                                Parametrisation, ReducedDynamics,
+                                create_parametrisation_method_objects,
+                                compute_higher_derivative_coefficients!,
+                                multiindex_set
 using ..LowerOrderCouplings: compute_lower_order_couplings
 using ..InvarianceEquation: assemble_cohomological_matrix_and_rhs!,
                             precompute_master_column_polynomials,

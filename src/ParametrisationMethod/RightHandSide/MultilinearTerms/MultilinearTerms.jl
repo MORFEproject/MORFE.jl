@@ -33,7 +33,7 @@ using ..Multiindices: indices_in_box_with_bounded_degree,
                       factorisations_asymmetric, factorisations_fully_symmetric,
                       factorisations_groupwise_symmetric,
                       bounded_index_tuples, FactorisationEntry
-using ..ParametrisationMethod: Parametrisation
+using ..ParametrisationObjects: Parametrisation
 using ..FullOrderModel: NDOrderModel, MultilinearMap
 using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap,
                          fem_elements, fem_n_qp, fem_ndofs_per_cell,

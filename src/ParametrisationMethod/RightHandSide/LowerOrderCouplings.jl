@@ -16,8 +16,8 @@ using StaticArrays
 using ..Multiindices: MultiindexSet, build_exponent_index_map,
                       indices_in_box_with_bounded_degree
 using ..Polynomials: nvars
-using ..ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients,
-                               multiindex_set
+using ..ParametrisationObjects: Parametrisation, ReducedDynamics, coefficients,
+                                multiindex_set
 using StaticArrays: SVector
 
 export compute_lower_order_couplings
