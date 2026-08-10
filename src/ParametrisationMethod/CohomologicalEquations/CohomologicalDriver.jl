@@ -467,7 +467,7 @@ than at the call site.
 external variables — pass an explicit vector to override it, or `nothing` to disable
 conjugate symmetry for this solve.
 """
-function solve_cohomological_problem(
+@inline function solve_cohomological_problem(
         model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
         mset::MultiindexSet{NVAR},
         spectral::SpectralData{ORD, ROM},
@@ -503,9 +503,13 @@ end
 # block derived from the external system. Anything else is used verbatim.
 function _spectral_conjugate_permutation(request, spectral::SpectralData, sys)
     request === :from_spectral || return request
-    # The stored involution spans the whole spectrum; the solve wants it restricted
-    # to the master block and re-indexed to 1:ROM.
+    # `master_conjugate_permutation` is a field read — the restriction was settled when the
+    # SpectralData was built.
     master_perm = master_conjugate_permutation(spectral)
     master_perm === nothing && return nothing
+    # With no external system, NVAR == ROM and the master block already *is* the full
+    # permutation. Returning the stored vector avoids rebuilding an identical one on every
+    # autonomous solve — `full_conjugate_permutation` would collect, broadcast and vcat.
+    sys === nothing && return master_perm
     return full_conjugate_permutation(master_perm, sys)
 end

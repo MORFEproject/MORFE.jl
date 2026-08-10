@@ -34,12 +34,17 @@ Three reasons, all load-bearing:
 The cost is `2·FOM·n` complex numbers, negligible beside the `FOM × ORD × L`
 parametrisation.
 """
-struct ModeBundle{ORD, EV <: AbstractVector{ComplexF64}}
+struct ModeBundle{ORD, EV <: AbstractVector{ComplexF64}, RD, LD}
     eigenvalues::EV
     right_blocks::Union{Nothing, Array{ComplexF64, 3}}
     left_blocks::Union{Nothing, Array{ComplexF64, 3}}
     right_physical::Union{Nothing, Matrix{ComplexF64}}
     left_physical::Union{Nothing, Matrix{ComplexF64}}
+    # The derivative/order sub-blocks, cached as concretely-typed views. Building them per
+    # call allocated a SubArray on every solve; the type parameters keep the fields
+    # concrete so reading them is free.
+    right_derivatives::RD
+    left_order_blocks::LD
     indices::Vector{Int}
 
     function ModeBundle{ORD}(eigenvalues::EV,
@@ -63,7 +68,12 @@ struct ModeBundle{ORD, EV <: AbstractVector{ComplexF64}}
         # left physical is the LAST.
         rp = rb === nothing ? nothing : Matrix{ComplexF64}(rb[:, 1, :])
         lp = lb === nothing ? nothing : Matrix{ComplexF64}(lb[:, ORD, :])
-        return new{ORD, EV}(eigenvalues, rb, lb, rp, lp, collect(Int, indices))
+        # Same convention, other end: right derivatives are blocks 2:ORD, left order-blocks
+        # are 1:ORD-1. Empty for ORD == 1, which the accessors report as `nothing`.
+        rd = (rb === nothing || ORD == 1) ? nothing : @view rb[:, 2:ORD, :]
+        ld = (lb === nothing || ORD == 1) ? nothing : @view lb[:, 1:(ORD - 1), :]
+        return new{ORD, EV, typeof(rd), typeof(ld)}(
+            eigenvalues, rb, lb, rp, lp, rd, ld, collect(Int, indices))
     end
 end
 
@@ -100,10 +110,7 @@ left_modes(b::ModeBundle) = b.left_physical
 Blocks `2:ORD` of the right eigenvectors — the time derivatives `ψ_{k+1} = λ ψ_k`.
 `nothing` when `ORD == 1`.
 """
-function right_mode_derivatives(b::ModeBundle{ORD}) where {ORD}
-    (ORD == 1 || b.right_blocks === nothing) && return nothing
-    return @view b.right_blocks[:, 2:ORD, :]
-end
+right_mode_derivatives(b::ModeBundle) = b.right_derivatives
 
 """
 	left_mode_blocks(b::ModeBundle) -> view or nothing
@@ -111,10 +118,7 @@ end
 Blocks `1:(ORD-1)` of the left eigenvectors — the ones feeding the orthogonality row
 operators. `nothing` when `ORD == 1`.
 """
-function left_mode_blocks(b::ModeBundle{ORD}) where {ORD}
-    (ORD == 1 || b.left_blocks === nothing) && return nothing
-    return @view b.left_blocks[:, 1:(ORD - 1), :]
-end
+left_mode_blocks(b::ModeBundle) = b.left_order_blocks
 
 Base.length(b::ModeBundle) = length(b.eigenvalues)
 
@@ -141,16 +145,22 @@ boundary.
 - `conjugate_permutation::Union{Nothing, Vector{Int}}` — the involution `σ` over the **whole
   spectrum**, `1:n_eigs`, with `λ[σ(i)] = conj(λ[i])`; `nothing` when the spectrum has no
   conjugate structure or none was requested.
+- `master_permutation`, `outer_permutation` — `σ` restricted to each bundle and re-indexed,
+  computed once in the constructor. Read them through
+  [`master_conjugate_permutation`](@ref) / [`outer_conjugate_permutation`](@ref).
 - `mode_numbers::Vector{Int}` — physical mode number of each spectrum entry, derived from
   `σ`'s orbits (see below).
 
-## One involution, stored once
+## One involution, detected once — and each restriction computed once
 
 Conjugacy is a property of the *spectrum*, not of a bundle: master and outer modes are
-subsets of one index set. Storing a permutation per bundle would detect and store the same
-fact twice, so `σ` is detected once over all eigenvalues and both restrictions are derived —
-[`master_conjugate_permutation`](@ref) (what the solve consumes) and
-[`outer_conjugate_permutation`](@ref) (what the off-manifold warning consumes).
+subsets of one index set. Detecting per bundle would establish the same fact twice, so `σ`
+is detected once over all eigenvalues.
+
+The restrictions are then computed **once, in the constructor, and stored** — not derived per
+call. The master restriction is what every solve reads, so recomputing it would put an
+avoidable allocation on that path. Whether `σ` was detected or the master pairing was supplied
+explicitly, the result is settled at construction and thereafter only read.
 
 A restriction is well defined only if the index set is **closed under `σ`** — both members of
 a pair selected, or neither. Splitting a pair across the master/outer boundary is rejected at
@@ -164,7 +174,22 @@ struct SpectralData{ORD, ROM}
     master::ModeBundle{ORD, SVector{ROM, ComplexF64}}
     outer::ModeBundle{ORD, Vector{ComplexF64}}
     conjugate_permutation::Union{Nothing, Vector{Int}}
+    master_permutation::Union{Nothing, Vector{Int}}
+    outer_permutation::Union{Nothing, Vector{Int}}
     mode_numbers::Vector{Int}
+
+    # The only constructor: takes the canonical facts (bundles + σ) and settles everything
+    # derived from them here, once. Restriction failures are raised at this point, where the
+    # offending spectrum entry can be named.
+    function SpectralData{ORD, ROM}(master::ModeBundle{ORD, SVector{ROM, ComplexF64}},
+            outer::ModeBundle{ORD, Vector{ComplexF64}},
+            σ::Union{Nothing, AbstractVector{Int}},
+            n_eigs::Int) where {ORD, ROM}
+        σv = σ === nothing ? nothing : collect(Int, σ)
+        mp = _restrict_permutation(σv, master.indices, "master")
+        op = _restrict_permutation(σv, outer.indices, "outer")
+        return new{ORD, ROM}(master, outer, σv, mp, op, _mode_numbers(σv, n_eigs))
+    end
 end
 
 master_bundle(sd::SpectralData) = sd.master
@@ -229,20 +254,21 @@ spectrum_entries(sd::SpectralData, p::Integer) = findall(==(p), sd.mode_numbers)
 
 `σ` restricted to the master modes and re-indexed to `1:ROM` — the form the cohomological
 solve consumes, before it is extended over the external variables.
+
+Computed once in the constructor; this is a field read. Every solve consults it, so it is
+not something to re-derive per call.
 """
-function master_conjugate_permutation(sd::SpectralData)
-    _restrict_permutation(sd.conjugate_permutation, sd.master.indices, "master")
-end
+master_conjugate_permutation(sd::SpectralData) = sd.master_permutation
 
 """
 	outer_conjugate_permutation(sd) -> Union{Nothing, Vector{Int}}
 
 `σ` restricted to the outer modes and re-indexed to `1:n_outer`. Used to group conjugates
 when reporting off-manifold near-resonances.
+
+Computed once in the constructor; this is a field read.
 """
-function outer_conjugate_permutation(sd::SpectralData)
-    _restrict_permutation(sd.conjugate_permutation, sd.outer.indices, "outer")
-end
+outer_conjugate_permutation(sd::SpectralData) = sd.outer_permutation
 
 # Restrict a spectrum-wide involution to a subset, re-indexed to 1:length(subset).
 # Well defined only when the subset is closed under σ.
@@ -309,7 +335,7 @@ function SpectralData(; eigenvalues::AbstractVector,
     perm = conjugate_permutation === nothing ? nothing : collect(Int, conjugate_permutation)
     _validate_master_permutation(perm, ROM)
     σ = _embed_master_permutation(perm, ROM, ROM + n_out)
-    return SpectralData{ORD, ROM}(master, outer, σ, _mode_numbers(σ, ROM + n_out))
+    return SpectralData{ORD, ROM}(master, outer, σ, ROM + n_out)
 end
 
 # Widen a ROM-length master-block involution to the full spectrum, fixing the outer entries.
@@ -422,9 +448,9 @@ function SpectralData(model::NDOrderModel, eigenproblem::Spectrum;
     # restrictions are derived from it on demand, so the pairing is never computed twice.
     σ = _resolve_permutation(
         conjugate_permutation, eigenproblem, idx, right, left, ROM, atol)
-    sd = SpectralData{ORD_model, ROM}(master_b, outer_b, σ, _mode_numbers(σ, n_eigs))
-    # Fail here, where the offending entry can be named, rather than inside the solve.
-    master_conjugate_permutation(sd)
+    # The constructor settles the restrictions and the mode numbering, and raises here —
+    # where the offending spectrum entry can be named — if a conjugate pair was split.
+    sd = SpectralData{ORD_model, ROM}(master_b, outer_b, σ, n_eigs)
     return sd
 end
 
