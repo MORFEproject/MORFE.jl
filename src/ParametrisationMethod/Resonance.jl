@@ -883,6 +883,27 @@ end
 _default_tol(style::Symbol) = style === :graph ? 0.0 : 1e-2
 
 """
+	_first_close_pair(eigenvalues, tol, n) -> (i, j, gap)
+
+The first pair of eigenvalues separated by no more than `tol`, or `(0, 0, 0.0)` if there is
+none. Allocation-free, and stops at the first hit.
+
+Split out from the caller so the `@info` that reports it sits *outside* the loop: string
+interpolation inside a loop body captures the loop variables and boxes them on every
+iteration, even when the branch is not taken and nothing is logged.
+"""
+function _first_close_pair(eigenvalues::AbstractVector, tol::Float64, n::Int)
+    for i in 1:n, j in (i + 1):n
+
+        gap = abs(eigenvalues[i] - eigenvalues[j])
+        if gap > 0 && tol >= gap
+            return i, j, gap
+        end
+    end
+    return 0, 0, 0.0
+end
+
+"""
 	resolve_tolerances(config, master_eigenvalues, outer_eigenvalues, n_monomials)
 		-> (inner_tol, outer_tol)
 
@@ -925,15 +946,16 @@ function resolve_tolerances(config::ResonanceConfig,
         t = Float64(tol)
         # A tolerance wider than the gaps between master eigenvalues makes essentially
         # every monomial read as resonant, which is rarely what anyone means.
-        if n_int > 1
-            gaps = [abs(master_eigenvalues[i] - master_eigenvalues[j])
-                    for i in 1:n_int for j in (i + 1):n_int]
-            spacing = minimum(gaps)
-            if spacing > 0 && t >= spacing
-                @info "ResonanceConfig: tol = $t is at least the smallest spacing between " *
-                      "master eigenvalues ($(spacing)), so nearly every monomial will be " *
-                      "flagged resonant. Did you mean a smaller tolerance, or `tol_relative`?"
-            end
+        # The guard asks a yes/no question — "does ANY pair of master eigenvalues sit within
+        # `t` of each other?" — so it neither materialises the ROM(ROM-1)/2 distances nor
+        # reduces them to a minimum. The search is a separate function, and the logging
+        # happens outside it: an `@info` in the loop body interpolates the loop variables,
+        # which boxes them on every iteration even when nothing is logged.
+        i, j, gap = _first_close_pair(master_eigenvalues, t, n_int)
+        if i != 0
+            @info "ResonanceConfig: tol = $t is at least the spacing between master " *
+                  "eigenvalues $i and $j ($gap), so nearly every monomial will be " *
+                  "flagged resonant. Did you mean a smaller tolerance, or `tol_relative`?"
         end
         return t, t
     end
