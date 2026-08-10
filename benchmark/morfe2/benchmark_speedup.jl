@@ -166,12 +166,11 @@ eigenproblem = spectrum(
 	sorter! = (args...) -> nothing,
 	normalizer! = (args...) -> nothing,
 )
-(eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
+(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 
 ROM = 2;
 N_EXT = 0;
 NVAR = ROM + N_EXT
-select_master_modes_by_sorting(eigenproblem, ROM)
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[1:FOM, 1:ROM]
 left_eigenmodes = Y[(FOM+1):end, 1:ROM]
@@ -201,18 +200,18 @@ println("─"^70)
 
 # Warm-up (forces JIT compilation)
 W,
-R = solve_cohomological_problem(
-	model, mset, master_eigenvalues, master_modes, left_eigenmodes, resonance_set;
-	master_modes_derivatives = master_modes_derivatives,
-)
+left_modes_derivatives = left_eigenmode_orders_from_slice(
+	model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
+spectral = SpectralData(; eigenvalues = master_eigenvalues,
+	right_modes = master_modes, right_derivatives = master_modes_derivatives,
+	left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+R = solve_cohomological_problem(model, mset, spectral, resonance_set)
 println("Warm-up done.  FOM = $FOM, monomials = $(length(mset))")
 println()
 
 # Benchmark the equation solve in isolation (skip setup / eigenproblem)
 t_full = @benchmark solve_cohomological_problem(
-	$model, $mset, $master_eigenvalues, $master_modes, $left_eigenmodes, $resonance_set;
-	master_modes_derivatives = $master_modes_derivatives,
-) seconds=10 samples=5
+	$model, $mset, $spectral, $resonance_set) seconds=10 samples=5
 
 println("  solve_cohomological_problem:")
 show(stdout, MIME"text/plain"(), t_full)
@@ -336,11 +335,7 @@ using MORFE.Resonance: ResonanceSet
 using MORFE.ParametrisationMethod: create_parametrisation_method_objects,
 	multiindex_set
 
-W2,
-R2 = solve_cohomological_problem(
-	model, mset, master_eigenvalues, master_modes, left_eigenmodes, resonance_set;
-	master_modes_derivatives = master_modes_derivatives,
-)
+W2, R2 = solve_cohomological_problem(model, mset, spectral, resonance_set)
 
 # Pick a non-resonant interior monomial (degree 2) for the allocation test.
 # In a 2-variable degree-3 mset, degree-2 monomials are at indices 3..5.

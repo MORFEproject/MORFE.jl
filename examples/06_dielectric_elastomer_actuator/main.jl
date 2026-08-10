@@ -72,10 +72,12 @@ println("\nMilestone 1 — autonomous reduction (NVAR = 2, degree ≤ 7) …")
 mset2 = all_multiindices_up_to(2, 7; min_degree = 1)
 res2 = resonance_set_from_complex_normal_form_style(
     mset2, Vector{ComplexF64}(master_eigenvalues), 0.05)
-@time W_a, R_a = solve_cohomological_problem(
-    model_auto, mset2, master_eigenvalues, master_modes, left_eigenmodes, res2;
-    master_modes_derivatives = mmd, left_modes_derivatives = left_modes_derivatives,
+spectral = SpectralData(; eigenvalues = master_eigenvalues,
+    right_modes = master_modes, right_derivatives = mmd,
+    left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives),
     conjugate_permutation = [2, 1])
+@time W_a, R_a = solve_cohomological_problem(
+    model_auto, mset2, spectral, res2)
 
 # Realify the master equation ż₁ = ẋ₁ + i ẏ₁ in real variables (x₁, y₁):
 # Re(c) feeds ẋ₁, Im(c) feeds ẏ₁ (imaginary parts carry the frequency content).
@@ -105,10 +107,9 @@ mset4 = all_multiindices_up_to(4, 5; min_degree = 1)
 res4 = resonance_set_from_complex_normal_form_style(
     mset4, Vector{ComplexF64}(master_eigenvalues), 0.05;
     external_eigenvalues = ComplexF64[im * Ω, -im * Ω])
-@time W, R = solve_cohomological_problem(
-    model_f, mset4, master_eigenvalues, master_modes, left_eigenmodes, res4;
-    master_modes_derivatives = mmd, left_modes_derivatives = left_modes_derivatives,
-    conjugate_permutation = [2, 1, 4, 3])
+# The bundle carries the ROM-length master pairing; the solve extends it over the two
+# external variables from the model's own external system.
+@time W, R = solve_cohomological_problem(model_f, mset4, spectral, res4)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. Acceptance checks + realification

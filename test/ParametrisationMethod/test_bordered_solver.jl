@@ -18,8 +18,7 @@ using Random: MersenneTwister, randn
 
 using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
-using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
-                                   select_master_modes_by_sorting
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver, SpectralData
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.InvarianceError: invariance_error_norms
 using MORFE.InvarianceEquation: precompute_sparse_L_template,
@@ -53,21 +52,18 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         @test dense_model.linear_terms[1] isa Matrix
 
         ep = spectrum(dense_model; solver = DefaultEigensolver())
-        select_master_modes_by_sorting(ep, ROM)
+        # Same bundle for both runs: the models differ only in matrix type, and the
+        # blocks are sliced from the eigenproblem either way.
+        sd = SpectralData(dense_model, ep; master = master_by_sorting(ROM))
 
         mset = all_multiindices_up_to(ROM, order; min_degree = 1)
-        mask = ep.master_modes
-        master_eigs = SVector{ROM, ComplexF64}(ep.eigenvalues[mask])
-        master_modes = ep.eigenmodes[:, 1, mask]
-        left_modes = ep.left_eigenmodes[:, mask]
-        mmd = @view(ep.eigenmodes[:, 2:end, mask])
-        lmd = @view(ep.left_eigenmodes_orders[:, 1:1, mask])
-        rset = MORFE.Resonance.build_resonance_set(
-            dense_model, resonance_style, mset, ep, tol, nothing)
+        master_eigs = master_eigenvalues(sd)
+        rset = MORFE.Resonance.build_resonance_set(dense_model, mset, sd,
+            MORFE.Resonance.ResonanceConfig(style = resonance_style, tol = tol,
+                outer_targets = true, warn_outer = false))
 
-        args = (mset, master_eigs, master_modes, left_modes, rset)
-        kwargs = (; master_modes_derivatives = mmd, left_modes_derivatives = lmd,
-            show_progress = false)
+        args = (mset, sd, rset)
+        kwargs = (; show_progress = false)
         Wd, Rd = solve_cohomological_problem(dense_model, args...; kwargs...)
         Ws, Rs = solve_cohomological_problem(sparse_model, args...; kwargs...)
         return (; Wd, Rd, Ws, Rs, mset, rset, master_eigs)

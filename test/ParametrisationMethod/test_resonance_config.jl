@@ -1,5 +1,6 @@
-# `ResonanceConfig` must reproduce the loose-keyword path exactly, and the separated
-# inner/outer tolerances must fix the combination that used to be a bounds error.
+# `ResonanceConfig` must reproduce what the low-level constructors do when called
+# directly, and the separated inner/outer tolerances must fix the combination that used to
+# be a bounds error.
 #
 # `ResonanceSet` is plain data (BitMatrix), so these are exact comparisons that need no
 # cohomological solve at all.
@@ -10,8 +11,7 @@ using StaticArrays
 
 using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
-using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
-                                   select_master_modes_by_sorting
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver
 using MORFE.Resonance: ResonanceConfig, resolve_tolerances, build_resonance_set,
                        resonance_set_from_complex_normal_form_style,
                        resonance_set_from_graph_style,
@@ -26,26 +26,30 @@ using MORFE.SpectralDecomposition: SpectralData
     model = NthOrderModel((B0, B1, B2), (cubic,))
     ROM = 2
     ep = spectrum(model; solver = DefaultEigensolver())
-    select_master_modes_by_sorting(ep, ROM)
-    idx = findall(ep.master_modes)
+    idx = master_by_sorting(ROM)
     sd = SpectralData(model, ep; master = idx)
     mset = all_multiindices_up_to(ROM, 5; min_degree = 1)
 
-    master_eigs = collect(ComplexF64, ep.eigenvalues[ep.master_modes])
+    master_eigs = collect(ComplexF64, ep.eigenvalues[idx])
+    outer_eigs = collect(ComplexF64, ep.eigenvalues[setdiff(1:length(ep.eigenvalues), idx)])
 
-    @testset "config path ≡ loose-keyword path" begin
+    @testset "config path ≡ the constructor called directly" begin
+        direct = Dict(
+            :graph => resonance_set_from_graph_style(
+                mset, master_eigs, ComplexF64[], outer_eigs, 0.05),
+            :complex_normal_form => resonance_set_from_complex_normal_form_style(
+                mset, master_eigs, 0.05; outer_eigenvalues = outer_eigs))
         for style in (:graph, :complex_normal_form)
-            old = build_resonance_set(model, style, mset, ep, 0.05, nothing)
             new = build_resonance_set(model, mset, sd,
                 ResonanceConfig(style = style, tol = 0.05, warn_outer = false))
-            @test new.inner_resonances == old.inner_resonances
-            # Outer targets are opt-in now; the old path always passed them, so compare
-            # the inner block (which is the only thing the solve reads) and check the
-            # opt-in reproduces the outer block too.
+            @test new.inner_resonances == direct[style].inner_resonances
+            # Outer targets are opt-in: the inner block is the only thing the solve reads,
+            # so the outer one is built only when it was asked for.
+            @test new.outer_resonances === nothing
             withouter = build_resonance_set(model, mset, sd,
                 ResonanceConfig(style = style, tol = 0.05,
                     outer_targets = true, warn_outer = false))
-            @test withouter.outer_resonances == old.outer_resonances
+            @test withouter.outer_resonances == direct[style].outer_resonances
         end
     end
 

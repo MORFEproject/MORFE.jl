@@ -154,7 +154,7 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 
 	r1 = @timed spectrum(K, M, solver_eig; sorter! = (args...) -> nothing)
 	eigenproblem = r1.value
-	(eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
+	(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 
 	println("  First eigenvalues:")
 	for (i, λi) in enumerate(eigenvalues)
@@ -162,7 +162,6 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	end
 
 	FOM = n_free
-	select_master_modes_by_sorting(eigenproblem, SUITE_ROM)
 
 	master_eigenvalues = SVector{SUITE_ROM, ComplexF64}(eigenvalues[1:SUITE_ROM])
 	master_modes = Y[:, 1, 1:SUITE_ROM]
@@ -204,12 +203,13 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	# §2 — Cohomological solve
 	# -------------------------------------------------------------------
 	println("\n§2  Cohomological solve (max_degree = $(max_degree)) …")
+	left_modes_derivatives = left_eigenmode_orders_from_slice(
+		model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
+	spectral = SpectralData(; eigenvalues = master_eigenvalues,
+		right_modes = master_modes, right_derivatives = master_modes_derivatives,
+		left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 	r2 = @timed solve_cohomological_problem(
-		model, mset,
-		master_eigenvalues,
-		master_modes, left_eigenmodes,
-		resonance_set;
-		master_modes_derivatives = master_modes_derivatives,
+		model, mset, spectral, resonance_set;
 		conjugate_permutation = [2, 1, 4, 3],
 		benchmark_dir = bench_dir,
 	)

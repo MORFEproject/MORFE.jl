@@ -59,6 +59,14 @@ const _EC_left_eigenmodes = _EC_master_modes
 const _EC_left_modes_derivatives = MORFE.SpectralDecomposition.left_eigenmode_orders_from_slice(
     (_EC_K, _EC_C, _EC_M), _EC_left_eigenmodes, [_EC_λ, conj(_EC_λ)])[:, 1:1, :]
 
+# Physical slices plus their companion blocks; `SpectralData` applies the mirrored
+# convention that used to be re-stated at every call site.
+const _EC_spectral = SpectralData(; eigenvalues = _EC_master_eigenvalues,
+    right_modes = _EC_master_modes,
+    right_derivatives = _EC_master_modes_derivatives,
+    left_modes = _EC_left_eigenmodes,
+    left_blocks = _EC_left_modes_derivatives)
+
 const _EC_mset = all_multiindices_up_to(_EC_NVAR, _EC_DEGREE; min_degree = 1)
 
 # Forcing frequency deliberately away from ω₁ = 1 and from every combination
@@ -105,11 +113,8 @@ function _ec_solve(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64})
         _EC_mset, Vector{ComplexF64}(_EC_master_eigenvalues), 0.1;
         external_eigenvalues = ComplexF64[_EC_λ_ext...])
     return solve_cohomological_problem(
-        model, _EC_mset, _EC_master_eigenvalues, _EC_master_modes,
-        _EC_left_eigenmodes, res_set;
-        master_modes_derivatives = _EC_master_modes_derivatives,
-        left_modes_derivatives = _EC_left_modes_derivatives,
-        show_progress = false
+        model, _EC_mset, _EC_spectral, res_set;
+        conjugate_permutation = nothing, show_progress = false
     )
 end
 

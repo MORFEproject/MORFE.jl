@@ -108,10 +108,7 @@ function rom_amplitude_at(Ωk)
     res_k = resonance_set_from_complex_normal_form_style(
         mset4, Vector{ComplexF64}(master_eigenvalues), 0.05;
         external_eigenvalues = ComplexF64[im * Ωk, -im * Ωk])
-    W_k, R_k = solve_cohomological_problem(
-        model_k, mset4, master_eigenvalues, master_modes, left_eigenmodes, res_k;
-        master_modes_derivatives = mmd, left_modes_derivatives = left_modes_derivatives,
-        conjugate_permutation = [2, 1, 4, 3],
+    W_k, R_k = solve_cohomological_problem(model_k, mset4, spectral, res_k;
         show_progress = false)
     Tk = 2π / Ωk
     ts_k, Z_k = integrate_rom(R_k, mset4, ComplexF64[0, 0, 1, 1], 60 * Tk, Tk / 200)

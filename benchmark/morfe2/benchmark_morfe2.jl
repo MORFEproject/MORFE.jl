@@ -82,7 +82,7 @@ println("FOM:", FOM)
 eigenproblem = spectrum(
 	model, StructureModalDampingEigensolver(10, info.α, info.β);
 	sorter! = (args...) -> nothing)
-(eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
+(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 for (i, λ) in enumerate(eigenvalues)
 	println("  mode $i →   λ = $λ\n")
 end
@@ -93,13 +93,11 @@ ROM = 2             # number of master (dominant) modes
 N_EXT = 0           # number of external forcing modes (for future use)
 NVAR = ROM + N_EXT
 
-# mark eigenmodes in eigenproblem
-select_master_modes_by_sorting(eigenproblem, ROM)
 
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[:, 1, 1:ROM]            # size: FOM × ROM
 # left_eigenmodes = Y[(FOM + 1):end, 1:ROM]  # size: FOM × ROM
-left_eigenmodes = X[:, 1:ROM]      # size: FOM × ROM — X is FOM × n_eigs from get_eigenpairs
+left_eigenmodes = X[:, 1:ROM]      # size: FOM × ROM — X is the FOM × n_eigs left-eigenmode slice
 
 # Higher-order master mode derivatives W^(k)[e_r], k = 2 … ORD.
 # For the companion-form eigenproblem with state ẑ = [x; ẋ; …], the k-th
@@ -141,20 +139,16 @@ end
 #    External eigenvalues are read from model.external_system automatically.
 # ------------------------------------------------------------------------------
 # Profile.clear()
-@time W, R = solve_cohomological_problem(
-	model, mset,
-	master_eigenvalues,
-	master_modes, left_eigenmodes,
-	resonance_set;
-	master_modes_derivatives = master_modes_derivatives,
-)
-@time W, R = solve_cohomological_problem(
-	model, mset,
-	master_eigenvalues,
-	master_modes, left_eigenmodes,
-	resonance_set;
-	master_modes_derivatives = master_modes_derivatives,
-)
+# One spectral object in place of five hand-sliced arrays; `SpectralData` applies the
+# mirrored right/left block convention.
+left_modes_derivatives = left_eigenmode_orders_from_slice(
+    model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
+spectral = SpectralData(; eigenvalues = master_eigenvalues,
+    right_modes = master_modes, right_derivatives = master_modes_derivatives,
+    left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+
+@time W, R = solve_cohomological_problem(model, mset, spectral, resonance_set)
+@time W, R = solve_cohomological_problem(model, mset, spectral, resonance_set)
 
 println("finished")
 

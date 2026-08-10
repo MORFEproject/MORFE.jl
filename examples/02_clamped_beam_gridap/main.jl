@@ -218,7 +218,8 @@ end
 eigenproblem = spectrum(
     model, solver = Mechanical_Problem_Solver(nothing, nothing, 10, α, β),
     sorter! = (args...) -> nothing)
-(eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
+(eigenvalues, Y, X) = (
+    eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 for (i, λ) in enumerate(eigenvalues)
     println("  mode $i →   λ = $λ\n")
 end
@@ -241,8 +242,6 @@ N_EXT = 0           # number of external forcing modes (for future use)
 NVAR = ROM + N_EXT
 
 # mark eigenmodes in eigenproblem
-# TODO !Usage of eigenproblems is not yet implemented in parametrisation!
-select_master_modes_by_sorting(eigenproblem, ROM)
 
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[1:FOM, 1:ROM]            # size: FOM × ROM
@@ -290,14 +289,12 @@ left_modes_derivatives = left_eigenmode_orders_from_slice(
     model.linear_terms, left_eigenmodes,
     collect(master_eigenvalues))[:, 1:(ORD_model - 1), :]
 
+spectral = SpectralData(; eigenvalues = master_eigenvalues,
+    right_modes = master_modes, right_derivatives = master_modes_derivatives,
+    left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+
 _t_solve = @elapsed W, R = solve_cohomological_problem(
-    model, mset,
-    master_eigenvalues,
-    master_modes, left_eigenmodes,
-    resonance_set;
-    master_modes_derivatives = master_modes_derivatives,
-    left_modes_derivatives = left_modes_derivatives
-)
+    model, mset, spectral, resonance_set)
 
 # ------------------------------------------------------------------------------
 # 6. Realify

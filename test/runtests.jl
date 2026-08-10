@@ -30,8 +30,8 @@ should_run(group) = GROUP == "all" || GROUP == group
             @testset "ConjugateSymmetry" begin
                 include("ParametrisationMethod/test_conjugate_symmetry.jl")
             end
-            @testset "ParametriseEntry" begin
-                include("ParametrisationMethod/test_parametrise_entry.jl")
+            @testset "Parametrise" begin
+                include("ParametrisationMethod/test_parametrise_contract.jl")
                 include("ParametrisationMethod/test_parametrise_unified.jl")
             end
             include("ParametrisationMethod/test_bordered_solver.jl")

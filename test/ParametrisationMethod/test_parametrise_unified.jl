@@ -1,7 +1,8 @@
-# The unified entry point `parametrise(model, spectral, expansion_order)` must reproduce
-# the older `parametrise(model, order, spectrum)` path exactly.
+# `parametrise(model, spectral, expansion_order)` — the entry point.
 #
-# Bit-equality, not `≈`: this is a plumbing change, so any difference at all is a bug.
+# Bit-equality, not `≈`, throughout: everything here is plumbing, so any difference at all
+# is a bug. The `parametrise(model, order, spectrum)` path these once compared against is
+# gone; what remains checks the entry point against the steps it delegates to.
 
 using Test
 using LinearAlgebra
@@ -9,8 +10,7 @@ using StaticArrays
 
 using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
-using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
-                                   select_master_modes_by_sorting, SpectralData
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver, SpectralData
 using MORFE.Resonance: ResonanceConfig
 
 @testset "parametrise (unified entry point)" begin
@@ -22,18 +22,9 @@ using MORFE.Resonance: ResonanceConfig
     ROM, order = 2, 5
 
     sp = spectrum(model; solver = DefaultEigensolver())
-    select_master_modes_by_sorting(sp, ROM)
-    idx = findall(sp.master_modes)
+    idx = master_by_sorting(ROM)
     sd = SpectralData(model, sp; master = idx)
     cnf = ResonanceConfig(style = :complex_normal_form, tol = 0.05, warn_outer = false)
-
-    @testset "≡ the (model, order, spectrum) path" begin
-        Wo, Ro = parametrise(model, order, sp;
-            resonance = :complex_normal_form, resonance_tol = 0.05)
-        Wn, Rn = parametrise(model, sd, order; resonance = cnf)
-        @test Wo.poly.coefficients == Wn.poly.coefficients
-        @test Ro.poly.coefficients == Rn.poly.coefficients
-    end
 
     @testset "expansion_order dispatches on its type" begin
         Wi, Ri = parametrise(model, sd, order; resonance = cnf)
@@ -55,9 +46,9 @@ using MORFE.Resonance: ResonanceConfig
     @testset "conjugate symmetry is carried by the bundle" begin
         sdc = SpectralData(model, sp; master = idx, conjugate_permutation = :detect)
         Wc, Rc = parametrise(model, sdc, order; resonance = cnf)
-        # Identical to passing the literal through the old entry point.
-        Wr, Rr = parametrise(model, order, sp;
-            resonance = :complex_normal_form, resonance_tol = 0.05,
+        # Identical to passing the literal explicitly: the bundle's involution and a
+        # hand-written [2, 1] are the same assertion about the same eigenvectors.
+        Wr, Rr = parametrise(model, sd, order; resonance = cnf,
             conjugate_permutation = [2, 1])
         @test Wc.poly.coefficients == Wr.poly.coefficients
         @test Rc.poly.coefficients == Rr.poly.coefficients

@@ -114,7 +114,7 @@ solver_eig = StructureModalDampingEigensolver(10, α, β)
 
 r1 = @timed spectrum(K, M, solver_eig; sorter! = (args...) -> nothing)
 eigenproblem = r1.value
-(eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
+(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 
 println("  First eigenvalues:")
 for (i, λi) in enumerate(eigenvalues)
@@ -122,11 +122,10 @@ for (i, λi) in enumerate(eigenvalues)
 end
 
 FOM = n_free
-select_master_modes_by_sorting(eigenproblem, ROM)
 
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[:, 1, 1:ROM]   # position component of right eigenvectors
-left_eigenmodes = X[:, 1:ROM]   # adjoint mode shapes — X is FOM × n_eigs from get_eigenpairs
+left_eigenmodes = X[:, 1:ROM]   # adjoint mode shapes — X is the FOM × n_eigs left-eigenmode slice
 
 ORD_model = size(eigenproblem.eigenmodes, 2)
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
@@ -176,12 +175,13 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 # -----------------------------------------------------------------------
 
 println("\n§2  Cohomological solve (max_degree = $max_degree) …")
+left_modes_derivatives = left_eigenmode_orders_from_slice(
+	model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
+spectral = SpectralData(; eigenvalues = master_eigenvalues,
+	right_modes = master_modes, right_derivatives = master_modes_derivatives,
+	left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 r2 = @timed solve_cohomological_problem(
-	model, mset,
-	master_eigenvalues,
-	master_modes, left_eigenmodes,
-	resonance_set;
-	master_modes_derivatives = master_modes_derivatives,
+	model, mset, spectral, resonance_set;
 	conjugate_permutation = [2, 1, 4, 3],
 	# benchmark_dir = joinpath(@__DIR__, "benchmark_results"),
 )

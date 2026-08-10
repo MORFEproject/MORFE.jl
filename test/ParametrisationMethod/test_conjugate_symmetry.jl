@@ -6,7 +6,7 @@ using MORFE.Multiindices: all_multiindices_up_to
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.Resonance: resonance_set_from_complex_normal_form_style
 using MORFE.CohomologicalEquations: solve_cohomological_problem
-using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice
+using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice, SpectralData
 
 # ── Minimal 2-DOF Duffing model ──────────────────────────────────────────────
 const _FOM = 2
@@ -50,6 +50,12 @@ _left_modes_derivatives = left_eigenmode_orders_from_slice(
     _model.linear_terms, _left_eigenmodes,
     collect(_master_eigenvalues))[:, 1:(_ORD_model - 1), :]
 
+# The bundle the solve consumes: physical slices plus their companion blocks, which is
+# exactly what this file already had. `SpectralData` applies the mirrored convention.
+_spectral = SpectralData(; eigenvalues = _master_eigenvalues,
+    right_modes = _master_modes, right_derivatives = _master_modes_derivatives,
+    left_modes = _left_eigenmodes, left_blocks = _left_modes_derivatives)
+
 # ── Multiindex and resonance sets ─────────────────────────────────────────────
 const _max_degree = 5
 _mset = all_multiindices_up_to(_NVAR, _max_degree; min_degree = 1)
@@ -89,20 +95,12 @@ end
 _pairs, _self_conj = _build_pairs(_mset, _conj_perm)
 
 # ── Solve once per strategy ───────────────────────────────────────────────────
-_common_kwargs = (
-    master_modes_derivatives = _master_modes_derivatives,
-    left_modes_derivatives = _left_modes_derivatives
-)
-
 W_nosym, R_nosym = solve_cohomological_problem(
-    _model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, _resonance_set;
-    _common_kwargs...
+    _model, _mset, _spectral, _resonance_set; conjugate_permutation = nothing
 )
 
 W_expl, R_expl = solve_cohomological_problem(
-    _model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, _resonance_set;
-    conjugate_permutation = _conj_perm,
-    _common_kwargs...
+    _model, _mset, _spectral, _resonance_set; conjugate_permutation = _conj_perm
 )
 
 # =============================================================================

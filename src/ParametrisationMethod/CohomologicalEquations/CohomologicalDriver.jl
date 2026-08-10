@@ -329,18 +329,21 @@ function solve_cohomological_problem(
                  SVector{NVAR, Int}(conj_perm) : NoConjugatePermutation()
 
     if !(_conj_perm isa NoConjugatePermutation)
+        # `maxlog = 1`: the text is a static advisory about the model's assumptions, so it
+        # says nothing new on the second solve — and a parameter sweep pays ~1.2 kB per
+        # solve to re-render an identical message it has already shown.
         @info """
-            conjugate_permutation is active — the following assumptions must hold:
-           1. Real-valued FOM: all matrices in model.linear_terms and all nonlinear/force \
-            	 terms must have real-valued entries (eltype <: Real or purely-real complex).
-           2. Each mode either comes in a complex conjugate pair with another mode, or is \
-            	 self-paired  meaning it has a real eigenvalue and a real-valued mode shape.
-           3. Eigenvalue conjugacy is necessary but NOT sufficient for paired modes; \
-            	 the eigenvectors must satisfy master_modes[:, perm[r]] = conj(master_modes[:, r]).
-           4. If external modes are present (N_EXT > 0): the same pairing rules apply \
-            	 to the external eigenvalues, encoded in the NVAR-length permutation.
-            Passing an incorrect permutation silently corrupts the parametrisation and reduced-dynamics.
-            """
+          conjugate_permutation is active — the following assumptions must hold:
+            1. Real-valued FOM: all matrices in model.linear_terms and all nonlinear/force \
+          	 terms must have real-valued entries (eltype <: Real or purely-real complex).
+            2. Each mode either comes in a complex conjugate pair with another mode, or is \
+          	 self-paired  meaning it has a real eigenvalue and a real-valued mode shape.
+            3. Eigenvalue conjugacy is necessary but NOT sufficient for paired modes; \
+          	 the eigenvectors must satisfy master_modes[:, perm[r]] = conj(master_modes[:, r]).
+            4. If external modes are present (N_EXT > 0): the same pairing rules apply \
+          	 to the external eigenvalues, encoded in the NVAR-length permutation.
+          Passing an incorrect permutation silently corrupts the parametrisation and reduced-dynamics.
+          """ maxlog=1
     end
 
     sym = if _conj_perm isa NoConjugatePermutation

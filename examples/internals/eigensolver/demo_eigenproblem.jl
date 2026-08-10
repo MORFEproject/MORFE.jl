@@ -26,7 +26,8 @@ model = NthOrderModel((B0, B1, B2))
 
 # Compute left and right eigenpairs using the default solver and store it in Spectrum
 eigenproblem = spectrum(model)# , normaliser! = (args...) -> nothing)
-(eigs, Y, X) = get_eigenpairs(eigenproblem)
+(eigs, Y, X) = (
+    eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 for (i, λ) in enumerate(eigs)
     println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
 end
@@ -40,13 +41,13 @@ for (i, λ) in enumerate(eigs)
     @assert res_x<1e-8 "eigenvectors doesnt match: i=$i, res_x = $res_x"
 end
 
-# Choose master_modes
-select_master_modes_by_hand(eigenproblem, [false, true, false, true])
-println("by_hand: ", eigenproblem.master_modes)
-select_master_modes_by_sorting(eigenproblem, 2)
-println("by_sorting: ", eigenproblem.master_modes)
-select_master_modes_by_target_frequency(eigenproblem, [(-0.005 - 1 * im)], 1e-4)
-println("by_target_frequency: ", eigenproblem.master_modes)
+# Choose the master modes. These helpers RETURN indices; nothing is written back onto
+# the spectrum, so the selection is visible at the call site that uses it:
+#     sd = SpectralData(model, eigenproblem; master = <indices>)
+println("by hand:             ", [2, 4])
+println("by sorting:          ", master_by_sorting(2))
+println("by target frequency: ",
+    master_by_target_frequency(eigenproblem, [(-0.005 - 1 * im)], 1e-4))
 
 println("\n" * "="^80 * "\n")
 # ------------------------------------------------------------------------------
@@ -81,7 +82,8 @@ end
 # Compute left and right eigenpairs using the default solver and store it in Spectrum
 eigenproblem = spectrum(
     model, solver = My_Own_Solver(nothing), normaliser! = (args...) -> nothing)
-(eigs, Y, X) = get_eigenpairs(eigenproblem)
+(eigs, Y, X) = (
+    eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 for (i, λ) in enumerate(eigs)
     println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
 end

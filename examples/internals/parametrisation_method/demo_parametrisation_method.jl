@@ -209,13 +209,14 @@ left_modes_derivatives = left_eigenmode_orders_from_slice(
     model.linear_terms, left_eigenmodes,
     collect(master_eigenvalues))[:, 1:(ORD_model - 1), :]
 
+# One spectral object rather than five hand-sliced arrays: `SpectralData` owns the
+# mirrored right/left block convention (right physical FIRST, left physical LAST).
+spectral = SpectralData(; eigenvalues = master_eigenvalues,
+    right_modes = master_modes, right_derivatives = master_modes_derivatives,
+    left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+
 W, R = solve_cohomological_problem(
-    model, mset,
-    master_eigenvalues,
-    master_modes, left_eigenmodes,
-    resonance_set;
-    master_modes_derivatives = master_modes_derivatives,
-    left_modes_derivatives = left_modes_derivatives,
+    model, mset, spectral, resonance_set;
     conjugate_permutation = [2, 1, 3]
 )
 

@@ -14,11 +14,16 @@
 using MORFE
 using LinearAlgebra, SparseArrays, StaticArrays, Serialization, Printf
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
-using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
-                           select_master_modes_by_sorting,
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver, SpectralData,
                            left_eigenmode_orders_from_slice
 using MORFE.CohomologicalEquations: solve_cohomological_problem
-using MORFE.Resonance: build_resonance_set
+using MORFE.Resonance: build_resonance_set, ResonanceConfig
+
+# The resonance policy every model here uses. `outer_targets` reproduces what the
+# eigenproblem-based builder did unconditionally; the solve reads only the inner block,
+# so it cannot move a coefficient either way.
+const CNF = ResonanceConfig(style = :complex_normal_form, tol = 0.05,
+    outer_targets = true, warn_outer = false)
 
 const OUTDIR = length(ARGS) >= 1 ? ARGS[1] : @__DIR__
 mkpath(OUTDIR)
@@ -45,21 +50,12 @@ function chainN(n::Int; sparse_matrices = true)
     return NthOrderModel(lt, (cubic,)), (B0, B1, B2)
 end
 
-# Spectral data assembled the way parametrise_entry.jl does it today.
-# Takes a DENSE model (DefaultEigensolver calls `eigen(A, B)`, which needs dense
-# matrices) carrying at least one nonlinear term so `ORD` is inferrable.
-function spectral_pieces(dense_lt, ROM)
+# The eigenproblem every model here is fed from.  Takes a DENSE model
+# (DefaultEigensolver calls `eigen(A, B)`, which needs dense matrices) carrying at least
+# one nonlinear term so `ORD` is inferrable.
+function eigenproblem(dense_lt)
     cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0))
-    eig_model = NthOrderModel(dense_lt, (cubic,))
-    ep = spectrum(eig_model; solver = DefaultEigensolver())
-    select_master_modes_by_sorting(ep, ROM)
-    m = ep.master_modes
-    λ = SVector{ROM, ComplexF64}(ep.eigenvalues[m])
-    Ψ = ep.eigenmodes[:, 1, m]
-    ℓ = ep.left_eigenmodes[:, m]
-    mmd = Array(ep.eigenmodes[:, 2:end, m])
-    lmd = Array(ep.left_eigenmodes_orders[:, 1:(end - 1), m])
-    return ep, λ, Ψ, ℓ, mmd, lmd
+    return spectrum(NthOrderModel(dense_lt, (cubic,)); solver = DefaultEigensolver())
 end
 
 # ── measurement ──────────────────────────────────────────────────────────────
@@ -88,37 +84,36 @@ println(repeat("-", 78))
 # M1 — dense ORD=2, N_EXT=0, no conjugate symmetry.
 let ROM = 2, order = 7
     model, dense_lt = duffing2()
-    ep, λ, Ψ, ℓ, mmd, lmd = spectral_pieces(dense_lt, ROM)
+    ep = eigenproblem(dense_lt)
+    sd = SpectralData(model, ep; master = master_by_sorting(ROM))
     mset = all_multiindices_up_to(ROM, order; min_degree = 1)
-    rset = build_resonance_set(model, :complex_normal_form, mset, ep, 0.05, nothing)
+    rset = build_resonance_set(model, mset, sd, CNF)
     record!("M1_dense_noconj",
-        () -> solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
-            master_modes_derivatives = mmd, left_modes_derivatives = lmd,
-            show_progress = false))
+        () -> solve_cohomological_problem(model, mset, sd, rset;
+            conjugate_permutation = nothing, show_progress = false))
 
     # M2 — same model, conjugate-symmetry path active.
     record!("M2_dense_conj",
-        () -> solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
-            master_modes_derivatives = mmd, left_modes_derivatives = lmd,
+        () -> solve_cohomological_problem(model, mset, sd, rset;
             conjugate_permutation = [2, 1], show_progress = false))
 end
 
 # M3 — sparse solver path (KLU), larger chain.
 let ROM = 2, order = 5, n = 30
     model, dense_lt = chainN(n)
-    ep, λ, Ψ, ℓ, mmd, lmd = spectral_pieces(dense_lt, ROM)
+    ep = eigenproblem(dense_lt)
+    sd = SpectralData(model, ep; master = master_by_sorting(ROM))
     mset = all_multiindices_up_to(ROM, order; min_degree = 1)
-    rset = build_resonance_set(model, :complex_normal_form, mset, ep, 0.05, nothing)
+    rset = build_resonance_set(model, mset, sd, CNF)
     record!("M3_sparse_chain30",
-        () -> solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
-            master_modes_derivatives = mmd, left_modes_derivatives = lmd,
+        () -> solve_cohomological_problem(model, mset, sd, rset;
             conjugate_permutation = [2, 1], show_progress = false))
 end
 
 # M4 — external system present (N_EXT = 2), conjugate permutation over ROM+N_EXT.
 let ROM = 2, order = 5
     model_eig, dense_lt = duffing2()
-    ep, λ, Ψ, ℓ, mmd, lmd = spectral_pieces(dense_lt, ROM)
+    ep = eigenproblem(dense_lt)
     Ω = 1.3
     fvec = [1.0, 0.5]
     force = MultilinearMap((res, r) -> begin
@@ -130,11 +125,11 @@ let ROM = 2, order = 5
     cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0))
     ext = ExternalSystem((im * Ω, -im * Ω))
     model = NthOrderModel(dense_lt, (cubic, force), ext)
+    sd = SpectralData(model, ep; master = master_by_sorting(ROM))
     mset = all_multiindices_up_to(ROM + 2, order; min_degree = 1)
-    rset = build_resonance_set(model, :complex_normal_form, mset, ep, 0.05, nothing)
+    rset = build_resonance_set(model, mset, sd, CNF)
     record!("M4_external_conj",
-        () -> solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
-            master_modes_derivatives = mmd, left_modes_derivatives = lmd,
+        () -> solve_cohomological_problem(model, mset, sd, rset;
             conjugate_permutation = [2, 1, 4, 3], show_progress = false))
 end
 
@@ -149,25 +144,19 @@ let ROM = 2, order = 5
     cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0, 0))
     model = NthOrderModel((B0, B1, B2, Z), (cubic,))
 
-    ep, λ, Ψ, ℓ, _, _ = spectral_pieces(dense_lt, ROM)
-    # Right blocks: extend by multiplying the LAST AVAILABLE block by λ — not a
-    # fresh λ^{k-1}ψ. This is the ex04 convention (main.jl:73-77).
-    Y2 = ep.eigenmodes[:, 2, ep.master_modes]
-    mmd = zeros(ComplexF64, size(Ψ, 1), 2, ROM)
-    for r in 1:ROM
-        mmd[:, 1, r] .= Y2[:, r]
-        mmd[:, 2, r] .= λ[r] .* Y2[:, r]
-    end
-    # Left blocks: rebuilt against the AUGMENTED linear_terms (ex04 main.jl:116-117).
-    lmd = left_eigenmode_orders_from_slice(model.linear_terms, ℓ, collect(λ))[:, 1:(end - 1), :]
-
+    ep = eigenproblem(dense_lt)
+    # `SpectralData` reconciles the order mismatch: right blocks extended by multiplying
+    # the LAST AVAILABLE block by λ (not a fresh λ^{k-1}ψ), left blocks rebuilt against
+    # the AUGMENTED linear_terms. Both are dumped so the archive still pins them.
+    sd = SpectralData(model, ep; master = master_by_sorting(ROM))
     mset = all_multiindices_up_to(ROM, order; min_degree = 1)
-    rset = build_resonance_set(model, :complex_normal_form, mset, ep, 0.05, nothing)
-    serialize(joinpath(OUTDIR, "M5_mmd.jls"), mmd)
-    serialize(joinpath(OUTDIR, "M5_lmd.jls"), Array(lmd))
+    rset = build_resonance_set(model, mset, sd, CNF)
+    serialize(joinpath(OUTDIR, "M5_mmd.jls"),
+        Array(MORFE.SpectralDecomposition.right_mode_derivatives(sd)))
+    serialize(joinpath(OUTDIR, "M5_lmd.jls"),
+        Array(MORFE.SpectralDecomposition.left_mode_blocks(sd)))
     record!("M5_ord3_mismatch",
-        () -> solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
-            master_modes_derivatives = mmd, left_modes_derivatives = lmd,
+        () -> solve_cohomological_problem(model, mset, sd, rset;
             conjugate_permutation = [2, 1], show_progress = false))
 end
 

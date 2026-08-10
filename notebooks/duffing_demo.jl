@@ -227,14 +227,16 @@ For each monomial α in GrLex order:
 
 # ╔═╡ 19202122-3333-4234-af01-2233445511bb
 begin
-    W,
-    R = solve_cohomological_problem(
-        model, mset,
-        master_eigenvalues,
-        master_modes, left_eigenmodes,
-        resonance_set;
-        master_modes_derivatives = master_modes_derivatives
-    )
+    # One spectral object in place of five hand-sliced arrays. `SpectralData` applies
+    # the mirrored convention: right physical block FIRST, left physical block LAST.
+    left_modes_derivatives = left_eigenmode_orders_from_slice(
+        model.linear_terms, left_eigenmodes,
+        collect(master_eigenvalues))[:, 1:(end - 1), :]
+    spectral = SpectralData(; eigenvalues = master_eigenvalues,
+        right_modes = master_modes, right_derivatives = master_modes_derivatives,
+        left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+
+    W, R = solve_cohomological_problem(model, mset, spectral, resonance_set)
     md"""✓ Done. W: $(size(W.poly.coefficients)), R: $(size(R.poly.coefficients))."""
 end
 

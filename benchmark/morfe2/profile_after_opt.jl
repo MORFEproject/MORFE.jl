@@ -122,8 +122,7 @@ NVAR = ROM + N_EXT
 eig = spectrum(model,
 	solver = MechSolver(nothing, nothing, 1, info.α, info.β),
 	sorter! = (args...) -> nothing, normalizer! = (args...) -> nothing)
-eigenvalues, Y, _ = get_eigenpairs(eig)
-select_master_modes_by_sorting(eig, ROM)
+eigenvalues, Y, _ = (eig.eigenvalues, eig.eigenmodes, eig.left_eigenmodes)
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[1:FOM, 1:ROM]
 left_eigenmodes = Y[(FOM+1):end, 1:ROM]
@@ -145,9 +144,12 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 # ===========================================================================
 println("JIT warm-up…")
 W,
-R = solve_cohomological_problem(model, mset, master_eigenvalues,
-	master_modes, left_eigenmodes, resonance_set;
-	master_modes_derivatives = mmd)
+left_modes_derivatives = left_eigenmode_orders_from_slice(
+	model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
+spectral = SpectralData(; eigenvalues = master_eigenvalues,
+	right_modes = master_modes, right_derivatives = mmd,
+	left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+R = solve_cohomological_problem(model, mset, spectral, resonance_set)
 println("Warm-up done.\n")
 
 # ===========================================================================
@@ -156,9 +158,7 @@ println("Warm-up done.\n")
 println("Profiling…")
 Profile.clear()
 @profile for _ in 1:3
-	solve_cohomological_problem(model, mset, master_eigenvalues,
-		master_modes, left_eigenmodes, resonance_set;
-		master_modes_derivatives = mmd)
+	solve_cohomological_problem(model, mset, spectral, resonance_set)
 end
 println("Profile collected.")
 

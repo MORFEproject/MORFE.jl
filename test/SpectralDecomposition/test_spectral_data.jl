@@ -12,10 +12,9 @@ using StaticArrays
 using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
-                                   select_master_modes_by_sorting,
                                    left_eigenmode_orders_from_slice
 using MORFE.CohomologicalEquations: solve_cohomological_problem
-using MORFE.Resonance: build_resonance_set
+using MORFE.Resonance: build_resonance_set, ResonanceConfig
 using MORFE.SpectralDecomposition: SpectralData, ModeBundle, check_biorthogonality,
                                    right_modes, left_modes,
                                    right_mode_derivatives, left_mode_blocks,
@@ -38,9 +37,10 @@ end
 
     model = NthOrderModel((B0, B1, B2), (_cubic(2),))
     ep = spectrum(model; solver = DefaultEigensolver())
-    select_master_modes_by_sorting(ep, ROM)
-    mask = ep.master_modes
-    idx = findall(mask)
+    idx = master_by_sorting(ROM)
+    mask = [i in idx for i in eachindex(ep.eigenvalues)]
+
+    cnf = ResonanceConfig(style = :complex_normal_form, tol = 0.05, warn_outer = false)
 
     λ = SVector{ROM, ComplexF64}(ep.eigenvalues[mask])
     Ψ = ep.eigenmodes[:, 1, mask]
@@ -146,17 +146,19 @@ end
         @test MORFE.SpectralDecomposition._mode_numbers(nothing, 3) == [1, 2, 3]
     end
 
-    @testset "solve ≡ positional path" begin
+    @testset "the solve reads the involution off the bundle" begin
         order = 5
         mset = all_multiindices_up_to(ROM, order; min_degree = 1)
-        rset = build_resonance_set(model, :complex_normal_form, mset, ep, 0.05, nothing)
+        plain = SpectralData(model, ep; master = idx)
+        rset = build_resonance_set(model, mset, plain, cnf)
         for perm in (nothing, [2, 1])
-            Wa, Ra = solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
-                master_modes_derivatives = mmd, left_modes_derivatives = lmd,
-                conjugate_permutation = perm, show_progress = false)
+            # Carried by the bundle ...
             sd = SpectralData(model, ep; master = idx, conjugate_permutation = perm)
-            Wb, Rb = solve_cohomological_problem(model, mset, sd, rset;
+            Wa, Ra = solve_cohomological_problem(model, mset, sd, rset;
                 show_progress = false)
+            # ... must be the same solve as stating it at the call site.
+            Wb, Rb = solve_cohomological_problem(model, mset, plain, rset;
+                conjugate_permutation = perm, show_progress = false)
             @test Wa.poly.coefficients == Wb.poly.coefficients
             @test Ra.poly.coefficients == Rb.poly.coefficients
         end
@@ -184,14 +186,13 @@ end
         @test right_modes(sd) == Ψ
         @test left_modes(sd) == ℓ
 
+        # The reconciled blocks above are the whole content of this case; solving with
+        # them simply has to work at the augmented order.
         mset = all_multiindices_up_to(ROM, 5; min_degree = 1)
-        rset = build_resonance_set(aug, :complex_normal_form, mset, ep, 0.05, nothing)
-        Wa, Ra = solve_cohomological_problem(aug, mset, λ, Ψ, ℓ, rset;
-            master_modes_derivatives = mmd3, left_modes_derivatives = lmd3,
-            conjugate_permutation = [2, 1], show_progress = false)
-        Wb, Rb = solve_cohomological_problem(aug, mset, sd, rset; show_progress = false)
-        @test Wa.poly.coefficients == Wb.poly.coefficients
-        @test Ra.poly.coefficients == Rb.poly.coefficients
+        rset = build_resonance_set(aug, mset, sd, cnf)
+        W, R = solve_cohomological_problem(aug, mset, sd, rset; show_progress = false)
+        @test size(W.poly.coefficients, 2) == 3     # ORD = 3 order-blocks
+        @test size(R.poly.coefficients, 2) == length(mset)
     end
 
     @testset "external system: permutation derived, not hand-written" begin
@@ -206,16 +207,15 @@ end
             end, (0, 0), 1)
         forced = NthOrderModel((B0, B1, B2), (_cubic(2), force),
             ExternalSystem((im * Ω, -im * Ω)))
-        mset = all_multiindices_up_to(ROM + 2, 5; min_degree = 1)
-        rset = build_resonance_set(forced, :complex_normal_form, mset, ep, 0.05, nothing)
-
         sd = SpectralData(forced, ep; master = idx, conjugate_permutation = [2, 1])
-        Wa, Ra = solve_cohomological_problem(forced, mset, λ, Ψ, ℓ, rset;
-            master_modes_derivatives = mmd, left_modes_derivatives = lmd,
+        mset = all_multiindices_up_to(ROM + 2, 5; min_degree = 1)
+        rset = build_resonance_set(forced, mset, sd, cnf)
+
+        # The ROM-length master block is extended over the external variables from the
+        # external system, and must reproduce the literal [2, 1, 4, 3] exactly.
+        Wa, Ra = solve_cohomological_problem(forced, mset, sd, rset;
             conjugate_permutation = [2, 1, 4, 3], show_progress = false)
         Wb, Rb = solve_cohomological_problem(forced, mset, sd, rset; show_progress = false)
-        # The ROM-length master block is extended over the external variables from the
-        # external system, reproducing the literal [2, 1, 4, 3] exactly.
         @test Wa.poly.coefficients == Wb.poly.coefficients
         @test Ra.poly.coefficients == Rb.poly.coefficients
     end

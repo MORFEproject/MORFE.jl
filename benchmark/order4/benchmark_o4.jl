@@ -269,9 +269,8 @@ println("    Free DOFs: $n_free_s")
 ep = spectrum(model_s;
 	solver  = MechSolver(nothing, nothing, 10, α_ray, β_ray),
 	sorter! = (args...) -> nothing)
-(evals_s, Y_s, _) = get_eigenpairs(ep)
+(evals_s, Y_s, _) = (ep.eigenvalues, ep.eigenmodes, ep.left_eigenmodes)
 FOM_s = n_free_s
-select_master_modes_by_sorting(ep, ROM)
 me_s  = SVector{ROM, ComplexF64}(evals_s[1:ROM])
 mm_s  = Y_s[1:FOM_s, 1:ROM]
 lm_s  = Y_s[(FOM_s+1):end, 1:ROM]
@@ -283,8 +282,14 @@ end
 rs_s = resonance_set_from_complex_normal_form_style(
 	mset_s, Vector{ComplexF64}(me_s), 0.05)
 
-solve_args   = (model_s, mset_s, me_s, mm_s, lm_s, rs_s)
-solve_kwargs = (master_modes_derivatives = mmd_s, conjugate_permutation = [2, 1])
+lmd_s = left_eigenmode_orders_from_slice(
+	model_s.linear_terms, lm_s, collect(me_s))[:, 1:(end - 1), :]
+sd_s = SpectralData(; eigenvalues = me_s,
+	right_modes = mm_s, right_derivatives = mmd_s,
+	left_modes = lm_s, left_blocks = Array(lmd_s))
+
+solve_args   = (model_s, mset_s, sd_s, rs_s)
+solve_kwargs = (conjugate_permutation = [2, 1],)
 
 print("    Warm-up ... ");
 solve_cohomological_problem(solve_args...; solve_kwargs...);

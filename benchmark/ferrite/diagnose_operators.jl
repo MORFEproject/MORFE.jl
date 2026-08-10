@@ -74,7 +74,7 @@ println("Free DOFs: ", n_free)
 println("\nSolving eigenproblem …")
 solver_eig = StructureModalDampingEigensolver(4, α_ray, β_ray)
 eigenproblem = spectrum(K, M, solver_eig; sorter! = (args...) -> nothing)
-(eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
+(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 
 λ1 = eigenvalues[1];
 λ2 = eigenvalues[2]

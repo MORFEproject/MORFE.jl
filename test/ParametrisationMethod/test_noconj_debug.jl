@@ -65,6 +65,11 @@ const _left_eigenmodes = _master_modes
 const _left_modes_derivatives = MORFE.SpectralDecomposition.left_eigenmode_orders_from_slice(
     (_K, _C, _M), _left_eigenmodes, [_λ₁, _λ₂])[:, 1:1, :]
 
+# The bundle the solve consumes: physical slices plus their companion blocks.
+const _spectral = SpectralData(; eigenvalues = _master_eigenvalues,
+    right_modes = _master_modes, right_derivatives = _master_modes_derivatives,
+    left_modes = _left_eigenmodes, left_blocks = _left_modes_derivatives)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Multiindex set (shared; all monomials of total degree 1…max_degree in NVAR vars)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -102,17 +107,14 @@ function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
 
     model = _make_model(f_vec)
     res_set = _make_resonance()
-    shared = (master_modes_derivatives = _master_modes_derivatives,
-        left_modes_derivatives = _left_modes_derivatives, show_progress = false)
 
     W_conj, R_conj = solve_cohomological_problem(
-        model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, res_set;
-        conjugate_permutation = [2, 1, 4, 3],
-        shared...
+        model, _mset, _spectral, res_set;
+        conjugate_permutation = [2, 1, 4, 3], show_progress = false
     )
     W_noconj, R_noconj = solve_cohomological_problem(
-        model, _mset, _master_eigenvalues, _master_modes, _left_eigenmodes, res_set;
-        shared...
+        model, _mset, _spectral, res_set;
+        conjugate_permutation = nothing, show_progress = false
     )
 
     Wc1 = W_conj.poly.coefficients    # FOM × ORD × L

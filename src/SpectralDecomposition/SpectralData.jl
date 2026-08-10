@@ -300,14 +300,24 @@ end
 
 """
 	SpectralData(; eigenvalues, right_modes, left_modes,
+				 right_derivatives = nothing, left_blocks = nothing,
 				 outer_eigenvalues = ComplexF64[], conjugate_permutation = nothing)
 
-Build `SpectralData` directly from raw arrays — for eigensolvers that never construct an
+Build `SpectralData` directly from raw arrays — for eigensolvers that never construct a
 `Spectrum` (a shift-invert Hopf solve, say).
 
-`right_modes` and `left_modes` are `FOM × ORD × ROM` block arrays, or `FOM × ROM` matrices
-when `ORD == 1`.  Remember the mirrored convention: the left array's **last** slice is the
-physical one.
+Two shapes are accepted:
+
+- **Whole blocks.** `right_modes` and `left_modes` are `FOM × ORD × ROM` arrays (or
+  `FOM × ROM` matrices when `ORD == 1`), with `right_derivatives` and `left_blocks` left
+  `nothing`. Remember the mirrored convention: the left array's **last** slice is the
+  physical one.
+- **Physical slices plus their companions.** `right_modes` and `left_modes` are the
+  `FOM × ROM` physical slices, `right_derivatives` is `FOM × (ORD-1) × ROM` holding
+  `W^(k)[eᵣ]`, and `left_blocks` is `FOM × (ORD-1) × ROM` holding the lower-order left
+  blocks `φ_{r,j}`. This is the shape callers of the old positional solve already had, and
+  taking it here means the mirrored convention is applied in **one** place instead of at
+  every call site — where a swap is type-correct and compiles silently.
 
 `conjugate_permutation` is taken as given here (no `:detect`): a caller assembling raw
 arrays is in the best position to know the pairing, and eigenvalue-based detection is not
@@ -316,11 +326,13 @@ sufficient on its own.
 function SpectralData(; eigenvalues::AbstractVector,
         right_modes::AbstractArray,
         left_modes::AbstractArray,
+        right_derivatives::Union{Nothing, AbstractArray} = nothing,
+        left_blocks::Union{Nothing, AbstractArray} = nothing,
         outer_eigenvalues::AbstractVector = ComplexF64[],
         conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing)
     ROM = length(eigenvalues)
-    rb = _as_blocks(right_modes, ROM, "right_modes")
-    lb = _as_blocks(left_modes, ROM, "left_modes")
+    rb = _stack_blocks(right_modes, right_derivatives, ROM, :right)
+    lb = _stack_blocks(left_modes, left_blocks, ROM, :left)
     ORD = size(rb, 2)
     size(lb, 2) == ORD || throw(ArgumentError(
         "right_modes has $ORD order-blocks but left_modes has $(size(lb, 2))"))
@@ -350,6 +362,49 @@ function _embed_master_permutation(perm::Union{Nothing, Vector{Int}}, ROM::Int, 
 end
 
 # FOM × n (ORD = 1) or FOM × ORD × n, normalised to the 3-D form.
+"""
+	_stack_blocks(physical, companions, ROM, side) -> Array{ComplexF64, 3}
+
+Assemble one side's order-blocks, applying the mirrored convention **here and nowhere
+else**: the right physical slice is block 1 with its derivatives in `2:ORD`, the left
+physical slice is block `ORD` with its orthogonality blocks in `1:(ORD-1)`.
+
+With `companions === nothing` the caller already holds whole blocks and they are used as
+given.
+"""
+function _stack_blocks(physical::AbstractArray, companions::Union{Nothing, AbstractArray},
+        ROM::Int, side::Symbol)
+    what = side === :right ? "right_modes" : "left_modes"
+    companions === nothing && return _as_blocks(physical, ROM, what)
+
+    ndims(physical) == 2 || throw(ArgumentError(
+        "$what must be the FOM × ROM physical slice when " *
+        "$(side === :right ? "right_derivatives" : "left_blocks") is given"))
+    ndims(companions) == 3 || throw(ArgumentError(
+        "$(side === :right ? "right_derivatives" : "left_blocks") must be a " *
+        "FOM × (ORD-1) × ROM array"))
+    size(physical, 2) == ROM || throw(ArgumentError(
+        "$what has $(size(physical, 2)) columns but there are $ROM eigenvalues"))
+    size(companions, 3) == ROM || throw(ArgumentError(
+        "$(side === :right ? "right_derivatives" : "left_blocks") has " *
+        "$(size(companions, 3)) modes but there are $ROM eigenvalues"))
+    size(companions, 1) == size(physical, 1) || throw(ArgumentError(
+        "$what has $(size(physical, 1)) rows but its companion blocks have " *
+        "$(size(companions, 1))"))
+
+    FOM = size(physical, 1)
+    ORD = size(companions, 2) + 1
+    blocks = Array{ComplexF64, 3}(undef, FOM, ORD, ROM)
+    if side === :right
+        blocks[:, 1, :] .= physical
+        blocks[:, 2:ORD, :] .= companions
+    else
+        blocks[:, 1:(ORD - 1), :] .= companions
+        blocks[:, ORD, :] .= physical
+    end
+    return blocks
+end
+
 function _as_blocks(a::AbstractArray, n::Int, what::AbstractString)
     if ndims(a) == 2
         size(a, 2) == n || throw(ArgumentError(
