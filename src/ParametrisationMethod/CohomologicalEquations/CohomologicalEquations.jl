@@ -117,7 +117,7 @@ using ..SpectralDecomposition: detect_conjugate_permutation,
                                full_conjugate_permutation
 using ..SpectralDecomposition: SpectralData, right_modes, left_modes,
                                right_mode_derivatives, left_mode_blocks,
-                               master_eigenvalues
+                               master_eigenvalues, master_conjugate_permutation
 
 using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
                           build_multilinear_terms_cache, MultilinearTermsCache

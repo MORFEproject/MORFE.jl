@@ -40,10 +40,12 @@ struct ModeBundle{ORD, EV <: AbstractVector{ComplexF64}}
     left_blocks::Union{Nothing, Array{ComplexF64, 3}}
     right_physical::Union{Nothing, Matrix{ComplexF64}}
     left_physical::Union{Nothing, Matrix{ComplexF64}}
+    indices::Vector{Int}
 
     function ModeBundle{ORD}(eigenvalues::EV,
             right_blocks::Union{Nothing, AbstractArray{<:Complex, 3}},
-            left_blocks::Union{Nothing, AbstractArray{<:Complex, 3}}
+            left_blocks::Union{Nothing, AbstractArray{<:Complex, 3}},
+            indices::AbstractVector{<:Integer} = 1:length(eigenvalues)
     ) where {ORD, EV <: AbstractVector{ComplexF64}}
         n = length(eigenvalues)
         rb = right_blocks === nothing ? nothing : Array{ComplexF64, 3}(right_blocks)
@@ -55,13 +57,27 @@ struct ModeBundle{ORD, EV <: AbstractVector{ComplexF64}}
             size(b, 3) == n || throw(ArgumentError(
                 "$name blocks have $(size(b, 3)) modes but there are $n eigenvalues"))
         end
+        length(indices) == n || throw(ArgumentError(
+            "indices has $(length(indices)) entries but there are $n eigenvalues"))
         # THE mirrored convention, written once. Right physical is the FIRST slice,
         # left physical is the LAST.
         rp = rb === nothing ? nothing : Matrix{ComplexF64}(rb[:, 1, :])
         lp = lb === nothing ? nothing : Matrix{ComplexF64}(lb[:, ORD, :])
-        return new{ORD, EV}(eigenvalues, rb, lb, rp, lp)
+        return new{ORD, EV}(eigenvalues, rb, lb, rp, lp, collect(Int, indices))
     end
 end
+
+"""
+	indices(b::ModeBundle) -> Vector{Int}
+
+The positions this bundle's modes occupy in the **source spectrum**.
+
+Selecting master modes discards the original numbering, so it is recorded here. Two things
+need it: restricting the spectrum-wide conjugate involution to this bundle, and reporting a
+mode by the entry a user would index in their own spectrum. Conjugate partners need not be
+adjacent, so these are not recoverable by arithmetic.
+"""
+indices(b::ModeBundle) = b.indices
 
 """
 	right_modes(b::ModeBundle) -> Matrix{ComplexF64}
@@ -111,7 +127,7 @@ Base.length(b::ModeBundle) = length(b.eigenvalues)
 
 The complete spectral input to a parametrisation: a master [`ModeBundle`](@ref) (always
 carrying modes), an outer bundle (eigenvalues always, modes optional), and the conjugate
-involution on the master block.
+structure of the spectrum they were selected from.
 
 Element type is pinned to `ComplexF64` rather than left as a parameter, because the solve
 is `ComplexF64` throughout; a generic element type would only create a silent conversion
@@ -120,12 +136,26 @@ boundary.
 # Fields
 
 - `master::ModeBundle{ORD, SVector{ROM, ComplexF64}}`
-- `outer::ModeBundle{ORD, Vector{ComplexF64}}` — the non-master eigenvalues that outer
-  resonance detection reads.
-- `conjugate_permutation::Union{Nothing, Vector{Int}}` — length `ROM`, the **master block
-  only**. The full `NVAR` vector is assembled at solve time from the model's external
-  system, because the eigenproblem is generally solved on the autonomous operator before
-  the forced model exists.
+- `outer::ModeBundle{ORD, Vector{ComplexF64}}` — the eigenvalues left off the manifold, which
+  outer resonance detection reads.
+- `conjugate_permutation::Union{Nothing, Vector{Int}}` — the involution `σ` over the **whole
+  spectrum**, `1:n_eigs`, with `λ[σ(i)] = conj(λ[i])`; `nothing` when the spectrum has no
+  conjugate structure or none was requested.
+- `mode_numbers::Vector{Int}` — physical mode number of each spectrum entry, derived from
+  `σ`'s orbits (see below).
+
+## One involution, stored once
+
+Conjugacy is a property of the *spectrum*, not of a bundle: master and outer modes are
+subsets of one index set. Storing a permutation per bundle would detect and store the same
+fact twice, so `σ` is detected once over all eigenvalues and both restrictions are derived —
+[`master_conjugate_permutation`](@ref) (what the solve consumes) and
+[`outer_conjugate_permutation`](@ref) (what the off-manifold warning consumes).
+
+A restriction is well defined only if the index set is **closed under `σ`** — both members of
+a pair selected, or neither. Splitting a pair across the master/outer boundary is rejected at
+construction, where the offending entry can be named, rather than surfacing later inside the
+solve.
 
 Mode rescaling for conditioning (e.g. multiplying both sides by `1e-2`) is a caller-side
 operation on the raw arrays before construction; there is deliberately no `scale` field.
@@ -134,6 +164,7 @@ struct SpectralData{ORD, ROM}
     master::ModeBundle{ORD, SVector{ROM, ComplexF64}}
     outer::ModeBundle{ORD, Vector{ComplexF64}}
     conjugate_permutation::Union{Nothing, Vector{Int}}
+    mode_numbers::Vector{Int}
 end
 
 master_bundle(sd::SpectralData) = sd.master
@@ -146,11 +177,99 @@ left_modes(sd::SpectralData) = left_modes(sd.master)
 right_mode_derivatives(sd::SpectralData) = right_mode_derivatives(sd.master)
 left_mode_blocks(sd::SpectralData) = left_mode_blocks(sd.master)
 
+# ── Physical mode numbering ──────────────────────────────────────────────────
+
+"""
+	_mode_numbers(σ, n_eigs) -> Vector{Int}
+
+Number the physical modes of a spectrum: entry `i` gets `out[i]`, the index of the conjugate
+pair it belongs to.
+
+The pairs are the orbits of `σ`, numbered by **first appearance** — walk the spectrum in
+order and, on reaching an unvisited entry, assign the next number to it and to `σ(i)`. A
+self-paired entry (`σ(i) = i`, a real eigenvalue) is its own mode.
+
+This deliberately does **not** compute `⌈i/2⌉`. That formula assumes the eigensolver emits
+conjugate partners adjacently, which is a convention of some solvers rather than a fact about
+spectra — a shift-invert or filtered solve can return `{1, 5}` as a pair. Deriving the
+numbering from `σ` agrees with the adjacent case and stays correct otherwise.
+
+With no conjugate structure (`σ === nothing`), every entry is its own mode.
+"""
+function _mode_numbers(σ::Union{Nothing, AbstractVector{Int}}, n_eigs::Int)
+    σ === nothing && return collect(1:n_eigs)
+    out = zeros(Int, n_eigs)
+    next = 0
+    for i in 1:n_eigs
+        out[i] == 0 || continue
+        next += 1
+        out[i] = next
+        out[σ[i]] = next          # no-op when σ[i] == i (a real, self-paired mode)
+    end
+    return out
+end
+
+"""
+	physical_mode(sd::SpectralData, i::Integer) -> Int
+
+The physical mode number of spectrum entry `i` — conjugate partners share a number.
+"""
+physical_mode(sd::SpectralData, i::Integer) = sd.mode_numbers[i]
+
+"""
+	spectrum_entries(sd::SpectralData, p::Integer) -> Vector{Int}
+
+The spectrum entries making up physical mode `p` — one for a real mode, two for a conjugate
+pair. **Not necessarily consecutive**, which is why they are looked up rather than computed.
+"""
+spectrum_entries(sd::SpectralData, p::Integer) = findall(==(p), sd.mode_numbers)
+
+"""
+	master_conjugate_permutation(sd) -> Union{Nothing, Vector{Int}}
+
+`σ` restricted to the master modes and re-indexed to `1:ROM` — the form the cohomological
+solve consumes, before it is extended over the external variables.
+"""
+function master_conjugate_permutation(sd::SpectralData)
+    _restrict_permutation(sd.conjugate_permutation, sd.master.indices, "master")
+end
+
+"""
+	outer_conjugate_permutation(sd) -> Union{Nothing, Vector{Int}}
+
+`σ` restricted to the outer modes and re-indexed to `1:n_outer`. Used to group conjugates
+when reporting off-manifold near-resonances.
+"""
+function outer_conjugate_permutation(sd::SpectralData)
+    _restrict_permutation(sd.conjugate_permutation, sd.outer.indices, "outer")
+end
+
+# Restrict a spectrum-wide involution to a subset, re-indexed to 1:length(subset).
+# Well defined only when the subset is closed under σ.
+function _restrict_permutation(σ::Union{Nothing, AbstractVector{Int}},
+        idx::AbstractVector{Int}, what::AbstractString)
+    σ === nothing && return nothing
+    isempty(idx) && return Int[]
+    out = Vector{Int}(undef, length(idx))
+    # Linear scan rather than a Dict: this runs once per solve on a handful of master
+    # modes, where building a hash table costs more than it saves — and it kept the
+    # per-solve setup allocation flat.
+    for (l, g) in enumerate(idx)
+        partner = findfirst(==(σ[g]), idx)
+        partner === nothing && throw(ArgumentError(
+            "the $what modes are not closed under the conjugate involution: spectrum entry " *
+            "$g is included but its conjugate partner $(σ[g]) is not. Select both or " *
+            "neither — a half-pair has no conjugate symmetry to exploit."))
+        out[l] = partner
+    end
+    return out
+end
+
 function Base.show(io::IO, sd::SpectralData{ORD, ROM}) where {ORD, ROM}
     print(io, "SpectralData{ORD=$ORD, ROM=$ROM}(", length(sd.outer),
         " outer eigenvalues, ",
-        sd.conjugate_permutation === nothing ? "no conjugate permutation" :
-        "conjugate_permutation = $(sd.conjugate_permutation)", ")")
+        sd.conjugate_permutation === nothing ? "no conjugate structure" :
+        "conjugate pairs detected", ")")
 end
 
 """
@@ -180,11 +299,28 @@ function SpectralData(; eigenvalues::AbstractVector,
     size(lb, 2) == ORD || throw(ArgumentError(
         "right_modes has $ORD order-blocks but left_modes has $(size(lb, 2))"))
     λ = SVector{ROM, ComplexF64}(ComplexF64.(eigenvalues))
-    master = ModeBundle{ORD}(λ, rb, lb)
-    outer = ModeBundle{ORD}(Vector{ComplexF64}(outer_eigenvalues), nothing, nothing)
+    n_out = length(outer_eigenvalues)
+    # Raw arrays carry no spectrum of their own, so define one: masters occupy entries
+    # 1:ROM and the outer eigenvalues follow. Those positions are what `physical_mode`
+    # and the off-manifold warning report.
+    master = ModeBundle{ORD}(λ, rb, lb, 1:ROM)
+    outer = ModeBundle{ORD}(Vector{ComplexF64}(outer_eigenvalues), nothing, nothing,
+        (ROM + 1):(ROM + n_out))
     perm = conjugate_permutation === nothing ? nothing : collect(Int, conjugate_permutation)
     _validate_master_permutation(perm, ROM)
-    return SpectralData{ORD, ROM}(master, outer, perm)
+    σ = _embed_master_permutation(perm, ROM, ROM + n_out)
+    return SpectralData{ORD, ROM}(master, outer, σ, _mode_numbers(σ, ROM + n_out))
+end
+
+# Widen a ROM-length master-block involution to the full spectrum, fixing the outer entries.
+# The master block occupies 1:ROM here by construction, so this is a straight copy; the
+# outer entries are self-paired, which is the honest statement that nothing is known about
+# their conjugate structure from raw arrays alone.
+function _embed_master_permutation(perm::Union{Nothing, Vector{Int}}, ROM::Int, n_eigs::Int)
+    perm === nothing && return nothing
+    σ = collect(1:n_eigs)
+    σ[1:ROM] .= perm
+    return σ
 end
 
 # FOM × n (ORD = 1) or FOM × ORD × n, normalised to the 3-D form.
@@ -267,8 +403,9 @@ function SpectralData(model::NDOrderModel, eigenproblem::Spectrum;
     right = _reconcile_right(eigenproblem, idx, λ_master, ORD_spec, ORD_model)
     left = _reconcile_left(model, eigenproblem, idx, λ_master, ORD_spec, ORD_model)
 
-    master_b = ModeBundle{ORD_model}(λ_master, right, left)
+    master_b = ModeBundle{ORD_model}(λ_master, right, left, idx)
 
+    # `setdiff` returns ascending indices, so the outer bundle stays in spectrum order.
     outer_idx = setdiff(1:n_eigs, idx)
     λ_outer = Vector{ComplexF64}(eigenproblem.eigenvalues[outer_idx])
     outer_b = if keep_outer_modes && !isempty(outer_idx)
@@ -276,13 +413,19 @@ function SpectralData(model::NDOrderModel, eigenproblem::Spectrum;
             ComplexF64.(eigenproblem.eigenvalues[outer_idx]), ORD_spec, ORD_model)
         lo = _reconcile_left(model, eigenproblem, outer_idx,
             ComplexF64.(eigenproblem.eigenvalues[outer_idx]), ORD_spec, ORD_model)
-        ModeBundle{ORD_model}(λ_outer, ro, lo)
+        ModeBundle{ORD_model}(λ_outer, ro, lo, outer_idx)
     else
-        ModeBundle{ORD_model}(λ_outer, nothing, nothing)
+        ModeBundle{ORD_model}(λ_outer, nothing, nothing, outer_idx)
     end
 
-    perm = _resolve_permutation(conjugate_permutation, λ_master, right, left, ROM, atol)
-    return SpectralData{ORD_model, ROM}(master_b, outer_b, perm)
+    # ONE detection, over the WHOLE spectrum — master and outer alike. The master and outer
+    # restrictions are derived from it on demand, so the pairing is never computed twice.
+    σ = _resolve_permutation(
+        conjugate_permutation, eigenproblem, idx, right, left, ROM, atol)
+    sd = SpectralData{ORD_model, ROM}(master_b, outer_b, σ, _mode_numbers(σ, n_eigs))
+    # Fail here, where the offending entry can be named, rather than inside the solve.
+    master_conjugate_permutation(sd)
+    return sd
 end
 
 function _master_indices(master::AbstractVector{Bool}, n_eigs::Int)
@@ -332,33 +475,51 @@ function _reconcile_left(model, ep, idx, λ, ORD_spec::Int, ORD_model::Int)
 end
 
 _resolve_permutation(::Nothing, args...) = nothing
-function _resolve_permutation(perm::AbstractVector{Int}, λ, right, left, ROM, atol)
-    (_validate_master_permutation(collect(Int, perm), ROM); collect(Int, perm))
+
+# An explicitly supplied ROM-length master block, widened to the full spectrum. The outer
+# entries are left self-paired: the caller stated the master pairing, not the spectrum's.
+function _resolve_permutation(perm::AbstractVector{Int}, ep, idx, right, left, ROM, atol)
+    p = collect(Int, perm)
+    _validate_master_permutation(p, ROM)
+    n_eigs = length(ep.eigenvalues)
+    σ = collect(1:n_eigs)
+    for (l, g) in enumerate(idx)
+        σ[g] = idx[p[l]]        # local pairing re-expressed in spectrum indices
+    end
+    return σ
 end
 
-function _resolve_permutation(sym::Symbol, λ, right, left, ROM, atol)
+function _resolve_permutation(sym::Symbol, ep, idx, right, left, ROM, atol)
     sym === :detect || throw(ArgumentError(
         "conjugate_permutation must be `nothing`, `:detect`, or a Vector{Int}; got :$sym"))
-    σ = detect_conjugate_permutation(collect(λ); atol = atol)
+    # Detect over the WHOLE spectrum, once. The master and outer restrictions are derived
+    # from this single vector, so the pairing is never computed a second time.
+    σ = detect_conjugate_permutation(collect(ep.eigenvalues); atol = atol)
     if σ === nothing
-        @info "conjugate_permutation = :detect — the master eigenvalues are not closed " *
-              "under conjugation, so no permutation was derived. Proceeding without " *
-              "conjugate symmetry."
+        @info "conjugate_permutation = :detect — the spectrum is not closed under " *
+              "conjugation, so no involution was derived. Proceeding without conjugate " *
+              "symmetry."
         return nothing
     end
     # Eigenvalue pairing is necessary but NOT sufficient: verify the vectors, on every
     # order-block and on both sides, exactly as external_conjugate_permutation verifies
-    # the external basis columns.
+    # the external basis columns. Only the MASTER modes are checked — they are the ones the
+    # solve exploits; the outer restriction is used for diagnostics only.
+    position = Dict(g => l for (l, g) in enumerate(idx))
     for (name, blocks) in (("right", right), ("left", left))
         blocks === nothing && continue
-        for r in 1:ROM, k in axes(blocks, 2)
-
-            if !isapprox(@view(blocks[:, k, σ[r]]), conj(@view(blocks[:, k, r])); atol = atol)
-                @info "conjugate_permutation = :detect — the master eigenvalues pair up, " *
-                      "but the $name eigenvectors do not satisfy Ψ[:, σ(r)] = conj(Ψ[:, r]) " *
-                      "(mode $r, order-block $k). Proceeding without conjugate symmetry; " *
-                      "pass an explicit permutation to override."
-                return nothing
+        for (r, g) in enumerate(idx)
+            partner = get(position, σ[g], 0)
+            partner == 0 && continue   # half-pair; reported by _restrict_permutation
+            for k in axes(blocks, 2)
+                if !isapprox(@view(blocks[:, k, partner]), conj(@view(blocks[:, k, r]));
+                    atol = atol)
+                    @info "conjugate_permutation = :detect — the eigenvalues pair up, but " *
+                          "the $name eigenvectors do not satisfy Ψ[:, σ(r)] = conj(Ψ[:, r]) " *
+                          "(spectrum entry $g, order-block $k). Proceeding without " *
+                          "conjugate symmetry; pass an explicit permutation to override."
+                    return nothing
+                end
             end
         end
     end

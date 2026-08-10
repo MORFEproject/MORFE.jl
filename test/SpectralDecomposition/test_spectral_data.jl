@@ -19,7 +19,11 @@ using MORFE.Resonance: build_resonance_set
 using MORFE.SpectralDecomposition: SpectralData, ModeBundle, check_biorthogonality,
                                    right_modes, left_modes,
                                    right_mode_derivatives, left_mode_blocks,
-                                   master_eigenvalues, outer_eigenvalues
+                                   master_eigenvalues, outer_eigenvalues,
+                                   master_bundle, outer_bundle, indices,
+                                   master_conjugate_permutation,
+                                   outer_conjugate_permutation,
+                                   physical_mode, spectrum_entries
 
 function _cubic(nd)
     MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3),
@@ -81,15 +85,65 @@ end
 
     @testset "conjugate permutation" begin
         @test SpectralData(model, ep; master = idx).conjugate_permutation === nothing
-        @test SpectralData(model, ep; master = idx,
-            conjugate_permutation = :detect).conjugate_permutation == [2, 1]
-        @test SpectralData(model, ep; master = idx,
-            conjugate_permutation = [2, 1]).conjugate_permutation == [2, 1]
+        @test master_conjugate_permutation(SpectralData(model, ep; master = idx)) ===
+              nothing
+
+        # The STORED involution spans the whole spectrum; the master block is derived.
+        # This 2-DOF model has four eigenvalues in two conjugate pairs.
+        det = SpectralData(model, ep; master = idx, conjugate_permutation = :detect)
+        @test det.conjugate_permutation == [2, 1, 4, 3]      # σ over 1:n_eigs
+        @test master_conjugate_permutation(det) == [2, 1]    # restricted to 1:ROM
+        @test outer_conjugate_permutation(det) == [2, 1]     # restricted to 1:n_outer
+
+        # An explicit master block is still accepted in ROM-length form and widened; the
+        # outer entries stay self-paired because the caller stated only the master pairing.
+        exp = SpectralData(model, ep; master = idx, conjugate_permutation = [2, 1])
+        @test master_conjugate_permutation(exp) == [2, 1]
+        @test exp.conjugate_permutation == [2, 1, 3, 4]
+
         # Master block only — a full NVAR-length vector is the wrong length here.
         @test_throws ArgumentError SpectralData(model, ep; master = idx,
             conjugate_permutation = [2, 1, 4, 3])
         @test_throws ArgumentError SpectralData(model, ep; master = idx,
             conjugate_permutation = [1, 1])
+
+        # Selecting half a conjugate pair leaves no symmetry to restrict, and must be
+        # rejected at construction where the offending entry can be named — not later,
+        # inside the solve.
+        @test_throws ArgumentError SpectralData(model, ep; master = [1, 3],
+            conjugate_permutation = :detect)
+    end
+
+    @testset "physical mode numbers survive non-adjacent pairs" begin
+        # The case that motivates deriving mode numbers from σ's orbits rather than
+        # computing ⌈i/2⌉: a spectrum whose conjugate partners are NOT adjacent, which a
+        # shift-invert or filtered eigensolver can return.
+        λna = ComplexF64[1 + 2im, 3 + 4im, 1 - 2im, 3 - 4im]   # pairs {1,3} and {2,4}
+        Ψna = ComplexF64[1 0 1 0; 0 1 0 1; 1 1 1 1]
+        Ψna[:, 3] .= conj.(Ψna[:, 1])
+        Ψna[:, 4] .= conj.(Ψna[:, 2])
+        sd = SpectralData(; eigenvalues = λna[1:2], right_modes = Ψna[:, 1:2],
+            left_modes = Ψna[:, 1:2], outer_eigenvalues = λna[3:4],
+            conjugate_permutation = nothing)
+
+        # Raw-array construction numbers masters 1:ROM then the outer entries after them,
+        # so here the spectrum order is [λ₁, λ₂, λ₃, λ₄] as given.
+        @test indices(master_bundle(sd)) == [1, 2]
+        @test indices(outer_bundle(sd)) == [3, 4]
+
+        # With σ pairing {1,3} and {2,4}, mode numbering by first appearance gives
+        # entry 1 → mode 1, entry 2 → mode 2, entry 3 → mode 1, entry 4 → mode 2.
+        # ⌈i/2⌉ would wrongly give 1,1,2,2.
+        σ = [3, 4, 1, 2]
+        @test MORFE.SpectralDecomposition._mode_numbers(σ, 4) == [1, 2, 1, 2]
+        @test MORFE.SpectralDecomposition._mode_numbers(σ, 4) != [1, 1, 2, 2]
+
+        # Adjacent pairs must still give the conventional numbering.
+        @test MORFE.SpectralDecomposition._mode_numbers([2, 1, 4, 3], 4) == [1, 1, 2, 2]
+        # A real (self-paired) eigenvalue is its own mode.
+        @test MORFE.SpectralDecomposition._mode_numbers([2, 1, 3], 3) == [1, 1, 2]
+        # No conjugate structure at all: every entry is its own mode.
+        @test MORFE.SpectralDecomposition._mode_numbers(nothing, 3) == [1, 2, 3]
     end
 
     @testset "solve ≡ positional path" begin

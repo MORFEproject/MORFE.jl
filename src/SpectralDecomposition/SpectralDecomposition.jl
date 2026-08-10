@@ -69,7 +69,9 @@ export select_master_modes_by_hand, select_master_modes_by_sorting,
 export ModeBundle, SpectralData,
        right_modes, left_modes, right_mode_derivatives, left_mode_blocks,
        master_eigenvalues, outer_eigenvalues, master_bundle, outer_bundle,
-       check_biorthogonality
+       check_biorthogonality, indices,
+       physical_mode, spectrum_entries,
+       master_conjugate_permutation, outer_conjugate_permutation
 
 # ── Conjugate structure ──────────────────────────────────────────────────────
 export detect_conjugate_permutation, external_conjugate_permutation,

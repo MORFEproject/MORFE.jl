@@ -31,7 +31,8 @@ using StaticArrays: SVector
 
 using ..Multiindices: MultiindexSet, all_multiindices_up_to
 using ..FullOrderModel: NDOrderModel
-using ..SpectralDecomposition: Spectrum, SpectralData, master_eigenvalues
+using ..SpectralDecomposition: Spectrum, SpectralData, master_eigenvalues,
+                               master_conjugate_permutation
 using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
 using ..CohomologicalEquations: solve_cohomological_problem
 
@@ -307,7 +308,7 @@ function parametrise(
     # so it is resolved first.
     if validate_mset
         perm_for_check = conjugate_permutation === :from_spectral ?
-                         spectral.conjugate_permutation : conjugate_permutation
+                         master_conjugate_permutation(spectral) : conjugate_permutation
         validate_multiindex_set(mset, NVAR, ROM;
             conjugate_permutation = perm_for_check === nothing ? nothing :
                                     _pad_permutation(perm_for_check, NVAR))

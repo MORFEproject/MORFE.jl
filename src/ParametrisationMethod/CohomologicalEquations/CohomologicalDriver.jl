@@ -503,7 +503,9 @@ end
 # block derived from the external system. Anything else is used verbatim.
 function _spectral_conjugate_permutation(request, spectral::SpectralData, sys)
     request === :from_spectral || return request
-    master_perm = spectral.conjugate_permutation
+    # The stored involution spans the whole spectrum; the solve wants it restricted
+    # to the master block and re-indexed to 1:ROM.
+    master_perm = master_conjugate_permutation(spectral)
     master_perm === nothing && return nothing
     return full_conjugate_permutation(master_perm, sys)
 end
