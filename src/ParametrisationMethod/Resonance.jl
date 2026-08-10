@@ -57,7 +57,9 @@ export ResonanceSet,
        RealEigenvalueCondition,
        ConditionNumberEstimateCondition,
        GraphInternal,
-       NormalFormInternal
+       NormalFormInternal,
+       ResonanceConfig,
+       resolve_tolerances
 
 # ======================================================================
 # ResonanceSet
@@ -528,22 +530,52 @@ function resonance_set_from_complex_normal_form_style(
         master_eigenvalues::Vector{ComplexF64},
         tol::Union{Float64, Vector{Vector{Float64}}};
         external_eigenvalues::Vector{ComplexF64} = ComplexF64[],
-        outer_eigenvalues::Vector{ComplexF64} = ComplexF64[]) where {NVAR}
+        outer_eigenvalues::Vector{ComplexF64} = ComplexF64[],
+        outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
     n_int = length(master_eigenvalues)
     n_out = length(outer_eigenvalues)
     N_EXT = NVAR - n_int
     _super = vcat(master_eigenvalues, external_eigenvalues)
     @assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
+    otol = _resolve_outer_tol(tol, outer_tol, n_out, n_int)
     inner_cond = EigenvalueCondition(master_eigenvalues, tol, 1:n_int)
     inner = _build_inner_matrix(
         NormalFormInternal(), inner_cond, _super, multiindices, n_int)
     outer = if n_out > 0
-        outer_cond = EigenvalueCondition(outer_eigenvalues, tol, 1:n_out)
+        outer_cond = EigenvalueCondition(outer_eigenvalues, otol, 1:n_out)
         _build_outer_matrix(outer_cond, _super, multiindices, n_out)
     else
         nothing
     end
     return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
+end
+
+"""
+	_resolve_outer_tol(tol, outer_tol, n_out, n_int)
+
+Pick the tolerance for the outer targets, and reject the one combination that used to be
+a silent bounds error.
+
+A per-target tolerance is read `tol[k][local_idx]` with `local_idx` **local to its own
+condition** — `1:n_int` for the inner block, `1:n_out` for the outer one. The two blocks
+are built from separate condition objects, so they can perfectly well carry separate
+tolerances; only the public constructors' single `tol` argument tied them together, and a
+per-target vector sized for `n_int` then overran whenever `n_out > n_int`.
+
+`outer_tol === nothing` means "reuse `tol`", which is exactly right for a scalar (it
+applies to any number of targets) and impossible for a per-target vector — hence the
+error, which tells the caller what to pass instead of failing deep inside `is_resonant`.
+"""
+function _resolve_outer_tol(tol, outer_tol, n_out::Int, n_int::Int)
+    n_out == 0 && return tol
+    outer_tol !== nothing && return outer_tol
+    tol isa Float64 && return tol
+    throw(ArgumentError("""
+       A per-target `tol` is indexed by the target number *within its own block*, so a
+       vector sized for the $n_int inner targets cannot also serve the $n_out outer targets.
+       Pass `outer_tol` as well: a scalar, or a per-monomial vector whose entries have
+       $n_out elements (e.g. `[[rel * abs(λ_outer[j]) for j in 1:$n_out] for _ in 1:NMON]`).
+       """))
 end
 
 """
@@ -565,13 +597,15 @@ function resonance_set_from_real_normal_form_style(
         conjugacy_map::Vector{Int},
         tol::Union{Float64, Vector{Vector{Float64}}};
         external_eigenvalues::Vector{ComplexF64} = ComplexF64[],
-        outer_eigenvalues::Vector{ComplexF64} = ComplexF64[]) where {NVAR}
+        outer_eigenvalues::Vector{ComplexF64} = ComplexF64[],
+        outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
     n_int = length(master_eigenvalues)
     n_out = length(outer_eigenvalues)
     N_EXT = NVAR - n_int
     _super = vcat(master_eigenvalues, external_eigenvalues)
     @assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
     @assert length(conjugacy_map) == n_int + n_out "conjugacy_map length ≠ n_int + n_out"
+    otol = _resolve_outer_tol(tol, outer_tol, n_out, n_int)
     inner_conj = conjugacy_map[1:n_int]
     inner_cond = RealEigenvalueCondition(master_eigenvalues, inner_conj, tol, 1:n_int)
     inner = _build_inner_matrix(
@@ -579,7 +613,7 @@ function resonance_set_from_real_normal_form_style(
     outer = if n_out > 0
         # re-index outer conjugacy map entries to local 1:n_out
         outer_conj = conjugacy_map[(n_int + 1):end] .- n_int
-        outer_cond = RealEigenvalueCondition(outer_eigenvalues, outer_conj, tol, 1:n_out)
+        outer_cond = RealEigenvalueCondition(outer_eigenvalues, outer_conj, otol, 1:n_out)
         _build_outer_matrix(outer_cond, _super, multiindices, n_out)
     else
         nothing
@@ -754,6 +788,248 @@ function build_resonance_set(
         throw(ArgumentError("Unknown resonance_style :$style. Choose :graph or :complex_normal_form"))
     end
     #TODO resonance_set_from_condition_number_estimate
+end
+
+# =============================================================================
+# ResonanceConfig — every resonance knob in one validated object
+# =============================================================================
+
+"""
+	ResonanceConfig(; style, tol, tol_relative, conjugacy_map, outer_targets, warn_outer)
+
+Every knob that controls resonance detection, in one place.
+
+Previously these were loose keyword arguments spread across `parametrise`
+(`resonance`, `resonance_tol`, `conjugacy_map`) and re-implemented again in
+MORFEFerrite's structural backend (`resonance_tol`, `resonance_tol_rel`, plus a separate
+off-manifold warning pass). Gathering them means there is one thing to read, and
+combinations that cannot work are rejected where they are written rather than deep inside
+the solve.
+
+# Fields
+
+- `style::Symbol = :graph` — `:graph`, `:complex_normal_form`, or `:real_normal_form`.
+- `tol::Union{Nothing, Real, AbstractVector} = nothing` — absolute detuning threshold.
+  `nothing` means "not specified" and resolves to the style's default.
+- `tol_relative::Union{Nothing, Real} = nothing` — when set, replaces `tol` by the
+  per-target threshold `tol_relative * |λⱼ|`, judging each target on its own frequency
+  scale. This is the physically meaningful criterion when the master modes span decades.
+- `conjugacy_map::Union{Nothing, Vector{Int}} = nothing` — required by
+  `:real_normal_form`, and an error with any other style rather than silently ignored.
+- `outer_targets::Bool = false` — also flag resonances against the non-master
+  eigenvalues, populating the `outer_resonances` block. Diagnostic: the solve reads only
+  the inner block.
+- `warn_outer::Bool = true` — warn when a monomial is near-resonant with an off-manifold
+  mode, whose direction is then solved through a near-singular operator.
+
+## Why `tol` defaults to `nothing` rather than `1e-2`
+
+The guards below fire on *explicitly set* values. With a numeric default there would be no
+way to tell "the user asked for this tolerance" from "nobody said anything", so a plain
+`ResonanceConfig()` would emit a spurious "tolerance unused" notice on every run — and
+guards that cry wolf get ignored. `nothing` is the only honest "unspecified".
+"""
+struct ResonanceConfig
+    style::Symbol
+    tol::Union{Nothing, Real, AbstractVector}
+    tol_relative::Union{Nothing, Real}
+    conjugacy_map::Union{Nothing, Vector{Int}}
+    outer_targets::Bool
+    warn_outer::Bool
+
+    function ResonanceConfig(; style::Symbol = :graph,
+            tol::Union{Nothing, Real, AbstractVector} = nothing,
+            tol_relative::Union{Nothing, Real} = nothing,
+            conjugacy_map::Union{Nothing, Vector{Int}} = nothing,
+            outer_targets::Bool = false,
+            warn_outer::Bool = true)
+        style in (:graph, :complex_normal_form, :real_normal_form) || throw(ArgumentError(
+            "unknown resonance style :$style; choose :graph, :complex_normal_form or " *
+            ":real_normal_form"))
+        if style === :real_normal_form && conjugacy_map === nothing
+            throw(ArgumentError(
+                ":real_normal_form pairs conjugate targets, so it requires `conjugacy_map`"))
+        end
+        if style !== :real_normal_form && conjugacy_map !== nothing
+            throw(ArgumentError(
+                "`conjugacy_map` is only read by :real_normal_form, but style is :$style. " *
+                "It would be silently ignored, so it is rejected instead."))
+        end
+        if tol isa Real && tol <= 0
+            throw(ArgumentError("resonance tol must be positive, got $tol"))
+        end
+        if tol_relative !== nothing && tol_relative <= 0
+            throw(ArgumentError("tol_relative must be positive, got $tol_relative"))
+        end
+        # NOTE: `tol_relative` together with `outer_targets` is deliberately NOT rejected.
+        # It used to be impossible because one per-target tolerance vector was handed to
+        # both target families; `outer_tol` now sizes them separately, so the combination
+        # is both legal and the physically obvious reading of "relative detuning".
+        return new(style, tol, tol_relative, conjugacy_map, outer_targets, warn_outer)
+    end
+end
+
+function Base.show(io::IO, c::ResonanceConfig)
+    print(io, "ResonanceConfig(style = :", c.style)
+    c.tol === nothing || print(io, ", tol = ", c.tol)
+    c.tol_relative === nothing || print(io, ", tol_relative = ", c.tol_relative)
+    c.conjugacy_map === nothing || print(io, ", conjugacy_map = ", c.conjugacy_map)
+    c.outer_targets && print(io, ", outer_targets = true")
+    c.warn_outer || print(io, ", warn_outer = false")
+    print(io, ")")
+end
+
+# Style default for an unspecified tolerance.
+_default_tol(style::Symbol) = style === :graph ? 0.0 : 1e-2
+
+"""
+	resolve_tolerances(config, master_eigenvalues, outer_eigenvalues, n_monomials)
+		-> (inner_tol, outer_tol)
+
+Turn a [`ResonanceConfig`](@ref) into the two correctly-sized tolerance objects the
+resonance-set constructors want, and emit `@info` for settings that will have no effect.
+
+With `tol_relative`, each family is sized for its **own** target count:
+
+	inner[k][r] = tol_relative * |λ_master[r]|      length n_int
+	outer[k][j] = tol_relative * |λ_outer[j]|       length n_out
+
+which is why the two can now be combined at all.
+"""
+function resolve_tolerances(config::ResonanceConfig,
+        master_eigenvalues::AbstractVector, outer_eigenvalues::AbstractVector,
+        n_monomials::Int)
+    n_int = length(master_eigenvalues)
+    n_out = length(outer_eigenvalues)
+
+    if config.style === :graph &&
+       (config.tol !== nothing || config.tol_relative !== nothing)
+        @info "ResonanceConfig: style = :graph marks every monomial of degree ≥ 2 as " *
+              "resonant with all master modes, so the tolerance you set is not used for " *
+              "the inner block. It still applies to outer targets when `outer_targets = true`."
+    end
+    if config.outer_targets && n_out == 0
+        @info "ResonanceConfig: `outer_targets = true` but the spectral data carries no " *
+              "outer eigenvalues, so no off-manifold targets can be flagged."
+    end
+
+    if config.tol_relative !== nothing
+        rel = Float64(config.tol_relative)
+        inner = [[rel * abs(master_eigenvalues[r]) for r in 1:n_int] for _ in 1:n_monomials]
+        outer = [[rel * abs(outer_eigenvalues[j]) for j in 1:n_out] for _ in 1:n_monomials]
+        return inner, outer
+    end
+
+    tol = config.tol === nothing ? _default_tol(config.style) : config.tol
+    if tol isa Real
+        t = Float64(tol)
+        # A tolerance wider than the gaps between master eigenvalues makes essentially
+        # every monomial read as resonant, which is rarely what anyone means.
+        if n_int > 1
+            gaps = [abs(master_eigenvalues[i] - master_eigenvalues[j])
+                    for i in 1:n_int for j in (i + 1):n_int]
+            spacing = minimum(gaps)
+            if spacing > 0 && t >= spacing
+                @info "ResonanceConfig: tol = $t is at least the smallest spacing between " *
+                      "master eigenvalues ($(spacing)), so nearly every monomial will be " *
+                      "flagged resonant. Did you mean a smaller tolerance, or `tol_relative`?"
+            end
+        end
+        return t, t
+    end
+    return tol, nothing   # explicit per-target vector: outer_tol must be supplied upstream
+end
+
+"""
+	build_resonance_set(model, mset, spectral::SpectralData, config::ResonanceConfig)
+		-> ResonanceSet
+
+Build the resonance set from a [`SpectralData`](@ref) bundle and a
+[`ResonanceConfig`](@ref) — the single entry point for resonance construction.
+
+Reads the master and outer eigenvalues off `spectral` (replacing the eigenproblem plus
+master-mask plumbing), resolves the config's tolerances into correctly-sized inner and
+outer objects via [`resolve_tolerances`](@ref), and warns about off-manifold
+near-resonances when `config.warn_outer` is set.
+"""
+function build_resonance_set(model::NDOrderModel, mset::MultiindexSet,
+        spectral, config::ResonanceConfig)
+    # `Vector{ComplexF64}`, not `collect`: the master eigenvalues are an `SVector`, and
+    # `collect` would give a `SizedVector` that the constructors' signatures reject.
+    master_eigs = Vector{ComplexF64}(spectral.master.eigenvalues)
+    all_outer = Vector{ComplexF64}(spectral.outer.eigenvalues)
+    external_eigs = model.external_system === nothing ? ComplexF64[] :
+                    Vector(model.external_system.eigenvalues)
+
+    # Outer eigenvalues serve two distinct purposes: populating the diagnostic
+    # `outer_resonances` block (opt-in), and driving the off-manifold warning (on by
+    # default). Only the first puts them in the returned set.
+    target_outer = config.outer_targets ? all_outer : ComplexF64[]
+    inner_tol, outer_tol = resolve_tolerances(
+        config, master_eigs, target_outer, length(mset))
+
+    rset = if config.style === :graph
+        resonance_set_from_graph_style(
+            mset, master_eigs, external_eigs, target_outer,
+            outer_tol === nothing ? inner_tol : outer_tol)
+    elseif config.style === :complex_normal_form
+        resonance_set_from_complex_normal_form_style(
+            mset, master_eigs, inner_tol;
+            external_eigenvalues = external_eigs,
+            outer_eigenvalues = target_outer, outer_tol = outer_tol)
+    else
+        resonance_set_from_real_normal_form_style(
+            mset, master_eigs, config.conjugacy_map, inner_tol;
+            external_eigenvalues = external_eigs,
+            outer_eigenvalues = target_outer, outer_tol = outer_tol)
+    end
+
+    config.warn_outer && _warn_outer_resonances(
+        mset, master_eigs, all_outer, external_eigs, config)
+    return rset
+end
+
+"""
+	_warn_outer_resonances(mset, master_eigs, outer_eigs, external_eigs, config)
+
+Warn when a monomial is near-resonant with a physical mode that is *not* on the manifold.
+
+That direction is then solved through a near-singular operator, so the ROM loses accuracy
+there regardless of how the load is shaped: `solve_single_monomial!` builds its operator
+from `s = ⟨λ, α⟩` alone, which makes the conditioning independent of the right-hand side.
+Rounding injects a component along the near-null direction and `1/(λ_s - s)` amplifies it.
+
+Runs for autonomous and forced models alike — a monomial built purely from master
+coordinates that lands on an off-manifold eigenvalue is exactly as near-singular as a
+forced one, and that its cause is the chosen master set makes it more worth surfacing.
+
+Diagnostic only: this builds its own resonance set and discards it.
+"""
+function _warn_outer_resonances(mset::MultiindexSet, master_eigs, outer_eigs,
+        external_eigs, config::ResonanceConfig)
+    isempty(outer_eigs) && return nothing
+    inner_tol, outer_tol = resolve_tolerances(config, master_eigs, outer_eigs, length(mset))
+    probe = resonance_set_from_complex_normal_form_style(
+        mset, master_eigs, inner_tol;
+        external_eigenvalues = external_eigs, outer_eigenvalues = outer_eigs,
+        outer_tol = outer_tol)
+    n_int = length(master_eigs)
+    flagged = Dict{Int, Vector{Int}}()
+    for j in eachindex(outer_eigs)
+        cols = resonant_multiindices(probe, n_int + j)
+        isempty(cols) || (flagged[j] = cols)
+    end
+    isempty(flagged) && return nothing
+    for j in sort!(collect(keys(flagged)))
+        monomials = join([string(Tuple(mset.exponents[c])) for c in sort!(flagged[j])], ", ")
+        @warn """
+        Monomials are near-resonant with a non-master eigenvalue \
+        (λ = $(outer_eigs[j])). That mode is not on the manifold, so its direction is \
+        solved through a near-singular operator and the ROM will lose accuracy there \
+        regardless of how the load is shaped. Offending monomial exponents: $monomials. \
+        Add that mode to the master set, detune the forcing, or add damping."""
+    end
+    return nothing
 end
 
 end # module

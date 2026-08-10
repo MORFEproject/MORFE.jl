@@ -25,6 +25,7 @@ should_run(group) = GROUP == "all" || GROUP == group
             include("ParametrisationMethod/test_master_mode_orthogonality.jl")
             @testset "Resonances" begin
                 include("ParametrisationMethod/test_resonances.jl")
+                include("ParametrisationMethod/test_resonance_config.jl")
             end
             @testset "ConjugateSymmetry" begin
                 include("ParametrisationMethod/test_conjugate_symmetry.jl")
