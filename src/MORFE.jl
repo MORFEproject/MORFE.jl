@@ -132,6 +132,6 @@ function externalsystem_from_symbolics end
 export model_from_symbolics, externalsystem_from_symbolics
 
 # ParametrisationMethod high-level entry (also re-exported from the submodule)
-export parametrise, build_multiindex_set, validate_multiindex_set
+export parametrise, build_multiindex_set, validate_multiindex_set, print_setup
 
 end # module

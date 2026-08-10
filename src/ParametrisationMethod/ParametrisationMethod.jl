@@ -27,10 +27,12 @@ module-less `parametrise_entry.jl` included at `MORFE` top level; that file is g
 """
 module ParametrisationMethod
 
+using Printf: @printf, @sprintf
+using SparseArrays: SparseMatrixCSC
 using StaticArrays: SVector
 
 using ..Multiindices: MultiindexSet, all_multiindices_up_to
-using ..FullOrderModel: NDOrderModel
+using ..FullOrderModel: NDOrderModel, _term_label
 using ..SpectralDecomposition: Spectrum, SpectralData, master_eigenvalues,
                                master_conjugate_permutation
 using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
@@ -54,7 +56,7 @@ export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
        compute_higher_derivative_coefficients!,
        restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree,
        validate_multiindex_set,
-       parametrise, build_multiindex_set
+       parametrise, build_multiindex_set, print_setup
 
 # ==================== Expansion order → multiindex set ====================
 
@@ -245,6 +247,96 @@ function parametrise(
     return W, R
 end
 
+# ==================== Setup banner ====================
+
+# λ as `a ± bi` when it is half of a conjugate pair, `a + bi` on its own otherwise.
+function _eigenvalue_entries(λ, perm)
+    seen = falses(length(λ))
+    parts = String[]
+    for r in eachindex(λ)
+        seen[r] && continue
+        seen[r] = true
+        partner = perm === nothing ? r : perm[r]
+        if partner != r
+            seen[partner] = true
+            push!(parts, @sprintf("%.3e ± %.3ei", real(λ[r]), abs(imag(λ[r]))))
+        else
+            push!(parts,
+                @sprintf("%.3e %s %.3ei", real(λ[r]), imag(λ[r]) < 0 ? "-" : "+",
+                    abs(imag(λ[r]))))
+        end
+    end
+    return parts
+end
+
+function _resonance_summary(c::ResonanceConfig)
+    s = string(c.style)
+    c.tol === nothing || (s *= ",  tol = $(c.tol)")
+    c.tol_relative === nothing || (s *= ",  tol_relative = $(c.tol_relative)")
+    c.outer_targets && (s *= ",  outer targets on")
+    s
+end
+_resonance_summary(rs::ResonanceSet) = "supplied — " * sprint(show, rs)
+
+# Rows after the first of a multi-line block line up under the key column.
+function _print_block(io::IO, key::AbstractString, entries)
+    for (i, entry) in enumerate(entries)
+        println(io, i == 1 ? key : " "^length(key), entry)
+    end
+end
+
+"""
+	print_setup(io, model, spectral, mset, resonance)
+
+Print a summary of what [`parametrise`](@ref) is about to solve: model size and layout,
+nonlinear terms, external system, reduced dimensions, master eigenvalues, the monomial
+count, the resonance policy and the conjugate involution.
+
+A normal function, so a caller who wants a different banner defines a method rather than
+editing `parametrise`. It prints **only what the arguments genuinely carry**: `parametrise`
+receives an `NDOrderModel`, and every backend's model is that same type, so there is
+nothing backend-specific to dispatch on here. Backends with richer information print their
+own summary before calling — they already have `show` methods for it.
+
+Called by `parametrise` only when the output is going somewhere interactive; see the
+`verbose` / `setup_io` keywords there.
+"""
+function print_setup(io::IO,
+        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT},
+        spectral::SpectralData{ORD, ROM},
+        mset::MultiindexSet{NVAR},
+        resonance) where {ORD, ORDP1, N_NL, N_EXT, T, MT, NVAR, ROM}
+    λ = master_eigenvalues(spectral)
+    perm = master_conjugate_permutation(spectral)
+    layout = MT <: SparseMatrixCSC ? "sparse" : "dense"
+
+    println(io, repeat("=", 70))
+    println(io, "MORFE parametrisation")
+    println(io, repeat("-", 70))
+    @printf(io, "  model       : FOM = %d,  ORD = %d,  %s (%s)\n",
+        model.n_fom, ORD, layout, MT)
+    if N_NL > 0
+        _print_block(io, "  nonlinear   : ",
+            ("$(_term_label(t))  (deg $(t.deg))" for t in model.nonlinear_terms))
+    end
+    if model.external_system !== nothing
+        ext = _eigenvalue_entries(model.external_system.eigenvalues, nothing)
+        @printf(io, "  external    : N_EXT = %d   (λ = %s)\n", N_EXT, join(ext, ", "))
+    end
+    @printf(io, "  reduced     : ROM = %d,  NVAR = %d\n", ROM, NVAR)
+    _print_block(io, "  masters     : ", _eigenvalue_entries(λ, perm))
+    # GrLex order puts the highest total degree last, so this is a lookup, not a scan.
+    @printf(io, "  expansion   : total degree ≤ %d   →   %d monomials\n",
+        sum(mset.exponents[end]), length(mset))
+    println(io, "  resonance   : ", _resonance_summary(resonance))
+    if perm !== nothing
+        println(io, "  conjugate   : master ", perm,
+            N_EXT > 0 ? "  (+ external, derived)" : "")
+    end
+    println(io, repeat("=", 70))
+    return nothing
+end
+
 # ==================== The unified entry point ====================
 
 """
@@ -284,6 +376,10 @@ W, R = parametrise(model, sd, mset)        # a monomial set you built
 - `validate_mset::Bool = true` — check the monomial set against the five-clause contract
   before solving. The solve is then told to skip its own check, so the set is walked once.
 - `show_progress::Bool = true`.
+- `verbose::Bool = true`, `setup_io::IO = stderr` — print the [`print_setup`](@ref) banner.
+  On the default `stderr` it is gated on `stderr isa Base.TTY`, exactly as the progress
+  reporter is, so redirected output and test logs stay as they were. An explicitly passed
+  `setup_io` is always written to — a caller who names a destination asked for the output.
 
 ## Returns
 
@@ -296,7 +392,9 @@ function parametrise(
         resonance::Union{ResonanceConfig, ResonanceSet} = ResonanceConfig(),
         conjugate_permutation = :from_spectral,
         validate_mset::Bool = true,
-        show_progress::Bool = true
+        show_progress::Bool = true,
+        verbose::Bool = true,
+        setup_io::IO = stderr
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}
     NVAR = ROM + N_EXT
 
@@ -314,6 +412,13 @@ function parametrise(
                                     _pad_permutation(perm_for_check, NVAR))
     end
 
+    # Decided once, before anything is formatted: the whole banner — every `@sprintf`, every
+    # term label — is built inside this branch, because interpolation boxes what it captures
+    # even when the result is thrown away. Printed before the resonance set is built so the
+    # banner precedes any tolerance `@info` it emits.
+    _setup_output_enabled(verbose, setup_io) &&
+        print_setup(setup_io, model, spectral, mset, resonance)
+
     resonance_set = resonance isa ResonanceSet ? resonance :
                     build_resonance_set(model, mset, spectral, resonance)
 
@@ -321,6 +426,13 @@ function parametrise(
         conjugate_permutation = conjugate_permutation,
         validate_mset = false,   # already checked above; don't walk the set twice
         show_progress = show_progress)
+end
+
+# Same policy as `_make_progress`: on the default `stderr`, print only when it is a TTY, so
+# CI logs and redirected runs are unchanged. An explicitly supplied destination is always
+# written to — naming one is itself the request for output.
+function _setup_output_enabled(verbose::Bool, io::IO)
+    verbose && (io !== stderr || stderr isa Base.TTY)
 end
 
 # The mset contract's conjugate-closure clause wants an NVAR-length permutation, while

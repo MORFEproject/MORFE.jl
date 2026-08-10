@@ -77,4 +77,38 @@ using MORFE.Resonance: ResonanceConfig
         @test Wa.poly.coefficients == Wb.poly.coefficients
         @test Ra.poly.coefficients == Rb.poly.coefficients
     end
+
+    @testset "setup banner" begin
+        mset = all_multiindices_up_to(ROM, order; min_degree = 1)
+        sdc = SpectralData(model, sp; master = idx, conjugate_permutation = :detect)
+
+        banner = sprint(io -> print_setup(io, model, sdc, mset, cnf))
+        @test occursin("MORFE parametrisation", banner)
+        @test occursin("FOM = 2", banner)
+        @test occursin("ROM = 2,  NVAR = 2", banner)
+        @test occursin("$(length(mset)) monomials", banner)
+        @test occursin("complex_normal_form", banner)
+        @test occursin("master [2, 1]", banner)
+        # Conjugate pairs are collapsed rather than listed twice.
+        @test count("±", banner) == 1
+
+        # `parametrise` routes through it when a destination is named ...
+        buf = IOBuffer()
+        parametrise(model, sdc, order; resonance = cnf, setup_io = buf,
+            show_progress = false)
+        @test occursin("MORFE parametrisation", String(take!(buf)))
+
+        # ... and stays silent when asked to, or when the destination is the default
+        # `stderr` under test (never a TTY), which is what keeps existing logs unchanged.
+        quiet = IOBuffer()
+        parametrise(model, sdc, order; resonance = cnf, setup_io = quiet,
+            verbose = false, show_progress = false)
+        @test isempty(take!(quiet))
+        # The gate: `stderr` follows the TTY rule the progress reporter uses; a named
+        # destination is always written to.
+        gate = MORFE.ParametrisationMethod._setup_output_enabled
+        @test gate(true, stderr) == (stderr isa Base.TTY)
+        @test gate(true, IOBuffer())
+        @test !gate(false, IOBuffer())
+    end
 end
