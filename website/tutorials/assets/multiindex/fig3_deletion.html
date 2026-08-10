@@ -521,7 +521,7 @@ function renderLegend(P, pts) {
 	  (P.lam ? "outside the set" : "removed") + "</span>");
   if (seen.has("needed"))
 	bits.push('<span><i style="background:transparent;border:2px solid ' + NEEDED +
-	  '"></i>divisor the closure must add</span>');
+	  '"></i>factor the closure must add</span>');
   if (P.lam) {
 	// Explain the arrow colours of the hover path.
 	const fmt = ([r, i]) => r + (i < 0 ? " − " + (-i) : " + " + i) + "i";

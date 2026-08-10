@@ -281,7 +281,7 @@ println("|s(α)| < ", R, ":     ", length(band), " monomials")
 #
 # The α₁α₂ coefficient is NEGATIVE. Multiplying by z̄ cancels imaginary part contributed
 # by z, pulling s back towards the real axis — so |s| is not monotone under divisibility,
-# and a monomial can sit inside the band while one of its divisors does not.
+# and a monomial can sit inside the band while one of its factors does not.
 println("\nα                s(α)              |s|     kept")
 for α in full.exponents
     sum(α) ≤ 3 || continue
@@ -298,24 +298,24 @@ println("\nresonant monomials of degree > 1: ",
         full.exponents))
 
 # So the band is NOT downward closed. The graded solve reads W[α − eᵢ] while working on
-# α, so DPIM rejects a set with a missing divisor.
+# α, so DPIM rejects a set with a missing factor.
 println("\nis_downward_closed(band): ", is_downward_closed(band))
 @assert !is_downward_closed(band)
 
 unit(i, n) = SVector{n, Int}(ntuple(j -> j == i ? 1 : 0, n))
 
-# Degree 1 is exempt — its only divisor is the constant, which min_degree = 1 removed.
+# Degree 1 is exempt — its only factor is the constant, which min_degree = 1 removed.
 for α in band.exponents, i in 1:3
 
     (α[i] > 0 && sum(α) > 1) || continue
     β = α - unit(i, 3)
     find_in_set(band, β) === nothing || continue
     println("  ", Vector(α), " is kept (|s| = ", round(abs(superharmonic(α)), digits = 3),
-        "), but its divisor ", Vector(β), " has |s| = ",
+        "), but its factor ", Vector(β), " has |s| = ",
         round(abs(superharmonic(β)), digits = 3), " ≥ ", R)
 end
 
-# The fix: take the downward closure — add back every divisor of every member. The
+# The fix: take the downward closure — add back every factor of every member. The
 # result is legal, and still far smaller than the full expansion.
 function downward_closure(S::MultiindexSet{N}) where {N}
     closed = Set{SVector{N, Int}}()
