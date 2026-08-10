@@ -62,7 +62,7 @@ end
 const _left_eigenmodes = _master_modes
 
 # Lower-order left eigenvector blocks from the physical slice
-const _left_modes_derivatives = MORFE.Eigenproblems.left_eigenmode_orders_from_slice(
+const _left_modes_derivatives = MORFE.SpectralDecomposition.left_eigenmode_orders_from_slice(
     (_K, _C, _M), _left_eigenmodes, [_λ₁, _λ₂])[:, 1:1, :]
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -135,7 +135,7 @@ model = NDOrderModel(
 )
 
 # ------------------------------------------------------------------------------
-# 2. Eigenproblem
+# 2. Spectrum
 # ------------------------------------------------------------------------------
 
 """
@@ -164,7 +164,7 @@ mutable struct Mechanical_Problem_Solver <: AbstractEigensolver
     α::Float64
     β::Float64
 end
-function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
+function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
     ω2,
     ϕ = eigs(
         model.linear_terms[1], model.linear_terms[3], nev = solver.nev, which = :SM)
@@ -195,7 +195,7 @@ function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::Mechanical_Probl
     return λ, eigenvectors
 end
 
-function MORFE.Eigenproblems.solve_left(
+function MORFE.SpectralDecomposition.eigensolve_left(
         model::NDOrderModel, solver::Mechanical_Problem_Solver)
     @assert solver.right_eig_result!==nothing "First run solve()"
     left_eigenvectors = similar(solver.right_eig_result)
@@ -214,8 +214,8 @@ function MORFE.Eigenproblems.solve_left(
     return solver.eigenvalues, left_eigenvectors
 end
 
-# Compute left and right eigenpairs using the default solver and store it in Eigenproblem
-eigenproblem = solve_eigenproblem(
+# Compute left and right eigenpairs using the default solver and store it in Spectrum
+eigenproblem = spectrum(
     model, solver = Mechanical_Problem_Solver(nothing, nothing, 10, α, β),
     sorter! = (args...) -> nothing)
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)

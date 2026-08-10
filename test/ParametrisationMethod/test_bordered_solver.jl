@@ -18,8 +18,8 @@ using Random: MersenneTwister, randn
 
 using MORFE
 using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
-using MORFE.Eigenproblems: solve_eigenproblem, DefaultEigensolver,
-                           select_master_modes_by_sorting
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
+                                   select_master_modes_by_sorting
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.InvarianceError: invariance_error_norms
 using MORFE.InvarianceEquation: precompute_sparse_L_template,
@@ -52,7 +52,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         @test sparse_model.linear_terms[1] isa SparseMatrixCSC
         @test dense_model.linear_terms[1] isa Matrix
 
-        ep = solve_eigenproblem(dense_model; solver = DefaultEigensolver())
+        ep = spectrum(dense_model; solver = DefaultEigensolver())
         select_master_modes_by_sorting(ep, ROM)
 
         mset = all_multiindices_up_to(ROM, order; min_degree = 1)

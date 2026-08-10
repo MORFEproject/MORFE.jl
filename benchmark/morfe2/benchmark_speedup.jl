@@ -90,7 +90,7 @@ model = NDOrderModel((K, C, M), (quadratic_term, cubic_term))
 FOM = size(K, 1)
 println("\nFOM = $FOM")
 
-# Eigenproblem
+# Spectrum
 mutable struct Mechanical_Problem_Solver <: AbstractEigensolver
 	right_eig_result::Union{Nothing, Matrix}
 	eigenvalues::Union{Nothing, Vector}
@@ -106,7 +106,7 @@ function mass_normalization!(ϕ, M, neig)
 		end
 	end
 end
-function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
+function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
 	K = model.linear_terms[1]
 	M = model.linear_terms[3]
 	nev = solver.nev
@@ -143,7 +143,7 @@ function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::Mechanical_Probl
 	solver.eigenvalues = λ
 	return λ, eigenvectors
 end
-function MORFE.Eigenproblems.solve_left(model::NDOrderModel,
+function MORFE.SpectralDecomposition.eigensolve_left(model::NDOrderModel,
 	solver::Mechanical_Problem_Solver)
 	@assert solver.right_eig_result !== nothing
 	left_eigenvectors = similar(solver.right_eig_result)
@@ -161,7 +161,7 @@ end
 # nev = number of natural frequencies; each gives one complex-conjugate eigenvalue pair.
 # ROM=2 master modes come from the first natural frequency, so nev=1 is sufficient.
 nev_needed = 1
-eigenproblem = solve_eigenproblem(
+eigenproblem = spectrum(
 	model, solver = Mechanical_Problem_Solver(nothing, nothing, nev_needed, info.α, info.β),
 	sorter! = (args...) -> nothing,
 	normalizer! = (args...) -> nothing,

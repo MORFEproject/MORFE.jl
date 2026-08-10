@@ -5,7 +5,7 @@ Equivalent to legacy_morfe/MORFE2.0/launch_benchmark.jl, using the new API
 with Ferrite.jl as the FEM backend.
 
 Measured phases (analogues in brackets):
-  §1  Eigenproblem           [eigs inside dpim]
+  §1  Spectrum           [eigs inside dpim]
   §2  Cohomological solve    [full dpim loop, quad + cubic together]
   §3  Realification          [realification!]
 
@@ -106,13 +106,13 @@ mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 _max_uniq = length(mset)
 
 # -----------------------------------------------------------------------
-# §1 — Eigenproblem
+# §1 — Spectrum
 # -----------------------------------------------------------------------
 
-println("\n§1  Eigenproblem …")
+println("\n§1  Spectrum …")
 solver_eig = StructureModalDampingEigensolver(10, α, β)
 
-r1 = @timed solve_eigenproblem(K, M, solver_eig; sorter! = (args...) -> nothing)
+r1 = @timed spectrum(K, M, solver_eig; sorter! = (args...) -> nothing)
 eigenproblem = r1.value
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
 
@@ -210,7 +210,7 @@ println("-" ^ 67)
 @printf("  %-32s  %9s  %11s  %7s\n", "Phase", "Time (s)", "Memory (GB)", "GC (s)")
 println("-" ^ 67)
 @printf("  §1  %-28s  %9.3f  %11.2f  %7.3f\n",
-	"Eigenproblem", r1.time, to_gb(r1.bytes), r1.gctime)
+	"Spectrum", r1.time, to_gb(r1.bytes), r1.gctime)
 @printf("  §2  %-28s  %9.3f  %11.2f  %7.3f\n",
 	"Cohomological solve", r2.time, to_gb(r2.bytes), r2.gctime)
 println("-" ^ 67)

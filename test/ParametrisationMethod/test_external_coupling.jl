@@ -56,7 +56,7 @@ const _EC_master_modes_derivatives = let d = zeros(ComplexF64, _EC_FOM, 1, _EC_R
 end
 
 const _EC_left_eigenmodes = _EC_master_modes
-const _EC_left_modes_derivatives = MORFE.Eigenproblems.left_eigenmode_orders_from_slice(
+const _EC_left_modes_derivatives = MORFE.SpectralDecomposition.left_eigenmode_orders_from_slice(
     (_EC_K, _EC_C, _EC_M), _EC_left_eigenmodes, [_EC_λ, conj(_EC_λ)])[:, 1:1, :]
 
 const _EC_mset = all_multiindices_up_to(_EC_NVAR, _EC_DEGREE; min_degree = 1)

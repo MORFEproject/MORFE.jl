@@ -35,7 +35,7 @@ using LinearAlgebra
 using StaticArrays: SVector
 
 using ..FullOrderModel: NDOrderModel, linear_first_order_matrices
-using ..Eigenproblems: Eigenproblem, left_eigenmode_orders_from_slice
+using ..SpectralDecomposition: Spectrum, left_eigenmode_orders_from_slice
 using ..ConjugatePermutation: detect_conjugate_permutation
 
 export ModeBundle, SpectralData,
@@ -203,7 +203,7 @@ end
 				 outer_eigenvalues = ComplexF64[], conjugate_permutation = nothing)
 
 Build `SpectralData` directly from raw arrays — for eigensolvers that never construct an
-`Eigenproblem` (a shift-invert Hopf solve, say).
+`Spectrum` (a shift-invert Hopf solve, say).
 
 `right_modes` and `left_modes` are `FOM × ORD × ROM` block arrays, or `FOM × ROM` matrices
 when `ORD == 1`.  Remember the mirrored convention: the left array's **last** slice is the
@@ -290,7 +290,7 @@ returns `nothing` with an `@info` if they disagree — eigenvalue pairing alone 
 but not sufficient, and a wrong permutation silently corrupts `W` and `R`. The default is
 `nothing` so that enabling conjugate symmetry is always a deliberate act.
 """
-function SpectralData(model::NDOrderModel, eigenproblem::Eigenproblem;
+function SpectralData(model::NDOrderModel, eigenproblem::Spectrum;
         master,
         conjugate_permutation = nothing,
         keep_outer_modes::Bool = false,

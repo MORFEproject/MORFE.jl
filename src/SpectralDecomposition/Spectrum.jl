@@ -1,72 +1,14 @@
 """
-Module `Eigenproblems` — solve and manage the generalised eigenproblem for an `NDOrderModel`.
-
-Starting from an `NDOrderModel`, the companion-form first-order matrices `(A, B)` are
-assembled and the generalised eigenproblem `A v = λ B v` is solved.  The results are
-stored in an `Eigenproblem` struct together with:
-
----
-# Module contents
-### Eigensolver
-Eigensolver is a type that implements different methods to solve the eigenproblem. 
-Every Eigensolver must have the parent type [`AbstractEigensolver`](@ref) needs to implement to methods: [`solve`](@ref) and [`solve_left`](@ref).
-Implemented eigensolvers are:
-1. [`DefaultEigensolver`](@ref): Uses the `eigen()` from the package LinearAlgebra.
-	Calculates full spectrum. This solver is only recommended for small problems. 
-2. [`ArpackEigensolver`](@ref): Uses the `eigs()` from the package Arpack.
-	Calculates a specific number of modes of smalles magnitude by default. 
-	Works only for sparse matrices
-3. MorfeEigensolver: Uses the `eigs()` from the package Arpack with a shift of the spectrum.
-4. [`StructureModalDampingEigensolver`](@ref): Uses the `eigs()` from the package Arpack, but operates
-	specifically  on the second order system with Raleigh damping.
-
-### EigenProblem
-Struct with the attributs:
-- `model`: [`NDOrderModel`](@ref)
-- `solver`: [`AbstractEigensolver`](@ref)
-- `eigenvalues`: Vector containing the eigenvalues
-- `eigenvectors`: 3D Array containing the eigenvectors as columns
-- `master_modes`: boolean vector of the same length as eigenvectors, showing wich eigenvectors are master_modes
-- `left_eigenvectors`: Matrix containing the left eigenvectors as columns
-
-### Compute eigenproblem [`solve_eigenproblem`](@ref)
-Function that takes a [`NDOrderModel`](@ref) and a [`AbstractEigensolver`](@ref) and calculates the eigenvalues and left and right eigenvectors.
-Additionally it takes a function to sort the eigenvectors and a function to normalise.
-It generates and returns an EigenProblem and is the main interaction of this module.
-
-### Master mode selection 
-The selection of the master modes is done after using `solve_eigenproblem`.
-There are the options:
-1. [`select_master_modes_by_hand`](@ref)
-2. [`select_master_modes_by_sorting`](@ref)
-3. [`select_master_modes_by_target_frequency`](@ref)
-
-"""
-module Eigenproblems
-
-using ..FullOrderModel
-using ..Eigensolvers
-
-using LinearAlgebra
-
-export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
-       StructureModalDampingEigensolver
-export solve, solve_left, sort_by_magnitude!, normalise_biorthogonal!
-export Eigenproblem, solve_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
-       select_master_modes_by_sorting, select_master_modes_by_target_frequency
-export left_eigenmode_orders_from_slice
-
-"""
 	AbstractEigensolver
 
-Abstract supertype for all eigensolvers accepted by `solve_eigenproblem`.
+Abstract supertype for all eigensolvers accepted by `eigensolve`.
 
-Concrete subtypes must implement `solve` and `solve_left` for `NDOrderModel`.
+Concrete subtypes must implement `eigensolve` and `eigensolve_left` for `NDOrderModel`.
 Two built-in subtypes are provided: `DefaultEigensolver` and `ArpackEigensolver`.
 
 ## Interface contract — full order-blocks
 
-Both `solve` and `solve_left` must return eigenvectors as `FOM × ORD × n`
+Both `eigensolve` and `eigensolve_left` must return eigenvectors as `FOM × ORD × n`
 arrays containing ALL companion order-blocks, not just the physical slice:
 
 - right: `(λB − A) ψ = 0`, blocks `ψ = [ψ_1; …; ψ_ORD]` with `ψ_{k+1} = λ ψ_k`;
@@ -81,10 +23,10 @@ the blocks with [`left_eigenmode_orders_from_slice`](@ref).
 """
 abstract type AbstractEigensolver end
 
-function solve(model::NDOrderModel, solver::AbstractEigensolver, args...)
+function eigensolve(model::NDOrderModel, solver::AbstractEigensolver, args...)
     error("solve not implemented for $(typeof(solver))")
 end
-function solve_left(model::NDOrderModel, solver::AbstractEigensolver, args...)
+function eigensolve_left(model::NDOrderModel, solver::AbstractEigensolver, args...)
     error("solve not implemented for $(typeof(solver))")
 end
 
@@ -97,7 +39,7 @@ Suitable for small to medium full-order models (dense matrices).
 struct DefaultEigensolver <: AbstractEigensolver end
 
 """
-	solve(model::NDOrderModel, solver::DefaultEigensolver)
+	eigensolve(model::NDOrderModel, solver::DefaultEigensolver)
 
 Solves right eigenproblem using `eigen` from LinearAlgebra. 
 Let `A` and `B` be the first order matrices of `model`. Then it returns the eigenpairs
@@ -105,7 +47,7 @@ Let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 	(A-\\lambda_k B)y_k = 0
 ```
 """
-function solve(model::NDOrderModel, solver::DefaultEigensolver)
+function eigensolve(model::NDOrderModel, solver::DefaultEigensolver)
     A, B = linear_first_order_matrices(model)
     FOM = size(model.linear_terms[1], 1)
     ORD = length(model.linear_terms) - 1
@@ -118,7 +60,7 @@ function solve(model::NDOrderModel, solver::DefaultEigensolver)
 end
 
 """
-	solve_left(model::NDOrderModel, solver::DefaultEigensolver)
+	eigensolve_left(model::NDOrderModel, solver::DefaultEigensolver)
 
 Solves left eigenproblem using `eigen` from LinearAlgebra. 
 let `A` and `B` be the first order matrices of `model`. Then it returns the eigenpairs
@@ -126,7 +68,7 @@ let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 	x_k^H(A-\\lambda_k B) = 0
 ```
 """
-function solve_left(model::NDOrderModel, solver::DefaultEigensolver)
+function eigensolve_left(model::NDOrderModel, solver::DefaultEigensolver)
     A, B = linear_first_order_matrices(model)
     FOM = size(model.linear_terms[1], 1)
     ORD = length(model.linear_terms) - 1
@@ -150,7 +92,7 @@ eigenpairs. If `nev` is not specified, Arpack's default count is used.
   "not chosen yet"; the zero-argument constructor warns, because leaving the count
   to Arpack on a large model is rarely what the caller wants.
 - `eigenvalues::Union{Nothing, Vector{ComplexF64}}` — the eigenvalues from the most
-  recent [`solve`](@ref), cached so the left problem can reuse them.  Left
+  recent [`eigensolve`](@ref), cached so the left problem can reuse them.  Left
   **undefined** by the constructors, not set to `nothing`: guard with `isdefined`
   before reading it.
 """
@@ -179,11 +121,11 @@ picked out of a large spectrum.
 # Fields
 
 - `nev::Union{Nothing, Int64}` — number of eigenpairs to compute.  `nothing` is
-  resolved to the full problem size on the first [`solve`](@ref).
+  resolved to the full problem size on the first [`eigensolve`](@ref).
 - `shift::Union{Nothing, ComplexF64}` — the shift point.  `nothing` falls back to
   the unshifted `eigs`.
 - `eigenvalues::Union{Nothing, Vector{ComplexF64}}` — eigenvalues from the most
-  recent [`solve`](@ref), cached so the left problem can reuse them.  Left
+  recent [`eigensolve`](@ref), cached so the left problem can reuse them.  Left
   **undefined** by the constructors, not set to `nothing`: guard with `isdefined`
   before reading it.
 """
@@ -202,7 +144,7 @@ mutable struct MorfeEigensolver <: AbstractEigensolver
 end
 
 """
-	solve(model::NDOrderModel, solver::MorfeEigensolver)
+	eigensolve(model::NDOrderModel, solver::MorfeEigensolver)
 
 Solves right eigenproblem using `generalised_eigenpairs` from `MORFE.Eigensolvers`. 
 Let `A` and `B` be the first order matrices of `model`. Then it returns the eigenpairs
@@ -210,7 +152,7 @@ Let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 	(A-\\lambda_k B)y_k = 0
 ```
 """
-function solve(model::NDOrderModel, solver::MorfeEigensolver)
+function eigensolve(model::NDOrderModel, solver::MorfeEigensolver)
     A, B = linear_first_order_matrices(model)
     if solver.nev === nothing
         solver.nev = size(A, 1)
@@ -227,11 +169,11 @@ function solve(model::NDOrderModel, solver::MorfeEigensolver)
 end
 
 """
-	solve_left(model::NDOrderModel, solver::MorfeEigensolver)
+	eigensolve_left(model::NDOrderModel, solver::MorfeEigensolver)
 
 Solves left eigenproblem using σ-shift to recover the correct eigenvalues.
 """
-function solve_left(model::NDOrderModel, solver::MorfeEigensolver)
+function eigensolve_left(model::NDOrderModel, solver::MorfeEigensolver)
     A, B = linear_first_order_matrices(model)
     @assert solver.nev == length(solver.eigenvalues)
     FOM = size(model.linear_terms[1], 1)
@@ -266,7 +208,7 @@ Calculates only the first `nev` eigenvectors.
 # Fields
 
 - `eigenvalues::Union{Nothing, Vector}` — eigenvalues from the most recent
-  [`solve`](@ref), `nothing` before the first one.  Cached so the left problem can
+  [`eigensolve`](@ref), `nothing` before the first one.  Cached so the left problem can
   reuse them instead of re-running Arpack.
 - `nev::Int64` — number of modes to compute, counted in the second-order problem
   (so `nev` frequencies `ωₖ`, not `2·nev` first-order eigenvalues).
@@ -286,7 +228,7 @@ mutable struct StructureModalDampingEigensolver <: AbstractEigensolver
 end
 
 """
-	solve(mass::AbstractMatrix, stiffness::AbstractMatrix, solver::StructureModalDampingEigensolver)
+	eigensolve(mass::AbstractMatrix, stiffness::AbstractMatrix, solver::StructureModalDampingEigensolver)
 
 Calculates right eigenvectors in the secod order form.
 Uses the relations:
@@ -298,7 +240,7 @@ Uses the relations:
 ```
 and assumes ``C = \\alpha*M + \\beta*K``.
 """
-function solve(
+function eigensolve(
         ::AbstractMatrix,
         ::AbstractMatrix,
         ::StructureModalDampingEigensolver
@@ -310,13 +252,13 @@ function solve(
 end
 
 """
-	solve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
+	eigensolve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
 
 Thin wrapper: extracts `M = model.linear_terms[end]` and `K = model.linear_terms[1]`
-and delegates to `solve(M, K, solver)`.
+and delegates to `eigensolve(M, K, solver)`.
 """
-function solve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
-    return solve(model.linear_terms[end], model.linear_terms[1], solver)
+function eigensolve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
+    return eigensolve(model.linear_terms[end], model.linear_terms[1], solver)
 end
 
 """
@@ -336,7 +278,7 @@ block equations give
 
 The eigenvalue is used only to *define* the eigenvector from its slice — the
 per-monomial cohomological solve reads the blocks and never touches it. Prefer
-eigensolvers that return the full blocks directly (`solve_left` does); use this
+eigensolvers that return the full blocks directly (`eigensolve_left` does); use this
 only when a slice is all you have.
 
 The slice may carry an arbitrary per-mode scale: the blocks scale with it, and
@@ -406,7 +348,7 @@ second-order structure `M ẍ + C ẋ + K x = 0` with real symmetric `M, K` and
 φ_1 = (conj(λ) M + C) ϕ
 ```
 
-These are exactly the blocks `solve_left` would return — algebraically equal to
+These are exactly the blocks `eigensolve_left` would return — algebraically equal to
 `-(1/conj(λ)) Kᵀϕ` via the quadratic eigenrelation, but built from the
 moderate-norm `M`, `C` instead of `K` (which amplifies eigensolver noise by
 `(ω_max/ω₁)²`). No adjoint eigensolve is needed because the proportional
@@ -433,49 +375,49 @@ function _structural_left_eigenmode_orders(
 end
 
 """
-	solve_eigenproblem(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)
+	spectrum(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)
 
 Specialised path for `StructureModalDampingEigensolver`: mass-normalisation is
-built into `solve`, and the left eigenvector order-blocks are analytic in the
+built into `eigensolve`, and the left eigenvector order-blocks are analytic in the
 position mode (see [`_structural_left_eigenmode_orders`](@ref)).  No adjoint
 solve or biorthogonal normalisation is needed.
 
 The optional `sorter!` kwarg has the same semantics as in the general
-`solve_eigenproblem`: pass `(args...) -> nothing` to preserve the solver's
+`eigensolve`: pass `(args...) -> nothing` to preserve the solver's
 natural ordering.
 """
-function solve_eigenproblem(
+function spectrum(
         model::NDOrderModel,
         solver::StructureModalDampingEigensolver;
         sorter!::Function = sort_by_magnitude!)
-    λ, Y = solve(model, solver)
+    λ, Y = eigensolve(model, solver)
     sorter!(λ, Y)
     left = _structural_left_eigenmode_orders(λ, Y,
         model.linear_terms[3], model.linear_terms[2])
-    return Eigenproblem(solver, λ, Y, left)
+    return Spectrum(solver, λ, Y, left)
 end
 
 """
-	solve_eigenproblem(stiffness, mass, solver::StructureModalDampingEigensolver; sorter!)
+	spectrum(stiffness, mass, solver::StructureModalDampingEigensolver; sorter!)
 
 Convenience overload: pass `K` and `M` directly without constructing an `NDOrderModel`.
 The Rayleigh damping matrix `C = αM + βK` is rebuilt from the solver parameters
 for the left eigenvector order-blocks.
 """
-function solve_eigenproblem(
+function spectrum(
         stiffness::AbstractMatrix,
         mass::AbstractMatrix,
         solver::StructureModalDampingEigensolver;
         sorter!::Function = sort_by_magnitude!)
-    λ, Y = solve(mass, stiffness, solver)
+    λ, Y = eigensolve(mass, stiffness, solver)
     sorter!(λ, Y)
     damping = solver.α * mass + solver.β * stiffness
     left = _structural_left_eigenmode_orders(λ, Y, mass, damping)
-    return Eigenproblem(solver, λ, Y, left)
+    return Spectrum(solver, λ, Y, left)
 end
 
 """
-	Eigenproblem{T}
+	Spectrum{T}
 
 Stores sorted and biorthogonally normalised left/right eigenpairs of the
 generalised eigenproblem `A x = λ B x`, together with a master-mode selector.
@@ -506,7 +448,7 @@ nullable rather than empty.
 - `external_modes::Union{Nothing, Vector{Bool}}` — flags modes driven by external
   forcing rather than solved for; `nothing` when the model has no forcing.
 """
-mutable struct Eigenproblem{T}
+mutable struct Spectrum{T}
     solver::AbstractEigensolver
     eigenvalues::Array{Complex{T}}
     eigenmodes::Array{Complex{T}}              # FOM × ORD × n_eigs
@@ -517,7 +459,7 @@ mutable struct Eigenproblem{T}
     # Constructor from full 3-D left eigenvectors: retains the full order-block
     # array (fed to MasterModeOrthogonality) and the highest-order
     # (physical-space) slice [:, ORD, :].
-    function Eigenproblem(
+    function Spectrum(
             solver::AbstractEigensolver,
             eigenvalues::Array{Complex{T}},
             eigenmodes::Array{Complex{T}},
@@ -542,7 +484,7 @@ mutable struct Eigenproblem{T}
     # 2-D left eigenmodes). For the 3-D case the n_eigs axis is dim 3; for
     # the 2-D (flat first-order) case it is dim 2. `left_eigenmodes_orders`
     # is left as `nothing`; ORD > 1 orthogonality solves require the full blocks.
-    function Eigenproblem(
+    function Spectrum(
             solver::AbstractEigensolver,
             eigenvalues::Array{Complex{T}},
             eigenmodes::Array{Complex{T}},
@@ -555,7 +497,7 @@ mutable struct Eigenproblem{T}
 end
 
 """
-	solve_eigenproblem(
+	spectrum(
 		model::NDOrderModel;
 		solver::AbstractEigensolver = DefaultEigensolver(),
 		sorter!::Function = sort_by_magnitude!,
@@ -564,28 +506,28 @@ end
 Computes left and right eigenpairs of the problem described in `model` by using the defined `solver`.
 Additionally `sorter!` sorts the eigenpairs and `normaliser!` is used to normalise the eigenmodes.
 """
-function solve_eigenproblem(
+function spectrum(
         model::NDOrderModel;
         solver::AbstractEigensolver = DefaultEigensolver(),
         sorter!::Function = sort_by_magnitude!,
         normaliser!::Function = normalise_biorthogonal!)
 
     #calculate right eigenmodes
-    (eigenvalues, eigenmodes) = solve(model, solver)
+    (eigenvalues, eigenmodes) = eigensolve(model, solver)
 
     #sort eigenpairs
     sorter!(eigenvalues, eigenmodes)
 
     #calculate left eigenmodes
-    (left_eigenvalues, left_eigenmodes) = solve_left(model, solver)
+    (left_eigenvalues, left_eigenmodes) = eigensolve_left(model, solver)
     left_eigenvalues, left_eigenmodes = sort_left_eigenmodes(
         eigenvalues, left_eigenvalues, left_eigenmodes)
 
     # normalise eigenpairs
     normaliser!(model, eigenmodes, left_eigenmodes)
 
-    # Construct Eigenproblem
-    return Eigenproblem(solver, eigenvalues, eigenmodes, left_eigenmodes)
+    # Construct Spectrum
+    return Spectrum(solver, eigenvalues, eigenmodes, left_eigenmodes)
 end
 
 """
@@ -679,39 +621,39 @@ function normalise_biorthogonal!(
 end
 
 """
-	get_eigenpairs(ep::Eigenproblem)
+	get_eigenpairs(ep::Spectrum)
 
-Returns eigenvalues, (right) eigenmodes and left eigenmodes of an Eigenproblem.
+Returns eigenvalues, (right) eigenmodes and left eigenmodes of an Spectrum.
 """
-function get_eigenpairs(ep::Eigenproblem)
+function get_eigenpairs(ep::Spectrum)
     return (ep.eigenvalues, ep.eigenmodes, ep.left_eigenmodes)
 end
 
 """
-	select_master_modes_by_hand(ep::Eigenproblem, mastermodes::Vector{Bool})
+	select_master_modes_by_hand(ep::Spectrum, mastermodes::Vector{Bool})
 
-Define master_modes of Eigenproblem by passing a vector of booleans.
+Define master_modes of Spectrum by passing a vector of booleans.
 	master_modes[i] = true  ===> eigen_modes[:,i] is a mastermode
 """
-function select_master_modes_by_hand(ep::Eigenproblem, mastermodes::Vector{Bool})
+function select_master_modes_by_hand(ep::Spectrum, mastermodes::Vector{Bool})
     n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
     @assert length(mastermodes) == n "mastermodes has wrong length!"
     ep.master_modes = mastermodes
 end
 
 """
-	select_master_modes_by_sorting(ep::Eigenproblem, nev::Int64)
+	select_master_modes_by_sorting(ep::Spectrum, nev::Int64)
 
-Defines master_modes as the first nev eigenpairs. Sorting was done in solve_eigenproblem.
+Defines master_modes as the first nev eigenpairs. Sorting was done in eigensolve.
 """
-function select_master_modes_by_sorting(ep::Eigenproblem, nev::Int64)
+function select_master_modes_by_sorting(ep::Spectrum, nev::Int64)
     @assert nev>0 "nev must be bigger then zero"
     n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
     ep.master_modes = [i <= nev for i in 1:n]
 end
 
 """
-	select_master_modes_by_target_frequency(ep::Eigenproblem, target_frequencies::Vector, tol)
+	select_master_modes_by_target_frequency(ep::Spectrum, target_frequencies::Vector, tol)
 
 Defines master_modes by specified target values. 
 All eigenvalues that are of distance of one target value smaller than `tol` are marked for mastermodes.
@@ -719,7 +661,7 @@ Distance used:
 	dist(a, b) = abs(real(a - b)) + abs(imag(a - b)).
 """
 function select_master_modes_by_target_frequency(
-        ep::Eigenproblem,
+        ep::Spectrum,
         target_frequencies::Vector,
         tol::Float64)
     n = length(ep.eigenvalues)
@@ -751,5 +693,3 @@ end
 function group_conjugate_pairs()
     #TODO
 end
-
-end # module

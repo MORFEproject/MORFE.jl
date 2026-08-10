@@ -103,7 +103,7 @@ mutable struct MechSolver <: AbstractEigensolver
 	α::Float64;
 	β::Float64
 end
-function MORFE.Eigenproblems.solve(m::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve(m::NDOrderModel, s::MechSolver)
 	ω2, ϕ = eigs(m.linear_terms[1], m.linear_terms[3]; nev = s.nev, which = :SM)
 	idx = sortperm(real(ω2))[1:s.nev]
 	ω2 = real.(ω2[idx]);
@@ -127,7 +127,7 @@ function MORFE.Eigenproblems.solve(m::NDOrderModel, s::MechSolver)
 	s.eigenvalues = λ_all;
 	return λ_all, evecs
 end
-function MORFE.Eigenproblems.solve_left(m::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve_left(m::NDOrderModel, s::MechSolver)
 	R = s.eig_mat;
 	FOM = size(R, 1) ÷ 2;
 	L = similar(R)
@@ -266,7 +266,7 @@ model_s, mset_s, cv_s, dh_s, n_free_s, _ = make_ferrite_model(
 	max_deg = MAX_DEG, rom = ROM)
 println("    Free DOFs: $n_free_s")
 
-ep = solve_eigenproblem(model_s;
+ep = spectrum(model_s;
 	solver  = MechSolver(nothing, nothing, 10, α_ray, β_ray),
 	sorter! = (args...) -> nothing)
 (evals_s, Y_s, _) = get_eigenpairs(ep)

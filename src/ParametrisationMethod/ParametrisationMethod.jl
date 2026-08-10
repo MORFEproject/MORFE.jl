@@ -31,7 +31,7 @@ using StaticArrays: SVector
 
 using ..Multiindices: MultiindexSet, all_multiindices_up_to
 using ..FullOrderModel: NDOrderModel
-using ..Eigenproblems: Eigenproblem
+using ..SpectralDecomposition: Spectrum
 using ..Resonance: ResonanceSet, build_resonance_set
 using ..CohomologicalEquations: solve_cohomological_problem
 
@@ -100,14 +100,14 @@ end
 	parametrise(model, expansion_order, eigenproblem; resonance, resonance_tol, conjugacy_map) -> (W, R)
 
 Convenience entry point for the parametrisation method. Assembles all required inputs
-from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
+from a solved `Spectrum` and calls `solve_cohomological_problem` internally.
 
 ## Arguments
 
 - `model::NDOrderModel`: full-order model providing linear and nonlinear terms.
 - `expansion_order`: either an `Integer` (total-degree truncation, must be > 0) or a
   `MultiindexSet` used as given — see [`build_multiindex_set`](@ref).
-- `eigenproblem::Eigenproblem`: solved eigenproblem with master modes selected via one
+- `eigenproblem::Spectrum`: solved eigenproblem with master modes selected via one
   of the `select_master_modes_*` functions.
 
 ## Keyword Arguments
@@ -143,12 +143,12 @@ from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
   `model.external_system`).
 - `master_modes_derivatives = nothing`, `left_modes_derivatives = nothing`:
   explicit `(FOM, ORD-1, ROM)` derivative/order blocks. Needed when the
-  `Eigenproblem` was solved on a *lower-order* operator than `model` (e.g. an
+  `Spectrum` was solved on a *lower-order* operator than `model` (e.g. an
   augmented `(K, C, M, 0)` ORD-3 model with a second-order structural
   eigenproblem): the internal slices then don't match `ORD`, and callers supply
   blocks built from the eigenpairs (right: `λ^{k-1}·Y[:, 2, r]`; left: via
   `left_eigenmode_orders_from_slice(model.linear_terms, …)`). Default `nothing`
-  → sliced from the `Eigenproblem` storage as before.
+  → sliced from the `Spectrum` storage as before.
 
 ## Returns
 
@@ -158,7 +158,7 @@ from a solved `Eigenproblem` and calls `solve_cohomological_problem` internally.
 function parametrise(
         model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
         expansion_order,
-        eigenproblem::Eigenproblem;
+        eigenproblem::Spectrum;
         resonance::Union{Symbol, ResonanceSet} = :graph,
         resonance_tol::Float64 = 1e-2,
         conjugacy_map = nothing,
@@ -171,9 +171,9 @@ function parametrise(
 
     # Extract eigenproblem
     master_mask = eigenproblem.master_modes
-    @assert !isnothing(master_mask) "master_modes not set on Eigenproblem"
+    @assert !isnothing(master_mask) "master_modes not set on Spectrum"
     ROM = sum(master_mask)
-    @assert ROM > 0 "No modes chosen as master modes in Eigenproblem"
+    @assert ROM > 0 "No modes chosen as master modes in Spectrum"
     NVAR = ROM + N_EXT
 
     # Copies, not views: a Bool-mask view is not strided, so downstream
@@ -188,7 +188,7 @@ function parametrise(
     master_eigenvalues = SVector{ROM, ComplexF64}(master_eigs_vec)
 
     # For ORD > 1: derivatives live in higher slices [:, 2:end, master_mask].
-    # An explicit kwarg overrides the slicing (lower-order Eigenproblem storage
+    # An explicit kwarg overrides the slicing (lower-order Spectrum storage
     # feeding a higher-order model — see docstring).
     if master_modes_derivatives === nothing
         master_modes_derivatives = ORD > 1 ?
@@ -201,7 +201,7 @@ function parametrise(
     if left_modes_derivatives === nothing
         left_modes_derivatives = if ORD > 1
             @assert eigenproblem.left_eigenmodes_orders !== nothing """
-               Eigenproblem stores only the physical-space left eigenmode slice, but
+               Spectrum stores only the physical-space left eigenmode slice, but
                ORD > 1 orthogonality solves need the full left eigenvector order-blocks.
                Use an eigensolver path that supplies them (solve_left returns FOM × ORD × n).
                """

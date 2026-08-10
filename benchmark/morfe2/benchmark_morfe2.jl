@@ -79,7 +79,7 @@ println("FOM:", FOM)
 # 2. EigenProblem
 # ------------------------------------------------------------------------------
 # Compute left and right eigenpairs using the special StructureModalDampingEigensolver and store it in EigenProblem
-eigenproblem = solve_eigenproblem(
+eigenproblem = spectrum(
 	model, StructureModalDampingEigensolver(10, info.α, info.β);
 	sorter! = (args...) -> nothing)
 (eigenvalues, Y, X) = get_eigenpairs(eigenproblem)

@@ -10,8 +10,8 @@ using StaticArrays
 
 using MORFE
 using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
-using MORFE.Eigenproblems: solve_eigenproblem, DefaultEigensolver,
-                           select_master_modes_by_sorting
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
+                                   select_master_modes_by_sorting
 using MORFE.Resonance: ResonanceConfig, resolve_tolerances, build_resonance_set,
                        resonance_set_from_complex_normal_form_style,
                        resonance_set_from_graph_style,
@@ -25,7 +25,7 @@ using MORFE.SpectralDataTypes: SpectralData
     cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0))
     model = NDOrderModel((B0, B1, B2), (cubic,))
     ROM = 2
-    ep = solve_eigenproblem(model; solver = DefaultEigensolver())
+    ep = spectrum(model; solver = DefaultEigensolver())
     select_master_modes_by_sorting(ep, ROM)
     idx = findall(ep.master_modes)
     sd = SpectralData(model, ep; master = idx)

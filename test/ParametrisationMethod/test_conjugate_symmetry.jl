@@ -6,7 +6,7 @@ using MORFE.Multiindices: all_multiindices_up_to
 using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.Resonance: resonance_set_from_complex_normal_form_style
 using MORFE.CohomologicalEquations: solve_cohomological_problem
-using MORFE.Eigenproblems: left_eigenmode_orders_from_slice
+using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice
 
 # ── Minimal 2-DOF Duffing model ──────────────────────────────────────────────
 const _FOM = 2
@@ -24,7 +24,7 @@ term_cubic = MultilinearMap(
 
 _model = NDOrderModel((B0, B1, B2), (term_cubic,))
 
-# ── Eigenproblem ──────────────────────────────────────────────────────────────
+# ── Spectrum ──────────────────────────────────────────────────────────────
 let
     A_eig, B_eig = linear_first_order_matrices(_model)
     global _eig = eigen(A_eig, B_eig)

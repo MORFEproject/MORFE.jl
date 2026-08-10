@@ -1,8 +1,8 @@
 module MORFEArpackExt
 
 using MORFE
-using MORFE.Eigenproblems
-using MORFE.Eigensolvers
+using MORFE.SpectralDecomposition
+using MORFE.SpectralDecomposition
 using Arpack
 using LinearAlgebra
 using LinearMaps
@@ -10,7 +10,7 @@ using SparseArrays
 
 # ── generalised_eigenpairs ─────────────────────────────────────────────────────
 
-function MORFE.Eigensolvers.generalised_eigenpairs(
+function MORFE.SpectralDecomposition.generalised_eigenpairs(
         A::AbstractMatrix,
         B::AbstractMatrix;
         nev::Integer,
@@ -74,7 +74,7 @@ function MORFE.Eigensolvers.generalised_eigenpairs(
     end
 
     if sort_largest_real
-        vals, vecs = MORFE.Eigensolvers._sort_largest_real(vals, vecs)
+        vals, vecs = MORFE.SpectralDecomposition._sort_largest_real(vals, vecs)
     end
 
     return (
@@ -89,9 +89,9 @@ end
 
 # ── ArpackEigensolver.solve ────────────────────────────────────────────────────
 
-function MORFE.Eigenproblems.solve(
+function MORFE.SpectralDecomposition.eigensolve(
         model::MORFE.FullOrderModel.NDOrderModel,
-        solver::MORFE.Eigenproblems.ArpackEigensolver
+        solver::MORFE.SpectralDecomposition.ArpackEigensolver
 )
     A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
     FOM = size(model.linear_terms[1], 1)
@@ -111,9 +111,9 @@ end
 # ── ArpackEigensolver.solve_left ───────────────────────────────────────────────
 # Uses per-eigenvalue sigma-shifts — NOT a simple eigs(A', B'; which=:SM).
 
-function MORFE.Eigenproblems.solve_left(
+function MORFE.SpectralDecomposition.eigensolve_left(
         model::MORFE.FullOrderModel.NDOrderModel,
-        solver::MORFE.Eigenproblems.ArpackEigensolver
+        solver::MORFE.SpectralDecomposition.ArpackEigensolver
 )
     A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
     A_c = complex.(A)
@@ -140,10 +140,10 @@ end
 # ── StructureModalDampingEigensolver.solve(mass, stiffness, solver) ────────────
 # The thin wrapper solve(model, solver) stays in core and delegates here.
 
-function MORFE.Eigenproblems.solve(
+function MORFE.SpectralDecomposition.eigensolve(
         mass::AbstractMatrix{T},
         stiffness::AbstractMatrix{T},
-        solver::MORFE.Eigenproblems.StructureModalDampingEigensolver
+        solver::MORFE.SpectralDecomposition.StructureModalDampingEigensolver
 ) where {T}
     ω2, ϕ = eigs(stiffness, mass; nev = solver.nev, which = :LM, sigma = 0.0, check = 1)
     any(x -> abs(imag(x)) > 1e-12 * abs(real(x)), ω2) && error("Eigenvalues not real.")

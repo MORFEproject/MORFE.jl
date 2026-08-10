@@ -13,7 +13,7 @@ dense `DefaultEigensolver` and extracts everything `solve_cohomological_problem`
 - `left_modes_derivatives :: Array` (FOM × 2 × 2) — lower-order left eigenvector
   blocks φ₁, φ₂ (from `left_eigenmode_orders_from_slice`)
 
-Why not `solve_eigenproblem`: its global left/right matching and biorthogonal
+Why not `spectrum`: its global left/right matching and biorthogonal
 normalisation are ill-posed on the ~n-fold quasi-degenerate RC relaxation cluster of
 this model (eigenvalues clustered at −ĉ/R), producing warnings and unstable scalings.
 Only the well-separated master pair is needed, so `solve` / `solve_left` are called
@@ -36,7 +36,7 @@ function dea_eigenanalysis(model, B0, B1, B2, B3, idx_wtip, rc_target;
     Y = Y[:, :, perm]
 
     # Left eigenpairs of the transposed companion pencil (unsorted — matched locally)
-    λLs, XL = solve_left(model, solver)
+    λLs, XL = eigensolve_left(model, solver)
 
     # ── spectrum classification ───────────────────────────────────────────────
     @assert all(real(λ) < 0 for λ in λs) "A4: unstable eigenvalue found"

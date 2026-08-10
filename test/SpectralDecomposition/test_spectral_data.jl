@@ -11,9 +11,9 @@ using StaticArrays
 
 using MORFE
 using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
-using MORFE.Eigenproblems: solve_eigenproblem, DefaultEigensolver,
-                           select_master_modes_by_sorting,
-                           left_eigenmode_orders_from_slice
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
+                                   select_master_modes_by_sorting,
+                                   left_eigenmode_orders_from_slice
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.Resonance: build_resonance_set
 using MORFE.SpectralDataTypes: SpectralData, ModeBundle, check_biorthogonality,
@@ -33,7 +33,7 @@ end
     ROM = 2
 
     model = NDOrderModel((B0, B1, B2), (_cubic(2),))
-    ep = solve_eigenproblem(model; solver = DefaultEigensolver())
+    ep = spectrum(model; solver = DefaultEigensolver())
     select_master_modes_by_sorting(ep, ROM)
     mask = ep.master_modes
     idx = findall(mask)

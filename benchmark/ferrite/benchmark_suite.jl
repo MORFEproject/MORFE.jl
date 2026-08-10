@@ -10,7 +10,7 @@ Sweeps five denser mesh sizes of the clamped-clamped H27 beam at degree 5:
   160× 8×8  → ~375 825 free DoFs
 
 For each mesh the script measures:
-  §1  Eigenproblem
+  §1  Spectrum
   §2  Cohomological solve (ROM=2, N_EXT=2, max_degree=5)
 
 Results are written to timestamped subfolders:
@@ -147,12 +147,12 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	max_uniq = length(mset)
 
 	# -------------------------------------------------------------------
-	# §1 — Eigenproblem
+	# §1 — Spectrum
 	# -------------------------------------------------------------------
-	println("\n§1  Eigenproblem …")
+	println("\n§1  Spectrum …")
 	solver_eig = StructureModalDampingEigensolver(10, α_damp, β_damp)
 
-	r1 = @timed solve_eigenproblem(K, M, solver_eig; sorter! = (args...) -> nothing)
+	r1 = @timed spectrum(K, M, solver_eig; sorter! = (args...) -> nothing)
 	eigenproblem = r1.value
 	(eigenvalues, Y, X) = get_eigenpairs(eigenproblem)
 

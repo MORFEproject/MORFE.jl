@@ -24,8 +24,8 @@ model = NDOrderModel((B0, B1, B2))
 # # sorts by magnitude, and normlizes biorthogonal
 # # ------------------------------------------------------------------------------
 
-# Compute left and right eigenpairs using the default solver and store it in Eigenproblem
-eigenproblem = solve_eigenproblem(model)# , normaliser! = (args...) -> nothing)
+# Compute left and right eigenpairs using the default solver and store it in Spectrum
+eigenproblem = spectrum(model)# , normaliser! = (args...) -> nothing)
 (eigs, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigs)
     println("  mode $i →   λ = $λ\n\t     y = $(Y[:, i])\n\t     x = $(X[:, i])\n")
@@ -64,7 +64,7 @@ mutable struct My_Own_Solver <: AbstractEigenSolver
     right_eig_result::Any
 end
 # need to implement left and right solve functions
-function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::My_Own_Solver)
+function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::My_Own_Solver)
     A, B = linear_first_order_matrices(model)
     eig_result = eigen(A, B)
     solver.right_eig_result = eig_result
@@ -72,14 +72,14 @@ function MORFE.Eigenproblems.solve(model::NDOrderModel, solver::My_Own_Solver)
     return eig_result.values, eig_result.vectors
 end
 
-function MORFE.Eigenproblems.solve_left(model::NDOrderModel, solver::My_Own_Solver)
+function MORFE.SpectralDecomposition.eigensolve_left(model::NDOrderModel, solver::My_Own_Solver)
     @assert solver.right_eig_result!==nothing "First run solve()"
     eig_result = solver.right_eig_result
     return eig_result.values, (eig_result.vectors)
 end
 
-# Compute left and right eigenpairs using the default solver and store it in Eigenproblem
-eigenproblem = solve_eigenproblem(
+# Compute left and right eigenpairs using the default solver and store it in Spectrum
+eigenproblem = spectrum(
     model, solver = My_Own_Solver(nothing), normaliser! = (args...) -> nothing)
 (eigs, Y, X) = get_eigenpairs(eigenproblem)
 for (i, λ) in enumerate(eigs)

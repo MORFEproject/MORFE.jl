@@ -46,7 +46,7 @@ end
 
     # @testset "Solvers" begin
     #     @testset "DefaultEigensolver" begin
-    #         ep = solve_eigenproblem(
+    #         ep = spectrum(
     #             model_dense;
     #             solver = DefaultEigensolver(),
     #             sorter! = (args...) -> nothing,
@@ -75,7 +75,7 @@ end
 
     #     @testset "ArpackEigensolver" begin
     #         nev = 2
-    #         ep = solve_eigenproblem(
+    #         ep = spectrum(
     #             model;
     #             solver = ArpackEigensolver(nev),
     #             sorter! = (args...) -> nothing,
@@ -105,7 +105,7 @@ end
 
     #     @testset "MorfeEigensolver" begin
     #         nev = 2
-    #         ep = solve_eigenproblem(
+    #         ep = spectrum(
     #             model;
     #             solver = MorfeEigensolver(nev, 0.0 + 0.0 * im),
     #             sorter! = (args...) -> nothing,
@@ -141,7 +141,7 @@ end
     #         A, B = linear_first_order_matrices(model_modal_damping)
 
     #         nev = 2
-    #         ep = solve_eigenproblem(
+    #         ep = spectrum(
     #             model;
     #             solver = StructureModalDampingEigensolver(nev, α, β),
     #             sorter! = (args...) -> nothing,
@@ -185,7 +185,7 @@ end
             Φ[:, :, 2] .= 20
             Φ[:, :, 3] .= 30
 
-            MORFE.Eigenproblems.sort_by_magnitude!(λ, Φ)
+            MORFE.SpectralDecomposition.sort_by_magnitude!(λ, Φ)
 
             @test λ == ComplexF64[
                 1 + 0im,
@@ -218,7 +218,7 @@ end
             Ψ[:, :, 2] .= 10
             Ψ[:, :, 3] .= 20
 
-            λl, Ψ = MORFE.Eigenproblems.sort_left_eigenmodes(λr, λl, Ψ)
+            λl, Ψ = MORFE.SpectralDecomposition.sort_left_eigenmodes(λr, λl, Ψ)
 
             @test λl == λr
 
@@ -239,14 +239,14 @@ end
             _, B = linear_first_order_matrices(model)
 
             # Test normalise_biorthogonal! directly on raw 3-D arrays so the
-            # check is independent of what Eigenproblem chooses to store.
-            # Must replicate the sort + match steps from solve_eigenproblem so
+            # check is independent of what Spectrum chooses to store.
+            # Must replicate the sort + match steps from spectrum so
             # that left and right eigenvectors correspond index-by-index.
             solver = DefaultEigensolver()
-            λ, Y = MORFE.Eigenproblems.solve(model, solver)
+            λ, Y = MORFE.SpectralDecomposition.eigensolve(model, solver)
             sort_by_magnitude!(λ, Y)
-            λ_left, X = MORFE.Eigenproblems.solve_left(model, solver)
-            _, X = MORFE.Eigenproblems.sort_left_eigenmodes(λ, λ_left, X)
+            λ_left, X = MORFE.SpectralDecomposition.eigensolve_left(model, solver)
+            _, X = MORFE.SpectralDecomposition.sort_left_eigenmodes(λ, λ_left, X)
 
             normalise_biorthogonal!(model, Y, X)
 
@@ -283,7 +283,7 @@ end
                 Y[:, 2, k] .= λ[k] .* Y[:, 1, k]
             end
 
-            structural = MORFE.Eigenproblems._structural_left_eigenmode_orders(λ, Y, M, C)
+            structural = MORFE.SpectralDecomposition._structural_left_eigenmode_orders(λ, Y, M, C)
 
             # The formula the structural builder is documented to implement:
             #   φ_2 = ϕ,  φ_1 = (conj(λ) M + C) ϕ

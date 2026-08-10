@@ -25,7 +25,7 @@ Pkg.instantiate()
 
 using Arpack               # triggers MORFEArpackExt
 using Plots                # triggers MORFEPlotsExt  → real plot_invariance_convergence
-using MORFE.Eigensolvers: generalised_eigenpairs
+using MORFE.SpectralDecomposition: generalised_eigenpairs
 using MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
 using MORFE.Polynomials: DensePolynomial
 using MORFE.Resonance: resonance_set_from_graph_style,
@@ -34,7 +34,7 @@ using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_mat
 using MORFE.ExternalSystems: ExternalSystem
 using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
 using MORFE.CohomologicalEquations: solve_cohomological_problem
-using MORFE.Eigenproblems: left_eigenmode_orders_from_slice
+using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice
 using MORFE.InvarianceError: invariance_error_norms, invariance_error_convergence,
                              plot_invariance_convergence
 using LinearAlgebra

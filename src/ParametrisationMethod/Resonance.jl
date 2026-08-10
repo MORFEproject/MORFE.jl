@@ -38,7 +38,7 @@ module Resonance
 
 using ..Multiindices: MultiindexSet, find_in_set
 using ..FullOrderModel: NDOrderModel
-using ..Eigenproblems: Eigenproblem
+using ..SpectralDecomposition: Spectrum
 using ..ExternalSystems: external_basis
 
 export ResonanceSet,
@@ -741,7 +741,7 @@ end
 	build_resonance_set(model, style, mset, eigenproblem, tol, conjugacy_map;
 	                    external_eigenvalues = nothing)
 
-Build a `ResonanceSet` from a solved `Eigenproblem` according to the chosen
+Build a `ResonanceSet` from a solved `Spectrum` according to the chosen
 parametrisation `style`. Accepted styles:
 - `:graph`
 - `:complex_normal_form`
@@ -754,7 +754,7 @@ function build_resonance_set(
         model::NDOrderModel,
         style::Symbol,
         mset::MultiindexSet,
-        eigenproblem::Eigenproblem,
+        eigenproblem::Spectrum,
         tol::Float64,
         conjugacy_map::Union{Nothing, Vector{Int}};
         external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing

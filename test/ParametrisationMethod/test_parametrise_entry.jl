@@ -9,8 +9,8 @@ using StaticArrays
 
 using MORFE
 using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
-using MORFE.Eigenproblems: solve_eigenproblem, DefaultEigensolver,
-                           select_master_modes_by_sorting
+using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
+                                   select_master_modes_by_sorting
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.Multiindices: MultiindexSet, find_in_set
 
@@ -27,7 +27,7 @@ using MORFE.Multiindices: MultiindexSet, find_in_set
     ROM = 2
     order = 5
 
-    ep = solve_eigenproblem(model; solver = DefaultEigensolver())
+    ep = spectrum(model; solver = DefaultEigensolver())
     select_master_modes_by_sorting(ep, ROM)
 
     W0, R0 = parametrise(model, order, ep;

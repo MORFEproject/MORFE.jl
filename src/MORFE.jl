@@ -5,8 +5,7 @@ include("Polynomials.jl")
 include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
-include("SpectralDecomposition/Eigensolvers.jl")
-include("SpectralDecomposition/Eigenproblems.jl")
+include("SpectralDecomposition/SpectralDecomposition.jl")
 include("SpectralDecomposition/ConjugatePermutation.jl")
 include("SpectralDecomposition/SpectralData.jl")
 include("Realification.jl")
@@ -33,8 +32,7 @@ using .Polynomials: DensePolynomial, evaluate, extract_component
 using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
-using .Eigensolvers
-using .Eigenproblems
+using .SpectralDecomposition
 using .ConjugatePermutation
 using .SpectralDataTypes
 using .Realification
@@ -75,13 +73,20 @@ export fem_elements, fem_n_qp, fem_ndofs_per_cell,
 export FullOrderModel, FirstOrderModel, NDOrderModel,
        linear_first_order_matrices, evaluate_nonlinear_terms!
 
-# Eigenproblems
+# SpectralDecomposition
 export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
        StructureModalDampingEigensolver
-export solve, solve_left, sort_by_magnitude!, normalise_biorthogonal!
-export Eigenproblem, solve_eigenproblem, get_eigenpairs, select_master_modes_by_hand,
-       select_master_modes_by_sorting, select_master_modes_by_target_frequency
-export left_eigenmode_orders_from_slice
+export eigensolve, eigensolve_left, generalised_eigenpairs,
+       sort_by_magnitude!, normalise_biorthogonal!, sort_left_eigenmodes
+export Spectrum, spectrum, left_eigenmode_orders_from_slice,
+       select_master_modes_by_hand, select_master_modes_by_sorting,
+       select_master_modes_by_target_frequency
+# SpectralData
+export SpectralData, ModeBundle, check_biorthogonality,
+       right_modes, left_modes, right_mode_derivatives, left_mode_blocks,
+       master_eigenvalues, outer_eigenvalues
+# Resonance configuration
+export ResonanceConfig
 
 # Realification
 export realify, compose_linear, realify_via_linear

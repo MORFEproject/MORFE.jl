@@ -72,7 +72,7 @@ function mass_normalize!(ϕ, M, n)
 		ϕ[:, i] ./= sqrt(c)
 	end
 end
-function MORFE.Eigenproblems.solve(model::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, s::MechSolver)
 	K, M = model.linear_terms[1], model.linear_terms[3]
 	FK = factorize(K)
 	vals_inv, vecs,
@@ -102,7 +102,7 @@ function MORFE.Eigenproblems.solve(model::NDOrderModel, s::MechSolver)
 	s.eigenvalues = λ
 	return λ, ev
 end
-function MORFE.Eigenproblems.solve_left(model::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve_left(model::NDOrderModel, s::MechSolver)
 	ev = s.right_eig_result
 	lev = similar(ev)
 	n2 = size(ev, 2) ÷ 2
@@ -119,7 +119,7 @@ end
 ROM = 2;
 N_EXT = 0;
 NVAR = ROM + N_EXT
-eig = solve_eigenproblem(model,
+eig = spectrum(model,
 	solver = MechSolver(nothing, nothing, 1, info.α, info.β),
 	sorter! = (args...) -> nothing, normalizer! = (args...) -> nothing)
 eigenvalues, Y, _ = get_eigenpairs(eig)

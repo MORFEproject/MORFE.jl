@@ -1,19 +1,3 @@
-"""
-Module `Eigensolvers` — high-level interface for computing generalised eigenpairs
-of large sparse systems arising from `NDOrderModel`.
-
-The primary entry point is `generalised_eigenpairs`, which wraps `Arpack.eigs` to
-compute a selected subset of eigenpairs of the companion-form system `A v = λ B v`.
-A shift-invert spectral transformation is used internally to target eigenpairs near
-a specified shift `σ`, which is essential for large sparse problems where only a
-small number of physically relevant modes are needed.
-"""
-module Eigensolvers
-
-using LinearAlgebra
-using SparseArrays
-
-export generalised_eigenpairs
 
 @inline function _sort_largest_real(vals, vecs)
     p = sortperm(real.(vals); rev = true)
@@ -34,6 +18,4 @@ function generalised_eigenpairs(args...; kwargs...)
         "generalised_eigenpairs requires Arpack.jl and LinearMaps.jl.\n" *
         "Load them with `using Arpack, LinearMaps` to activate the MORFE extension.",
     )
-end
-
 end

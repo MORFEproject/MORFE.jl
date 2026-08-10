@@ -10,7 +10,7 @@ using MORFE.MasterModeOrthogonality:
                                      evaluate_orthogonality_column_row!,
                                      evaluate_orthogonality_external_rhs,
                                      assemble_orthogonality_matrix_and_rhs!
-using MORFE.Eigenproblems: left_eigenmode_orders_from_slice
+using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice
 
 # =============================================================================
 # Fixture: complex ORD = 2 companion pencil with genuine left/right eigenblocks
