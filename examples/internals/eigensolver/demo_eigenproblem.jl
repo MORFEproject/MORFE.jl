@@ -9,14 +9,14 @@ using LinearAlgebra
 
 # ------------------------------------------------------------------------------
 # 1. Setup 
-#    Define NDOrderModel
+#    Define NthOrderModel
 #    Second-order ODE:  M ẍ + C ẋ + K x = 0
 # ------------------------------------------------------------------------------
 B0 = [2.0 -1.0; -1.0 2.0]   # stiffness
 B1 = [0.01 0.0; 0.0 0.01]   # light damping
 B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 
-model = NDOrderModel((B0, B1, B2))
+model = NthOrderModel((B0, B1, B2))
 
 # # ------------------------------------------------------------------------------
 # # 2.1. Default 
@@ -57,14 +57,14 @@ B0 = [-1.0 0.0; 0.0 -1.0]   # stiffness
 B1 = [0.01 0.0; 0.0 0.01]   # light damping
 B2 = [2.0 0.0; 0.0 2.0]   # mass (highest-order coefficient)
 
-model = NDOrderModel((B0, B1, B2))
+model = NthOrderModel((B0, B1, B2))
 
 #Add new solver that uses that X'=Y
 mutable struct My_Own_Solver <: AbstractEigenSolver
     right_eig_result::Any
 end
 # need to implement left and right solve functions
-function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::My_Own_Solver)
+function MORFE.SpectralDecomposition.eigensolve(model::NthOrderModel, solver::My_Own_Solver)
     A, B = linear_first_order_matrices(model)
     eig_result = eigen(A, B)
     solver.right_eig_result = eig_result
@@ -72,7 +72,7 @@ function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::My_
     return eig_result.values, eig_result.vectors
 end
 
-function MORFE.SpectralDecomposition.eigensolve_left(model::NDOrderModel, solver::My_Own_Solver)
+function MORFE.SpectralDecomposition.eigensolve_left(model::NthOrderModel, solver::My_Own_Solver)
     @assert solver.right_eig_result!==nothing "First run solve()"
     eig_result = solver.right_eig_result
     return eig_result.values, (eig_result.vectors)

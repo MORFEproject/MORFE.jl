@@ -88,7 +88,7 @@
   "116": "MORFE.jl",
   "117": "diagnose_operators.jl",
   "119": "NS2D.jl",
-  "123": "demo_NDOrderModel.jl",
+  "123": "demo_NthOrderModel.jl",
   "124": "test_multilinear_maps.jl",
   "130": "numeric_mirror.py",
   "131": "demo_eigensolver.jl",

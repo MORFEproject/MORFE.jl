@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">05</div>
       <div class="body">
-        <h3 id="step-spectral">Bound the superharmonics by a spectral radius</h3>
+        <h3 id="step-spectral">Superharmonics and spectral radius</h3>
         <p>
           Every monomial carries a <strong>superharmonic</strong>
           $s(\alpha) = \langle \alpha, \lambda \rangle = \alpha_1 \lambda_1 + \alpha_2 \lambda_2 + \dotsm + \alpha_n \lambda_n$,
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </p>
         <p>
           This set is <strong>not downward closed</strong>: it keeps $\alpha = (2,1,0)$ while
-          dropping its factor $(2,0,0)$; and keeps $(1,2,0)$ while dropping $(0,2,0)$. 
+          dropping its factor <span style="color:#E8C33D">$(2,0,0)$</span>; and keeps $(1,2,0)$ while dropping <span style="color:#E8C33D">$(0,2,0)$</span>. 
           Step 06 explains why this is a problem.
         </p>
       </div>
@@ -404,8 +404,12 @@ document.addEventListener('DOMContentLoaded', function () {
           Sets safisfying this property are called <strong>downward closed</strong>.
         </p>
         <p>
-          E.g. $z_1^2 z_2$ has factors $\{z_1, z_2, z_1^2, z_1 z_2, z_1^2 z_2\}$.
-          Therefore $\alpha=(2,1)$ has factors $\{(1,0), (0,1), (2,0), (1,1), (2,1)\}$.
+          E.g. $z_1^2 z_2^1 z_3^0$ has factors $\{z_1, z_2, $ <span style="color:#E8C33D">$z_1^2$</span> $, z_1 z_2, z_1^2 z_2\}$.
+          Therefore $\alpha=(2,1,0)$ has factors $\{(1,0,0), (0,1,0),$ <span style="color:#E8C33D">$(2,0,0)$</span> $, (1,1,0), (2,1,0)\}$.
+        </p>
+        <p>
+          And this explains why the <a class="doc-link" href="../documentation.html#Multiindices-MultiindexSet"><code>MultiindexSet</code></a> 
+          from Step 05 is <strong>not downward closed</strong>:
         </p>
 <pre class="code"><span class="fn">is_downward_closed</span>(<span class="var">band</span>) <span class="cm"># false</span>
 <span class="cm"># [2,1,0] is kept (|s| = 3.606), but not its factor [2,0,0] with |s| = 4.472 ≥ R</span>
@@ -421,11 +425,11 @@ document.addEventListener('DOMContentLoaded', function () {
             <span class="fn">push!</span>(<span class="var">closed</span>, <span class="fn">SVector</span>{N, Int}(<span class="fn">Tuple</span>(<span class="var">idx</span>)))
         <span class="kw">end</span>
     <span class="kw">end</span>
-    <span class="fn">delete!</span>(<span class="var">closed</span>, <span class="fn">zero</span>(<span class="fn">SVector</span>{N, Int}))   <span class="cm"># DPIM needs min_degree ≥ 1</span>
+    <span class="fn">delete!</span>(<span class="var">closed</span>, <span class="fn">zero</span>(<span class="fn">SVector</span>{N, Int})) <span class="cm"># DPIM needs min_degree ≥ 1</span>
     <span class="kw">return</span> <span class="fn">MultiindexSet</span>(<span class="fn">collect</span>(<span class="var">closed</span>))
 <span class="kw">end</span>
 
-<span class="fn">is_downward_closed</span>(<span class="fn">downward_closure</span>(<span class="var">band</span>))   <span class="cm"># true — 15 monomials, vs 34</span>
+<span class="fn">is_downward_closed</span>(<span class="fn">downward_closure</span>(<span class="var">band</span>)) <span class="cm"># true — 15 monomials, vs 34</span>
 <span class="cm"># the closure added exactly [2,0,0] and [0,2,0]</span></pre>
         <p>The full contract for a custom <code>mset</code>:</p>
         <table class="mi">

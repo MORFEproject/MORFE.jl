@@ -161,7 +161,7 @@ term_forcing = MultilinearMap(
 
 ext_sys = ExternalSystem((im * Ω_force, -im * Ω_force))
 
-model = NDOrderModel(
+model = NthOrderModel(
 	(K, C, M),
 	(term_quad, term_cubic, term_forcing),
 	ext_sys,

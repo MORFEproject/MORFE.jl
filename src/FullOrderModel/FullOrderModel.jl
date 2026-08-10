@@ -1,7 +1,7 @@
 """
 Module `FullOrderModel` — representation of high-dimensional nonlinear ODEs.
 
-The central type is `NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}`, which encodes
+The central type is `NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}`, which encodes
 an `ORD`-th order system
 
 	B_ORD ẋ^(ORD) + … + B₁ ẋ + B₀ x = F(x, ẋ, …, r)
@@ -23,7 +23,8 @@ using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap, MultilinearM
                          evaluate_term!, fem_elements, _definition_site
 using ..ExternalSystems: ExternalSystem, external_basis
 
-export NDOrderModel, FirstOrderModel, linear_first_order_matrices, evaluate_nonlinear_terms!
+export NthOrderModel, FirstOrderModel, linear_first_order_matrices,
+       evaluate_nonlinear_terms!
 
 abstract type AbstractFullOrderModel end
 
@@ -51,7 +52,7 @@ function _info_implicit_symmetry(nonlinear_terms)
     lines = join(
         ["  · term $i: $(_term_label(t)), with multiindex=$(t.multiindex) and deg=$(t.deg)"
          for (i, t) in hits], "\n")
-    @info "NDOrderModel: the following terms did not set `fully_asymmetric`\n" *
+    @info "NthOrderModel: the following terms did not set `fully_asymmetric`\n" *
           "(f! is assumed symmetric within each derivative-order argument group):\n" *
           lines * "\n  Pass `fully_asymmetric=true` to any term where this does not hold."
 end
@@ -67,17 +68,21 @@ Without this the mismatch survives construction and only surfaces mid-solve, as
 function _check_external_terms(nonlinear_terms)
     for (i, t) in enumerate(nonlinear_terms)
         t.multiplicity_external == 0 && continue
-        throw(ArgumentError("NDOrderModel: term $i ($(_term_label(t))) takes " *
-                            "$(t.multiplicity_external) external factor(s), but this " *
-                            "model was built without an external system.\nPass an " *
-                            "`ExternalSystem` (or the external dynamics polynomial) as " *
-                            "the third argument, or set multiplicity_external = 0."))
+        throw(
+            ArgumentError(
+            "NthOrderModel: term $i ($(_term_label(t))) takes " *
+            "$(t.multiplicity_external) external factor(s), but this " *
+            "model was built without an external system.\nPass an " *
+            "`ExternalSystem` (or the external dynamics polynomial) as " *
+            "the third argument, or set multiplicity_external = 0.",
+        ),
+        )
     end
 end
 
 """
 
-	NDOrderModel{ORD, ORDP1, N_NL, T, MT} <: AbstractFullOrderModel
+	NthOrderModel{ORD, ORDP1, N_NL, T, MT} <: AbstractFullOrderModel
 
 Representation of an ORD-th (ORDP1=ORD+1) order dynamical system of the form
 
@@ -126,7 +131,7 @@ Each `MultilinearMap` defines:
 - All matrices must have identical size.
 - The nonlinear structure is stored in sparse form (only active terms).
 """
-struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
+struct NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
        AbstractFullOrderModel
     n_fom::Int
     linear_terms::NTuple{ORDP1, MT}
@@ -135,19 +140,19 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     max_nl_degree::Int
 
     """
-    		NDOrderModel(linear_terms, nonlinear_terms, external_system::ExternalSystem)
+    			NthOrderModel(linear_terms, nonlinear_terms, external_system::ExternalSystem)
 
-    		Construct an `NDOrderModel` from an `ExternalSystem` object directly.
+    			Construct an `NthOrderModel` from an `ExternalSystem` object directly.
 
-    		# Checks performed
-    		- Correct relationship between `ORD` and `ORDP1`.
-    		- All matrices in `linear_terms` must be adequately sized.
+    			# Checks performed
+    			- Correct relationship between `ORD` and `ORDP1`.
+    			- All matrices in `linear_terms` must be adequately sized.
 
-    		The two-argument form, which builds a model *without* an external system, additionally
-    		rejects any term with `multiplicity_external > 0` — such a term would otherwise construct
-    		fine and fail only at evaluation time, inside `evaluate_term!`.
-    		"""
-    function NDOrderModel(
+    			The two-argument form, which builds a model *without* an external system, additionally
+    			rejects any term with `multiplicity_external > 0` — such a term would otherwise construct
+    			fine and fail only at evaluation time, inside `evaluate_term!`.
+    			"""
+    function NthOrderModel(
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
             external_system::ExternalSystem{N_EXT}
@@ -163,7 +168,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     end
 
     # Constructor accepting the external dynamics polynomial directly
-    function NDOrderModel(
+    function NthOrderModel(
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
             external_dynamics::DensePolynomial{TE, N_EXT}
@@ -178,7 +183,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     end
 
     # Constructor without external system
-    function NDOrderModel(
+    function NthOrderModel(
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}}
     ) where {ORD, ORDP1, N_NL, T, MT <: AbstractMatrix{T}}
@@ -193,8 +198,8 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     end
 
     # Constructor without external system and nonlinear_terms#
-    function NDOrderModel(linear_terms::NTuple{ORDP1, MT}) where {ORDP1, MT}
-        @warn ("Definition of NDOrderModel without nonlinear terms.")
+    function NthOrderModel(linear_terms::NTuple{ORDP1, MT}) where {ORDP1, MT}
+        @warn ("Definition of NthOrderModel without nonlinear terms.")
         n_fom = size(linear_terms[1], 1)
         T = eltype(linear_terms[1])
         new{ORDP1 - 1, ORDP1, 0, 0, T, MT}(n_fom, linear_terms, tuple(), nothing, 1)
@@ -202,7 +207,7 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
 end
 
 """
-	Base.show(io::IO, ::MIME"text/plain", m::NDOrderModel)
+	Base.show(io::IO, ::MIME"text/plain", m::NthOrderModel)
 
 Print a summary of the model.
 
@@ -214,19 +219,19 @@ The one-line method exists for the same reason: a model nested inside another co
 would otherwise expand its whole field tree there too.
 """
 function Base.show(io::IO,
-        m::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {
+        m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {
         ORD, ORDP1, N_NL, N_EXT, T, MT}
-    print(io, "NDOrderModel{ORD=", ORD, ", N_EXT=", N_EXT, "} FOM=", m.n_fom, ", ",
+    print(io, "NthOrderModel{ORD=", ORD, ", N_EXT=", N_EXT, "} FOM=", m.n_fom, ", ",
         MT <: SparseMatrixCSC ? "sparse" : "dense", ", ", N_NL,
         N_NL == 1 ? " nonlinear term" : " nonlinear terms",
         ", max degree ", m.max_nl_degree)
 end
 
 function Base.show(io::IO, ::MIME"text/plain",
-        m::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {
+        m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {
         ORD, ORDP1, N_NL, N_EXT, T, MT}
     layout = MT <: SparseMatrixCSC ? "sparse" : "dense"
-    println(io, "NDOrderModel{ORD = ", ORD, ", N_EXT = ", N_EXT, "}")
+    println(io, "NthOrderModel{ORD = ", ORD, ", N_EXT = ", N_EXT, "}")
     println(io, "  size      : FOM = ", m.n_fom, ",  ", layout, " (", MT, ")")
     println(io, "  linear    : ", ORDP1, " operators (B_0 … B_", ORD, ")")
     if N_NL == 0
@@ -258,25 +263,25 @@ end
 """
 	evaluate_nonlinear_terms!(res, model, order, state_vectors, r = nothing)
 
-Evaluate all nonlinear terms of a given polynomial degree for an `NDOrderModel`.
+Evaluate all nonlinear terms of a given polynomial degree for an `NthOrderModel`.
 
 # Arguments
 - `res`: output vector (modified in-place)
-- `model`: the `NDOrderModel`
+- `model`: the `NthOrderModel`
 - `order`: degree of the nonlinear terms to evaluate
 - `state_vectors`: tuple `(x, x^(1), …, x^(ORD-1))` of state derivatives
 - `r`: external state vector (default `nothing`). Must be provided if any term uses external variables.
 
 !!! note "`r` is the *physical* external state"
-    Terms are defined in the external coordinates the model was written in.  When the
-    external system was re-based (its linear matrix was not upper triangular, so
-    `ExternalSystem` chose a new basis `Q`), the solver's *reduced* external coordinates
-    `r′` are related to these by `r = Q r′`, and it is the caller's job to convert:
-    `ExternalSystems.to_physical_external(model.external_system, r′)` does it, and is the
-    identity for every system that was not re-based.  Passing `r′` where `r` is expected
-    silently evaluates the terms at the wrong point.
+	Terms are defined in the external coordinates the model was written in.  When the
+	external system was re-based (its linear matrix was not upper triangular, so
+	`ExternalSystem` chose a new basis `Q`), the solver's *reduced* external coordinates
+	`r′` are related to these by `r = Q r′`, and it is the caller's job to convert:
+	`ExternalSystems.to_physical_external(model.external_system, r′)` does it, and is the
+	identity for every system that was not re-based.  Passing `r′` where `r` is expected
+	silently evaluates the terms at the wrong point.
 """
-function evaluate_nonlinear_terms!(res, model::NDOrderModel{ORD, ORDP1, N_NL},
+function evaluate_nonlinear_terms!(res, model::NthOrderModel{ORD, ORDP1, N_NL},
         order, state_vectors, r = nothing) where {ORD, ORDP1, N_NL}
     order <= 0 && return res
     @assert length(res)==model.n_fom "Result vector length does not match full‑order state dimension"
@@ -289,7 +294,7 @@ function evaluate_nonlinear_terms!(res, model::NDOrderModel{ORD, ORDP1, N_NL},
 end
 
 """
-	linear_first_order_matrices(model::NDOrderModel)
+	linear_first_order_matrices(model::NthOrderModel)
 
 Construct the matrices A and B of the equivalent linear first-order system:
 
@@ -319,7 +324,7 @@ and
 
 where `I` is the `n_fom × n_fom` identity matrix.
 """
-function linear_first_order_matrices(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T,
+function linear_first_order_matrices(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T,
         MT}
 ) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: SparseMatrixCSC{T}}
     n = model.n_fom
@@ -360,7 +365,7 @@ function linear_first_order_matrices(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT
     return A, B
 end
 
-function linear_first_order_matrices(model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T,
+function linear_first_order_matrices(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T,
         MT}
 ) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}}
     n = model.n_fom

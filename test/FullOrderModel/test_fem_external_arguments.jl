@@ -97,7 +97,7 @@ the combined element loop.  Its allocating sibling replays every term through
 """
 function _fem_rhs_all_monomials(term, mset, N_EXT, W)
     K = zeros(ComplexF64, _FEM_FOM, _FEM_FOM)
-    model = NDOrderModel((K, K, K), (term,),
+    model = NthOrderModel((K, K, K), (term,),
         ExternalSystem(ntuple(j -> ComplexF64(j) * im, N_EXT)))
     cache = build_multilinear_terms_cache(model, W)
     out = Vector{Vector{ComplexF64}}(undef, length(mset))

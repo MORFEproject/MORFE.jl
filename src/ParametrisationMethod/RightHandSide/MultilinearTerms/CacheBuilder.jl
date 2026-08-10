@@ -147,14 +147,14 @@ This is safe for monomials that will never be replayed (linear monomials, conjug
 secondaries): those entries are guarded by the same `skip_bits` check in the solve loop.
 """
 function build_multilinear_terms_cache(
-        model::NDOrderModel{ORD}, parametrisation::Parametrisation{ORD, NVAR}) where {
+        model::NthOrderModel{ORD}, parametrisation::Parametrisation{ORD, NVAR}) where {
         ORD, NVAR}
     L = length(parametrisation.poly.multiindex_set)
     build_multilinear_terms_cache(model, parametrisation, falses(L))
 end
 
 function build_multilinear_terms_cache(
-        model::NDOrderModel{ORD}, parametrisation::Parametrisation{ORD, NVAR},
+        model::NthOrderModel{ORD}, parametrisation::Parametrisation{ORD, NVAR},
         skip_bits::BitVector) where {ORD, NVAR}
     mset = parametrisation.poly.multiindex_set
     L = length(mset)

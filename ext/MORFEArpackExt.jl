@@ -90,7 +90,7 @@ end
 # ── ArpackEigensolver.solve ────────────────────────────────────────────────────
 
 function MORFE.SpectralDecomposition.eigensolve(
-        model::MORFE.FullOrderModel.NDOrderModel,
+        model::MORFE.FullOrderModel.NthOrderModel,
         solver::MORFE.SpectralDecomposition.ArpackEigensolver
 )
     A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
@@ -112,7 +112,7 @@ end
 # Uses per-eigenvalue sigma-shifts — NOT a simple eigs(A', B'; which=:SM).
 
 function MORFE.SpectralDecomposition.eigensolve_left(
-        model::MORFE.FullOrderModel.NDOrderModel,
+        model::MORFE.FullOrderModel.NthOrderModel,
         solver::MORFE.SpectralDecomposition.ArpackEigensolver
 )
     A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)

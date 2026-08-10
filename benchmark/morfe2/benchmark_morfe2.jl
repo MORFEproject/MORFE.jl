@@ -55,7 +55,7 @@ Morfe_2_0.assembler_MK!(mesh, U, K, M)
 C = info.α * M + info.β * K
 
 # ------------------------------------------------------------------------------
-# 1. Define NDOrderModel
+# 1. Define NthOrderModel
 # Structural mechanical problem without forcing.
 # First build second order ODE:
 # M*d_t² U + C*d_tU + K*U = F(U)
@@ -69,7 +69,7 @@ function cubic!(res, Ψ₁, Ψ₂, Ψ₃)
 	Morfe_2_0.assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh, U)
 end
 cubic_term = MultilinearMap(cubic!, (3, 0))
-model = NDOrderModel((K, C, M), (quadratic_term, cubic_term))
+model = NthOrderModel((K, C, M), (quadratic_term, cubic_term))
 
 A, B = FullOrderModel.linear_first_order_matrices(model)
 FOM = size(K, 1)

@@ -407,7 +407,7 @@ returns `nothing` with an `@info` if they disagree — eigenvalue pairing alone 
 but not sufficient, and a wrong permutation silently corrupts `W` and `R`. The default is
 `nothing` so that enabling conjugate symmetry is always a deliberate act.
 """
-function SpectralData(model::NDOrderModel, eigenproblem::Spectrum;
+function SpectralData(model::NthOrderModel, eigenproblem::Spectrum;
         master,
         conjugate_permutation = nothing,
         keep_outer_modes::Bool = false,
@@ -490,10 +490,10 @@ end
 function _reconcile_left(model, ep, idx, λ, ORD_spec::Int, ORD_model::Int)
     if ORD_spec == ORD_model
         ep.left_eigenmodes_orders === nothing && throw(ArgumentError("""
-            The eigenproblem stores only the physical left slice, but ORD = $ORD_model needs
-            the full left order-blocks. Use an eigensolver that returns them, or rebuild with
-            `left_eigenmode_orders_from_slice(model.linear_terms, slice, eigenvalues)`.
-            """))
+           The eigenproblem stores only the physical left slice, but ORD = $ORD_model needs
+           the full left order-blocks. Use an eigensolver that returns them, or rebuild with
+           `left_eigenmode_orders_from_slice(model.linear_terms, slice, eigenvalues)`.
+           """))
         return Array{ComplexF64, 3}(ep.left_eigenmodes_orders[:, :, idx])
     end
     slice = Matrix{ComplexF64}(ep.left_eigenmodes[:, idx])
@@ -565,7 +565,7 @@ loudly, whatever accessor was misused.
 **Diagnostic only** — deliberately not called from `parametrise` or the solve, so it adds
 no cost to a normal run. Call it in tests, or when a result looks wrong.
 """
-function check_biorthogonality(sd::SpectralData{ORD, ROM}, model::NDOrderModel) where {
+function check_biorthogonality(sd::SpectralData{ORD, ROM}, model::NthOrderModel) where {
         ORD, ROM}
     _, B = linear_first_order_matrices(model)
     right = sd.master.right_blocks

@@ -8,7 +8,7 @@ using LinearAlgebra
 using StaticArrays
 
 using MORFE
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
                                    select_master_modes_by_sorting, SpectralData
 using MORFE.Resonance: ResonanceConfig
@@ -18,7 +18,7 @@ using MORFE.Resonance: ResonanceConfig
     B2 = [1.0 0.0; 0.0 1.0]
     B1 = 0.001 * B2
     cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0))
-    model = NDOrderModel((B0, B1, B2), (cubic,))
+    model = NthOrderModel((B0, B1, B2), (cubic,))
     ROM, order = 2, 5
 
     sp = spectrum(model; solver = DefaultEigensolver())

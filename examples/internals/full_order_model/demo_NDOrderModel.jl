@@ -1,5 +1,5 @@
 """
-Demonstration of the usage of NDOrderModel and FirstOrderModel
+Demonstration of the usage of NthOrderModel and FirstOrderModel
 """
 
 using MORFE
@@ -47,7 +47,7 @@ for deg in 1:4
 end
 
 # -------------------------------------------------------------------
-# 2. NDOrderModel: second‑order system
+# 2. NthOrderModel: second‑order system
 #    B₂ x'' + B₁ x' + B₀ x = F(x, x', r)
 #    where r is an external forcing variable satisfying r' = 3*r
 # -------------------------------------------------------------------
@@ -89,13 +89,13 @@ term_forcing = MultilinearMap(forcing!, (0, 0), 1)   # no state derivatives, one
 nonlinear_terms = (term1, term2, term3, term_forcing)
 
 # Build the second‑order model, including external dynamics
-model_nd = NDOrderModel((B₀, B₁, B₂), nonlinear_terms)
+model_nd = NthOrderModel((B₀, B₁, B₂), nonlinear_terms)
 
 # Generate the equivalent first‑order matrices for the linear part:
 #   B Ẋ = A X   with X = [x; x']
 A_nd, B_nd = linear_first_order_matrices(model_nd)
 
-println("\n\n=== NDOrderModel ===")
+println("\n\n=== NthOrderModel ===")
 println("\nA matrix (linear part in first‑order form):\n", repr("text/plain", A_nd))
 println("\nB matrix (mass matrix in first‑order form):\n", repr("text/plain", B_nd))
 

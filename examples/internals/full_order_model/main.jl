@@ -9,14 +9,14 @@ three from scratch:
 - `ExternalSystem` — the autonomous dynamics `ṙ = f(r)` that drives the model. Its linear
   part **must be upper triangular** — a constraint the constructor satisfies by changing
   coordinates itself when it has to.
-- `NDOrderModel` — the assembled `B_ORD x^(ORD) + … + B_0 x = F(x, ẋ, …, r)`.
+- `NthOrderModel` — the assembled `B_ORD x^(ORD) + … + B_0 x = F(x, ẋ, …, r)`.
 
 The arc is: nonlinear terms → the driver → the assembled model → its response.
 
  1. `MultilinearMap`: what a multiindex means, drawn as force–displacement curves
  2. `ExternalSystem`: harmonic, multiharmonic and quasi-periodic excitation, drawn as orbits
  3. Chaotic excitation: a nonlinear driver, and the one coordinate change left to the caller
- 4. `NDOrderModel`: assemble a forced Duffing oscillator and integrate it
+ 4. `NthOrderModel`: assemble a forced Duffing oscillator and integrate it
 
 Everything is evaluated through the real library code — the curves come from `evaluate_term!`
 and `evaluate`, never from a formula written out a second time — and the coordinate changes
@@ -46,11 +46,11 @@ rule(title) = println("\n" * "="^92 * "\n  " * title * "\n" * "="^92)
 # One RK4 step of ẏ = f(y). Ten lines, no dependency, and accurate enough that the
 # coordinate changes below can be checked to ~1e-13.
 function rk4_step(f, y, h)
-	k1 = f(y)
-	k2 = f(y .+ (h / 2) .* k1)
-	k3 = f(y .+ (h / 2) .* k2)
-	k4 = f(y .+ h .* k3)
-	return y .+ (h / 6) .* (k1 .+ 2 .* k2 .+ 2 .* k3 .+ k4)
+    k1 = f(y)
+    k2 = f(y .+ (h / 2) .* k1)
+    k3 = f(y .+ (h / 2) .* k2)
+    k4 = f(y .+ h .* k3)
+    return y .+ (h / 6) .* (k1 .+ 2 .* k2 .+ 2 .* k3 .+ k4)
 end
 
 """
@@ -62,19 +62,19 @@ Integrate `ẏ = f(y)` from `y0` and return every state along the way.
 modal Lorenz one, where it enforces a reality condition — see section 3.
 """
 function orbit(f, y0, h, nsteps; project = identity)
-	ys = Vector{typeof(y0)}(undef, nsteps + 1)
-	ys[1] = project(y0)
-	for i in 1:nsteps
-		ys[i+1] = project(rk4_step(f, ys[i], h))
-	end
-	return ys
+    ys = Vector{typeof(y0)}(undef, nsteps + 1)
+    ys[1] = project(y0)
+    for i in 1:nsteps
+        ys[i + 1] = project(rk4_step(f, ys[i], h))
+    end
+    return ys
 end
 
 # An `ExternalSystem` carries its dynamics as a polynomial, so this is all it takes to
 # integrate one.
 external_rhs(sys) = r -> evaluate(sys.first_order_dynamics, r)
 function orbit(sys::ExternalSystem, r0, h, nsteps; kwargs...)
-	orbit(external_rhs(sys), r0, h, nsteps; kwargs...)
+    orbit(external_rhs(sys), r0, h, nsteps; kwargs...)
 end
 
 component(ys, k) = [y[k] for y in ys]
@@ -82,12 +82,12 @@ component(ys, k) = [y[k] for y in ys]
 # The degree-1 polynomial of a purely linear driver ṙ = A r.  The coefficient carried by the
 # unit multiindex eⱼ is the column A[:, j], because that column is what multiplies rⱼ.
 function linear_polynomial(A::AbstractMatrix)
-	n = size(A, 1)
-	ms = all_multiindices_up_to(n, 1)
-	deleteat!(ms.exponents, 1)              # an ExternalSystem carries no constant term
-	coeffs = [SVector{n, ComplexF64}(A[:, findfirst(==(1), Tuple(e))])
-			  for e in ms.exponents]
-	return DensePolynomial(coeffs, ms)
+    n = size(A, 1)
+    ms = all_multiindices_up_to(n, 1)
+    deleteat!(ms.exponents, 1)              # an ExternalSystem carries no constant term
+    coeffs = [SVector{n, ComplexF64}(A[:, findfirst(==(1), Tuple(e))])
+              for e in ms.exponents]
+    return DensePolynomial(coeffs, ms)
 end
 
 # Orbits are integrated finely for accuracy but drawn coarsely: a screen cannot resolve
@@ -125,22 +125,22 @@ const K_MIX = -1.5
 mixed!(res, x, r) = (res .+= K_MIX .* x .* (r[1] + r[2]))
 
 term_quad = MultilinearMap(quadratic!; multiindex = (2, 0),
-	multiplicity_external = 0, fully_asymmetric = false)
+    multiplicity_external = 0, fully_asymmetric = false)
 term_hard = MultilinearMap(hardening!; multiindex = (3, 0),
-	multiplicity_external = 0, fully_asymmetric = false)
+    multiplicity_external = 0, fully_asymmetric = false)
 term_soft = MultilinearMap(softening!; multiindex = (3, 0),
-	multiplicity_external = 0, fully_asymmetric = false)
+    multiplicity_external = 0, fully_asymmetric = false)
 term_drag = MultilinearMap(drag!; multiindex = (0, 2),
-	multiplicity_external = 0, fully_asymmetric = false)
+    multiplicity_external = 0, fully_asymmetric = false)
 # multiindex (1, 0) with one external factor: one slot takes x, the other takes r. This
 # split is exactly the one the constructor refuses to guess — state it and it is fine.
 term_mixed = MultilinearMap(mixed!; multiindex = (1, 0), multiplicity_external = 1)
 
 for (name, t) in (("quadratic", term_quad), ("hardening cubic", term_hard),
-	("quadratic drag", term_drag), ("mixed x·r", term_mixed))
-	println(rpad(name, 18), "multiindex = ", rpad(string(t.multiindex), 8),
-		" deg = ", t.deg, "   ",
-		_call_signature(t.multiindex, t.multiplicity_external))
+    ("quadratic drag", term_drag), ("mixed x·r", term_mixed))
+    println(rpad(name, 18), "multiindex = ", rpad(string(t.multiindex), 8),
+        " deg = ", t.deg, "   ",
+        _call_signature(t.multiindex, t.multiplicity_external))
 end
 
 # The keyword constructor reports anything it had to assume. Stating `multiindex` and
@@ -151,8 +151,8 @@ _ = MultilinearMap(hardening!)
 
 # Evaluate a term the way the solver does: one state vector per derivative order.
 force(term, x, v) = (res = zeros(1);
-	evaluate_term!(res, term, ([x], [v]), nothing);
-	res[1])
+    evaluate_term!(res, term, ([x], [v]), nothing);
+    res[1])
 
 xs = collect(range(-1.0, 1.0, length = 241))
 vs = collect(range(-1.5, 1.5, length = 241))
@@ -162,34 +162,34 @@ vs = collect(range(-1.5, 1.5, length = 241))
 restoring(term, x) = K_LIN * x - force(term, x, 0.0)
 
 panel_force = ChartPanel("restoring force",
-	[Curve("linear  K u", xs, K_LIN .* xs; colour = 4, dashed = true),
-		Curve("hardening  K u + k₃ u³", xs, restoring.(Ref(term_hard), xs); colour = 1),
-		Curve("softening  K u − k₃ u³", xs, restoring.(Ref(term_soft), xs); colour = 3),
-		Curve("quadratic  K u + k₂ u²", xs, restoring.(Ref(term_quad), xs); colour = 2)];
-	xlabel = "displacement u", ylabel = "restoring force",
-	note = "A multiindex (3, 0) is for cubic f!(res, u, u, u); and (2, 0) is for quadratic f!(res, u, u). " *
-		   "Hardening stiffens with amplitude, softening goes the other way. K = 4, k₂ = 3, k₃ = 6.")
+    [Curve("linear  K u", xs, K_LIN .* xs; colour = 4, dashed = true),
+        Curve("hardening  K u + k₃ u³", xs, restoring.(Ref(term_hard), xs); colour = 1),
+        Curve("softening  K u − k₃ u³", xs, restoring.(Ref(term_soft), xs); colour = 3),
+        Curve("quadratic  K u + k₂ u²", xs, restoring.(Ref(term_quad), xs); colour = 2)];
+    xlabel = "displacement u", ylabel = "restoring force",
+    note = "A multiindex (3, 0) is for cubic f!(res, u, u, u); and (2, 0) is for quadratic f!(res, u, u). " *
+           "Hardening stiffens with amplitude, softening goes the other way. K = 4, k₂ = 3, k₃ = 6.")
 
 # A *multilinear* quadratic drag is v·v, which is even — it decelerates for v > 0 and
 # accelerates for v < 0. Physical drag is |v|·v, which is odd but not multilinear, so it
 # cannot be a `MultilinearMap` at all: it would have to be approximated by odd terms.
 panel_drag = ChartPanel("quadratic drag",
-	[
-		Curve("smooth  −0.8 u̇²", vs, [force(term_drag, 0.0, v) for v in vs];
-			colour = 1),
-		Curve("not smooth  −0.8 |u̇| u̇", vs,
-			-C_DRAG .* abs.(vs) .* vs; colour = 3, dashed = true)];
-	xlabel = "velocity u̇", ylabel = "force F",
-	note = "The multilinear map F(u̇₁,u̇₂) = u̇₁ u̇₂ is linear in each argument separately; and describes a quadratic function on repeated inputs: F(u̇,u̇) = u̇². " *
-		   "F(u̇,u̇) = |u̇| u̇ is not twice differentiable @ u̇ = 0.")
+    [
+        Curve("smooth  −0.8 u̇²", vs, [force(term_drag, 0.0, v) for v in vs];
+            colour = 1),
+        Curve("not smooth  −0.8 |u̇| u̇", vs,
+            -C_DRAG .* abs.(vs) .* vs; colour = 3, dashed = true)];
+    xlabel = "velocity u̇", ylabel = "force F",
+    note = "The multilinear map F(u̇₁,u̇₂) = u̇₁ u̇₂ is linear in each argument separately; and describes a quadratic function on repeated inputs: F(u̇,u̇) = u̇². " *
+           "F(u̇,u̇) = |u̇| u̇ is not twice differentiable @ u̇ = 0.")
 
 # F(x, t) = k·x·(r₁+r₂) with r = (e^{iΩt}, e^{−iΩt}), so r₁ + r₂ = 2cos(Ωt). It is a
 # surface over the (x, t) plane, drawn as a wireframe: straight lines along x — the term is
 # linear in the state — and cosines along t.
 function force_ext(term, x, t)
-	(res = zeros(1);
-		evaluate_term!(res, term, ([x], [0.0]), SVector(cis(Ω * t), cis(-Ω * t)));
-		res[1])
+    (res = zeros(1);
+        evaluate_term!(res, term, ([x], [0.0]), SVector(cis(Ω * t), cis(-Ω * t)));
+        res[1])
 end
 
 x_mix = collect(range(-1.0, 1.0, length = 33))
@@ -201,20 +201,20 @@ surf_mixed = Surface3D(x_mix, t_mix, (x, t) -> force_ext(term_mixed, x, t))
 # closed form are exact. `offset` lifts it by ~1% of the force range, just enough to sit
 # on the surface rather than inside it.
 line_mixed = SweptLine([first(x_mix), last(x_mix)],
-	[2K_MIX * first(x_mix), 2K_MIX * last(x_mix)];
-	omega = Ω, offset = 0.01 * (maximum(surf_mixed.z) - minimum(surf_mixed.z)))
+    [2K_MIX * first(x_mix), 2K_MIX * last(x_mix)];
+    omega = Ω, offset = 0.01 * (maximum(surf_mixed.z) - minimum(surf_mixed.z)))
 
 panel_mixed = ChartPanel("time-varying stiffness", surf_mixed;
-	line = line_mixed,
-	axes = ("displacement u", "time t", "force F"),
-	note = "Periodically time-varying stiffness: F = k · u · (r₁ + r₂), with " *
-		   "r₁ + r₂ = 2 cos(Ωt). The swept line is the force–displacement law at one " *
-		   "instant. Drag to orbit.")
+    line = line_mixed,
+    axes = ("displacement u", "time t", "force F"),
+    note = "Periodically time-varying stiffness: F = k · u · (r₁ + r₂), with " *
+           "r₁ + r₂ = 2 cos(Ωt). The swept line is the force–displacement law at one " *
+           "instant. Drag to orbit.")
 
 write_charts(joinpath(FOM_FIGDIR, "fig1_nonlinear_terms.html"),
-	[panel_force, panel_drag, panel_mixed];
-	title = "Nonlinear terms",
-	caption = "Every curve is produced by `evaluate_term!` on a real `MultilinearMap`.")
+    [panel_force, panel_drag, panel_mixed];
+    title = "Nonlinear terms",
+    caption = "Every curve is produced by `evaluate_term!` on a real `MultilinearMap`.")
 
 # ------------------------------------------------------------------------------
 # 2. `ExternalSystem` — periodic excitation
@@ -255,24 +255,24 @@ println("RK4 vs closed form exp(λt)r₀: max error = ", round(err_harm, sigdigi
 # `ExternalSystem` no longer rejects that: it finds a basis Q in which the linear part is
 # triangular and re-expresses the whole polynomial in r′ = Q⁻¹r.  Here A is real and
 # diagonalisable, so the eigenvector route applies and U comes out diagonal.
-A_multiharmonic = [                              0.0 0.0 Ω 0.0;
-	-0.03Ω 0.0 0.0 4Ω;
-	-Ω 0.0 0.0 0.0;
-	0.0 -4Ω 0.12Ω 0.0]        # 0.12 = 4a
+A_multiharmonic = [0.0 0.0 Ω 0.0;
+                   -0.03Ω 0.0 0.0 4Ω;
+                   -Ω 0.0 0.0 0.0;
+                   0.0 -4Ω 0.12Ω 0.0]        # 0.12 = 4a
 println("multiharmonic linear matrix is upper triangular = ",
-	istriu(A_multiharmonic), "  ⇒ it will be re-based:")
+    istriu(A_multiharmonic), "  ⇒ it will be re-based:")
 multiharmonic = ExternalSystem(linear_polynomial(A_multiharmonic))
 println("multiharmonic  eigenvalues = ", round.(multiharmonic.eigenvalues, digits = 6))
 println("               expected ±iΩ, ±4iΩ = ",
-	round.(ComplexF64[im*Ω, -im*Ω, 4im*Ω, -4im*Ω], digits = 6), " (in some order)")
+    round.(ComplexF64[im * Ω, -im * Ω, 4im * Ω, -4im * Ω], digits = 6), " (in some order)")
 
 # The step is set by the fastest harmonic, 4Ω, not by Ω.
 hm = 2π / Ω / 2000
 n_multi = 2 * 2000                          # two periods of the slow harmonic
 r0_multiharmonic = ComplexF64[-1, -1, 0, 0]            # r₁(0) = r₂(0) = −cos 0, auxiliaries 0
 morb = orbit(multiharmonic,
-	SVector{4, ComplexF64}(external_basis(multiharmonic) \ r0_multiharmonic),
-	hm, n_multi)
+    SVector{4, ComplexF64}(external_basis(multiharmonic) \ r0_multiharmonic),
+    hm, n_multi)
 t_m = hm .* (0:n_multi)
 # Everything is read back in *physical* coordinates: `to_physical_external` undoes the Q the
 # constructor chose, so the tutorial never has to know which basis it picked.
@@ -303,31 +303,31 @@ q_im = imag.(component(qorb, 1)) .+ imag.(component(qorb, 3))
 iq = thin(length(qorb), 2000)
 
 write_pairs(joinpath(FOM_FIGDIR, "fig2_external_systems.html"),
-	[
-		PairPanel("harmonic",
-			[Curve("Re r₁(t)", t_harm[ih], real.(component(harm, 1))[ih]; colour = 1),
-				Curve("Im r₁(t)", t_harm[ih], imag.(component(harm, 1))[ih]; colour = 4)],
-			[Curve("r₁", real.(component(harm, 1))[ih],
-				imag.(component(harm, 1))[ih]; colour = 1)];
-			tylabel = "r₁", pxlabel = "Re r₁", pylabel = "Im r₁",
-			note = "A purely imaginary pair ±iΩ with Ω = $(Ω): the orbit is a circle and " *
-				   "the signal a cosine."),
-		PairPanel("multiharmonic",
-			[Curve("r₁(t) = −cos Ωt", t_m[im_], m_r1[im_]; colour = 3),
-				Curve("r₂(t) = 0.03 sin Ωt − cos 4Ωt", t_m[im_], m_r2[im_]; colour = 4)],
-			[Curve("(r₁, r₂)", m_r1[im_], m_r2[im_]; colour = 3)];
-			tylabel = "r", pxlabel = "r₁", pylabel = "r₂",
-			note = "A signal with two harmonics, Ω₁ = $(Ω) and 4Ω₁ = $(4*Ω) draws an M (for MORFE) in the phase plane."),
-		PairPanel("quasi-periodic",
-			[Curve("Re r₁ + Re r₃", t_q[iq], q_sig[iq]; colour = 2)],
-			[Curve("(Re, Im) of r₁ + r₃", q_sig[iq], q_im[iq]; colour = 2)];
-			tylabel = "signal", pxlabel = "Re", pylabel = "Im",
-			note = "Two incommensurate frequencies, Ω₁ = $(Ω1) and Ω₂ = √2, over " *
-				   "$(round(Int, hq * n_quasi)) s: the signal beats and never repeats, and " *
-				   "the orbit fills an annulus — a section of the invariant torus.")];
-	title = "Periodic excitation",
-	caption = "Time plot left, phase portrait right. Orbits integrated with RK4 through " *
-			  "`evaluate(sys.first_order_dynamics, r)`.")
+    [
+        PairPanel("harmonic",
+            [Curve("Re r₁(t)", t_harm[ih], real.(component(harm, 1))[ih]; colour = 1),
+                Curve("Im r₁(t)", t_harm[ih], imag.(component(harm, 1))[ih]; colour = 4)],
+            [Curve("r₁", real.(component(harm, 1))[ih],
+                imag.(component(harm, 1))[ih]; colour = 1)];
+            tylabel = "r₁", pxlabel = "Re r₁", pylabel = "Im r₁",
+            note = "A purely imaginary pair ±iΩ with Ω = $(Ω): the orbit is a circle and " *
+                   "the signal a cosine."),
+        PairPanel("multiharmonic",
+            [Curve("r₁(t) = −cos Ωt", t_m[im_], m_r1[im_]; colour = 3),
+                Curve("r₂(t) = 0.03 sin Ωt − cos 4Ωt", t_m[im_], m_r2[im_]; colour = 4)],
+            [Curve("(r₁, r₂)", m_r1[im_], m_r2[im_]; colour = 3)];
+            tylabel = "r", pxlabel = "r₁", pylabel = "r₂",
+            note = "A signal with two harmonics, Ω₁ = $(Ω) and 4Ω₁ = $(4*Ω) draws an M (for MORFE) in the phase plane."),
+        PairPanel("quasi-periodic",
+            [Curve("Re r₁ + Re r₃", t_q[iq], q_sig[iq]; colour = 2)],
+            [Curve("(Re, Im) of r₁ + r₃", q_sig[iq], q_im[iq]; colour = 2)];
+            tylabel = "signal", pxlabel = "Re", pylabel = "Im",
+            note = "Two incommensurate frequencies, Ω₁ = $(Ω1) and Ω₂ = √2, over " *
+                   "$(round(Int, hq * n_quasi)) s: the signal beats and never repeats, and " *
+                   "the orbit fills an annulus — a section of the invariant torus.")];
+    title = "Periodic excitation",
+    caption = "Time plot left, phase portrait right. Orbits integrated with RK4 through " *
+              "`evaluate(sys.first_order_dynamics, r)`.")
 
 # ------------------------------------------------------------------------------
 # 3. Chaotic excitation — a nonlinear driver
@@ -353,33 +353,33 @@ lorenz(r) = [SIG * (r[2] - r[1]), r[1] * (RHO - r[3]) - r[2], r[1] * r[2] - BET 
 lorenz_quad(u) = [0.0 + 0im, -u[1] * u[3], u[1] * u[2]]
 
 function lorenz_polynomial(A, quad_coeff)
-	ms = all_multiindices_up_to(3, 2)
-	deleteat!(ms.exponents, 1)
-	coeffs = map(ms.exponents) do e
-		ex = Tuple(e)
-		if sum(ex) == 1
-			k = findfirst(==(1), ex)
-			return SVector{3, ComplexF64}(A[:, k])
-		end
-		slots = vcat((fill(i, ex[i]) for i in 1:3)...)
-		return quad_coeff(slots[1], slots[end])
-	end
-	return DensePolynomial(coeffs, ms)
+    ms = all_multiindices_up_to(3, 2)
+    deleteat!(ms.exponents, 1)
+    coeffs = map(ms.exponents) do e
+        ex = Tuple(e)
+        if sum(ex) == 1
+            k = findfirst(==(1), ex)
+            return SVector{3, ComplexF64}(A[:, k])
+        end
+        slots = vcat((fill(i, ex[i]) for i in 1:3)...)
+        return quad_coeff(slots[1], slots[end])
+    end
+    return DensePolynomial(coeffs, ms)
 end
 
 # --- 3a. the original system --------------------------------------------------
 # The quadratic part as a bilinear form, via polarisation B(a, b) = Q(a+b) − Q(a) − Q(b).
 function raw_quad(a, b)
-	a == b ? SVector{3, ComplexF64}(lorenz_quad(1.0 .* (1:3 .== a))) :
-	SVector{3, ComplexF64}(lorenz_quad(1.0 .* ((1:3 .== a) .+ (1:3 .== b))) .-
-						   lorenz_quad(1.0 .* (1:3 .== a)) .-
-						   lorenz_quad(1.0 .* (1:3 .== b)))
+    a == b ? SVector{3, ComplexF64}(lorenz_quad(1.0 .* (1:3 .== a))) :
+    SVector{3, ComplexF64}(lorenz_quad(1.0 .* ((1:3 .== a) .+ (1:3 .== b))) .-
+                           lorenz_quad(1.0 .* (1:3 .== a)) .-
+                           lorenz_quad(1.0 .* (1:3 .== b)))
 end
 A_origin = [-SIG SIG 0.0; RHO -1.0 0.0; 0.0 0.0 -BET]
 println("Lorenz at the origin — linear matrix:")
 println(repr("text/plain", A_origin))
 println("upper triangular = ", istriu(A_origin),
-	"   (and no reordering helps: both off-diagonal entries of the x–y block are non-zero)")
+    "   (and no reordering helps: both off-diagonal entries of the x–y block are non-zero)")
 
 # --- 3b. why the origin will not do -------------------------------------------
 # The origin *is* an equilibrium, so it would serve — but it is not the interesting one, and
@@ -388,7 +388,7 @@ println("upper triangular = ", istriu(A_origin),
 xe = sqrt(BET * (RHO - 1))
 C_plus = [xe, xe, RHO - 1]
 println("\nfixed point C₊ = ", round.(C_plus, digits = 4),
-	"   ‖f(C₊)‖ = ", round(norm(lorenz(C_plus)), sigdigits = 3), " ⇒ an equilibrium")
+    "   ‖f(C₊)‖ = ", round(norm(lorenz(C_plus)), sigdigits = 3), " ⇒ an equilibrium")
 
 # Because Lorenz is quadratic, u = r − C₊ gives exactly u̇ = J u + Q(u, u): the same
 # quadratic part, and no constant because C₊ is an equilibrium. Writing
@@ -432,11 +432,11 @@ const I_POS = findfirst(k -> k != I_REAL && imag(λ_ext[k]) > 0, eachindex(λ_ex
 const I_NEG = findfirst(k -> k != I_REAL && k != I_POS, eachindex(λ_ext))
 @assert λ_ext[I_NEG]≈conj(λ_ext[I_POS]) "slots $I_POS/$I_NEG are not a conjugate pair"
 println("reality condition: slot ", I_REAL, " real, slots ", I_POS, "/", I_NEG,
-	" conjugate — read from the eigenvalues, not assumed")
+    " conjugate — read from the eigenvalues, not assumed")
 
 function realify(v)
-	SVector{3, ComplexF64}(ntuple(
-		k -> k == I_REAL ? real(v[I_REAL]) + 0im : k == I_POS ? v[I_POS] : conj(v[I_POS]), 3))
+    SVector{3, ComplexF64}(ntuple(
+        k -> k == I_REAL ? real(v[I_REAL]) + 0im : k == I_POS ? v[I_POS] : conj(v[I_POS]), 3))
 end
 
 const hL = 1e-4
@@ -452,51 +452,51 @@ n_val = 5000
 vorb_val = orbit(lorenz_ext, v0, hL, n_val; project = realify)
 rorb_val = orbit(lorenz, r0, hL, n_val)
 orbit_err = maximum(norm(real.(to_physical_external(lorenz_ext, v)) .+ C_plus .- r)
-					for (v, r) in zip(vorb_val, rorb_val))
+for (v, r) in zip(vorb_val, rorb_val))
 println("max ‖orbit mapped back − direct Lorenz orbit‖ over ",
-	round(hL * n_val, digits = 1), " s = ", round(orbit_err, sigdigits = 3))
+    round(hL * n_val, digits = 1), " s = ", round(orbit_err, sigdigits = 3))
 
 n_rec = 300000
 vorb = orbit(lorenz_ext, v0, hL, n_rec; project = realify)
 mapped = [real.(to_physical_external(lorenz_ext, v)) .+ C_plus for v in vorb]
 xs_rec = component(mapped, 1)
 println("recorded ", round(hL * n_rec, digits = 1), " s on the attractor; x ∈ [",
-	round(minimum(xs_rec), digits = 1), ", ", round(maximum(xs_rec), digits = 1),
-	"], wings swapped ", count(i -> xs_rec[i] * xs_rec[i+1] < 0, 1:(length(xs_rec)-1)),
-	" times")
+    round(minimum(xs_rec), digits = 1), ", ", round(maximum(xs_rec), digits = 1),
+    "], wings swapped ", count(i -> xs_rec[i] * xs_rec[i + 1] < 0, 1:(length(xs_rec) - 1)),
+    " times")
 
 t_L = hL .* (0:n_rec)
 iL = thin(length(mapped), 4000)
 iLt = thin(length(mapped), 1800)
 
 write_split(joinpath(FOM_FIGDIR, "fig3_lorenz.html"),
-	[
-		SplitPanel("physical coordinates",
-			# One curve, not two: over 30 s of a chaotic orbit a second integration would
-			# trace the same attractor but a visibly different trajectory. The agreement
-			# between the two is measured above, on a window short enough to mean something.
-			[Orbit3D("integrated as an ExternalSystem, mapped back",
-				component(mapped, 1)[iL], component(mapped, 2)[iL],
-				component(mapped, 3)[iL]; colour = 1)],
-			[Curve("x(t)", t_L[iLt], component(mapped, 1)[iLt]; colour = 1),
-				Curve("y(t)", t_L[iLt], component(mapped, 2)[iLt]; colour = 2),
-				Curve("z(t)", t_L[iLt], component(mapped, 3)[iLt]; colour = 3)];
-			axes = ("x", "y", "z"), xlabel = "t", ylabel = "state",
-			# The one thing the user supplies: the origin of the expansion.
-			arrows = [Arrow3D((0.0, 0.0, 0.0), Tuple(C_plus);
-				label = "C₊", colour = 3)],
-			note = "σ = $(SIG), ρ = $(RHO), β = $(BET).")];
-	title = "Chaotic excitation",
-	caption = "")
+    [
+        SplitPanel("physical coordinates",
+        # One curve, not two: over 30 s of a chaotic orbit a second integration would
+        # trace the same attractor but a visibly different trajectory. The agreement
+        # between the two is measured above, on a window short enough to mean something.
+        [Orbit3D("integrated as an ExternalSystem, mapped back",
+            component(mapped, 1)[iL], component(mapped, 2)[iL],
+            component(mapped, 3)[iL]; colour = 1)],
+        [Curve("x(t)", t_L[iLt], component(mapped, 1)[iLt]; colour = 1),
+            Curve("y(t)", t_L[iLt], component(mapped, 2)[iLt]; colour = 2),
+            Curve("z(t)", t_L[iLt], component(mapped, 3)[iLt]; colour = 3)];
+        axes = ("x", "y", "z"), xlabel = "t", ylabel = "state",
+        # The one thing the user supplies: the origin of the expansion.
+        arrows = [Arrow3D((0.0, 0.0, 0.0), Tuple(C_plus);
+            label = "C₊", colour = 3)],
+        note = "σ = $(SIG), ρ = $(RHO), β = $(BET).")];
+    title = "Chaotic excitation",
+    caption = "")
 
 # ------------------------------------------------------------------------------
-# 4. `NDOrderModel` — assemble and drive it
+# 4. `NthOrderModel` — assemble and drive it
 #
 # A forced Duffing oscillator:  M ẍ + C ẋ + K x = −k₃x³ + f·(r₁ + r₂),  with r driven by
 # the harmonic system from section 2. One degree of freedom keeps the figure readable;
 # nothing changes for a FEM-sized model beyond the size of the matrices.
 # ------------------------------------------------------------------------------
-rule("4. NDOrderModel — assemble the model and drive it")
+rule("4. NthOrderModel — assemble the model and drive it")
 
 const M_MAT = fill(1.0, 1, 1)
 const C_MAT = fill(0.08, 1, 1)
@@ -506,9 +506,9 @@ const F_AMP = 2.5
 forcing!(res, r) = (res .+= F_AMP * (r[1] + r[2]))
 term_forcing = MultilinearMap(forcing!; multiindex = (0, 0), multiplicity_external = 1)
 
-model = NDOrderModel((K_MAT, C_MAT, M_MAT), (term_hard, term_forcing), harmonic)
+model = NthOrderModel((K_MAT, C_MAT, M_MAT), (term_hard, term_forcing), harmonic)
 println("model       = ", typeof(model).name.name, "{ORD=2}, n_fom = ", model.n_fom,
-	", terms = ", length(model.nonlinear_terms), ", max_nl_degree = ", model.max_nl_degree)
+    ", terms = ", length(model.nonlinear_terms), ", max_nl_degree = ", model.max_nl_degree)
 
 A_fo, B_fo = linear_first_order_matrices(model)
 println("first-order companion pair from `linear_first_order_matrices`:")
@@ -518,27 +518,27 @@ println("  B = ", B_fo[1, :], " / ", B_fo[2, :])
 # A term that reads the external state needs a model that has one — otherwise the
 # mismatch would only surface much later, during evaluation.
 try
-	NDOrderModel((K_MAT, C_MAT, M_MAT), (term_forcing,))
+    NthOrderModel((K_MAT, C_MAT, M_MAT), (term_forcing,))
 catch e
-	println("\nWithout an external system:\n", e.msg)
+    println("\nWithout an external system:\n", e.msg)
 end
 
 # Right-hand side of the coupled system (x, ẋ, r), assembled through the model itself.
 function nl_force(model, x, v, r)
-	(res = zeros(model.n_fom);
-		for ord in 1:(model.max_nl_degree)
-			evaluate_nonlinear_terms!(res, model, ord, ([x], [v]), r)
-		end;
-		res)
+    (res = zeros(model.n_fom);
+        for ord in 1:(model.max_nl_degree)
+            evaluate_nonlinear_terms!(res, model, ord, ([x], [v]), r)
+        end;
+        res)
 end
 
 function duffing_rhs(y)
-	x, v = y[1], y[2]
-	r = SVector(y[3], y[4])
-	F = nl_force(model, x, v, r)[1]
-	acc = (F - K_MAT[1, 1] * x - C_MAT[1, 1] * v) / M_MAT[1, 1]
-	dr = evaluate(harmonic.first_order_dynamics, r)
-	return [v, acc, dr[1], dr[2]]
+    x, v = y[1], y[2]
+    r = SVector(y[3], y[4])
+    F = nl_force(model, x, v, r)[1]
+    acc = (F - K_MAT[1, 1] * x - C_MAT[1, 1] * v) / M_MAT[1, 1]
+    dr = evaluate(harmonic.first_order_dynamics, r)
+    return [v, acc, dr[1], dr[2]]
 end
 
 const STEPS_PER_PERIOD = 400
@@ -554,57 +554,57 @@ vD = real.(component(dorb, 2))
 # transient is everything before it, and the two share their boundary point so the time
 # trace reads as one continuous curve.
 n_steady = round(Int, 1.01 * STEPS_PER_PERIOD)
-steady = (length(xD)-n_steady):length(xD)
+steady = (length(xD) - n_steady):length(xD)
 transient = 1:steady[1]
 itr = transient[thin(length(transient), 1600)]
 ist = steady
 
 # A closed loop is the claim the phase portrait makes, so measure it: how far is the state
 # from where it was exactly one period earlier, relative to the size of the loop?
-closure = hypot(xD[end] - xD[end-STEPS_PER_PERIOD],
-	vD[end] - vD[end-STEPS_PER_PERIOD])
+closure = hypot(xD[end] - xD[end - STEPS_PER_PERIOD],
+    vD[end] - vD[end - STEPS_PER_PERIOD])
 loop = hypot(maximum(xD[steady]) - minimum(xD[steady]),
-	maximum(vD[steady]) - minimum(vD[steady]))
+    maximum(vD[steady]) - minimum(vD[steady]))
 println("\nintegrated ", round(hD * nD, digits = 1), " s = ", nD ÷ STEPS_PER_PERIOD,
-	" forcing periods;  |x|max = ", round(maximum(abs, xD), digits = 4),
-	",  steady |x|max = ", round(maximum(abs, xD[steady]), digits = 4))
+    " forcing periods;  |x|max = ", round(maximum(abs, xD), digits = 4),
+    ",  steady |x|max = ", round(maximum(abs, xD[steady]), digits = 4))
 println("loop closure after one period: ", round(100 * closure / loop, sigdigits = 2),
-	" % of the loop diameter")
+    " % of the loop diameter")
 
 write_charts(joinpath(FOM_FIGDIR, "fig4_forced_response.html"),
-	[
-		# One quantity, x(t), in two colours: purple while the transient is still dying,
-		# red once it has. The same two colours carry over to the phase portrait, so a
-		# feature can be traced from one panel to the other.
-		ChartPanel("response — time",
-			[Curve("transient", t_D[itr], xD[itr]; colour = 1),
-				Curve("steady state — last period", t_D[ist], xD[ist]; colour = 3)];
-			xlabel = "t", ylabel = "x",
-			note = "Forced Duffing: M ẍ + C ẋ + K x = −k₃x³ + 5cos(Ωt), with 2cos(Ωt) = r₁+r₂ using " *
-				   "the harmonic ExternalSystem of section 2."),
-		# No equal_aspect here: x and ẋ are different physical quantities whose ranges
-		# differ by a factor of a few, so forcing one scale on both would letterbox the
-		# orbit into a sliver. Scaling each axis to its own data fills the panel, and the
-		# statement below survives it — a non-uniform scaling of an ellipse is still one.
-		ChartPanel("phase portrait",
-			[Curve("transient", xD[itr], vD[itr]; colour = 1),
-				# The closed loop is the point of this panel, so draw it twice as heavy as
-				# the spiral that leads into it.
-				Curve("steady state; last period", xD[ist], vD[ist];
-					colour = 3, width = 2)];
-			xlabel = "x", ylabel = "ẋ",
-			note = "Damping pulls the orbit onto the periodic response, a closed loop; " *
-				   "the hardening cubic is what bends it away from an ellipse.")];
-	title = "Forced response of the assembled model",
-	caption = "The nonlinear force at each step comes from " *
-			  "`evaluate_nonlinear_terms!` on the `NDOrderModel` itself.")
+    [
+        # One quantity, x(t), in two colours: purple while the transient is still dying,
+        # red once it has. The same two colours carry over to the phase portrait, so a
+        # feature can be traced from one panel to the other.
+        ChartPanel("response — time",
+            [Curve("transient", t_D[itr], xD[itr]; colour = 1),
+                Curve("steady state — last period", t_D[ist], xD[ist]; colour = 3)];
+            xlabel = "t", ylabel = "x",
+            note = "Forced Duffing: M ẍ + C ẋ + K x = −k₃x³ + 5cos(Ωt), with 2cos(Ωt) = r₁+r₂ using " *
+                   "the harmonic ExternalSystem of section 2."),
+        # No equal_aspect here: x and ẋ are different physical quantities whose ranges
+        # differ by a factor of a few, so forcing one scale on both would letterbox the
+        # orbit into a sliver. Scaling each axis to its own data fills the panel, and the
+        # statement below survives it — a non-uniform scaling of an ellipse is still one.
+        ChartPanel("phase portrait",
+            [Curve("transient", xD[itr], vD[itr]; colour = 1),
+                # The closed loop is the point of this panel, so draw it twice as heavy as
+                # the spiral that leads into it.
+                Curve("steady state; last period", xD[ist], vD[ist];
+                    colour = 3, width = 2)];
+            xlabel = "x", ylabel = "ẋ",
+            note = "Damping pulls the orbit onto the periodic response, a closed loop; " *
+                   "the hardening cubic is what bends it away from an ellipse.")];
+    title = "Forced response of the assembled model",
+    caption = "The nonlinear force at each step comes from " *
+              "`evaluate_nonlinear_terms!` on the `NthOrderModel` itself.")
 
 # The website card for this tutorial uses the phase portrait itself rather than a drawing
 # of one, so it is generated from the same arrays as the figure above.
 ith = itr[thin(length(itr), 420)]        # a card needs far fewer points than a figure
 write_thumbnail(joinpath(FOM_FIGDIR, "thumb.svg"),
-	[Curve("transient", xD[ith], vD[ith]; colour = 1, width = 0.55),
-		Curve("steady state", xD[ist], vD[ist]; colour = 3, width = 2.1)])
+    [Curve("transient", xD[ith], vD[ith]; colour = 1, width = 0.55),
+        Curve("steady state", xD[ist], vD[ist]; colour = 3, width = 2.1)])
 
 # ------------------------------------------------------------------------------
 println("\n" * "="^92)

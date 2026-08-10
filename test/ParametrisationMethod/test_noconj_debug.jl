@@ -81,7 +81,7 @@ function _make_model(f_vec::AbstractVector{ComplexF64})
     term_quad = MultilinearMap((res, x, y) -> (res .+= x .* y), (2, 0))
     term_forcing = MultilinearMap((res, r) -> (res .+= f_vec_r * sum(r)), (0, 0), 1)
     ext_sys = ExternalSystem((im * _Ω_force, -im * _Ω_force))
-    return NDOrderModel((_K, _C, _M), (term_quad, term_forcing), ext_sys)
+    return NthOrderModel((_K, _C, _M), (term_quad, term_forcing), ext_sys)
 end
 
 function _make_resonance()

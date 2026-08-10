@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
           </div>
           <h3 style="font-size:24px; margin:6px 0 12px;">Parametrisation method demo</h3>
-          <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current code: <code>NDOrderModel</code> → eigenproblem → resonance detection → <code>solve_cohomological_problem</code>. Ships in <code>examples/internals/</code>.</p>
+          <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current code: <code>NthOrderModel</code> → eigenproblem → resonance detection → <code>solve_cohomological_problem</code>. Ships in <code>examples/internals/</code>.</p>
           <div style="display:flex; gap:24px; font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:0.06em;">
             <span>JULIA 1.10+</span>
             <span>CURRENT CODE</span>
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <div style="position:relative; min-height:200px; border-left:1px solid var(--hair); background:#07070b; display:flex; align-items:center; padding:20px 24px; overflow:hidden;">
           <pre style="margin:0; font-size:10.5px; color:#d6d6df; line-height:1.6; overflow:hidden;"><span style="color:#6e6e7e">using</span> MORFE
 
-model = NDOrderModel(M, C, K, G)
+model = NthOrderModel(M, C, K, G)
 ep    = compute_eigenproblem(model)
 m     = select_master_modes_by_hand(ep, [1,2])
 res   = resonance_set_from_graph_style(m)
@@ -199,7 +199,7 @@ W, R  = solve_cohomological_problem(
     <div class="tut-grid">
       <a class="tut-card" href="full_order_model.html">
         <div class="thumb">
-          <span class="corner">NDOrderModel</span>
+          <span class="corner">NthOrderModel</span>
           <img src="assets/full_order_model/thumb.svg" loading="lazy"
             alt="Phase portrait of the forced Duffing oscillator: the transient spiralling in, and the closed steady-state loop it settles onto" />
         </div>
@@ -338,8 +338,8 @@ W, R  = solve_cohomological_problem(
         <div class="card-body">
           <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current code</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
           <h3>Parametrisation method</h3>
-          <p>Complete pipeline: <code>NDOrderModel</code> → resonance detection → <code>solve_cohomological_problem</code>. The recommended starting point.</p>
-          <div class="meta"><span>NDOrderModel</span><span>DPIM core</span></div>
+          <p>Complete pipeline: <code>NthOrderModel</code> → resonance detection → <code>solve_cohomological_problem</code>. The recommended starting point.</p>
+          <div class="meta"><span>NthOrderModel</span><span>DPIM core</span></div>
         </div>
       </a>
       <a class="tut-card" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">

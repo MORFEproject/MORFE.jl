@@ -34,7 +34,7 @@ begin
     using MORFE.Multiindices: all_multiindices_up_to
     using MORFE.Polynomials: DensePolynomial
     using MORFE.Resonance: resonance_set_from_graph_style
-    using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
+    using MORFE.FullOrderModel: NthOrderModel, MultilinearMap, linear_first_order_matrices
     using MORFE.ExternalSystems: ExternalSystem
     using MORFE.CohomologicalEquations: solve_cohomological_problem
 
@@ -114,7 +114,7 @@ begin
     Omega0 = 1.0
     external_system = ExternalSystem((ComplexF64(im * Omega0),))
 
-    model = NDOrderModel((B0, B1, B2), (term_cubic, term_forcing), external_system)
+    model = NthOrderModel((B0, B1, B2), (term_cubic, term_forcing), external_system)
 
     md"""Model assembled: n=$(n_dof) DOF, ε=$(epsilon), β=$(beta), Ω₀=$(Omega0)."""
 end

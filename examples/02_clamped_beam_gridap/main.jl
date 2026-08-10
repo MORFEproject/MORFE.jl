@@ -34,7 +34,7 @@ using StaticArrays
 test = false
 
 # ------------------------------------------------------------------------------
-# 1. Define NDOrderModel
+# 1. Define NthOrderModel
 # Structural mechanical problem without forcing.
 # First build second order ODE:
 # M*d_t² U + C*d_tU + K*U = F(U)
@@ -129,7 +129,7 @@ function cubic_nonlinearity!(res, vec1, vec2, vec3)
 end
 term_cubic = MultilinearMap(cubic_nonlinearity!, (3, 0))
 
-model = NDOrderModel(
+model = NthOrderModel(
     (stiffness_matrix, damping_matrix, mass_matrix),# B0, B1, B2
     (term_quad, term_cubic)
 )
@@ -164,7 +164,7 @@ mutable struct Mechanical_Problem_Solver <: AbstractEigensolver
     α::Float64
     β::Float64
 end
-function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
+function MORFE.SpectralDecomposition.eigensolve(model::NthOrderModel, solver::Mechanical_Problem_Solver)
     ω2,
     ϕ = eigs(
         model.linear_terms[1], model.linear_terms[3], nev = solver.nev, which = :SM)
@@ -196,7 +196,7 @@ function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::Mec
 end
 
 function MORFE.SpectralDecomposition.eigensolve_left(
-        model::NDOrderModel, solver::Mechanical_Problem_Solver)
+        model::NthOrderModel, solver::Mechanical_Problem_Solver)
     @assert solver.right_eig_result!==nothing "First run solve()"
     left_eigenvectors = similar(solver.right_eig_result)
     FOM = Int(0.5 * length(left_eigenvectors[:, 1]))

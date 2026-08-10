@@ -106,7 +106,7 @@ Return the sum of all nonlinear-term contributions for exponent `exp`.
 Scratch buffers and shared data (`external_arguments`, `candidate_indices`,
 `external_exp`) are allocated once and reused across all terms.
 """
-function compute_multilinear_terms(model::NDOrderModel{ORD}, exp::SVector{NVAR},
+function compute_multilinear_terms(model::NthOrderModel{ORD}, exp::SVector{NVAR},
         parametrisation::Parametrisation{ORD, NVAR}) where {ORD, NVAR}
     set = parametrisation.poly.multiindex_set
     FOM = size(parametrisation)

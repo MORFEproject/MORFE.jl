@@ -9,7 +9,7 @@ using LinearAlgebra
 using StaticArrays
 
 using MORFE
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
                                    select_master_modes_by_sorting
 using MORFE.Resonance: ResonanceConfig, resolve_tolerances, build_resonance_set,
@@ -23,7 +23,7 @@ using MORFE.SpectralDecomposition: SpectralData
     B2 = [1.0 0.0; 0.0 1.0]
     B1 = 0.001 * B2
     cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0))
-    model = NDOrderModel((B0, B1, B2), (cubic,))
+    model = NthOrderModel((B0, B1, B2), (cubic,))
     ROM = 2
     ep = spectrum(model; solver = DefaultEigensolver())
     select_master_modes_by_sorting(ep, ROM)
@@ -126,7 +126,7 @@ end
     M = [1.0 0.0; 0.0 1.0]
     C = 1.0e-6 * M
     cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0))
-    beam(ω2) = NDOrderModel(([1.0 0.0; 0.0 ω2^2], C, M), (cubic,))
+    beam(ω2) = NthOrderModel(([1.0 0.0; 0.0 ω2^2], C, M), (cubic,))
 
     function run(model, config, mset)
         logs, rset = Test.collect_test_logs() do

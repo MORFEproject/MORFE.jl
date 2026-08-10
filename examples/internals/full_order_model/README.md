@@ -9,7 +9,7 @@ model → its response.
 | 1 | `MultilinearMap`: the `multiindex` as a calling convention, evaluated with `evaluate_term!` — hardening/softening cubics, quadratic drag, a mixed `x·ẋ` term, and the `@info` reporting assumed constructor defaults |
 | 2 | `ExternalSystem`: harmonic `(iΩ, −iΩ)`, quasi-periodic with incommensurate frequencies, and a *nonlinear* upper-triangular cascade — all integrated through `evaluate(sys.first_order_dynamics, r)` |
 | 3 | Lorenz: why the constructor rejects it, and the shift-and-diagonalise coordinate change that repairs the full nonlinear system |
-| 4 | `NDOrderModel`: assembling a forced Duffing oscillator, `linear_first_order_matrices`, `evaluate_nonlinear_terms!`, and the external-system check |
+| 4 | `NthOrderModel`: assembling a forced Duffing oscillator, `linear_first_order_matrices`, `evaluate_nonlinear_terms!`, and the external-system check |
 
 No FEM backend and no solve: the script runs in a couple of seconds against the
 repository's root environment.
@@ -77,6 +77,6 @@ MORFE_FOM_OUT=website/tutorials/assets/full_order_model \
 
 ## The other scripts here
 
-`demo_NDOrderModel.jl` and `demo_external_system.jl` are terse, copy-pasteable API demos
+`demo_NthOrderModel.jl` and `demo_external_system.jl` are terse, copy-pasteable API demos
 of the same types, without figures or narration. Start with `main.jl`; reach for those
 when you want the shortest possible snippet to adapt.

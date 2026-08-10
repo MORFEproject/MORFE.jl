@@ -62,7 +62,7 @@ using StaticArrays</code></pre>
 <pre><code class="language-julia">test &#61; false</code></pre>
 <hr />
 <ol>
-<li><p>Define NDOrderModel</p>
+<li><p>Define NthOrderModel</p>
 </li>
 </ol>
 <p>Structural mechanical problem without forcing. First build second order ODE: M<em>d_t² U &#43; C</em>d_tU &#43; K*U &#61; F&#40;U&#41; –––––––––––––––––––––––––––––––––––––––</p>
@@ -149,7 +149,7 @@ function cubic_nonlinearity&#33;&#40;res, vec1, vec2, vec3&#41;
 end
 term_cubic &#61; MultilinearMap&#40;cubic_nonlinearity&#33;, &#40;3, 0&#41;&#41;
 
-model &#61; NDOrderModel&#40;
+model &#61; NthOrderModel&#40;
     &#40;stiffness_matrix, damping_matrix, mass_matrix&#41;,# B0, B1, B2
     &#40;term_quad, term_cubic&#41;
 &#41;</code></pre>
@@ -185,7 +185,7 @@ mutable struct Mechanical_Problem_Solver &lt;: AbstractEigensolver
     α::Float64
     β::Float64
 end
-function MORFE.Eigenproblems.solve&#40;model::NDOrderModel, solver::Mechanical_Problem_Solver&#41;
+function MORFE.Eigenproblems.solve&#40;model::NthOrderModel, solver::Mechanical_Problem_Solver&#41;
     ω2,
     ϕ &#61; eigs&#40;
         model.linear_terms&#91;1&#93;, model.linear_terms&#91;3&#93;, nev &#61; solver.nev, which &#61; :SM&#41;</code></pre>
@@ -217,7 +217,7 @@ function MORFE.Eigenproblems.solve&#40;model::NDOrderModel, solver::Mechanical_P
 end
 
 function MORFE.Eigenproblems.solve_left&#40;
-        model::NDOrderModel, solver::Mechanical_Problem_Solver&#41;
+        model::NthOrderModel, solver::Mechanical_Problem_Solver&#41;
     @assert solver.right_eig_result&#33;&#61;&#61;nothing &quot;First run solve&#40;&#41;&quot;
     left_eigenvectors &#61; similar&#40;solver.right_eig_result&#41;
     FOM &#61; Int&#40;0.5 * length&#40;left_eigenvectors&#91;:, 1&#93;&#41;&#41;

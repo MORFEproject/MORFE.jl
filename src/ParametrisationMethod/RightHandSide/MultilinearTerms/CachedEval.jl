@@ -244,7 +244,7 @@ data instead of calling the factorisation routines.
 
 `exp_index` is the 1-based index into `parametrisation`'s multiindex set.
 """
-function compute_multilinear_terms(model::NDOrderModel{ORD}, exp_index::Int,
+function compute_multilinear_terms(model::NthOrderModel{ORD}, exp_index::Int,
         parametrisation::Parametrisation{ORD, NVAR},
         cache::MultilinearTermsCache) where {ORD, NVAR}
     W = parametrisation.poly.coefficients
@@ -279,7 +279,7 @@ heap allocation occurs during the inner solve loop.
 """
 function compute_multilinear_terms!(
         result::AbstractVector,
-        model::NDOrderModel{ORD}, exp_index::Int,
+        model::NthOrderModel{ORD}, exp_index::Int,
         parametrisation::Parametrisation{ORD, NVAR},
         cache::MultilinearTermsCache) where {ORD, NVAR}
     fill!(result, zero(eltype(result)))

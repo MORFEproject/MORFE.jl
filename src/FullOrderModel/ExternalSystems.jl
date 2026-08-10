@@ -7,7 +7,7 @@ An `ExternalSystem` encodes a finite-dimensional autonomous ODE
 	ṙ = f(r) = A r + higher-order terms
 
 whose state `r ∈ ℂᴺᴱˣᵀ` appears as a forcing argument in the nonlinear terms
-of an `NDOrderModel`.  The module stores the polynomial dynamics together with
+of an `NthOrderModel`.  The module stores the polynomial dynamics together with
 the linear matrix `A` and its eigenvalues, which enter the cohomological equations
 as external superharmonic frequencies.
 

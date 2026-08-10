@@ -622,7 +622,7 @@ end #@testset "toMultilinearMaps"
     @testset "scalar Duffing oscillator" begin
         # ẍ + x + ε x³ = 0  written as first-order:
         #   ẋ = v,  v̇ = -x - x³
-        # In NDOrderModel form (ORD=2):
+        # In NthOrderModel form (ORD=2):
         #   exprs = [-dz1 - z1 - z1^3,   (= -v - x - x³, the "v equation" row)
         #            -dz2 - z2]            doesn't matter, padding
         # Actually simpler: treat as single scalar 2nd order:

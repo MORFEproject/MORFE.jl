@@ -18,7 +18,7 @@ using Statistics: median
 
 using ..Polynomials: DensePolynomial, evaluate
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics
-using ..FullOrderModel: NDOrderModel, evaluate_nonlinear_terms!
+using ..FullOrderModel: NthOrderModel, evaluate_nonlinear_terms!
 using ..ExternalSystems: to_physical_external
 
 export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
@@ -92,7 +92,7 @@ function _invariance_error_at!(
         buf_nl::AbstractVector,
         buf_fom::AbstractVector,
         pw_buf::AbstractMatrix,
-        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT},
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
         max_deg::Int,
         W::Parametrisation,
         R::ReducedDynamics,
@@ -234,7 +234,7 @@ in reduced coordinates.
 External coordinates are fixed to zero unless `r_external` is provided.
 """
 function invariance_error_norms(
-        model::NDOrderModel{ORD, ORDP1, N_NL},
+        model::NthOrderModel{ORD, ORDP1, N_NL},
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics;
         n_samples::Int = 1000,
@@ -303,7 +303,7 @@ on a sphere of radius `|r|`.  Each result NamedTuple contains:
 Use `plot_invariance_convergence` to visualise the result.
 """
 function invariance_error_convergence(
-        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT},
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics;
         n_samples::Int = 1000,
@@ -316,7 +316,7 @@ function invariance_error_convergence(
 end
 
 function _convergence_one_level(
-        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT},
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics,
         n_samples::Int,

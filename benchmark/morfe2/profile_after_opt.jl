@@ -54,7 +54,7 @@ quadratic_term = MultilinearMap(
 cubic_term = MultilinearMap(
 	(
 		res, Ψ₁, Ψ₂, Ψ₃) -> Morfe_2_0.assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh, U), (3, 0))
-model = NDOrderModel((K, C, M), (quadratic_term, cubic_term))
+model = NthOrderModel((K, C, M), (quadratic_term, cubic_term))
 FOM = size(K, 1)
 println("FOM = $FOM")
 
@@ -72,7 +72,7 @@ function mass_normalize!(ϕ, M, n)
 		ϕ[:, i] ./= sqrt(c)
 	end
 end
-function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve(model::NthOrderModel, s::MechSolver)
 	K, M = model.linear_terms[1], model.linear_terms[3]
 	FK = factorize(K)
 	vals_inv, vecs,
@@ -102,7 +102,7 @@ function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, s::MechSolv
 	s.eigenvalues = λ
 	return λ, ev
 end
-function MORFE.SpectralDecomposition.eigensolve_left(model::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve_left(model::NthOrderModel, s::MechSolver)
 	ev = s.right_eig_result
 	lev = similar(ev)
 	n2 = size(ev, 2) ÷ 2

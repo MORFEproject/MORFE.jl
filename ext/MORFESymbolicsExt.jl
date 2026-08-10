@@ -22,7 +22,7 @@ include("MORFESymbolicsExt/external_system.jl")
 """
     model_from_symbolics
 
-Generates NDOrderModel.
+Generates NthOrderModel.
 Inputs are a ODE of the variables defined in `groups` that is a NTuple, where every part of the Tuple consists of the state variables or the derivatives. 
 e.g: ([z1, z2, z3], [dz1, dz2, dz3], ...).
 The ODE is supposed to be a vector equal to zero and is inputed in the variable `exprs`. 
@@ -49,7 +49,7 @@ function MORFE.model_from_symbolics(
     # if nonlinear_remainder == zero
     if N===nothing && monomials===nothing && deg_monomials===nothing &&
        multideg_monomials===nothing
-        return NDOrderModel(linear_terms)
+        return NthOrderModel(linear_terms)
     end
 
     F_by_multiindex = group_monomials(
@@ -65,14 +65,14 @@ function MORFE.model_from_symbolics(
     dict_pol_vars = polarize(F_by_multiindex, groups[1:(end - 1)], N)
     nonlinear_terms = all_monomials_to_MultilinearMaps(
         F_by_multiindex_polarized, dict_pol_vars)
-    model = NDOrderModel(linear_terms, nonlinear_terms)
+    model = NthOrderModel(linear_terms, nonlinear_terms)
     return model
 end
 
 """
     model_from_symbolics
  
-Generates NDOrderModel where the nonlinear forcing terms may also depend on external
+Generates NthOrderModel where the nonlinear forcing terms may also depend on external
 variables `ext_var` (the state of an ExternalSystem).
  
 The multiindices of the resulting MultilinearMaps have `ORD + 1` entries:
@@ -113,7 +113,7 @@ function MORFE.model_from_symbolics(
     # if nonlinear_remainder == zero
     if N_check===nothing && monomials===nothing && deg_monomials===nothing &&
        multideg_monomials===nothing
-        return NDOrderModel(linear_terms)
+        return NthOrderModel(linear_terms)
     end
 
     F_by_multiindex = group_monomials(monomials, multideg_monomials, N)
@@ -136,7 +136,7 @@ function MORFE.model_from_symbolics(
     @assert is_polynomial(ext_exprs, ext_var) "External system `ext_system` must be in polynomial form!"
     ext_system = externalsystem_from_symbolics(ext_exprs, ext_var)
 
-    model = NDOrderModel(linear_terms, nonlinear_terms, ext_system)
+    model = NthOrderModel(linear_terms, nonlinear_terms, ext_system)
     return model
 end
 end # module MorfeSymbolics

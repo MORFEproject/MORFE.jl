@@ -86,7 +86,7 @@ function cubic!(res, Ψ₁, Ψ₂, Ψ₃)
 end
 cubic_term = MultilinearMap(cubic!, (3, 0))
 
-model = NDOrderModel((K, C, M), (quadratic_term, cubic_term))
+model = NthOrderModel((K, C, M), (quadratic_term, cubic_term))
 FOM = size(K, 1)
 println("\nFOM = $FOM")
 
@@ -106,7 +106,7 @@ function mass_normalization!(ϕ, M, neig)
 		end
 	end
 end
-function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::Mechanical_Problem_Solver)
+function MORFE.SpectralDecomposition.eigensolve(model::NthOrderModel, solver::Mechanical_Problem_Solver)
 	K = model.linear_terms[1]
 	M = model.linear_terms[3]
 	nev = solver.nev
@@ -143,7 +143,7 @@ function MORFE.SpectralDecomposition.eigensolve(model::NDOrderModel, solver::Mec
 	solver.eigenvalues = λ
 	return λ, eigenvectors
 end
-function MORFE.SpectralDecomposition.eigensolve_left(model::NDOrderModel,
+function MORFE.SpectralDecomposition.eigensolve_left(model::NthOrderModel,
 	solver::Mechanical_Problem_Solver)
 	@assert solver.right_eig_result !== nothing
 	left_eigenvectors = similar(solver.right_eig_result)

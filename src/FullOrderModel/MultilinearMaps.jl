@@ -1,5 +1,5 @@
 """
-Module `MultilinearMaps` — multilinear nonlinear term representations for `NDOrderModel`.
+Module `MultilinearMaps` — multilinear nonlinear term representations for `NthOrderModel`.
 
 Nonlinear terms in the full-order ODE are encoded as `AbstractMultilinearMap` subtypes:
 
@@ -22,7 +22,7 @@ export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, evaluate_term!
 """
 	AbstractMultilinearMap{ORD}
 
-Abstract supertype for all multilinear terms accepted by `NDOrderModel`.
+Abstract supertype for all multilinear terms accepted by `NthOrderModel`.
 
 Every concrete subtype must expose the fields `multiindex`, `multiplicity_external`, `deg`,
 and `fully_asymmetric` with the same semantics as `MultilinearMap`.
@@ -40,7 +40,7 @@ rather than once per factorisation entry.
 
 Required fields (same semantics as `MultilinearMap`):
 - `multiindex`, `multiplicity_external`, `deg`
-- `fully_asymmetric::Union{Nothing, Bool}` — `nothing` = not set (triggers `@info` at `NDOrderModel`
+- `fully_asymmetric::Union{Nothing, Bool}` — `nothing` = not set (triggers `@info` at `NthOrderModel`
   construction if multiindex implies symmetry); `false` = acknowledged symmetric; `true` = override to
   `FullyAsymmetric`. FEM backends whose integrand is symmetric by construction should default to `false`.
 
@@ -132,14 +132,14 @@ function fem_qp_buffer end
 """
 	MultilinearMap{ORD, F}
 
-Represents a single monomial term of order deg in the nonlinear function of an `NDOrderModel`.
+Represents a single monomial term of order deg in the nonlinear function of an `NthOrderModel`.
 
 A term is represented using a multiindex stored in the NTuple 
 	`multiindex` = (i_0, ..., i_{ORD-1})  
 where i_k is the multiplicity of the derivative x^(k). So the i_k specifies how many times the derivative x^(k) appears as an argument. 
 In addition the function accepts `multiplicity_external` external variables r_1, r_2, ...
 which satisfy the first order dynamic system r' = dynamics_external(r),
-where dynamics_external is a DensePolynomial defined in NDOrderModel. The influence in f! is described by `multiplicity_external`
+where dynamics_external is a DensePolynomial defined in NthOrderModel. The influence in f! is described by `multiplicity_external`
 
 During evaluation the multilinear map is called as
 
@@ -163,7 +163,7 @@ During evaluation the multilinear map is called as
 
 !!! note "Default: `fully_asymmetric` not set (`nothing`)"
     When this keyword is omitted, the following assumptions hold (and an `@info`
-    message is emitted when the term is added to an `NDOrderModel`).
+    message is emitted when the term is added to an `NthOrderModel`).
     Explicitly passing `fully_asymmetric = false` applies the same behaviour
     silently, without triggering the message.
 
@@ -340,7 +340,7 @@ end
 function _msg_degree_too_low(multiindex, multiplicity_external, deg)
     return "MultilinearMap: a term with no external factors must have degree at least 2,\n" *
            "but multiindex = $multiindex gives deg = $deg.  Linear contributions belong in\n" *
-           "the `linear_terms` matrices of `NDOrderModel`, not in a `MultilinearMap`.  If\n" *
+           "the `linear_terms` matrices of `NthOrderModel`, not in a `MultilinearMap`.  If\n" *
            "this term is meant to depend on the external state r, pass " *
            "`multiplicity_external`."
 end
@@ -465,7 +465,7 @@ the caller pinned them.  `mi_source` is `:stated`, `:arity` or `:degree`, and na
 assumed `multiindex` came from.
 
 `fully_asymmetric` is deliberately not reported here: it already has a dedicated diagnostic,
-`FullOrderModel._info_implicit_symmetry`, which fires at `NDOrderModel` construction exactly
+`FullOrderModel._info_implicit_symmetry`, which fires at `NthOrderModel` construction exactly
 when the flag changes the result.
 """
 function _info_assumed(f!, multiindex, multiplicity_external, mi_source, assumed_order,
@@ -646,7 +646,7 @@ Two rules apply only when neither `multiindex` nor `derivatives` was given:
   pure external forcing term (`multiplicity_external = 1`, no derivative factors).  Without
   it, `MultilinearMap(f!)` on `f!(res, r)` would resolve to a degree-1 term in the state,
   which is *linear* and cannot be represented here — linear contributions belong in the
-  `linear_terms` matrices of `NDOrderModel`.
+  `linear_terms` matrices of `NthOrderModel`.
 - **Mixed terms are never inferred.**  With `multiplicity_external >= 1` and a non-zero
   internal degree, splitting the factors would mean guessing `f!(res, x, r)`; that is an
   `ArgumentError`.  Only the pure-forcing split is inferable.  Stating `multiindex` lifts
@@ -655,7 +655,7 @@ Two rules apply only when neither `multiindex` nor `derivatives` was given:
 **Every assumed value is reported through an `@info`.**  A call that pins `multiindex` (or
 `derivatives` plus `order`) and `multiplicity_external` is silent, as are all the positional
 constructors.  `fully_asymmetric` is not reported here: it has its own diagnostic at
-`NDOrderModel` construction, which fires exactly when the flag changes the result.
+`NthOrderModel` construction, which fires exactly when the flag changes the result.
 
 # Examples
 
@@ -778,7 +778,7 @@ external state `r` repeated `multiplicity_external` times.  A term that depends 
 external state may have total degree 1 — a pure forcing term is written
 `MultilinearMap(f!, (0, 0), 1)`, for which `MultilinearMap(f!)` is a shorthand.
 
-The model this term goes into must have an external system; `NDOrderModel` rejects a
+The model this term goes into must have an external system; `NthOrderModel` rejects a
 `multiplicity_external > 0` term otherwise.
 
 # Arguments

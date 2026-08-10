@@ -491,7 +491,7 @@ section { padding: 110px 0; position: relative; }
       <div style="grid-column: 1 / -1; border-top:1px solid var(--hair); padding-top:18px;">
         <div class="label">To a 1st order reduced order model with $n$ DoFs ($n \ll N$)</div>
         <div style="margin-top:8px; font-size:18px;">
-          $$ \dot{\mathbf{z}} = \mathbf{f}(\mathbf{z}, \mathbf{r}) \,, \qquad \qquad \mathbf{u} = \mathbf{W}(\mathbf{z}, \mathbf{r}) $$
+          $$ \dot{\mathbf{z}} = \mathbf{R}(\mathbf{z}, \mathbf{r}) \,, \qquad \qquad \mathbf{u} = \mathbf{W}(\mathbf{z}, \mathbf{r}) $$
         </div>
       </div>
     </div>
@@ -795,7 +795,7 @@ section { padding: 110px 0; position: relative; }
          onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
         <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
         <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Parametrisation method</h3>
-        <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">End-to-end DPIM on a two-degree-of-freedom Duffing system. Covers <code style="font-family:var(--mono);font-size:0.88em;background:#07070b;border:1px solid var(--hair);padding:1px 4px;border-radius:3px;">NDOrderModel</code>, eigenpairs, resonance set, and solver.</p>
+        <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">End-to-end DPIM on a two-degree-of-freedom Duffing system. Covers <code style="font-family:var(--mono);font-size:0.88em;background:#07070b;border:1px solid var(--hair);padding:1px 4px;border-radius:3px;">NthOrderModel</code>, eigenpairs, resonance set, and solver.</p>
         <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/ParametrisationMethod/ →</span>
       </a>
 

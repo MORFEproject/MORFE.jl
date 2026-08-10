@@ -25,7 +25,7 @@ end
 
 Abstract supertype for all eigensolvers accepted by `eigensolve`.
 
-Concrete subtypes must implement `eigensolve` and `eigensolve_left` for `NDOrderModel`.
+Concrete subtypes must implement `eigensolve` and `eigensolve_left` for `NthOrderModel`.
 Two built-in subtypes are provided: `DefaultEigensolver` and `ArpackEigensolver`.
 
 ## Interface contract — full order-blocks
@@ -45,10 +45,10 @@ the blocks with [`left_eigenmode_orders_from_slice`](@ref).
 """
 abstract type AbstractEigensolver end
 
-function eigensolve(model::NDOrderModel, solver::AbstractEigensolver, args...)
+function eigensolve(model::NthOrderModel, solver::AbstractEigensolver, args...)
     error("solve not implemented for $(typeof(solver))")
 end
-function eigensolve_left(model::NDOrderModel, solver::AbstractEigensolver, args...)
+function eigensolve_left(model::NthOrderModel, solver::AbstractEigensolver, args...)
     error("solve not implemented for $(typeof(solver))")
 end
 
@@ -61,7 +61,7 @@ Suitable for small to medium full-order models (dense matrices).
 struct DefaultEigensolver <: AbstractEigensolver end
 
 """
-	eigensolve(model::NDOrderModel, solver::DefaultEigensolver)
+	eigensolve(model::NthOrderModel, solver::DefaultEigensolver)
 
 Solves right eigenproblem using `eigen` from LinearAlgebra. 
 Let `A` and `B` be the first order matrices of `model`. Then it returns the eigenpairs
@@ -69,7 +69,7 @@ Let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 	(A-\\lambda_k B)y_k = 0
 ```
 """
-function eigensolve(model::NDOrderModel, solver::DefaultEigensolver)
+function eigensolve(model::NthOrderModel, solver::DefaultEigensolver)
     A, B = linear_first_order_matrices(model)
     FOM = size(model.linear_terms[1], 1)
     ORD = length(model.linear_terms) - 1
@@ -82,7 +82,7 @@ function eigensolve(model::NDOrderModel, solver::DefaultEigensolver)
 end
 
 """
-	eigensolve_left(model::NDOrderModel, solver::DefaultEigensolver)
+	eigensolve_left(model::NthOrderModel, solver::DefaultEigensolver)
 
 Solves left eigenproblem using `eigen` from LinearAlgebra. 
 let `A` and `B` be the first order matrices of `model`. Then it returns the eigenpairs
@@ -90,7 +90,7 @@ let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 	x_k^H(A-\\lambda_k B) = 0
 ```
 """
-function eigensolve_left(model::NDOrderModel, solver::DefaultEigensolver)
+function eigensolve_left(model::NthOrderModel, solver::DefaultEigensolver)
     A, B = linear_first_order_matrices(model)
     FOM = size(model.linear_terms[1], 1)
     ORD = length(model.linear_terms) - 1
@@ -166,7 +166,7 @@ mutable struct MorfeEigensolver <: AbstractEigensolver
 end
 
 """
-	eigensolve(model::NDOrderModel, solver::MorfeEigensolver)
+	eigensolve(model::NthOrderModel, solver::MorfeEigensolver)
 
 Solves right eigenproblem using `generalised_eigenpairs` from `MORFE.Eigensolvers`. 
 Let `A` and `B` be the first order matrices of `model`. Then it returns the eigenpairs
@@ -174,7 +174,7 @@ Let `A` and `B` be the first order matrices of `model`. Then it returns the eige
 	(A-\\lambda_k B)y_k = 0
 ```
 """
-function eigensolve(model::NDOrderModel, solver::MorfeEigensolver)
+function eigensolve(model::NthOrderModel, solver::MorfeEigensolver)
     A, B = linear_first_order_matrices(model)
     if solver.nev === nothing
         solver.nev = size(A, 1)
@@ -191,11 +191,11 @@ function eigensolve(model::NDOrderModel, solver::MorfeEigensolver)
 end
 
 """
-	eigensolve_left(model::NDOrderModel, solver::MorfeEigensolver)
+	eigensolve_left(model::NthOrderModel, solver::MorfeEigensolver)
 
 Solves left eigenproblem using σ-shift to recover the correct eigenvalues.
 """
-function eigensolve_left(model::NDOrderModel, solver::MorfeEigensolver)
+function eigensolve_left(model::NthOrderModel, solver::MorfeEigensolver)
     A, B = linear_first_order_matrices(model)
     @assert solver.nev == length(solver.eigenvalues)
     FOM = size(model.linear_terms[1], 1)
@@ -274,12 +274,12 @@ function eigensolve(
 end
 
 """
-	eigensolve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
+	eigensolve(model::NthOrderModel, solver::StructureModalDampingEigensolver)
 
 Thin wrapper: extracts `M = model.linear_terms[end]` and `K = model.linear_terms[1]`
 and delegates to `eigensolve(M, K, solver)`.
 """
-function eigensolve(model::NDOrderModel, solver::StructureModalDampingEigensolver)
+function eigensolve(model::NthOrderModel, solver::StructureModalDampingEigensolver)
     return eigensolve(model.linear_terms[end], model.linear_terms[1], solver)
 end
 
@@ -397,7 +397,7 @@ function _structural_left_eigenmode_orders(
 end
 
 """
-	spectrum(model::NDOrderModel, solver::StructureModalDampingEigensolver; sorter!)
+	spectrum(model::NthOrderModel, solver::StructureModalDampingEigensolver; sorter!)
 
 Specialised path for `StructureModalDampingEigensolver`: mass-normalisation is
 built into `eigensolve`, and the left eigenvector order-blocks are analytic in the
@@ -409,7 +409,7 @@ The optional `sorter!` kwarg has the same semantics as in the general
 natural ordering.
 """
 function spectrum(
-        model::NDOrderModel,
+        model::NthOrderModel,
         solver::StructureModalDampingEigensolver;
         sorter!::Function = sort_by_magnitude!)
     λ, Y = eigensolve(model, solver)
@@ -422,7 +422,7 @@ end
 """
 	spectrum(stiffness, mass, solver::StructureModalDampingEigensolver; sorter!)
 
-Convenience overload: pass `K` and `M` directly without constructing an `NDOrderModel`.
+Convenience overload: pass `K` and `M` directly without constructing an `NthOrderModel`.
 The Rayleigh damping matrix `C = αM + βK` is rebuilt from the solver parameters
 for the left eigenvector order-blocks.
 """
@@ -449,9 +449,12 @@ physical-space (highest-order) slice of it.  The full blocks feed the orthogonal
 row operators directly, so no eigenvalue folding is needed to reconstruct them; the
 slice is what physical-space post-processing and export want.
 
-Fields become populated in stages — the solver fills the eigenpairs, then a
-`select_master_modes_*` call marks the masters — which is why the selectors are
-nullable rather than empty.
+**Immutable, and it holds no master selection.** A spectrum is what the eigensolver
+computed; *which* of its modes span the manifold is a separate decision, and it belongs to
+the [`SpectralData`](@ref) built from it — `SpectralData(model, spectrum; master = …)`.
+The type used to be mutable with a `master_modes` field only so the old
+`select_master_modes_*` mutators had somewhere to write, which meant one object could mean
+different things at different points in a script.
 
 # Fields
 
@@ -465,19 +468,13 @@ nullable rather than empty.
 - `left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}` — full left
   eigenvector order-blocks, `FOM × ORD × n_eigs`; `nothing` when the solver supplied
   only the physical slice.
-- `master_modes::Union{Nothing, Vector{Bool}}` — flags the master modes spanning the
-  invariant manifold; `nothing` until a `select_master_modes_*` call sets it.
-- `external_modes::Union{Nothing, Vector{Bool}}` — flags modes driven by external
-  forcing rather than solved for; `nothing` when the model has no forcing.
 """
-mutable struct Spectrum{T}
+struct Spectrum{T}
     solver::AbstractEigensolver
     eigenvalues::Array{Complex{T}}
     eigenmodes::Array{Complex{T}}              # FOM × ORD × n_eigs
     left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}  # FOM × n_eigs — physical-space (highest-order) slice
     left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}  # FOM × ORD × n_eigs — full order-blocks
-    master_modes::Union{Nothing, Vector{Bool}}
-    external_modes::Union{Nothing, Vector{Bool}}
     # Constructor from full 3-D left eigenvectors: retains the full order-block
     # array (fed to MasterModeOrthogonality) and the highest-order
     # (physical-space) slice [:, ORD, :].
@@ -497,7 +494,7 @@ mutable struct Spectrum{T}
         @assert size(left_eigenmodes, 3) == n_eigs "left_eigenmodes dim 3 must equal n_eigs = $n_eigs"
         left_orders = Array{Complex{T}, 3}(left_eigenmodes)
         left_phys = Matrix{Complex{T}}(left_eigenmodes[:, ORD, :])
-        new{T}(solver, eigenvalues, eigenmodes, left_phys, left_orders, nothing, nothing)
+        new{T}(solver, eigenvalues, eigenmodes, left_phys, left_orders)
     end
 
     # Constructor accepting pre-extracted 2-D physical-space left eigenmodes
@@ -514,13 +511,13 @@ mutable struct Spectrum{T}
         n_eigs = ndims(eigenmodes) == 3 ? size(eigenmodes, 3) : size(eigenmodes, 2)
         @assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal n_eigs = $n_eigs"
         @assert size(left_eigenmodes, 2) == n_eigs "left_eigenmodes must have n_eigs = $n_eigs columns"
-        new{T}(solver, eigenvalues, eigenmodes, left_eigenmodes, nothing, nothing, nothing)
+        new{T}(solver, eigenvalues, eigenmodes, left_eigenmodes, nothing)
     end
 end
 
 """
 	spectrum(
-		model::NDOrderModel;
+		model::NthOrderModel;
 		solver::AbstractEigensolver = DefaultEigensolver(),
 		sorter!::Function = sort_by_magnitude!,
 		normaliser!::Function = normalise_biorthogonal!)
@@ -529,7 +526,7 @@ Computes left and right eigenpairs of the problem described in `model` by using 
 Additionally `sorter!` sorts the eigenpairs and `normaliser!` is used to normalise the eigenmodes.
 """
 function spectrum(
-        model::NDOrderModel;
+        model::NthOrderModel;
         solver::AbstractEigensolver = DefaultEigensolver(),
         sorter!::Function = sort_by_magnitude!,
         normaliser!::Function = normalise_biorthogonal!)
@@ -608,7 +605,7 @@ end
 
 """
 	normalise_biorthogonal!(
-		model::NDOrderModel,
+		model::NthOrderModel,
 		eigenmodes::Matrix{T},
 		left_eigenmodes::Matrix{T})
 
@@ -620,7 +617,7 @@ eigenmode is divided by `s` and the left eigenmode by `conj(s)`, so the
 sesquilinear pairing becomes exactly 1.
 """
 function normalise_biorthogonal!(
-        model::NDOrderModel,
+        model::NthOrderModel,
         eigenmodes::Array{T},
         left_eigenmodes::Array{T}) where {T}
     @assert size(eigenmodes)==size(left_eigenmodes) "Size of left and right eigenmodes must be the same!"
@@ -643,73 +640,57 @@ function normalise_biorthogonal!(
 end
 
 """
-	get_eigenpairs(ep::Spectrum)
+	master_by_sorting(nev::Integer) -> Vector{Int}
 
-Returns eigenvalues, (right) eigenmodes and left eigenmodes of an Spectrum.
-"""
-function get_eigenpairs(ep::Spectrum)
-    return (ep.eigenvalues, ep.eigenmodes, ep.left_eigenmodes)
-end
+The first `nev` spectrum entries, as master indices — the eigenpairs were already sorted
+by [`spectrum`](@ref).
 
+Pure: it *returns* indices for `SpectralData(model, sp; master = …)` rather than marking
+them on the spectrum. The mutating `select_master_modes_by_sorting` it replaces wrote a
+mask into the `Spectrum`, which made the same object mean different things at different
+points in a script and left the selection invisible at the call site that used it.
 """
-	select_master_modes_by_hand(ep::Spectrum, mastermodes::Vector{Bool})
-
-Define master_modes of Spectrum by passing a vector of booleans.
-	master_modes[i] = true  ===> eigen_modes[:,i] is a mastermode
-"""
-function select_master_modes_by_hand(ep::Spectrum, mastermodes::Vector{Bool})
-    n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
-    @assert length(mastermodes) == n "mastermodes has wrong length!"
-    ep.master_modes = mastermodes
-end
-
-"""
-	select_master_modes_by_sorting(ep::Spectrum, nev::Int64)
-
-Defines master_modes as the first nev eigenpairs. Sorting was done in eigensolve.
-"""
-function select_master_modes_by_sorting(ep::Spectrum, nev::Int64)
+function master_by_sorting(nev::Integer)
     @assert nev>0 "nev must be bigger then zero"
-    n = ndims(ep.eigenmodes) == 3 ? size(ep.eigenmodes, 3) : size(ep.eigenmodes, 2)
-    ep.master_modes = [i <= nev for i in 1:n]
+    return collect(1:Int(nev))
 end
 
 """
-	select_master_modes_by_target_frequency(ep::Spectrum, target_frequencies::Vector, tol)
+	master_by_target_frequency(sp::Spectrum, target_frequencies, tol) -> Vector{Int}
 
-Defines master_modes by specified target values. 
-All eigenvalues that are of distance of one target value smaller than `tol` are marked for mastermodes.
-Distance used:
-	dist(a, b) = abs(real(a - b)) + abs(imag(a - b)).
+The spectrum entries within `tol` of any of `target_frequencies`, as master indices.
+
+Distance used: `dist(a, b) = abs(real(a - b)) + abs(imag(a - b))`.  A target that matches
+nothing warns and contributes no index — it is a mis-specified target, not an empty
+selection, and silently returning fewer masters than asked for is the failure mode worth
+naming.
 """
-function select_master_modes_by_target_frequency(
-        ep::Spectrum,
-        target_frequencies::Vector,
-        tol::Float64)
-    n = length(ep.eigenvalues)
+function master_by_target_frequency(
+        sp::Spectrum, target_frequencies::AbstractVector, tol::Float64)
+    n = length(sp.eigenvalues)
     if length(target_frequencies) > n
         @warn "target_frequencies has more entries than calculated eigenvalues. Everything after index $n is neglected!"
     end
 
     dist(a, b) = abs(real(a - b)) + abs(imag(a - b))
-    master_modes = falses(n)
+    selected = Int[]
 
     for target_frequency in target_frequencies
-        dists = [dist(ep.eigenvalues[j], target_frequency) for j in 1:n]
-        tmp = 0
+        best, best_dist = 0, Inf
+        hits = 0
         for j in 1:n
-            if dists[j] < tol
-                master_modes[j] = true
-                tmp += 1
+            d = dist(sp.eigenvalues[j], target_frequency)
+            d < best_dist && ((best, best_dist) = (j, d))
+            if d < tol
+                j in selected || push!(selected, j)
+                hits += 1
             end
         end
-        if tmp == 0
-            j = argmin(dists)
-            @warn("No eigenvalue found for target $target_frequency. Closest distance = $(dists[j]) at eigenvalue $j")
+        if hits == 0
+            @warn("No eigenvalue found for target $target_frequency. Closest distance = $best_dist at eigenvalue $best")
         end
     end
-    println("Chosen mastermodes: ", master_modes)
-    ep.master_modes = master_modes
+    return sort!(selected)
 end
 
 function group_conjugate_pairs()

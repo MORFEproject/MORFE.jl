@@ -1,6 +1,6 @@
 """
 Module `SpectralDecomposition` — solve the generalised eigenproblem for an
-`NDOrderModel` and package the result for a parametrisation.
+`NthOrderModel` and package the result for a parametrisation.
 
 The whole spectral layer, in one module. It replaces the former split between
 `Eigensolvers` (a stub that held no solvers) and `Eigenproblems` (which held them) —
@@ -48,7 +48,7 @@ their absence either — the block layout and the accessors carry over unchanged
 """
 module SpectralDecomposition
 
-using ..FullOrderModel: NDOrderModel, linear_first_order_matrices
+using ..FullOrderModel: NthOrderModel, linear_first_order_matrices
 using ..ExternalSystems: ExternalSystem, external_basis
 
 using LinearAlgebra
@@ -62,8 +62,7 @@ export eigensolve, eigensolve_left, generalised_eigenpairs
 export Spectrum, spectrum
 export sort_by_magnitude!, sort_left_eigenmodes, normalise_biorthogonal!
 export left_eigenmode_orders_from_slice
-export select_master_modes_by_hand, select_master_modes_by_sorting,
-       select_master_modes_by_target_frequency
+export master_by_sorting, master_by_target_frequency
 
 # ── The bundle a parametrisation consumes ────────────────────────────────────
 export ModeBundle, SpectralData,

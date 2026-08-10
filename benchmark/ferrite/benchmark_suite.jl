@@ -190,7 +190,7 @@ function benchmark_mesh(nx::Int, ny::Int, nz::Int; max_degree::Int = SUITE_DEGRE
 	)
 
 	ext_sys = ExternalSystem((complex(0.0, Ω_force), complex(0.0, -Ω_force)))
-	model   = NDOrderModel(
+	model   = NthOrderModel(
 	(K, C, M),
 	(term_quad, term_cubic, term_forcing),
 	ext_sys

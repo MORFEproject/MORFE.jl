@@ -4,7 +4,7 @@
 # parametrisation method:
 #
 #   1. Define system matrices (M, C, K) and nonlinear terms
-#   2. Build the NDOrderModel (embeds ExternalSystem for harmonic forcing)
+#   2. Build the NthOrderModel (embeds ExternalSystem for harmonic forcing)
 #   3. Derive A and B for the generalised eigenproblem directly from the model
 #   4. Solve the eigenproblem
 #   5. Select master modes and build the generalised eigenmode matrix
@@ -30,7 +30,7 @@ using MORFE.Multiindices: MultiindexSet, all_multiindices_up_to
 using MORFE.Polynomials: DensePolynomial
 using MORFE.Resonance: resonance_set_from_graph_style,
                        resonance_set_from_complex_normal_form_style
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.ExternalSystems: ExternalSystem
 using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
 using MORFE.CohomologicalEquations: solve_cohomological_problem
@@ -47,7 +47,7 @@ using StaticArrays
 # ------------------------------------------------------------------------------
 FOM = 2
 
-# NDOrderModel stores linear terms as (B₀, B₁, …, B_ORD)
+# NthOrderModel stores linear terms as (B₀, B₁, …, B_ORD)
 B0 = [2.0 -1.0; -1.0 2.0] # stiffness
 B2 = [1.0 0.0; 0.0 1.0]   # mass (highest-order coefficient)
 B1 = 0.001 * B2           # light damping
@@ -101,7 +101,7 @@ external_system = ExternalSystem(
 #    Embedding the ExternalSystem lets solve_cohomological_problem read the
 #    external eigenvalues directly from model.external_system.eigenvalues.
 # ------------------------------------------------------------------------------
-model = NDOrderModel(
+model = NthOrderModel(
     (B0, B1, B2),
     (term_cubic, term_forcing, term_drag, term_forcing_quadratic, term_forcing_mixed),
     external_system

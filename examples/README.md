@@ -33,7 +33,7 @@ Every runnable example satisfies:
 | Folder | Model | Demonstrates | Status | Approx. runtime |
 | ------ | ----- | ------------ | ------ | --------------- |
 | `02_clamped_beam_gridap/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Gridap.jl FEM backend | runnable | 8 min |
-| `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator (pure-Julia Hermite beam) | Coupled electrostatic-mechanical ROM, order-3 `NDOrderModel` | runnable | minutes |
+| `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator (pure-Julia Hermite beam) | Coupled electrostatic-mechanical ROM, order-3 `NthOrderModel` | runnable | minutes |
 | `mesh_import/` | Test meshes | Abaqus/COMSOL → GMSH format conversion | utility | seconds |
 | `internals/` | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method | utility | seconds–1 min |
 

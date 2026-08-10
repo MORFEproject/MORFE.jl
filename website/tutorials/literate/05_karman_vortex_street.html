@@ -142,14 +142,14 @@ r_eig &#61; @timed solve_hopf_eigenproblem&#40;
 &#41;
 &#40;master_eigenvalues, master_modes, left_eigenmodes, all_eigenvalues, all_modes&#41; &#61; r_eig.value</code></pre>
 <p>───────────────────────────────────────────────────────────────────────────── 7 — Full-order model for the DPIM: the quadratic convection f₂&#40;s,s&#41; &#61; −&#40;u·∇&#41;u     &#40;FEM-assembled on the fly&#41;, the two η′ terms from stage 5, and the     parameter itself as a trivial external system η̇′ &#61; 0. The multiindex set     enumerates every monomial z₁^a z̄₁^b η′^c up to total degree MAX_ORD. ─────────────────────────────────────────────────────────────────────────────</p>
-<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;7/10&#93; Building NDOrderModel and multiindex set ...&quot;&#41;
+<pre><code class="language-julia">println&#40;_out, &quot;\n&#91;7/10&#93; Building NthOrderModel and multiindex set ...&quot;&#41;
 mset &#61; all_multiindices_up_to&#40;NVAR, MAX_ORD; min_degree &#61; 1&#41;
 convection &#61; FluidConvection&#40;fom; max_unique_cols &#61; length&#40;mset&#41;&#41;
 g₁ &#61; make_param_coupling&#40;K_visc&#41;
 h₀ &#61; make_base_forcing&#40;h₀_vec&#41;
 ext_sys &#61; ExternalSystem&#40;&#40;0.0 &#43; 0.0im,&#41;&#41;
 
-model &#61; NDOrderModel&#40;&#40;B₀, B₁&#41;, &#40;convection, g₁, h₀&#41;, ext_sys&#41;
+model &#61; NthOrderModel&#40;&#40;B₀, B₁&#41;, &#40;convection, g₁, h₀&#41;, ext_sys&#41;
 println&#40;_out, &quot;  &#36;&#40;length&#40;mset&#41;&#41; monomials &#40;NVAR&#61;&#36;NVAR, order ≤ &#36;MAX_ORD&#41;&quot;&#41;</code></pre>
 <p>───────────────────────────────────────────────────────────────────────────── 8 — DPIM solve. The normal-form-style resonance set keeps only the resonant     monomials z₁|z₁|^&#123;2k&#125; η′^j in the reduced dynamics; everything else is     absorbed into the manifold map W. Solving the cohomological equations     order-by-order yields       W : &#40;z₁, z̄₁, η′&#41; ↦ full state      &#40;the invariant-manifold embedding&#41;       R : ż &#61; R&#40;z&#41;                        &#40;the reduced dynamics on it&#41;     The solve is graded — degree-N coefficients never depend on degrees &gt; N —     which is why lower orders are exact truncations of this run. ─────────────────────────────────────────────────────────────────────────────</p>
 <pre><code class="language-julia">println&#40;_out, &quot;\n&#91;8/10&#93; Solving cohomological equations &#40;order &#36;MAX_ORD&#41; ...&quot;&#41;

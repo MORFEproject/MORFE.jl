@@ -121,7 +121,7 @@
 - [[_COMMUNITY_solve_rom.jl|solve_rom.jl]]
 - [[_COMMUNITY_backbone_bk.jl|backbone_bk.jl]]
 - [[_COMMUNITY_generate_dynamical_system.py|generate_dynamical_system.py]]
-- [[_COMMUNITY_demo_NDOrderModel.jl|demo_NDOrderModel.jl]]
+- [[_COMMUNITY_demo_NthOrderModel.jl|demo_NthOrderModel.jl]]
 - [[_COMMUNITY_test_multilinear_maps.jl|test_multilinear_maps.jl]]
 - [[_COMMUNITY_test_structural_svk.jl|test_structural_svk.jl]]
 - [[_COMMUNITY_AbstractEigensolver|AbstractEigensolver]]
@@ -647,7 +647,7 @@ Nodes (8): BifurcationKit, MORFE, MORFE.Polynomials, MORFE.Realification, Pkg, P
 Cohesion: 0.25
 Nodes (10): add_block(), early_return_jac(), early_return_nl(), generate(), main(), make_z_term(), Return self._pack_real_imag(y) at the given indent level., Return self._wirtinger_to_jacobian(dy_dz, dy_dz_conj) at the given indent level. (+2 more)
 
-### Community 123 - "demo_NDOrderModel.jl"
+### Community 123 - "demo_NthOrderModel.jl"
 Cohesion: 0.18
 Nodes (4): LinearAlgebra, MORFE, MORFE.MultilinearMaps, StaticArrays
 

@@ -114,7 +114,7 @@ println&#40;&quot;maps: quad&#61;&#36;&#40;length&#40;quad_maps&#41;&#41; cube&#
 <h2>Augmented model, multiindex set, and the cohomological solve</h2>
 <pre><code class="language-julia">ext_sys &#61; ExternalSystem&#40;ntuple&#40;_ -&gt; complex&#40;0.0, 0.0&#41;, N_EXT&#41;&#41;
 ZERO &#61; spzeros&#40;eltype&#40;K&#41;, n_free, n_free&#41;
-model &#61; NDOrderModel&#40;&#40;K, C, M, ZERO&#41;,
+model &#61; NthOrderModel&#40;&#40;K, C, M, ZERO&#41;,
 	&#40;quad_maps..., cube_maps...,
 		K_corrections..., C_corrections..., M_corrections...&#41;,
 	ext_sys&#41;

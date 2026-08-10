@@ -16,4 +16,4 @@ ext_exprs = [
     4 * r[2] + r[2] * r[1] + 1 * r[2]^3 * r[1] + r[2]^2 * r[1]
 ]
 
-model = symbolics_to_NDOrdermodel(exprs, groups, ext_var, ext_exprs)
+model = symbolics_to_NthOrderModel(exprs, groups, ext_var, ext_exprs)

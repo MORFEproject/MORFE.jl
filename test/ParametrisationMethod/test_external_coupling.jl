@@ -96,7 +96,7 @@ function _ec_make_model(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{Complex
     term_quad = MultilinearMap((res, x, y) -> (res .+= x .* y), (2, 0))
     term_forcing = MultilinearMap((res, r) -> (res .+= F * r), (0, 0), 1)
     ext_sys = ExternalSystem(_ec_linear_external_polynomial(A))
-    return NDOrderModel((_EC_K, _EC_C, _EC_M), (term_quad, term_forcing), ext_sys)
+    return NthOrderModel((_EC_K, _EC_C, _EC_M), (term_quad, term_forcing), ext_sys)
 end
 
 function _ec_solve(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64})
@@ -259,28 +259,5 @@ end
             (_EC_ROM + 1):_EC_NVAR, (offset + _EC_ROM + 1):(offset + _EC_NVAR)]
         @test A_from_R ≈ U
         @test !isapprox(A_from_R, A_full)
-    end
-
-    @testset "a stale external_eigenvalues literal is rejected, not silently used" begin
-        # Resonance detection contracts these against multiindex components *position by
-        # position*, so a vector whose ordering no longer matches the re-based coordinates
-        # silently detects the wrong resonances.  The check compares elementwise for
-        # exactly that reason, and a permutation is the failure it has to catch.
-        model = _ec_make_model(A_full, _EC_F)
-        actual = Vector(model.external_system.eigenvalues)
-
-        @test_throws ArgumentError MORFE.Resonance._check_external_eigenvalues(
-            reverse(actual), model.external_system)
-        # Right multiset, wrong length is also rejected.
-        @test_throws ArgumentError MORFE.Resonance._check_external_eigenvalues(
-            actual[1:1], model.external_system)
-        # The system's own eigenvalues are of course accepted.
-        @test MORFE.Resonance._check_external_eigenvalues(
-            actual, model.external_system) === nothing
-        # And a system that was never re-based is never second-guessed, whatever is passed:
-        # its coordinates are the caller's own.
-        untouched = ExternalSystem((_EC_λ_ext[1], _EC_λ_ext[2]))
-        @test MORFE.Resonance._check_external_eigenvalues(
-            ComplexF64[99.0, 88.0], untouched) === nothing
     end
 end

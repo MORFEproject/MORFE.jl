@@ -15,7 +15,7 @@
 # ENV["JULIA_DEBUG"] = "MultilinearTerms" # enable debug for the module
 
 using MORFE.Multiindices: all_multiindices_up_to
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.ParametrisationMethod: create_parametrisation_method_objects
 using MORFE.MultilinearTerms: compute_multilinear_terms, build_multilinear_terms_cache
 using StaticArrays: SVector
@@ -36,7 +36,7 @@ term4 = MultilinearMap((res, x, r) -> (@. res += 2.0 * x * r), (1, 0), 1) # me=1
 term5 = MultilinearMap((res, r) -> (@. res += [100.0, 200.0] * r), (0, 0), 1) # me=1
 
 Id = Matrix{Float64}(I, FOM, FOM)
-model = NDOrderModel((Id, Id, Id), (term1, term2, term3, term4, term5))
+model = NthOrderModel((Id, Id, Id), (term1, term2, term3, term4, term5))
 
 # Multiindex set over NVAR = 3 variables, total degree ≤ 3
 mset = all_multiindices_up_to(NVAR, 3)

@@ -17,7 +17,7 @@ using StaticArrays
 using Random: MersenneTwister, randn
 
 using MORFE
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
                                    select_master_modes_by_sorting
 using MORFE.CohomologicalEquations: solve_cohomological_problem
@@ -47,8 +47,8 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
     # is solved once and its output fed to both runs, so any difference is due to
     # the linear solver alone and not to eigenvector gauge.
     function solve_both(linear_terms, nl_terms, order, ROM; resonance_style, tol)
-        dense_model = NDOrderModel(linear_terms, nl_terms)
-        sparse_model = NDOrderModel(map(sparse, linear_terms), nl_terms)
+        dense_model = NthOrderModel(linear_terms, nl_terms)
+        sparse_model = NthOrderModel(map(sparse, linear_terms), nl_terms)
         @test sparse_model.linear_terms[1] isa SparseMatrixCSC
         @test dense_model.linear_terms[1] isa Matrix
 
@@ -252,7 +252,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         # dense path is runnable; this check can, because it evaluates the defining
         # equation ∂W/∂z·R(z) = F(W(z)) on the manifold itself and needs no reference.
         # Normalised by a representative term so the number is dimensionless.
-        model = NDOrderModel(lin, nl)
+        model = NthOrderModel(lin, nl)
         rng = MersenneTwister(20260731)
         amplitude = 1e-3
         rms = invariance_error_norms(

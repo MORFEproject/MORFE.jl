@@ -32,16 +32,16 @@ end
 
 @testset "Eigenproblems" begin
 
-    #Create a minimal second order NDOrderModel for testing.
+    #Create a minimal second order NthOrderModel for testing.
     FOM = 4
     ORD = 2
     K = random_spd_matrix(FOM)
     C = random_spd_matrix(FOM)
     M = random_spd_matrix(FOM)
-    model = NDOrderModel((K, C, M))
+    model = NthOrderModel((K, C, M))
     A, B = linear_first_order_matrices(model)
 
-    model_dense = NDOrderModel((Matrix(K), Matrix(C), Matrix(M)))
+    model_dense = NthOrderModel((Matrix(K), Matrix(C), Matrix(M)))
     A_dense, B_dense = linear_first_order_matrices(model_dense)
 
     # @testset "Solvers" begin
@@ -137,7 +137,7 @@ end
     #         α = 0.25
     #         β = 0.25
     #         C = α * M + β * K
-    #         model_modal_damping = NDOrderModel((K, C, M))
+    #         model_modal_damping = NthOrderModel((K, C, M))
     #         A, B = linear_first_order_matrices(model_modal_damping)
 
     #         nev = 2
@@ -234,7 +234,7 @@ end
             C = Matrix(random_spd_matrix(FOM))
             M = Matrix(random_spd_matrix(FOM))
 
-            model = NDOrderModel((K, C, M))
+            model = NthOrderModel((K, C, M))
 
             _, B = linear_first_order_matrices(model)
 

@@ -25,7 +25,7 @@ end
 # ╔═╡ bb000002-0002-4002-b002-000000000002
 begin
     using MORFE.Multiindices: all_multiindices_up_to
-    using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+    using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
     using MORFE.ParametrisationMethod: create_parametrisation_method_objects
     using MORFE.MultilinearTerms: compute_multilinear_terms, build_multilinear_terms_cache
     using StaticArrays: SVector
@@ -96,7 +96,7 @@ begin
     term5 = MultilinearMap((res, r) -> (@. res += [100.0, 200.0] * r), (0, 0), 1)
 
     Id = Matrix{Float64}(I, FOM, FOM)
-    model = NDOrderModel((Id, Id, Id), (term1, term2, term3, term4, term5))
+    model = NthOrderModel((Id, Id, Id), (term1, term2, term3, term4, term5))
 end
 
 # ╔═╡ bb000006-0006-4006-b006-000000000006

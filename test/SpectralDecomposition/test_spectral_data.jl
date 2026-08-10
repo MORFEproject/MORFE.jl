@@ -10,7 +10,7 @@ using LinearAlgebra
 using StaticArrays
 
 using MORFE
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
                                    select_master_modes_by_sorting,
                                    left_eigenmode_orders_from_slice
@@ -36,7 +36,7 @@ end
     B1 = 0.001 * B2
     ROM = 2
 
-    model = NDOrderModel((B0, B1, B2), (_cubic(2),))
+    model = NthOrderModel((B0, B1, B2), (_cubic(2),))
     ep = spectrum(model; solver = DefaultEigensolver())
     select_master_modes_by_sorting(ep, ROM)
     mask = ep.master_modes
@@ -167,7 +167,7 @@ end
         # the LAST AVAILABLE block by λ — not by forming a fresh λ^{k-1}ψ — and left
         # blocks are rebuilt against the augmented linear_terms.
         Z = zeros(size(B0))
-        aug = NDOrderModel((B0, B1, B2, Z), (_cubic(3),))
+        aug = NthOrderModel((B0, B1, B2, Z), (_cubic(3),))
 
         Y2 = ep.eigenmodes[:, 2, mask]
         mmd3 = zeros(ComplexF64, size(Ψ, 1), 2, ROM)
@@ -204,7 +204,7 @@ end
                 end
                 res
             end, (0, 0), 1)
-        forced = NDOrderModel((B0, B1, B2), (_cubic(2), force),
+        forced = NthOrderModel((B0, B1, B2), (_cubic(2), force),
             ExternalSystem((im * Ω, -im * Ω)))
         mset = all_multiindices_up_to(ROM + 2, 5; min_degree = 1)
         rset = build_resonance_set(forced, :complex_normal_form, mset, ep, 0.05, nothing)

@@ -107,7 +107,7 @@ using ..InvarianceEquation: assemble_cohomological_matrix_and_rhs!,
 using ..MasterModeOrthogonality: assemble_orthogonality_matrix_and_rhs!,
                                  precompute_orthogonality_operator_coefficients,
                                  precompute_orthogonality_column_polynomials
-using ..FullOrderModel: NDOrderModel
+using ..FullOrderModel: NthOrderModel
 using ..ExternalSystems: ExternalSystem, external_basis
 # Conjugate-involution detection lives in the spectral layer (it is a statement about
 # the spectrum and the external system, not about the solve). Imported here so the
@@ -346,7 +346,7 @@ function solve_single_monomial!(
         idx::Int,
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         ::ConjugateSymmetryData,
-        model::NDOrderModel,
+        model::NthOrderModel,
         ml_cache::MultilinearTermsCache
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     multi = multiindex_set(W)[idx]
@@ -417,7 +417,7 @@ function solve_cohomological_equations!(
         R::ReducedDynamics{ROM, NVAR, T},
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         sym::ConjugateSymmetryData{NoConjugatePermutation},
-        model::NDOrderModel,
+        model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         show_progress::Bool = true
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
@@ -442,7 +442,7 @@ function solve_cohomological_equations!(
         R::ReducedDynamics{ROM, NVAR, T},
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         sym::ConjugateSymmetryData{<:SVector},
-        model::NDOrderModel,
+        model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         show_progress::Bool = true
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}

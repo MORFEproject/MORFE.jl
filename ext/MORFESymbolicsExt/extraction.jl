@@ -50,7 +50,7 @@ _numeric_eltype(::Type{Complex{Num}}) = ComplexF64
 """
     extract_linear_matrices
 
-Assemble linear_terms matrices for NDOrderModel.
+Assemble linear_terms matrices for NthOrderModel.
 Inputs are a ODE of the variables defined in `groups` that is a NTuple, where every part of the Tuple consists of the state variables or the derivatives. 
 e.g: ([z1, z2, z3], [dz1, dz2, dz3], ...)
 Returns tuple of matrices with B[i] is matric w.r.t. groups[i] so the ith derivative.  
@@ -106,7 +106,7 @@ function nonlinear_remainder(
     highest = groups[end]
     for i in 1:n, s in highest
 
-        @assert isequal(Symbolics.derivative(F[i], s), 0) "F[$i] depends on highest derivative $s — not representable in NDOrderModel"
+        @assert isequal(Symbolics.derivative(F[i], s), 0) "F[$i] depends on highest derivative $s — not representable in NthOrderModel"
     end
     return F
 end
@@ -276,7 +276,7 @@ end
 """
     extract_nonlinear_monomials(exprs, F_groups_ext, linear_terms, groups)
 
-Variant for NDOrderModel **with external variables**.
+Variant for NthOrderModel **with external variables**.
 
 `F_groups_ext` = `(groups[1:end-1]..., ext_var)` — the groups used to compute
 multidegrees of nonlinear monomials.  `groups` is the full derivative-group

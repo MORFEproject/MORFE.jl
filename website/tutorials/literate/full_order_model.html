@@ -40,7 +40,7 @@ commands in the script header; expected numbers are asserted by the example's
 </li>
 <li><p><code>ExternalSystem</code> — the autonomous dynamics <code>ṙ &#61; f&#40;r&#41;</code> that drives the model. Its linear part <strong>must be upper triangular</strong>, a constraint with real consequences.</p>
 </li>
-<li><p><code>NDOrderModel</code> — the assembled <code>B_ORD x^&#40;ORD&#41; &#43; … &#43; B_0 x &#61; F&#40;x, ẋ, …, r&#41;</code>.</p>
+<li><p><code>NthOrderModel</code> — the assembled <code>B_ORD x^&#40;ORD&#41; &#43; … &#43; B_0 x &#61; F&#40;x, ẋ, …, r&#41;</code>.</p>
 </li>
 </ul>
 <p>The arc is: nonlinear terms → the driver → the assembled model → its response.</p>
@@ -51,7 +51,7 @@ commands in the script header; expected numbers are asserted by the example's
 </li>
 <li><p>Lorenz: why it is rejected, and the coordinate change that repairs it</p>
 </li>
-<li><p><code>NDOrderModel</code>: assemble a forced Duffing oscillator and integrate it</p>
+<li><p><code>NthOrderModel</code>: assemble a forced Duffing oscillator and integrate it</p>
 </li>
 </ol>
 <p>Everything is evaluated through the real library code — the curves come from <code>evaluate_term&#33;</code> and <code>evaluate</code>, never from a formula written out a second time — and the two coordinate changes are checked numerically rather than asserted.</p>
@@ -433,11 +433,11 @@ println&#40;&quot;\nNote: this driver&#39;s linear part is unstable &#40;Re λ &
 	&quot;\nThe section is about the construction, not about a recommended forcing.&quot;&#41;</code></pre>
 <hr />
 <ol start="4">
-<li><p><code>NDOrderModel</code> — assemble and drive it</p>
+<li><p><code>NthOrderModel</code> — assemble and drive it</p>
 </li>
 </ol>
 <p>A forced Duffing oscillator:  M ẍ &#43; C ẋ &#43; K x &#61; −k₃x³ &#43; f·&#40;r₁ &#43; r₂&#41;,  with r driven by the harmonic system from section 2. One degree of freedom keeps the figure readable; nothing changes for a FEM-sized model beyond the size of the matrices. –––––––––––––––––––––––––––––––––––––––</p>
-<pre><code class="language-julia">rule&#40;&quot;4. NDOrderModel — assemble the model and drive it&quot;&#41;
+<pre><code class="language-julia">rule&#40;&quot;4. NthOrderModel — assemble the model and drive it&quot;&#41;
 
 const M_MAT &#61; fill&#40;1.0, 1, 1&#41;
 const C_MAT &#61; fill&#40;0.08, 1, 1&#41;
@@ -447,7 +447,7 @@ const F_AMP &#61; 2.5
 forcing&#33;&#40;res, r&#41; &#61; &#40;res .&#43;&#61; F_AMP * real&#40;sum&#40;r&#41;&#41;&#41;
 term_forcing &#61; MultilinearMap&#40;forcing&#33;; multiindex &#61; &#40;0, 0&#41;, multiplicity_external &#61; 1&#41;
 
-model &#61; NDOrderModel&#40;&#40;K_MAT, C_MAT, M_MAT&#41;, &#40;term_hard, term_forcing&#41;, harmonic&#41;
+model &#61; NthOrderModel&#40;&#40;K_MAT, C_MAT, M_MAT&#41;, &#40;term_hard, term_forcing&#41;, harmonic&#41;
 println&#40;&quot;model       &#61; &quot;, typeof&#40;model&#41;.name.name, &quot;&#123;ORD&#61;2&#125;, n_fom &#61; &quot;, model.n_fom,
 	&quot;, terms &#61; &quot;, length&#40;model.nonlinear_terms&#41;, &quot;, max_nl_degree &#61; &quot;, model.max_nl_degree&#41;
 
@@ -457,7 +457,7 @@ println&#40;&quot;  A &#61; &quot;, A_fo&#91;1, :&#93;, &quot; / &quot;, A_fo&#9
 println&#40;&quot;  B &#61; &quot;, B_fo&#91;1, :&#93;, &quot; / &quot;, B_fo&#91;2, :&#93;&#41;</code></pre>
 <p>A term that reads the external state needs a model that has one — otherwise the mismatch would only surface much later, during evaluation.</p>
 <pre><code class="language-julia">try
-	NDOrderModel&#40;&#40;K_MAT, C_MAT, M_MAT&#41;, &#40;term_forcing,&#41;&#41;
+	NthOrderModel&#40;&#40;K_MAT, C_MAT, M_MAT&#41;, &#40;term_forcing,&#41;&#41;
 catch e
 	println&#40;&quot;\nWithout an external system:\n&quot;, e.msg&#41;
 end</code></pre>
@@ -523,7 +523,7 @@ write_charts&#40;joinpath&#40;FOM_FIGDIR, &quot;fig4_forced_response.html&quot;&
 				   &quot;the hardening cubic is what bends it away from an ellipse.&quot;&#41;&#93;;
 	title &#61; &quot;Forced response of the assembled model&quot;,
 	caption &#61; &quot;The nonlinear force at each step comes from &quot; *
-			  &quot;&#96;evaluate_nonlinear_terms&#33;&#96; on the &#96;NDOrderModel&#96; itself.&quot;&#41;</code></pre>
+			  &quot;&#96;evaluate_nonlinear_terms&#33;&#96; on the &#96;NthOrderModel&#96; itself.&quot;&#41;</code></pre>
 <p>The website card for this tutorial uses the phase portrait itself rather than a drawing of one, so it is generated from the same arrays as the figure above.</p>
 <pre><code class="language-julia">ith &#61; itr&#91;thin&#40;length&#40;itr&#41;, 420&#41;&#93;        # a card needs far fewer points than a figure
 write_thumbnail&#40;joinpath&#40;FOM_FIGDIR, &quot;thumb.svg&quot;&#41;,

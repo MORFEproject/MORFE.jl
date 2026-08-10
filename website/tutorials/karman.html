@@ -295,7 +295,7 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
         <p>Finally the external state $\mathbf r = \eta'$ is an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> with a
         single eigenvalue 0 ($\dot\eta' = 0$), and the maps are collected into the model:</p>
 <pre class="code"><span class="var">ext_sys</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="num">0.0</span> <span class="op">+</span> <span class="num">0.0im</span>,))
-<span class="var">model</span> <span class="op">=</span> <span class="fn">NDOrderModel</span>((<span class="var">B₀</span>, <span class="var">B₁</span>), (<span class="var">convection</span>, <span class="var">g₁</span>, <span class="var">h₀</span>), <span class="var">ext_sys</span>)</pre>
+<span class="var">model</span> <span class="op">=</span> <span class="fn">NthOrderModel</span>((<span class="var">B₀</span>, <span class="var">B₁</span>), (<span class="var">convection</span>, <span class="var">g₁</span>, <span class="var">h₀</span>), <span class="var">ext_sys</span>)</pre>
       </div>
     </div>
 
@@ -441,7 +441,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
     <h2 id="next">Where to next?</h2>
     <ul>
       <li><a class="inline" href="micromirror.html">MEMS micromirror</a> — the structural counterpart with a 1:2 internal resonance (planned-interface preview).</li>
-      <li><a class="inline" href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel-NDOrderModel"><code>NDOrderModel</code></a>, multilinear maps, resonance sets, <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a>.</li>
+      <li><a class="inline" href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, multilinear maps, resonance sets, <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a>.</li>
       <li><a class="inline" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
     </ul>
 

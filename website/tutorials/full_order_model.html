@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <ul>
       <li>How a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a> describes which derivatives go into a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>.</li>
       <li>Multiple kinds of <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>: (multi) harmonic, quasi-periodic and chaotic.</li>
-      <li>Assembling an <a class="doc-link" href="../documentation.html#FullOrderModel-NDOrderModel"><code>NDOrderModel</code></a> and integrating its forced response.</li>
+      <li>Assembling an <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a> and integrating its forced response.</li>
     </ul>
 
     <h2 id="why">Mathematical formulation</h2>
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-model">Assemble the model</h3>
         <p>
-          An <a class="doc-link" href="../documentation.html#FullOrderModel-NDOrderModel"><code>NDOrderModel</code></a> takes the linear matrices as a tuple $(B_0, \ldots,
+          An <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a> takes the linear matrices as a tuple $(B_0, \ldots,
           B_{\mathrm{ORD}})$, the nonlinear terms as a tuple, and the external system. A forced
           Duffing oscillator is two terms — the hardening cubic from step 1 and a forcing term
           that reads the external state.
@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <pre class="code"><span class="fn">forcing!</span>(<span class="var">res</span>, <span class="var">r</span>) <span class="op">=</span> (<span class="var">res</span> <span class="op">.+=</span> <span class="num">2.5</span> <span class="op">*</span> (<span class="var">r</span>[<span class="num">1</span>] <span class="op">+</span> <span class="var">r</span>[<span class="num">2</span>])) <span class="cm"># 2.5 (r₁+r₂) = 5 cos(Ωt)</span>
 <span class="var">term_forcing</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="fn">forcing!</span>; <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">0</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">1</span>)
 
-<span class="var">model</span> <span class="op">=</span> <span class="fn">NDOrderModel</span>((<span class="var">K</span>, <span class="var">C</span>, <span class="var">M</span>), (<span class="var">term_hard</span>, <span class="var">term_forcing</span>), <span class="var">harmonic</span>)
+<span class="var">model</span> <span class="op">=</span> <span class="fn">NthOrderModel</span>((<span class="var">K</span>, <span class="var">C</span>, <span class="var">M</span>), (<span class="var">term_hard</span>, <span class="var">term_forcing</span>), <span class="var">harmonic</span>)
 
 <span class="var">A</span>, <span class="var">B</span> <span class="op">=</span> <span class="fn">linear_first_order_matrices</span>(<span class="var">model</span>)   <span class="cm"># companion pair for the eigensolver</span></pre>
         <p>

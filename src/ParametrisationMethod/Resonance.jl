@@ -39,7 +39,7 @@ module Resonance
 using Printf: @sprintf
 
 using ..Multiindices: MultiindexSet, find_in_set
-using ..FullOrderModel: NDOrderModel
+using ..FullOrderModel: NthOrderModel
 using ..SpectralDecomposition: Spectrum, SpectralData, outer_bundle, indices,
                                outer_conjugate_permutation, physical_mode
 using ..ExternalSystems: external_basis
@@ -574,11 +574,11 @@ function _resolve_outer_tol(tol, outer_tol, n_out::Int, n_int::Int)
     outer_tol !== nothing && return outer_tol
     tol isa Float64 && return tol
     throw(ArgumentError("""
-       A per-target `tol` is indexed by the target number *within its own block*, so a
-       vector sized for the $n_int inner targets cannot also serve the $n_out outer targets.
-       Pass `outer_tol` as well: a scalar, or a per-monomial vector whose entries have
-       $n_out elements (e.g. `[[rel * abs(λ_outer[j]) for j in 1:$n_out] for _ in 1:NMON]`).
-       """))
+        A per-target `tol` is indexed by the target number *within its own block*, so a
+        vector sized for the $n_int inner targets cannot also serve the $n_out outer targets.
+        Pass `outer_tol` as well: a scalar, or a per-monomial vector whose entries have
+        $n_out elements (e.g. `[[rel * abs(λ_outer[j]) for j in 1:$n_out] for _ in 1:NMON]`).
+        """))
 end
 
 """
@@ -707,90 +707,6 @@ function Base.show(io::IO, rs::ResonanceSet{ROM, N_EXT, M}) where {ROM, N_EXT, M
         length(rs.multiindices), " multiindices, ",
         count(rs.inner_resonances), " inner resonances",
         n_out > 0 ? ", $(count(rs.outer_resonances)) outer resonances" : "")
-end
-
-"""
-	_check_external_eigenvalues(supplied, sys)
-
-Reject an explicitly-supplied `external_eigenvalues` vector that disagrees with the external
-system's own eigenvalues, when the system was re-based.
-
-Resonance detection contracts these against multiindex components **position by position**
-(`_superharmonics`), so a permuted or stale vector does not fail — it silently detects the
-wrong resonances and yields a wrong ROM.  A change of external coordinates re-orders the
-spectrum into the new basis, which is exactly what makes a hand-written literal go stale.
-
-Only checked when `external_basis(sys) !== nothing`, so no system that was left in its own
-coordinates can trip it.
-"""
-function _check_external_eigenvalues(supplied, sys)
-    sys === nothing && return nothing
-    external_basis(sys) === nothing && return nothing
-    actual = Vector(sys.eigenvalues)
-    length(supplied) == length(actual) && all(isapprox.(supplied, actual)) && return nothing
-    throw(ArgumentError("""
-       `external_eigenvalues` was given as $(supplied), but the external system's \
-       eigenvalues are $(actual).
-       The external system was re-based (its linear matrix was not upper triangular), so \
-       its spectrum is now expressed in the new coordinates and an explicit vector written \
-       for the original ones is stale.  Resonance detection contracts these against \
-       multiindex components position by position, so a stale vector silently detects the \
-       wrong resonances.
-       Drop the `external_eigenvalues` argument — the default reads them from the model.
-       """))
-end
-
-"""
-	build_resonance_set(model, style, mset, eigenproblem, tol, conjugacy_map;
-	                    external_eigenvalues = nothing)
-
-Build a `ResonanceSet` from a solved `Spectrum` according to the chosen
-parametrisation `style`. Accepted styles:
-- `:graph`
-- `:complex_normal_form`
-- `:real_normal_form` (requires `conjugacy_map`)
-
-`external_eigenvalues` overrides the eigenvalues of the external system used
-in resonance detection (default: taken from `model.external_system`).
-"""
-function build_resonance_set(
-        model::NDOrderModel,
-        style::Symbol,
-        mset::MultiindexSet,
-        eigenproblem::Spectrum,
-        tol::Float64,
-        conjugacy_map::Union{Nothing, Vector{Int}};
-        external_eigenvalues::Union{Nothing, Vector{ComplexF64}} = nothing
-)
-    master_mask = eigenproblem.master_modes
-    outer_mask = .!eigenproblem.master_modes
-    master_eigenvalues = eigenproblem.eigenvalues[master_mask]
-    outer_eigenvalues = eigenproblem.eigenvalues[outer_mask]
-    if external_eigenvalues === nothing
-        external_eigenvalues = model.external_system === nothing ? ComplexF64[] :
-                               Vector(model.external_system.eigenvalues)
-    else
-        _check_external_eigenvalues(external_eigenvalues, model.external_system)
-    end
-
-    if style === :graph
-        return resonance_set_from_graph_style(
-            mset, master_eigenvalues, external_eigenvalues, outer_eigenvalues, tol)
-
-    elseif style === :complex_normal_form
-        return resonance_set_from_complex_normal_form_style(
-            mset, master_eigenvalues, tol;
-            external_eigenvalues, outer_eigenvalues)
-
-    elseif style === :real_normal_form
-        @assert !isnothing(conjugacy_map) ":real_normal_form requires conjugacy_map to be set"
-        return resonance_set_from_real_normal_form_style(
-            mset, master_eigenvalues, conjugacy_map, tol;
-            external_eigenvalues, outer_eigenvalues)
-    else
-        throw(ArgumentError("Unknown resonance_style :$style. Choose :graph or :complex_normal_form"))
-    end
-    #TODO resonance_set_from_condition_number_estimate
 end
 
 # =============================================================================
@@ -977,7 +893,7 @@ master-mask plumbing), resolves the config's tolerances into correctly-sized inn
 outer objects via [`resolve_tolerances`](@ref), and warns about off-manifold
 near-resonances when `config.warn_outer` is set.
 """
-function build_resonance_set(model::NDOrderModel, mset::MultiindexSet,
+function build_resonance_set(model::NthOrderModel, mset::MultiindexSet,
         spectral, config::ResonanceConfig)
     # `Vector{ComplexF64}`, not `collect`: the master eigenvalues are an `SVector`, and
     # `collect` would give a `SizedVector` that the constructors' signatures reject.
@@ -1171,10 +1087,10 @@ function _warn_flagged_outer_modes(mset::MultiindexSet, outer_eigs,
         monomials = join((string(Tuple(mset.exponents[c])) for c in cols), ", ")
         description, subject = _outer_mode_description(spectral, rep, partner, outer_eigs)
         @warn """
-        Monomials are near-resonant with $description. That mode is not on the manifold, \
-        so its direction is solved through a near-singular operator and the ROM will lose \
-        accuracy there regardless of how the load is shaped. Offending monomial exponents: \
-        $monomials. Add $subject to the master set, detune the forcing, or add damping."""
+          Monomials are near-resonant with $description. That mode is not on the manifold, \
+          so its direction is solved through a near-singular operator and the ROM will lose \
+          accuracy there regardless of how the load is shaped. Offending monomial exponents: \
+          $monomials. Add $subject to the master set, detune the forcing, or add damping."""
     end
     return nothing
 end

@@ -66,7 +66,7 @@ export fem_elements, fem_n_qp, fem_ndofs_per_cell,
        fem_reinit!
 
 # FullOrderModel
-export FullOrderModel, FirstOrderModel, NDOrderModel,
+export FullOrderModel, FirstOrderModel, NthOrderModel,
        linear_first_order_matrices, evaluate_nonlinear_terms!
 
 # SpectralDecomposition
@@ -75,8 +75,7 @@ export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensol
 export eigensolve, eigensolve_left, generalised_eigenpairs,
        sort_by_magnitude!, normalise_biorthogonal!, sort_left_eigenmodes
 export Spectrum, spectrum, left_eigenmode_orders_from_slice,
-       select_master_modes_by_hand, select_master_modes_by_sorting,
-       select_master_modes_by_target_frequency
+       master_by_sorting, master_by_target_frequency
 # SpectralData
 export SpectralData, ModeBundle, check_biorthogonality,
        right_modes, left_modes, right_mode_derivatives, left_mode_blocks,

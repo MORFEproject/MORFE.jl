@@ -3,7 +3,7 @@ using LinearAlgebra
 using StaticArrays
 
 using MORFE.Multiindices: all_multiindices_up_to
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap, linear_first_order_matrices
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.Resonance: resonance_set_from_complex_normal_form_style
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice
@@ -22,7 +22,7 @@ term_cubic = MultilinearMap(
     (3, 0)
 )
 
-_model = NDOrderModel((B0, B1, B2), (term_cubic,))
+_model = NthOrderModel((B0, B1, B2), (term_cubic,))
 
 # ── Spectrum ──────────────────────────────────────────────────────────────
 let

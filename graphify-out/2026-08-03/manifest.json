@@ -409,7 +409,7 @@
     "ast_hash": "3896c00bef90b93bcb96569f6fa18f35",
     "semantic_hash": ""
   },
-  "examples/internals/full_order_model/demo_NDOrderModel.jl": {
+  "examples/internals/full_order_model/demo_NthOrderModel.jl": {
     "mtime": 1785753133.8606215,
     "ast_hash": "37d22d751bf0c8e2bcc978dc105a29e9",
     "semantic_hash": ""

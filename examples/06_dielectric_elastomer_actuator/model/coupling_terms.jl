@@ -139,7 +139,7 @@ function build_nonlinear_terms(p, fe, bp; forced::Bool, include_cubic_forcing::B
 end
 
 """
-	build_model(p, fe, bp; forced, Ω = 0.0, include_cubic_forcing = true) -> NDOrderModel
+	build_model(p, fe, bp; forced, Ω = 0.0, include_cubic_forcing = true) -> NthOrderModel
 
 `forced = false`: autonomous ORD = 3 model (NVAR = 2 reduction path).
 `forced = true` : adds the external system ṙ = diag(+iΩ, −iΩ) r and all forcing maps.
@@ -151,9 +151,9 @@ function build_model(p, fe, bp; forced::Bool, Ω::Float64 = 0.0,
     if forced
         @assert Ω > 0 "forced model requires Ω > 0"
         ext = ExternalSystem((im * Ω, -im * Ω))
-        return NDOrderModel((B0, B1, B2, B3), terms, ext)
+        return NthOrderModel((B0, B1, B2, B3), terms, ext)
     else
-        return NDOrderModel((B0, B1, B2, B3), terms)
+        return NthOrderModel((B0, B1, B2, B3), terms)
     end
 end
 

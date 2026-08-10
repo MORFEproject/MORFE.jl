@@ -478,7 +478,7 @@ function solve_single_monomial!(
         idx::Int,
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         sym::ConjugateSymmetryData,
-        model::NDOrderModel,
+        model::NthOrderModel,
         ml_cache::MultilinearTermsCache
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     multi = multiindex_set(W)[idx]
@@ -534,7 +534,7 @@ and the context building logic are **not modified**.
 
 ```julia
 function solve_cohomological_problem(
-        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
         mset, master_eigenvalues, master_modes, left_eigenmodes, resonance_set;
         initial_W = nothing,
         initial_R = nothing,

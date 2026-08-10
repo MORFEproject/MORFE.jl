@@ -8,7 +8,7 @@ using LinearAlgebra
 using StaticArrays
 
 using MORFE
-using MORFE.FullOrderModel: NDOrderModel, MultilinearMap
+using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
                                    select_master_modes_by_sorting
 using MORFE.CohomologicalEquations: solve_cohomological_problem
@@ -23,7 +23,7 @@ using MORFE.Multiindices: MultiindexSet, find_in_set
         (res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3),
         (3, 0)
     )
-    model = NDOrderModel((B0, B1, B2), (term_cubic,))
+    model = NthOrderModel((B0, B1, B2), (term_cubic,))
     ROM = 2
     order = 5
 

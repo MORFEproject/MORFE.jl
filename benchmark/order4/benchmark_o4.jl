@@ -92,7 +92,7 @@ function make_ferrite_model(nx, ny, nz; λ, μ, ρ, α_ray, β_ray, max_deg, rom
 	max_uniq = length(mset)
 	tq       = FerriteGeometricNonlinearity{2}(dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = max_uniq)
 	tc       = FerriteGeometricNonlinearity{3}(dh, cv, free_to_local, n_free, λ, μ; max_unique_cols = max_uniq)
-	model    = NDOrderModel((K, C, M), (tq, tc))
+	model    = NthOrderModel((K, C, M), (tq, tc))
 	return model, mset, cv, dh, n_free, free_to_local
 end
 
@@ -103,7 +103,7 @@ mutable struct MechSolver <: AbstractEigensolver
 	α::Float64;
 	β::Float64
 end
-function MORFE.SpectralDecomposition.eigensolve(m::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve(m::NthOrderModel, s::MechSolver)
 	ω2, ϕ = eigs(m.linear_terms[1], m.linear_terms[3]; nev = s.nev, which = :SM)
 	idx = sortperm(real(ω2))[1:s.nev]
 	ω2 = real.(ω2[idx]);
@@ -127,7 +127,7 @@ function MORFE.SpectralDecomposition.eigensolve(m::NDOrderModel, s::MechSolver)
 	s.eigenvalues = λ_all;
 	return λ_all, evecs
 end
-function MORFE.SpectralDecomposition.eigensolve_left(m::NDOrderModel, s::MechSolver)
+function MORFE.SpectralDecomposition.eigensolve_left(m::NthOrderModel, s::MechSolver)
 	R = s.eig_mat;
 	FOM = size(R, 1) ÷ 2;
 	L = similar(R)

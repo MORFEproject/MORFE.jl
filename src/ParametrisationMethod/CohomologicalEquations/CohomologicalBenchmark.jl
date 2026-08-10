@@ -22,7 +22,7 @@ function _timed_solve_single_monomial!(
         idx::Int,
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         ::ConjugateSymmetryData,
-        model::NDOrderModel,
+        model::NthOrderModel,
         ml_cache::MultilinearTermsCache
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     multi = multiindex_set(W)[idx]
@@ -152,7 +152,7 @@ function solve_cohomological_equations_benchmarked!(
         R::ReducedDynamics{ROM, NVAR, T},
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         sym::ConjugateSymmetryData{NoConjugatePermutation},
-        model::NDOrderModel,
+        model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         benchmark_dir::AbstractString,
         show_progress::Bool = true
@@ -212,7 +212,7 @@ function solve_cohomological_equations_benchmarked!(
         R::ReducedDynamics{ROM, NVAR, T},
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         sym::ConjugateSymmetryData{<:SVector},
-        model::NDOrderModel,
+        model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         benchmark_dir::AbstractString,
         show_progress::Bool = true

@@ -34,7 +34,7 @@ using ..Multiindices: indices_in_box_with_bounded_degree,
                       factorisations_groupwise_symmetric,
                       bounded_index_tuples, FactorisationEntry
 using ..ParametrisationObjects: Parametrisation
-using ..FullOrderModel: NDOrderModel, MultilinearMap
+using ..FullOrderModel: NthOrderModel, MultilinearMap
 using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap,
                          fem_elements, fem_n_qp, fem_ndofs_per_cell,
                          fem_reinit!, scatter_qp!, accumulate_qp!, assemble_element!,

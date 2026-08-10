@@ -205,7 +205,7 @@ end
             @test typeof(symmetry_type(short)) === typeof(symmetry_type(long))
         end
 
-        @testset "order keyword composes into an NDOrderModel" begin
+        @testset "order keyword composes into an NthOrderModel" begin
             # The payoff: no hand-written trailing zeros, and the ORD=3 tuple still
             # unifies at model construction.
             q!(res, x, y) = (res .+= x .* y)
@@ -215,7 +215,7 @@ end
                 MultilinearMap(q!; multiindex = (2,), order = 3,
                     multiplicity_external = 0, fully_asymmetric = false),
                 MultilinearMap(t!, (3, 0, 0); fully_asymmetric = false))
-            @test NDOrderModel((K, K, K, K), terms) isa NDOrderModel{3}
+            @test NthOrderModel((K, K, K, K), terms) isa NthOrderModel{3}
         end
 
         @testset "derivatives keyword" begin
@@ -348,7 +348,7 @@ end
 
             K = Matrix{Float64}(I, n, n)
             ext = MORFE.ExternalSystems.ExternalSystem((0.0 + 1.0im, 0.0 - 1.0im))
-            @test NDOrderModel((K, K, K), (m,), ext) isa NDOrderModel
+            @test NthOrderModel((K, K, K), (m,), ext) isa NthOrderModel
         end
     end
 
@@ -430,10 +430,10 @@ end
 
         @testset "fully_asymmetric is still reported where it matters" begin
             # Excluded from the constructor report, but `_info_implicit_symmetry` at
-            # NDOrderModel still catches it — moved, not lost.
+            # NthOrderModel still catches it — moved, not lost.
             K = Matrix{Float64}(I, 3, 3)
             term = MultilinearMap(q2!, (2, 0))
-            @test_logs (:info, r"did not set `fully_asymmetric`") NDOrderModel(
+            @test_logs (:info, r"did not set `fully_asymmetric`") NthOrderModel(
                 (K, K, K), (term,))
         end
     end
@@ -527,7 +527,7 @@ end
             @test_throws "must accept 5 arguments" MultilinearMap(h!, (4,))
         end
 
-        @testset "multi-method f! survives NDOrderModel construction" begin
+        @testset "multi-method f! survives NthOrderModel construction" begin
             # Regression test for `_term_label`, which used to call `only(methods(f!))`
             # and threw inside the `@info` emitted by `_info_implicit_symmetry`.
             g!(res, x, y) = (res .+= x .* y)
@@ -537,8 +537,8 @@ end
             K = Matrix{Float64}(I, 3, 3)
             # `fully_asymmetric` is left unset on purpose: that is what makes
             # `_info_implicit_symmetry` — and hence `_term_label` — run at all.
-            model = @test_logs (:info,) match_mode=:any NDOrderModel((K, K), (term,))
-            @test model isa NDOrderModel
+            model = @test_logs (:info,) match_mode=:any NthOrderModel((K, K), (term,))
+            @test model isa NthOrderModel
         end
 
         @testset "concretely annotated arguments" begin

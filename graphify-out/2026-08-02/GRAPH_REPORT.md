@@ -87,7 +87,7 @@
 - [[_COMMUNITY_MORFE.jl|MORFE.jl]]
 - [[_COMMUNITY_diagnose_operators.jl|diagnose_operators.jl]]
 - [[_COMMUNITY_NS2D.jl|NS2D.jl]]
-- [[_COMMUNITY_demo_NDOrderModel.jl|demo_NDOrderModel.jl]]
+- [[_COMMUNITY_demo_NthOrderModel.jl|demo_NthOrderModel.jl]]
 - [[_COMMUNITY_test_multilinear_maps.jl|test_multilinear_maps.jl]]
 - [[_COMMUNITY_numeric_mirror.py|numeric_mirror.py]]
 - [[_COMMUNITY_demo_eigensolver.jl|demo_eigensolver.jl]]
@@ -436,7 +436,7 @@ Nodes (10): Arpack, Ferrite, FerriteGmsh, LinearAlgebra, LinearMaps, MORFE, Pkg,
 Cohesion: 0.25
 Nodes (6): LinearAlgebra, MORFE.Eigenproblems, MORFE.MasterModeOrthogonality, Random, StaticArrays, Test
 
-### Community 123 - "demo_NDOrderModel.jl"
+### Community 123 - "demo_NthOrderModel.jl"
 Cohesion: 0.18
 Nodes (4): LinearAlgebra, MORFE, MORFE.MultilinearMaps, StaticArrays
 

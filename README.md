@@ -73,7 +73,7 @@ SVK.print_equations(rom)                  # realified reduced dynamics
 SVK.save_rom(rom, "results")
 ```
 
-The low-level API (explicit `NDOrderModel`, eigensolvers, resonance sets,
+The low-level API (explicit `NthOrderModel`, eigensolvers, resonance sets,
 `solve_cohomological_problem`) remains fully available — see
 [`examples/01_clamped_beam_ferrite/low_level.jl`](https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/low_level.jl)
 in MORFEFerrite for the same computation written out in full.
@@ -116,7 +116,7 @@ Ferrite.jl backends, the SVK/parametric/fluid UIs, and all Ferrite examples live
 | `Multiindices` | Multiindex sets with graded lex ordering and factorisation utilities |
 | `Polynomials` | Dense multivariate polynomials aligned to multiindex sets |
 | `Realification` | Change of variables from complex (z, z̄) to real (x, y) coordinates |
-| `FullOrderModel` | `NDOrderModel` and `FirstOrderModel` with multilinear nonlinear terms |
+| `FullOrderModel` | `NthOrderModel` and `FirstOrderModel` with multilinear nonlinear terms |
 | `Eigensolvers` | ARPACK-based generalised eigensolver with shift-and-invert |
 | `EigenModesPropagation` | Left/right eigenvector and Jordan vector propagation for N-th order systems |
 | `Resonance` | Resonance set construction (graph, normal form, condition-number strategies) |

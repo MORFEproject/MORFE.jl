@@ -33,7 +33,7 @@
       title: 'Spectral Submanifold',
       short: 'An $n$-dimensional invariant manifold tangent to the chosen eigenspace — curved coordinates, not a Galerkin projection.',
       detail: {
-        body: 'DPIM parametrises a invariant manifold tangent to the chosen eigenspace. Coordinates on the SSM satisfy the reduced ODE $\\dot{\\mathbf{z}} = \\mathbf{f}(\\mathbf{z}, \\mathbf{r})$ up to the specified expansion order.',
+        body: 'DPIM parametrises a invariant manifold tangent to the chosen eigenspace. Coordinates on the SSM satisfy the reduced ODE $\\dot{\\mathbf{z}} = \\mathbf{R}(\\mathbf{z}, \\mathbf{r})$ up to the specified expansion order.',
         bullets: [
           'Distinct from POD/Galerkin: curved coordinates, no projection error',
           'Parametrisation computed order-by-order via cohomological equations',
@@ -65,7 +65,7 @@
       title: 'Modal interactions',
       short: 'Arbitrary $p:q$ internal resonances detected from the spectrum and retained in the ROM automatically.',
       detail: {
-        body: 'DPIM automatically detects internal resonances from the linearised spectrum. Any $p:q$ integer relation among master and forcing eigenvalues generates corresponding reduced dynamics in $\\mathbf{f}(\\mathbf{z})$.',
+        body: 'DPIM automatically detects internal resonances from the linearised spectrum. Any $p:q$ integer relation among master and forcing eigenvalues generates corresponding reduced dynamics in $\\mathbf{R}(\\mathbf{z}, \\mathbf{r})$.',
         bullets: [
           '1:2, 1:3, 5:3 and arbitrary combinatorial combinations',
           'Detection based on condition number with adjustable tolerance',
@@ -97,13 +97,13 @@
       title: 'Multiphysics',
       short: 'Physics-agnostic interface: structural, electrostatic, MEMS, thermal. Any $p$-th order polynomial ODE on FE matrices is reducible.',
       detail: {
-        body: '<code>NDOrderModel</code> accepts any $p$-th order polynomial ODE on sparse FE matrices. The FEM interface is physics-agnostic: the same pipeline reduces structural, electrostatic, piezoelectric, and thermal models.',
+        body: '<code>NthOrderModel</code> accepts any $p$-th order polynomial ODE on sparse FE matrices. The FEM interface is physics-agnostic: the same pipeline reduces structural, electrostatic, piezoelectric, and thermal models.',
         bullets: [
           '<code>ORD</code> type parameter encodes ODE order at compile time',
           'Nonlinear terms defined by multiindex + user-supplied <code>f!</code>',
           'No physics assumptions hard-coded in the solver'
         ],
-        link: { href: 'documentation.html', label: 'NDOrderModel →' }
+        link: { href: 'documentation.html', label: 'NthOrderModel →' }
       }
     },
     {

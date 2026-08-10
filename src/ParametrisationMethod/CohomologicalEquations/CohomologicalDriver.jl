@@ -120,12 +120,12 @@ function _check_external_conjugate_block(
 
     if σ === nothing
         supplied == collect(1:(NVAR - ROM)) || throw(ArgumentError("""
-           The external system was re-based onto a basis whose columns are not conjugate \
-           pairs, so its external variables have no conjugate structure, but the supplied \
-           `conjugate_permutation` pairs them as $(supplied).
-           Either drop `conjugate_permutation`, or use an external system whose linear \
-           matrix is real so the conjugate-preserving eigenvector route is taken.
-           """))
+             The external system was re-based onto a basis whose columns are not conjugate \
+             pairs, so its external variables have no conjugate structure, but the supplied \
+             `conjugate_permutation` pairs them as $(supplied).
+             Either drop `conjugate_permutation`, or use an external system whose linear \
+             matrix is real so the conjugate-preserving eigenvector route is taken.
+             """))
         return nothing
     end
 
@@ -192,15 +192,21 @@ end
 
 """
 	solve_cohomological_problem(
-		model, mset, master_eigenvalues,
-		master_modes, left_eigenmodes, resonance_set;
+		model, mset, spectral::SpectralData, resonance_set;
 		initial_W = nothing, initial_R = nothing,
-		master_modes_derivatives = nothing,
-		conjugate_permutation = nothing
+		conjugate_permutation = :from_spectral,
+		validate_mset = true, show_progress = true
 	) -> (W, R)
 
-High-level driver that assembles a [`CohomologicalContext`](@ref) from raw
-spectral data and solves the full set of cohomological equations.
+High-level driver that assembles a [`CohomologicalContext`](@ref) from spectral data and
+solves the full set of cohomological equations.
+
+The spectral input is **one** object. It used to be five separately-maintained arrays
+(`master_eigenvalues`, `master_modes`, `left_eigenmodes`, `master_modes_derivatives`,
+`left_modes_derivatives`) that every call site sliced by hand and had to keep mutually
+consistent — including the mirrored right/left block convention, where a swap is
+type-correct and compiles silently. [`SpectralData`](@ref)'s accessors own that convention
+now, and it is checked numerically by `check_biorthogonality`.
 
 The external dynamics enter through `model.external_system.first_order_dynamics`, which
 `_embed_external_dynamics!` copies into the external rows of `R`; the superharmonics `s`
@@ -225,24 +231,23 @@ linear-operator tuple is read from `model.linear_terms`.
 
 ## Arguments
 
-- `model :: NDOrderModel` — full-order model; `model.linear_terms` provides `(B₀,…,B_ORD)`.
+- `model :: NthOrderModel` — full-order model; `model.linear_terms` provides `(B₀,…,B_ORD)`.
 - `mset :: MultiindexSet{NVAR}` — multiindex set over all `NVAR = ROM + N_EXT` variables.
-- `master_eigenvalues :: SVector{ROM, ComplexF64}`.
-- `master_modes :: Matrix{ComplexF64}` — size `FOM × ROM`.
-- `left_eigenmodes :: AbstractMatrix{ComplexF64}` — size `FOM × ROM`.
+- `spectral :: SpectralData{ORD, ROM}` — master eigenvalues, the right physical modes and
+  their derivative blocks, the left physical modes and their orthogonality blocks, and the
+  conjugate involution. Build it with `SpectralData(model, spectrum; master = …)`.
+  The orthogonality row operators are read directly off the left blocks — no eigenvalue
+  folding.
 - `resonance_set :: ResonanceSet`.
 - `initial_W`, `initial_R` — optionally supply already-initialised objects.
-- `master_modes_derivatives` — `FOM × (ORD-1) × ROM`; required when `ORD > 1`.
-- `left_modes_derivatives` — `FOM × (ORD-1) × ROM`; the lower-order left
-  eigenvector blocks `left_modes_derivatives[:, j, r] = φ_{r,j}` (as returned by
-  `solve_left`); required when `ORD > 1`. The orthogonality row operators are
-  read directly off these blocks — no eigenvalue folding.
-- `conjugate_permutation` — optional `AbstractVector{Int}` of length NVAR encoding the
-  conjugate permutation on modes.  `perm[i] = j` means mode `j` is the complex conjugate
-  of mode `i`.  When `nothing` (default), no conjugate-symmetry exploitation is performed.
-  The caller must verify that the eigenvectors satisfy the conjugate symmetry before passing
-  this argument — two eigenvalues forming a conjugate pair is necessary but not sufficient
-  (the eigenspace must be one-dimensional, or the eigenvectors must be chosen conjugately).
+- `conjugate_permutation` — `:from_spectral` (default) takes the bundle's master-block
+  involution and extends it over the external variables using the model's external system.
+  Pass an `NVAR`-length vector to override it — `perm[i] = j` means mode `j` is the complex
+  conjugate of mode `i` — or `nothing` to disable conjugate symmetry for this solve.
+  A supplied permutation is the caller's assertion about the *eigenvectors*: two
+  eigenvalues forming a conjugate pair is necessary but not sufficient (the eigenspace must
+  be one-dimensional, or the eigenvectors chosen conjugately). `SpectralData`'s `:detect`
+  verifies exactly that before returning one.
 - `validate_mset` — check `mset` against the contract the solve assumes (variable count,
   minimum degree, unit multiindices, downward closure, and closure under
   `conjugate_permutation`) via [`validate_multiindex_set`](@ref), throwing an
@@ -257,27 +262,34 @@ linear-operator tuple is read from `model.linear_terms`.
 `(W, R)` — the solved [`Parametrisation`](@ref) and [`ReducedDynamics`](@ref).
 """
 function solve_cohomological_problem(
-        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
         mset::MultiindexSet{NVAR},
-        master_eigenvalues::SVector{ROM, ComplexF64},
-        master_modes::Matrix{ComplexF64},
-        left_eigenmodes::AbstractMatrix{ComplexF64},
+        spectral::SpectralData{ORD, ROM},
         resonance_set::ResonanceSet;
         initial_W::Union{Nothing, Parametrisation} = nothing,
         initial_R::Union{Nothing, ReducedDynamics} = nothing,
-        master_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
-        left_modes_derivatives::Union{Nothing, AbstractArray{ComplexF64, 3}} = nothing,
-        conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing,
+        conjugate_permutation = :from_spectral,
         validate_mset::Bool = true,
         show_progress::Bool = true,
         benchmark_dir::Union{Nothing, AbstractString} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
+    # Bind to concrete locals here, at the setup boundary, and nowhere else. The bundle's
+    # block fields are `Union{Nothing, Array}` so that ORD == 1 is representable, and every
+    # access to them is a type-unstable branch — harmless once, unacceptable in the loop.
+    master_eigs = master_eigenvalues(spectral)
+    master_modes = right_modes(spectral)::Matrix{ComplexF64}
+    left_eigenmodes = left_modes(spectral)::Matrix{ComplexF64}
+    master_modes_derivatives = right_mode_derivatives(spectral)
+    left_modes_derivatives = left_mode_blocks(spectral)
+    conj_perm = _spectral_conjugate_permutation(
+        conjugate_permutation, spectral, model.external_system)
+
     # Every path into the solve lands here, so this is where the mset contract is
     # enforced. `parametrise` checks first and passes validate_mset = false.
     validate_mset && validate_multiindex_set(mset, NVAR, ROM;
-        conjugate_permutation = conjugate_permutation)
-    _check_external_conjugate_block(conjugate_permutation, model.external_system, ROM, NVAR)
+        conjugate_permutation = conj_perm)
+    _check_external_conjugate_block(conj_perm, model.external_system, ROM, NVAR)
     FOM = size(master_modes, 1)
     @assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
     T = ComplexF64
@@ -294,11 +306,11 @@ function solve_cohomological_problem(
         R = initial_R
     else
         @assert ORD == 1 || master_modes_derivatives !== nothing """
-          master_modes_derivatives must be provided for ORD > 1 systems.
-          Supply a FOM × (ORD-1) × ROM array whose slice [:, k, r] = W^(k+1)[e_r].
-          """
+            master_modes_derivatives must be provided for ORD > 1 systems.
+            Supply a FOM × (ORD-1) × ROM array whose slice [:, k, r] = W^(k+1)[e_r].
+            """
         W, R = create_parametrisation_method_objects(mset, ORD, FOM, ROM, N_EXT, T)
-        _initialise_waveform!(W, R, master_modes, master_eigenvalues,
+        _initialise_waveform!(W, R, master_modes, master_eigs,
             master_modes_derivatives, unit_offset, model)
     end
 
@@ -313,22 +325,22 @@ function solve_cohomological_problem(
     lower_order = LowerOrderResources{NVAR, T}(mset, ORD, FOM)
     sparse_solver = _make_sparse_solver(MT, linear_terms, FOM, ROM)
 
-    _conj_perm = conjugate_permutation !== nothing ?
-                 SVector{NVAR, Int}(conjugate_permutation) : NoConjugatePermutation()
+    _conj_perm = conj_perm !== nothing ?
+                 SVector{NVAR, Int}(conj_perm) : NoConjugatePermutation()
 
     if !(_conj_perm isa NoConjugatePermutation)
         @info """
-          conjugate_permutation is active — the following assumptions must hold:
-            1. Real-valued FOM: all matrices in model.linear_terms and all nonlinear/force \
-          	 terms must have real-valued entries (eltype <: Real or purely-real complex).
-            2. Each mode either comes in a complex conjugate pair with another mode, or is \
-          	 self-paired  meaning it has a real eigenvalue and a real-valued mode shape.
-            3. Eigenvalue conjugacy is necessary but NOT sufficient for paired modes; \
-          	 the eigenvectors must satisfy master_modes[:, perm[r]] = conj(master_modes[:, r]).
-            4. If external modes are present (N_EXT > 0): the same pairing rules apply \
-          	 to the external eigenvalues, encoded in the NVAR-length permutation.
-          Passing an incorrect permutation silently corrupts the parametrisation and reduced-dynamics.
-          """
+            conjugate_permutation is active — the following assumptions must hold:
+           1. Real-valued FOM: all matrices in model.linear_terms and all nonlinear/force \
+            	 terms must have real-valued entries (eltype <: Real or purely-real complex).
+           2. Each mode either comes in a complex conjugate pair with another mode, or is \
+            	 self-paired  meaning it has a real eigenvalue and a real-valued mode shape.
+           3. Eigenvalue conjugacy is necessary but NOT sufficient for paired modes; \
+            	 the eigenvectors must satisfy master_modes[:, perm[r]] = conj(master_modes[:, r]).
+           4. If external modes are present (N_EXT > 0): the same pairing rules apply \
+            	 to the external eigenvalues, encoded in the NVAR-length permutation.
+            Passing an incorrect permutation silently corrupts the parametrisation and reduced-dynamics.
+            """
     end
 
     sym = if _conj_perm isa NoConjugatePermutation
@@ -348,7 +360,7 @@ function solve_cohomological_problem(
     # Right master-mode order-blocks: the linear master monomials of W hold all
     # ORD derivative blocks (filled from the eigenvectors at initialisation).
     right_master_blocks = view(W.poly.coefficients, :, :,
-        (unit_offset + 1):(unit_offset + ROM))
+        ((unit_offset + 1):(unit_offset + ROM)))
     Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
     invariance_C_coeffs, D_master_steps = precompute_master_column_polynomials(
         linear_terms, master_modes, Λ_master
@@ -450,53 +462,6 @@ function solve_cohomological_problem(
     end
 
     return W, R
-end
-
-"""
-	solve_cohomological_problem(model, mset, spectral::SpectralData, resonance_set; …) -> (W, R)
-
-Solve the cohomological equations from a [`SpectralData`](@ref) bundle.
-
-This is the same solve as the positional method; it exists so callers pass **one**
-spectral object instead of five separately-maintained arrays (`master_eigenvalues`,
-`master_modes`, `left_eigenmodes`, `master_modes_derivatives`, `left_modes_derivatives`).
-The mirrored right/left index conventions are handled by `SpectralData`'s accessors rather
-than at the call site.
-
-`conjugate_permutation` defaults to the one carried by `spectral`, extended over the
-external variables — pass an explicit vector to override it, or `nothing` to disable
-conjugate symmetry for this solve.
-"""
-@inline function solve_cohomological_problem(
-        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
-        mset::MultiindexSet{NVAR},
-        spectral::SpectralData{ORD, ROM},
-        resonance_set::ResonanceSet;
-        conjugate_permutation = :from_spectral,
-        validate_mset::Bool = true,
-        show_progress::Bool = true,
-        benchmark_dir::Union{Nothing, AbstractString} = nothing
-) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
-    # Bind to concrete locals here, at the setup boundary. The bundle's block fields are
-    # `Union{Nothing, Array}` so that ORD == 1 is representable, and every access to them
-    # is a type-unstable branch — harmless once, unacceptable inside the graded loop.
-    master_modes = right_modes(spectral)::Matrix{ComplexF64}
-    left_eigenmodes = left_modes(spectral)::Matrix{ComplexF64}
-    mmd = right_mode_derivatives(spectral)
-    lmd = left_mode_blocks(spectral)
-
-    perm = _spectral_conjugate_permutation(
-        conjugate_permutation, spectral, model.external_system)
-
-    return solve_cohomological_problem(
-        model, mset, master_eigenvalues(spectral), master_modes, left_eigenmodes,
-        resonance_set;
-        master_modes_derivatives = mmd,
-        left_modes_derivatives = lmd,
-        conjugate_permutation = perm,
-        validate_mset = validate_mset,
-        show_progress = show_progress,
-        benchmark_dir = benchmark_dir)
 end
 
 # `:from_spectral` — take the bundle's master-block permutation and append the external
