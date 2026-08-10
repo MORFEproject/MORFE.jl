@@ -31,8 +31,8 @@ using StaticArrays: SVector
 
 using ..Multiindices: MultiindexSet, all_multiindices_up_to
 using ..FullOrderModel: NDOrderModel
-using ..SpectralDecomposition: Spectrum
-using ..Resonance: ResonanceSet, build_resonance_set
+using ..SpectralDecomposition: Spectrum, SpectralData, master_eigenvalues
+using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
 using ..CohomologicalEquations: solve_cohomological_problem
 
 # Re-exported wholesale so `ParametrisationMethod` stays the one namespace users (and
@@ -242,6 +242,94 @@ function parametrise(
     )
 
     return W, R
+end
+
+# ==================== The unified entry point ====================
+
+"""
+	parametrise(model, spectral::SpectralData, expansion_order; resonance, …) -> (W, R)
+
+Compute the invariant manifold and its reduced dynamics. **This is the entry point.**
+
+Two positional arguments carry everything the reduction needs — the full-order model and
+the spectral data — and the third says how far to expand:
+
+```julia
+model, sd = build_model(case)              # or SpectralData(model, spectrum; master = …)
+W, R = parametrise(model, sd, 5)           # total degree ≤ 5
+W, R = parametrise(model, sd, mset)        # a monomial set you built
+```
+
+## Arguments
+
+- `model::NDOrderModel` — full-order model; supplies the linear operators, the nonlinear
+  terms, and the external system.
+- `spectral::SpectralData` — master eigenvalues and their right/left blocks, the outer
+  eigenvalues resonance detection reads, and the master-block conjugate involution. Build
+  it with `SpectralData(model, spectrum; master = …)`.
+- `expansion_order` — an `Integer` (total-degree truncation) or a `MultiindexSet` used as
+  given. Dispatch happens in [`build_multiindex_set`](@ref), so a new expansion policy is
+  a new method there and never a change here.
+
+## Keyword arguments
+
+- `resonance::Union{ResonanceConfig, ResonanceSet} = ResonanceConfig()` — either the
+  policy ([`ResonanceConfig`](@ref) gathers style, tolerances and the outer-target
+  settings) or a `ResonanceSet` you built yourself, used verbatim.
+- `conjugate_permutation = :from_spectral` — by default the master-block involution from
+  `spectral`, extended over the external variables using the model's external system.
+  Pass an explicit `NVAR`-length vector to override, or `nothing` to disable conjugate
+  symmetry for this solve.
+- `validate_mset::Bool = true` — check the monomial set against the five-clause contract
+  before solving. The solve is then told to skip its own check, so the set is walked once.
+- `show_progress::Bool = true`.
+
+## Returns
+
+`(W, R)` — the solved [`Parametrisation`](@ref) and [`ReducedDynamics`](@ref).
+"""
+function parametrise(
+        model::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
+        spectral::SpectralData{ORD, ROM},
+        expansion_order;
+        resonance::Union{ResonanceConfig, ResonanceSet} = ResonanceConfig(),
+        conjugate_permutation = :from_spectral,
+        validate_mset::Bool = true,
+        show_progress::Bool = true
+) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}
+    NVAR = ROM + N_EXT
+
+    # Each step is a separate, independently dispatchable function.
+    mset = build_multiindex_set(expansion_order, NVAR)
+
+    # Validated here rather than only in the solve, so a malformed set is rejected before
+    # the resonance-set construction. The permutation is needed for the closure clause,
+    # so it is resolved first.
+    if validate_mset
+        perm_for_check = conjugate_permutation === :from_spectral ?
+                         spectral.conjugate_permutation : conjugate_permutation
+        validate_multiindex_set(mset, NVAR, ROM;
+            conjugate_permutation = perm_for_check === nothing ? nothing :
+                                    _pad_permutation(perm_for_check, NVAR))
+    end
+
+    resonance_set = resonance isa ResonanceSet ? resonance :
+                    build_resonance_set(model, mset, spectral, resonance)
+
+    return solve_cohomological_problem(model, mset, spectral, resonance_set;
+        conjugate_permutation = conjugate_permutation,
+        validate_mset = false,   # already checked above; don't walk the set twice
+        show_progress = show_progress)
+end
+
+# The mset contract's conjugate-closure clause wants an NVAR-length permutation, while
+# `SpectralData` stores the ROM-length master block. Extending it with the identity on the
+# external variables is enough for the closure check: it is a permutation of 1:NVAR that
+# agrees with the real one on the master block, and the external block is checked
+# separately by the solve against the external system itself.
+function _pad_permutation(perm::AbstractVector{Int}, nvar::Int)
+    length(perm) == nvar && return collect(Int, perm)
+    return vcat(collect(Int, perm), collect((length(perm) + 1):nvar))
 end
 
 end # module
