@@ -21,7 +21,7 @@ using StaticArrays: SVector
 using ..Polynomials: DensePolynomial
 using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap,
                          evaluate_term!, fem_elements, _definition_site
-using ..ExternalSystems: ExternalSystem
+using ..ExternalSystems: ExternalSystem, external_basis
 
 export NDOrderModel, FirstOrderModel, linear_first_order_matrices, evaluate_nonlinear_terms!
 
@@ -199,6 +199,60 @@ struct NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
         T = eltype(linear_terms[1])
         new{ORDP1 - 1, ORDP1, 0, 0, T, MT}(n_fom, linear_terms, tuple(), nothing, 1)
     end
+end
+
+"""
+	Base.show(io::IO, ::MIME"text/plain", m::NDOrderModel)
+
+Print a summary of the model.
+
+Without this, showing a model dumps every field — which for a FEM backend means the entire
+`DofHandler` behind each nonlinear term. Everything printed here is already on the type;
+nothing is computed.
+
+The one-line method exists for the same reason: a model nested inside another container
+would otherwise expand its whole field tree there too.
+"""
+function Base.show(io::IO,
+        m::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {
+        ORD, ORDP1, N_NL, N_EXT, T, MT}
+    print(io, "NDOrderModel{ORD=", ORD, ", N_EXT=", N_EXT, "} FOM=", m.n_fom, ", ",
+        MT <: SparseMatrixCSC ? "sparse" : "dense", ", ", N_NL,
+        N_NL == 1 ? " nonlinear term" : " nonlinear terms",
+        ", max degree ", m.max_nl_degree)
+end
+
+function Base.show(io::IO, ::MIME"text/plain",
+        m::NDOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {
+        ORD, ORDP1, N_NL, N_EXT, T, MT}
+    layout = MT <: SparseMatrixCSC ? "sparse" : "dense"
+    println(io, "NDOrderModel{ORD = ", ORD, ", N_EXT = ", N_EXT, "}")
+    println(io, "  size      : FOM = ", m.n_fom, ",  ", layout, " (", MT, ")")
+    println(io, "  linear    : ", ORDP1, " operators (B_0 … B_", ORD, ")")
+    if N_NL == 0
+        println(io, "  nonlinear : none")
+    else
+        # A FEM model carries one term per polynomial degree, but a hand-written one can
+        # carry many; cap the list so a `show` never floods the REPL.
+        shown = min(N_NL, 6)
+        for i in 1:shown
+            t = m.nonlinear_terms[i]
+            key = i == 1 ? "  nonlinear : " : "              "
+            println(io, key, _term_label(t), "  (deg ", t.deg, ")")
+        end
+        shown < N_NL && println(io, "              … and ", N_NL - shown, " more")
+        # Not `maximum(t.deg)`: with an external system the external factors are subtracted,
+        # and this is the value the solve's progress exponent actually uses.
+        println(io, "  max degree: ", m.max_nl_degree)
+    end
+    print(io, "  external  : ")
+    if m.external_system === nothing
+        print(io, "none")
+    else
+        print(io, "N_EXT = ", N_EXT, ",  λ = ", Vector(m.external_system.eigenvalues))
+        external_basis(m.external_system) === nothing || print(io, "  (re-based)")
+    end
+    return nothing
 end
 
 """

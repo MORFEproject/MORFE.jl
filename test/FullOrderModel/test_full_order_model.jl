@@ -165,4 +165,31 @@ using SparseArrays
             @test_logs NDOrderModel((K, K, K), (term,))
         end
     end
+
+    @testset "show" begin
+        n = 4
+        B0 = Matrix{Float64}(I, n, n)
+        cubic = MultilinearMap((res, x, y, z) -> (res .+= x .* y .* z), (3, 0))
+        model = NDOrderModel((B0, 0.01 * B0, B0), (cubic,))
+
+        verbose = sprint(show, MIME"text/plain"(), model)
+        @test occursin("NDOrderModel{ORD = 2, N_EXT = 0}", verbose)
+        @test occursin("FOM = 4", verbose)
+        @test occursin("dense", verbose)
+        @test occursin("(deg 3)", verbose)
+        @test occursin("external  : none", verbose)
+        # The point of the method: a term's own fields must not be dumped (for a FEM
+        # backend that would drag the whole DofHandler into the REPL).
+        @test !occursin("f!", verbose)
+
+        sparse_model = NDOrderModel(
+            (sparse(B0), sparse(0.01 * B0), sparse(B0)), (cubic,))
+        @test occursin("sparse", sprint(show, MIME"text/plain"(), sparse_model))
+
+        compact = sprint(show, model)
+        @test occursin("NDOrderModel{ORD=2, N_EXT=0}", compact)
+        @test occursin("FOM=4", compact)
+        @test occursin("1 nonlinear term", compact)
+        @test !occursin('\n', compact)
+    end
 end # @testset "FullOrderModel"
