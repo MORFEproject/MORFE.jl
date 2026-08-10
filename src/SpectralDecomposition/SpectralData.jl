@@ -1,48 +1,3 @@
-"""
-Module `SpectralDataTypes` — the spectral input to a parametrisation, in one object.
-
-[`SpectralData`](@ref) bundles everything the cohomological solve needs to know about the
-spectrum: the master eigenvalues and their right/left eigenvector blocks, the non-master
-("outer") eigenvalues that resonance detection reads, and the conjugate involution on the
-master block.  It replaces the five loose, mutually-dependent arguments
-(`master_eigenvalues`, `master_modes`, `master_modes_derivatives`, `left_eigenmodes`,
-`left_modes_derivatives`) that callers previously had to keep consistent by hand.
-
-Master and outer modes are held symmetrically, as two [`ModeBundle`](@ref)s.
-
-## The mirrored index convention
-
-Right and left blocks are both `FOM × ORD × n`, but they index **oppositely**:
-
-| | physical slice | the other blocks |
-|---|---|---|
-| right | `[:, 1, :]` | `[:, 2:ORD, :]` — time derivatives `ψ_{k+1} = λ ψ_k` |
-| left  | `[:, ORD, :]` | `[:, 1:(ORD-1), :]` — orthogonality row operators |
-
-Because both arrays have the same shape, getting this backwards is type-correct and
-compiles.  It is therefore encoded in exactly two places and nowhere else: the
-`ModeBundle` constructor, which caches the two physical slices, and the four accessors
-[`right_modes`](@ref), [`left_modes`](@ref), [`right_mode_derivatives`](@ref) and
-[`left_mode_blocks`](@ref).  After construction there is no `[:, 1, :]` or `[:, ORD, :]`
-left in the codebase to get wrong.
-
-[`check_biorthogonality`](@ref) is the numerical guard: `φᵣᴴ B ψₛ = δᵣₛ` fails loudly
-under any swap.
-"""
-module SpectralDataTypes
-
-using LinearAlgebra
-using StaticArrays: SVector
-
-using ..FullOrderModel: NDOrderModel, linear_first_order_matrices
-using ..SpectralDecomposition: Spectrum, left_eigenmode_orders_from_slice
-using ..ConjugatePermutation: detect_conjugate_permutation
-
-export ModeBundle, SpectralData,
-       right_modes, left_modes, right_mode_derivatives, left_mode_blocks,
-       master_eigenvalues, outer_eigenvalues, master_bundle, outer_bundle,
-       check_biorthogonality
-
 # =============================================================================
 # ModeBundle
 # =============================================================================
@@ -439,5 +394,3 @@ function check_biorthogonality(sd::SpectralData{ORD, ROM}, model::NDOrderModel) 
     end
     return G
 end
-
-end # module

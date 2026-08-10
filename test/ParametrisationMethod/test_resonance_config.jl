@@ -16,7 +16,7 @@ using MORFE.Resonance: ResonanceConfig, resolve_tolerances, build_resonance_set,
                        resonance_set_from_complex_normal_form_style,
                        resonance_set_from_graph_style,
                        resonant_multiindices
-using MORFE.SpectralDataTypes: SpectralData
+using MORFE.SpectralDecomposition: SpectralData
 
 @testset "ResonanceConfig" begin
     B0 = [2.0 -1.0; -1.0 2.0]

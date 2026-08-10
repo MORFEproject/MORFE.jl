@@ -112,12 +112,12 @@ using ..ExternalSystems: ExternalSystem, external_basis
 # Conjugate-involution detection lives in the spectral layer (it is a statement about
 # the spectrum and the external system, not about the solve). Imported here so the
 # driver can use it, and re-exported below so the public names are unchanged.
-using ..ConjugatePermutation: detect_conjugate_permutation,
-                              external_conjugate_permutation,
-                              full_conjugate_permutation
-using ..SpectralDataTypes: SpectralData, right_modes, left_modes,
-                           right_mode_derivatives, left_mode_blocks,
-                           master_eigenvalues
+using ..SpectralDecomposition: detect_conjugate_permutation,
+                               external_conjugate_permutation,
+                               full_conjugate_permutation
+using ..SpectralDecomposition: SpectralData, right_modes, left_modes,
+                               right_mode_derivatives, left_mode_blocks,
+                               master_eigenvalues
 
 using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
                           build_multilinear_terms_cache, MultilinearTermsCache

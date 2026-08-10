@@ -6,8 +6,6 @@ include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
 include("SpectralDecomposition/SpectralDecomposition.jl")
-include("SpectralDecomposition/ConjugatePermutation.jl")
-include("SpectralDecomposition/SpectralData.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl")
@@ -33,8 +31,6 @@ using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
 using .SpectralDecomposition
-using .ConjugatePermutation
-using .SpectralDataTypes
 using .Realification
 using .Resonance
 using .InvarianceEquation

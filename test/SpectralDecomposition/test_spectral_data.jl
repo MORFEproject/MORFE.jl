@@ -16,10 +16,10 @@ using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
                                    left_eigenmode_orders_from_slice
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.Resonance: build_resonance_set
-using MORFE.SpectralDataTypes: SpectralData, ModeBundle, check_biorthogonality,
-                               right_modes, left_modes,
-                               right_mode_derivatives, left_mode_blocks,
-                               master_eigenvalues, outer_eigenvalues
+using MORFE.SpectralDecomposition: SpectralData, ModeBundle, check_biorthogonality,
+                                   right_modes, left_modes,
+                                   right_mode_derivatives, left_mode_blocks,
+                                   master_eigenvalues, outer_eigenvalues
 
 function _cubic(nd)
     MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3),

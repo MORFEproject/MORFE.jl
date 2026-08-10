@@ -1,29 +1,3 @@
-"""
-Module `ConjugatePermutation` — derive the conjugate involution `perm` from a spectrum.
-
-`perm[i] = j` means coordinate `j` carries the complex conjugate of coordinate `i`;
-self-paired entries (`perm[i] = i`) are real coordinates.  The cohomological solve uses
-it to fill secondary monomials by conjugation instead of solving them
-(`fill_conjugate_monomial!`), and `Realification.realify` uses the same encoding.
-
-This lives in the spectral layer, not in `CohomologicalEquations`, because it is a
-statement about *the spectrum and the external system* rather than about the solve:
-`detect_conjugate_permutation` reads eigenvalues, `external_conjugate_permutation`
-additionally reads the external basis.  Keeping it here lets `SpectralData` own its own
-master-block permutation, and lets callers assemble the full `NVAR` vector without
-reaching into the solver.
-
-**Eigenvalue pairing is necessary but not sufficient** — see
-[`detect_conjugate_permutation`](@ref)'s own warning.  A wrong permutation silently
-corrupts `W` and `R`.
-"""
-module ConjugatePermutation
-
-using ..ExternalSystems: ExternalSystem, external_basis
-
-export detect_conjugate_permutation, external_conjugate_permutation,
-       full_conjugate_permutation
-
 # =============================================================================
 # detect_conjugate_permutation — standalone utility
 # =============================================================================
@@ -156,5 +130,3 @@ function full_conjugate_permutation(
        """))
     return vcat(collect(master_perm), ROM .+ σ)
 end
-
-end # module
