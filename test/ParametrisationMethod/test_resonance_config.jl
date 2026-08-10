@@ -118,3 +118,62 @@ using MORFE.SpectralDecomposition: SpectralData
         @test viacfg.inner_resonances == direct.inner_resonances
     end
 end
+
+@testset "off-manifold near-resonance warning" begin
+    # ω₂ = 3ω₁ puts the cubic monomial z₁³ exactly on the OUTER pair's eigenvalue: s = 3iω₁
+    # meets λ₂ = 3iω₁. Nothing at degree 1 is resonant, so only a scan over the whole
+    # monomial set can see it — and it must report the PAIR once, not each conjugate.
+    M = [1.0 0.0; 0.0 1.0]
+    C = 1.0e-6 * M
+    cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0))
+    beam(ω2) = NDOrderModel(([1.0 0.0; 0.0 ω2^2], C, M), (cubic,))
+
+    function run(model, config, mset)
+        logs, rset = Test.collect_test_logs() do
+            ep = spectrum(model; solver = DefaultEigensolver())
+            spec = SpectralData(model, ep; master = [1, 2],
+                conjugate_permutation = :detect)
+            build_resonance_set(model, mset, spec, config)
+        end
+        return filter(r -> r.level >= Base.CoreLogging.Warn, logs), rset
+    end
+
+    cnf(tol) = ResonanceConfig(style = :complex_normal_form, tol = tol, warn_outer = true)
+    ms = all_multiindices_up_to(2, 3; min_degree = 1)
+
+    @testset "one warning per conjugate pair, naming mode and entries" begin
+        warns, _ = run(beam(3.0), cnf(0.05), ms)
+        @test length(warns) == 1
+        msg = string(warns[1].message)
+        # The physical mode number is what a user adds to `master`; the spectrum entries
+        # are what they index in their own spectrum. Both are reported because they
+        # coincide only under an adjacency assumption that need not hold.
+        @test occursin("outer physical mode pair 2", msg)
+        @test occursin("spectrum entries 3, 4", msg)
+        @test occursin("(3, 0)", msg)      # z₁³  ⇒ s = +3iω₁
+        @test occursin("(0, 3)", msg)      # z̄₁³ ⇒ s = -3iω₁
+        @test occursin("outer", msg) && !occursin("non-master", msg)
+    end
+
+    @testset "detuned ⇒ silent" begin
+        # ω₂ = 2.5 ω₁ leaves every superharmonic at least 0.5 away from the outer pair.
+        warns, _ = run(beam(2.5), cnf(0.05), ms)
+        @test isempty(warns)
+    end
+
+    @testset "silent by default: :graph carries tol = 0" begin
+        # A default config has no tolerance, and `_default_tol(:graph)` is 0.0 — the
+        # warning must not start firing merely because someone omitted `tol`.
+        warns, _ = run(beam(3.0), ResonanceConfig(), ms)
+        @test isempty(warns)
+    end
+
+    @testset "per-target tol vector skips the scan instead of throwing" begin
+        # The vector is sized for the INNER targets, so it cannot index an outer one.
+        # This used to reach `_resolve_outer_tol` and abort the whole solve.
+        vtol = [[0.05, 0.05] for _ in 1:length(ms)]
+        warns, rset = run(beam(3.0), cnf(vtol), ms)
+        @test rset isa MORFE.ResonanceSet
+        @test isempty(warns)
+    end
+end

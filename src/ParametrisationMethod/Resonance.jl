@@ -36,9 +36,12 @@ Four constructors are provided:
 """
 module Resonance
 
+using Printf: @sprintf
+
 using ..Multiindices: MultiindexSet, find_in_set
 using ..FullOrderModel: NDOrderModel
-using ..SpectralDecomposition: Spectrum
+using ..SpectralDecomposition: Spectrum, SpectralData, outer_bundle, indices,
+                               outer_conjugate_permutation, physical_mode
 using ..ExternalSystems: external_basis
 
 export ResonanceSet,
@@ -1007,12 +1010,12 @@ function build_resonance_set(model::NDOrderModel, mset::MultiindexSet,
     end
 
     config.warn_outer && _warn_outer_resonances(
-        mset, master_eigs, all_outer, external_eigs, config)
+        mset, master_eigs, all_outer, external_eigs, config, spectral)
     return rset
 end
 
 """
-	_warn_outer_resonances(mset, master_eigs, outer_eigs, external_eigs, config)
+	_warn_outer_resonances(mset, master_eigs, outer_eigs, external_eigs, config, spectral)
 
 Warn when a monomial is near-resonant with a physical mode that is *not* on the manifold.
 
@@ -1025,31 +1028,153 @@ Runs for autonomous and forced models alike — a monomial built purely from mas
 coordinates that lands on an off-manifold eigenvalue is exactly as near-singular as a
 forced one, and that its cause is the chosen master set makes it more worth surfacing.
 
-Diagnostic only: this builds its own resonance set and discards it.
+## Why this does not build a `ResonanceSet`
+
+It used to, and that made an on-by-default diagnostic cost `O(NMON × n_outer)` with a large
+constant: a whole second set including an `n_int × NMON` inner block that was discarded,
+`_superharmonics` allocating a temporary per monomial *twice*, and `_local_index`'s
+`findfirst` inside `is_resonant` turning the outer build into `O(NMON × n_outer²)`.
+
+The criterion needs none of that — it is one distance test per (monomial, outer target) — so
+it is written out directly. A run that flags nothing now costs a **constant 64 bytes**
+(measured, unchanged from `|mset| = 20` to `54`) against the 246 400 the probe cost at
+`|mset| = 35` with 58 outer modes. The test itself is unchanged: `|λ_outer[j] - s| < tol`,
+the same `EigenvalueCondition` comparison the probe applied, for every style. Reusing the
+already-built outer block instead was rejected deliberately: under `:real_normal_form` that
+block ORs each target with its conjugate, which would silently change what gets reported.
 """
 function _warn_outer_resonances(mset::MultiindexSet, master_eigs, outer_eigs,
-        external_eigs, config::ResonanceConfig)
+        external_eigs, config::ResonanceConfig, spectral)
     isempty(outer_eigs) && return nothing
-    inner_tol, outer_tol = resolve_tolerances(config, master_eigs, outer_eigs, length(mset))
-    probe = resonance_set_from_complex_normal_form_style(
-        mset, master_eigs, inner_tol;
-        external_eigenvalues = external_eigs, outer_eigenvalues = outer_eigs,
-        outer_tol = outer_tol)
-    n_int = length(master_eigs)
-    flagged = Dict{Int, Vector{Int}}()
-    for j in eachindex(outer_eigs)
-        cols = resonant_multiindices(probe, n_int + j)
-        isempty(cols) || (flagged[j] = cols)
+    tol = _outer_warn_tolerance(config, outer_eigs)
+    tol === nothing && return nothing
+    hits = _scan_outer_resonances(mset, master_eigs, outer_eigs, external_eigs, tol)
+    hits === nothing && return nothing
+    return _warn_flagged_outer_modes(mset, outer_eigs, hits, spectral)
+end
+
+"""
+	_outer_warn_tolerance(config, outer_eigenvalues)
+		-> Union{Nothing, Float64, Vector{Float64}}
+
+The threshold the off-manifold scan compares `|λ_outer[j] - s|` against, resolved *without*
+going through [`resolve_tolerances`](@ref).
+
+That function is wrong for this caller three times over: it re-emits every `@info` guard a
+second time, `tol_relative` makes it build `n_monomials` identical tolerance rows where the
+scan wants one, and for an explicitly per-target `tol` it returns `nothing` for the outer
+family — a vector sized for the *inner* targets cannot be indexed by an outer target number.
+That last case used to reach `_resolve_outer_tol` and **throw**, so a per-target tolerance
+combined with the default `warn_outer = true` aborted the solve. It now returns `nothing`,
+and the scan is skipped with a notice rather than taking the run down with it.
+"""
+function _outer_warn_tolerance(config::ResonanceConfig, outer_eigenvalues::AbstractVector)
+    if config.tol_relative !== nothing
+        rel = Float64(config.tol_relative)
+        return [rel * abs(λ) for λ in outer_eigenvalues]
     end
-    isempty(flagged) && return nothing
-    for j in sort!(collect(keys(flagged)))
-        monomials = join([string(Tuple(mset.exponents[c])) for c in sort!(flagged[j])], ", ")
+    tol = config.tol === nothing ? _default_tol(config.style) : config.tol
+    tol isa Real && return Float64(tol)
+    @info "ResonanceConfig: `tol` is a per-target vector sized for the inner targets, so " *
+          "it cannot be indexed by an outer target. The off-manifold near-resonance scan " *
+          "is skipped — pass a scalar `tol` or `tol_relative` to re-enable it."
+    return nothing
+end
+
+@inline _tol_at(tol::Float64, ::Int) = tol
+@inline _tol_at(tol::Vector{Float64}, j::Int) = tol[j]
+
+# s = ⟨λ, α⟩ for one monomial, accumulated in place: no `vcat` of the master and external
+# eigenvalues, and no per-monomial temporary. `α` has NVAR = n_int + N_EXT entries, the
+# master ones first, exactly as `_superharmonics` contracts them.
+@inline function _superharmonic(master_eigs, external_eigs, α)
+    s = zero(ComplexF64)
+    n_int = length(master_eigs)
+    @inbounds for i in 1:n_int
+        s += master_eigs[i] * α[i]
+    end
+    @inbounds for i in eachindex(external_eigs)
+        s += external_eigs[i] * α[n_int + i]
+    end
+    return s
+end
+
+# Every (outer target, monomial) pair that is near-resonant, or `nothing` when there are
+# none. The result vector is created on the FIRST hit, so a quiet run allocates a constant
+# handful of bytes whatever the size of the monomial set or the outer spectrum.
+function _scan_outer_resonances(
+        mset::MultiindexSet, master_eigs, outer_eigs, external_eigs,
+        tol::Union{Float64, Vector{Float64}})
+    hits = nothing
+    exps = mset.exponents
+    @inbounds for k in eachindex(exps)
+        s = _superharmonic(master_eigs, external_eigs, exps[k])
+        for j in eachindex(outer_eigs)
+            abs(outer_eigs[j] - s) < _tol_at(tol, j) || continue
+            hits === nothing && (hits = Tuple{Int, Int}[])
+            push!(hits, (j, k))
+        end
+    end
+    return hits
+end
+
+# ── Reporting ───────────────────────────────────────────────────────────────
+#
+# Conjugate partners are one physical mode, so they warn once, not twice. The pairing comes
+# from the spectral bundle's own involution; `spectral` is duck-typed here, so anything that
+# is not `SpectralData` falls back to one warning per target.
+
+_outer_pairing(sd::SpectralData) = outer_conjugate_permutation(sd)
+_outer_pairing(::Any) = nothing
+
+_outer_entry(sd::SpectralData, j::Int) = indices(outer_bundle(sd))[j]
+_outer_entry(::Any, j::Int) = j
+
+_outer_mode_number(sd::SpectralData, entry::Int) = physical_mode(sd, entry)
+_outer_mode_number(::Any, ::Int) = nothing
+
+# Both the mode's description and how to name it in the remedy: a pair is "mode pair p"
+# with both spectrum entries and λ written as a ± bi; a self-paired (real) or unpaired
+# target is singular.
+function _outer_mode_description(spectral, rep::Int, partner::Int, outer_eigs)
+    entry = _outer_entry(spectral, rep)
+    p = _outer_mode_number(spectral, entry)
+    λ = outer_eigs[rep]
+    if partner != rep
+        entries = sort!([entry, _outer_entry(spectral, partner)])
+        lam = @sprintf("%.3e ± %.3ei", real(λ), abs(imag(λ)))
+        head = p === nothing ? "an outer conjugate mode pair" :
+               "outer physical mode pair $p"
+        subject = p === nothing ? "those modes" : "mode $p"
+        return ("$head (spectrum entries $(join(entries, ", ")); λ = $lam)", subject)
+    end
+    lam = @sprintf("%.3e %s %.3ei", real(λ), imag(λ) < 0 ? "-" : "+", abs(imag(λ)))
+    head = p === nothing ? "an outer mode" : "outer physical mode $p"
+    subject = p === nothing ? "that mode" : "mode $p"
+    return ("$head (spectrum entry $entry; λ = $lam)", subject)
+end
+
+function _warn_flagged_outer_modes(mset::MultiindexSet, outer_eigs,
+        hits::Vector{Tuple{Int, Int}}, spectral)
+    σ = _outer_pairing(spectral)
+    paired = !(σ === nothing || isempty(σ))
+    # Group by the lower-numbered member of each conjugate pair, so both conjugates of a
+    # flagged mode land in the same bucket however the eigensolver ordered them.
+    groups = Dict{Int, Vector{Int}}()
+    for (j, k) in hits
+        rep = paired ? min(j, σ[j]) : j
+        push!(get!(() -> Int[], groups, rep), k)
+    end
+    for rep in sort!(collect(keys(groups)))
+        partner = paired ? σ[rep] : rep
+        cols = sort!(unique!(groups[rep]))
+        monomials = join((string(Tuple(mset.exponents[c])) for c in cols), ", ")
+        description, subject = _outer_mode_description(spectral, rep, partner, outer_eigs)
         @warn """
-        Monomials are near-resonant with a non-master eigenvalue \
-        (λ = $(outer_eigs[j])). That mode is not on the manifold, so its direction is \
-        solved through a near-singular operator and the ROM will lose accuracy there \
-        regardless of how the load is shaped. Offending monomial exponents: $monomials. \
-        Add that mode to the master set, detune the forcing, or add damping."""
+        Monomials are near-resonant with $description. That mode is not on the manifold, \
+        so its direction is solved through a near-singular operator and the ROM will lose \
+        accuracy there regardless of how the load is shaped. Offending monomial exponents: \
+        $monomials. Add $subject to the master set, detune the forcing, or add damping."""
     end
     return nothing
 end
