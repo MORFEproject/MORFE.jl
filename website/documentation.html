@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">18 modules · 248 documented entries · generated 11 August 2026</p>
+  <p class="lede">18 modules · 249 documented entries · generated 11 August 2026</p>
 
   <div id="Multiindices" class="doc-module-h">Multiindices</div>
   <div class="doc-module-desc" data-module="Multiindices"><div class="markdown"><p>Module <code>Multiindices</code> — graded-lexicographic multiindex sets and combinatorial utilities.</p>
@@ -738,7 +738,7 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
   </div>
 </div>
   <div id="MultilinearMaps" class="doc-module-h">MultilinearMaps</div>
-  <div class="doc-module-desc" data-module="MultilinearMaps"><div class="markdown"><p>Module <code>MultilinearMaps</code> — multilinear nonlinear term representations for <code>NDOrderModel</code>.</p>
+  <div class="doc-module-desc" data-module="MultilinearMaps"><div class="markdown"><p>Module <code>MultilinearMaps</code> — multilinear nonlinear term representations for <code>NthOrderModel</code>.</p>
 <p>Nonlinear terms in the full-order ODE are encoded as <code>AbstractMultilinearMap</code> subtypes:</p>
 <ul>
 <li><p><code>MultilinearMap&#123;ORD, F&#125;</code> — a single polynomial term of total degree <code>deg</code>, stored as a callable <code>f&#33;</code> that evaluates the multilinear form plus metadata &#40;<code>multiindex</code>, <code>multiplicity_external</code>, <code>deg</code>&#41;.</p>
@@ -755,7 +755,7 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>AbstractMultilinearMap&#123;ORD&#125;</code></pre>
-<p>Abstract supertype for all multilinear terms accepted by <code>NDOrderModel</code>.</p>
+<p>Abstract supertype for all multilinear terms accepted by <code>NthOrderModel</code>.</p>
 <p>Every concrete subtype must expose the fields <code>multiindex</code>, <code>multiplicity_external</code>, <code>deg</code>, and <code>fully_asymmetric</code> with the same semantics as <code>MultilinearMap</code>.</p>
 </div>
   </div>
@@ -773,7 +773,7 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
 <ul>
 <li><p><code>multiindex</code>, <code>multiplicity_external</code>, <code>deg</code></p>
 </li>
-<li><p><code>fully_asymmetric::Union&#123;Nothing, Bool&#125;</code> — <code>nothing</code> &#61; not set &#40;triggers <code>@info</code> at <code>NDOrderModel</code> construction if multiindex implies symmetry&#41;; <code>false</code> &#61; acknowledged symmetric; <code>true</code> &#61; override to <code>FullyAsymmetric</code>. FEM backends whose integrand is symmetric by construction should default to <code>false</code>.</p>
+<li><p><code>fully_asymmetric::Union&#123;Nothing, Bool&#125;</code> — <code>nothing</code> &#61; not set &#40;triggers <code>@info</code> at <code>NthOrderModel</code> construction if multiindex implies symmetry&#41;; <code>false</code> &#61; acknowledged symmetric; <code>true</code> &#61; override to <code>FullyAsymmetric</code>. FEM backends whose integrand is symmetric by construction should default to <code>false</code>.</p>
 </li>
 </ul>
 <p>Required methods &#40;extend <code>MORFE.*</code>&#41;:</p>
@@ -805,8 +805,8 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>MultilinearMap&#123;ORD, F&#125;</code></pre>
-<p>Represents a single monomial term of order deg in the nonlinear function of an <code>NDOrderModel</code>.</p>
-<p>A term is represented using a multiindex stored in the NTuple  	<code>multiindex</code> &#61; &#40;i<em>0, ..., i</em>&#123;ORD-1&#125;&#41;   where i<em>k is the multiplicity of the derivative x^&#40;k&#41;. So the i</em>k specifies how many times the derivative x^&#40;k&#41; appears as an argument.  In addition the function accepts <code>multiplicity_external</code> external variables r<em>1, r</em>2, ... which satisfy the first order dynamic system r&#39; &#61; dynamics<em>external&#40;r&#41;, where dynamics</em>external is a DensePolynomial defined in NDOrderModel. The influence in f&#33; is described by <code>multiplicity_external</code></p>
+<p>Represents a single monomial term of order deg in the nonlinear function of an <code>NthOrderModel</code>.</p>
+<p>A term is represented using a multiindex stored in the NTuple  	<code>multiindex</code> &#61; &#40;i<em>0, ..., i</em>&#123;ORD-1&#125;&#41;   where i<em>k is the multiplicity of the derivative x^&#40;k&#41;. So the i</em>k specifies how many times the derivative x^&#40;k&#41; appears as an argument.  In addition the function accepts <code>multiplicity_external</code> external variables r<em>1, r</em>2, ... which satisfy the first order dynamic system r&#39; &#61; dynamics<em>external&#40;r&#41;, where dynamics</em>external is a DensePolynomial defined in NthOrderModel. The influence in f&#33; is described by <code>multiplicity_external</code></p>
 <p>During evaluation the multilinear map is called as</p>
 <pre><code>f&#33;&#40;res,
    x^&#40;0&#41;, ... repeated i_0 times,
@@ -829,7 +829,7 @@ f&#33;&#40;res, x^&#40;1&#41;_1, x^&#40;1&#41;_2, ...&#41; &#61; f&#33;&#40;res,
 <li><p>Set <code>fully_asymmetric &#61; true</code> to override the symmetry assumption: the term is treated as <code>FullyAsymmetric</code> regardless of <code>multiindex</code>, so every ordered argument permutation is evaluated independently with multiplier 1. Use this when <code>f&#33;</code> is <strong>not</strong> symmetric in arguments that share a derivative order.</p>
 </li>
 </ul>
-<div class="admonition note"><p class="admonition-title">Default: `fully_asymmetric` not set (`nothing`)</p><p>When this keyword is omitted, the following assumptions hold &#40;and an <code>@info</code> message is emitted when the term is added to an <code>NDOrderModel</code>&#41;. Explicitly passing <code>fully_asymmetric &#61; false</code> applies the same behaviour silently, without triggering the message.</p>
+<div class="admonition note"><p class="admonition-title">Default: `fully_asymmetric` not set (`nothing`)</p><p>When this keyword is omitted, the following assumptions hold &#40;and an <code>@info</code> message is emitted when the term is added to an <code>NthOrderModel</code>&#41;. Explicitly passing <code>fully_asymmetric &#61; false</code> applies the same behaviour silently, without triggering the message.</p>
 <ol>
 <li><p><strong><code>f&#33;</code> is symmetric within each derivative-order group.</strong> For every <code>k</code> with <code>multiindex&#91;k&#93; &gt; 1</code>, permuting any two of the <code>multiindex&#91;k&#93;</code> argument slots that belong to derivative order <code>k</code> leaves the result unchanged.</p>
 </li>
@@ -893,12 +893,12 @@ MultilinearMap&#40;f&#33;, multiindex, multiplicity_external; fully_asymmetric&#
 <p><code>multiindex</code> pins the order exactly, since its length <em>is</em> <code>ORD</code>; <code>derivatives</code> does not, because it lists argument slots rather than the system order.</p>
 <p>Two rules apply only when neither <code>multiindex</code> nor <code>derivatives</code> was given:</p>
 <ul>
-<li><p><strong>Forcing rule.</strong>  A total degree of 1 with <code>multiplicity_external</code> unstated is read as a pure external forcing term &#40;<code>multiplicity_external &#61; 1</code>, no derivative factors&#41;.  Without it, <code>MultilinearMap&#40;f&#33;&#41;</code> on <code>f&#33;&#40;res, r&#41;</code> would resolve to a degree-1 term in the state, which is <em>linear</em> and cannot be represented here — linear contributions belong in the <code>linear_terms</code> matrices of <code>NDOrderModel</code>.</p>
+<li><p><strong>Forcing rule.</strong>  A total degree of 1 with <code>multiplicity_external</code> unstated is read as a pure external forcing term &#40;<code>multiplicity_external &#61; 1</code>, no derivative factors&#41;.  Without it, <code>MultilinearMap&#40;f&#33;&#41;</code> on <code>f&#33;&#40;res, r&#41;</code> would resolve to a degree-1 term in the state, which is <em>linear</em> and cannot be represented here — linear contributions belong in the <code>linear_terms</code> matrices of <code>NthOrderModel</code>.</p>
 </li>
 <li><p><strong>Mixed terms are never inferred.</strong>  With <code>multiplicity_external &gt;&#61; 1</code> and a non-zero internal degree, splitting the factors would mean guessing <code>f&#33;&#40;res, x, r&#41;</code>; that is an <code>ArgumentError</code>.  Only the pure-forcing split is inferable.  Stating <code>multiindex</code> lifts the restriction — mixed terms are perfectly legal, just not guessable.</p>
 </li>
 </ul>
-<p><strong>Every assumed value is reported through an <code>@info</code>.</strong>  A call that pins <code>multiindex</code> &#40;or <code>derivatives</code> plus <code>order</code>&#41; and <code>multiplicity_external</code> is silent, as are all the positional constructors.  <code>fully_asymmetric</code> is not reported here: it has its own diagnostic at <code>NDOrderModel</code> construction, which fires exactly when the flag changes the result.</p>
+<p><strong>Every assumed value is reported through an <code>@info</code>.</strong>  A call that pins <code>multiindex</code> &#40;or <code>derivatives</code> plus <code>order</code>&#41; and <code>multiplicity_external</code> is silent, as are all the positional constructors.  <code>fully_asymmetric</code> is not reported here: it has its own diagnostic at <code>NthOrderModel</code> construction, which fires exactly when the flag changes the result.</p>
 <h1>Examples</h1>
 <pre><code class="language-julia"># f&#33;&#40;res, x, x, ẋ&#41; in a second-order system
 MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 1&#41;&#41;
@@ -939,7 +939,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div><div class="markdown"><pre><code>MultilinearMap&#40;f&#33;, multiindex, multiplicity_external; fully_asymmetric &#61; nothing&#41;</code></pre>
 <p>Create a multilinear term for a system of order <code>ORD</code> that also takes the external state.</p>
 <p><code>f&#33;</code> is called with the derivative arguments selected by <code>multiindex</code> first, then the external state <code>r</code> repeated <code>multiplicity_external</code> times.  A term that depends on the external state may have total degree 1 — a pure forcing term is written <code>MultilinearMap&#40;f&#33;, &#40;0, 0&#41;, 1&#41;</code>, for which <code>MultilinearMap&#40;f&#33;&#41;</code> is a shorthand.</p>
-<p>The model this term goes into must have an external system; <code>NDOrderModel</code> rejects a <code>multiplicity_external &gt; 0</code> term otherwise.</p>
+<p>The model this term goes into must have an external system; <code>NthOrderModel</code> rejects a <code>multiplicity_external &gt; 0</code> term otherwise.</p>
 <h1>Arguments</h1>
 <ul>
 <li><p><code>f&#33;</code>: in-place evaluation function, accumulating into its first argument</p>
@@ -1047,7 +1047,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="markdown"><pre><code>_info_assumed&#40;f&#33;, multiindex, multiplicity_external, mi_source, assumed_order,
               assumed_me, forcing&#41;</code></pre>
 <p>Emit an <code>@info</code> naming every value the constructor had to default, or nothing at all when the caller pinned them.  <code>mi_source</code> is <code>:stated</code>, <code>:arity</code> or <code>:degree</code>, and names where an assumed <code>multiindex</code> came from.</p>
-<p><code>fully_asymmetric</code> is deliberately not reported here: it already has a dedicated diagnostic, <code>FullOrderModel._info_implicit_symmetry</code>, which fires at <code>NDOrderModel</code> construction exactly when the flag changes the result.</p>
+<p><code>fully_asymmetric</code> is deliberately not reported here: it already has a dedicated diagnostic, <code>FullOrderModel._info_implicit_symmetry</code>, which fires at <code>NthOrderModel</code> construction exactly when the flag changes the result.</p>
 </div>
   </div>
 </div>
@@ -1240,7 +1240,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
   <div class="doc-module-desc" data-module="ExternalSystems"><div class="markdown"><p>Module <code>ExternalSystems</code> — representation of autonomous external dynamical systems that drive a full-order model.</p>
 <p>An <code>ExternalSystem</code> encodes a finite-dimensional autonomous ODE</p>
 <pre><code>ṙ &#61; f&#40;r&#41; &#61; A r &#43; higher-order terms</code></pre>
-<p>whose state <code>r ∈ ℂᴺᴱˣᵀ</code> appears as a forcing argument in the nonlinear terms of an <code>NDOrderModel</code>.  The module stores the polynomial dynamics together with the linear matrix <code>A</code> and its eigenvalues, which enter the cohomological equations as external superharmonic frequencies.</p>
+<p>whose state <code>r ∈ ℂᴺᴱˣᵀ</code> appears as a forcing argument in the nonlinear terms of an <code>NthOrderModel</code>.  The module stores the polynomial dynamics together with the linear matrix <code>A</code> and its eigenvalues, which enter the cohomological equations as external superharmonic frequencies.</p>
 <h1>Upper-triangularity, and how it is obtained</h1>
 <p><code>A</code> <strong>must be upper triangular</strong>.  The cohomological equations are solved monomial by monomial in GrLex order, which makes the solve causal: every coefficient a monomial needs is already available when it is reached.  The <code>|β| &#61; 1</code> branch of the lower-order coupling needs <code>W&#91;α − eⱼ &#43; eᵢ&#93;</code>, a coefficient of the <em>same</em> total degree as <code>α</code>, and that coefficient precedes <code>α</code> in GrLex only when <code>i &lt; j</code>.  Accordingly <code>LowerOrderCouplings._sum_degree_one_terms&#33;</code> reads only the strictly upper triangle of the reduced linear dynamics <code>Λ</code>.</p>
 <p><code>Λ</code> is block structured: its master block is diagonal, its lower-left block vanishes because the external system is autonomous, and its lower-right block is <code>A</code>.  So <code>Λ</code> is upper triangular exactly when <code>A</code> is, and a strictly-lower entry of <code>A</code> would be discarded without trace.</p>
@@ -1733,9 +1733,16 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <p>A restriction is well defined only if the index set is <strong>closed under <code>σ</code></strong> — both members of a pair selected, or neither. Splitting a pair across the master/outer boundary is rejected at construction, where the offending entry can be named, rather than surfacing later inside the solve.</p>
 <p>Mode rescaling for conditioning &#40;e.g. multiplying both sides by <code>1e-2</code>&#41; is a caller-side operation on the raw arrays before construction; there is deliberately no <code>scale</code> field.</p>
 </div><div class="markdown"><pre><code>SpectralData&#40;; eigenvalues, right_modes, left_modes,
+			 right_derivatives &#61; nothing, left_blocks &#61; nothing,
 			 outer_eigenvalues &#61; ComplexF64&#91;&#93;, conjugate_permutation &#61; nothing&#41;</code></pre>
-<p>Build <code>SpectralData</code> directly from raw arrays — for eigensolvers that never construct an <code>Spectrum</code> &#40;a shift-invert Hopf solve, say&#41;.</p>
-<p><code>right_modes</code> and <code>left_modes</code> are <code>FOM × ORD × ROM</code> block arrays, or <code>FOM × ROM</code> matrices when <code>ORD &#61;&#61; 1</code>.  Remember the mirrored convention: the left array&#39;s <strong>last</strong> slice is the physical one.</p>
+<p>Build <code>SpectralData</code> directly from raw arrays — for eigensolvers that never construct a <code>Spectrum</code> &#40;a shift-invert Hopf solve, say&#41;.</p>
+<p>Two shapes are accepted:</p>
+<ul>
+<li><p><strong>Whole blocks.</strong> <code>right_modes</code> and <code>left_modes</code> are <code>FOM × ORD × ROM</code> arrays &#40;or <code>FOM × ROM</code> matrices when <code>ORD &#61;&#61; 1</code>&#41;, with <code>right_derivatives</code> and <code>left_blocks</code> left <code>nothing</code>. Remember the mirrored convention: the left array&#39;s <strong>last</strong> slice is the physical one.</p>
+</li>
+<li><p><strong>Physical slices plus their companions.</strong> <code>right_modes</code> and <code>left_modes</code> are the <code>FOM × ROM</code> physical slices, <code>right_derivatives</code> is <code>FOM × &#40;ORD-1&#41; × ROM</code> holding <code>W^&#40;k&#41;&#91;eᵣ&#93;</code>, and <code>left_blocks</code> is <code>FOM × &#40;ORD-1&#41; × ROM</code> holding the lower-order left blocks <code>φ_&#123;r,j&#125;</code>. This is the shape callers of the old positional solve already had, and taking it here means the mirrored convention is applied in <strong>one</strong> place instead of at every call site — where a swap is type-correct and compiles silently.</p>
+</li>
+</ul>
 <p><code>conjugate_permutation</code> is taken as given here &#40;no <code>:detect</code>&#41;: a caller assembling raw arrays is in the best position to know the pairing, and eigenvalue-based detection is not sufficient on its own.</p>
 </div><div class="markdown"><pre><code>SpectralData&#40;model, eigenproblem; master,
 			 conjugate_permutation &#61; nothing, keep_outer_modes &#61; false&#41;</code></pre>
@@ -1822,6 +1829,18 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="SpectralDecomposition-_stack_blocks">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L365" target="_blank" rel="noopener">_stack_blocks</a>(physical::AbstractArray, companions::Union{Nothing, AbstractArray}, ROM::Int64, side::Symbol)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_stack_blocks&#40;physical, companions, ROM, side&#41; -&gt; Array&#123;ComplexF64, 3&#125;</code></pre>
+<p>Assemble one side&#39;s order-blocks, applying the mirrored convention <strong>here and nowhere else</strong>: the right physical slice is block 1 with its derivatives in <code>2:ORD</code>, the left physical slice is block <code>ORD</code> with its orthogonality blocks in <code>1:&#40;ORD-1&#41;</code>.</p>
+<p>With <code>companions &#61;&#61;&#61; nothing</code> the caller already holds whole blocks and they are used as given.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="SpectralDecomposition-_structural_left_eigenmode_orders">
   <div class="doc-sig">
     <span class="badge f">function</span>
@@ -1839,7 +1858,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-check_biorthogonality">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L555" target="_blank" rel="noopener">check_biorthogonality</a>(sd::SpectralData{ORD, ROM}, model::NthOrderModel) where {ORD, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L610" target="_blank" rel="noopener">check_biorthogonality</a>(sd::SpectralData{ORD, ROM}, model::NthOrderModel) where {ORD, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>check_biorthogonality&#40;sd::SpectralData, model&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
