@@ -740,6 +740,25 @@ the solve.
   the inner block.
 - `warn_outer::Bool = true` — warn when a monomial is near-resonant with an off-manifold
   mode, whose direction is then solved through a near-singular operator.
+- `eigenvalue_projection::Symbol = :full` — which part of the master eigenvalues detection
+  compares. `:full` uses them as they are; `:imaginary_part_only` replaces `λ` by
+  `i·Im(λ)`, so near-resonance is judged on **frequency alone** and the growth rate is
+  ignored. See below.
+
+## `eigenvalue_projection`
+
+For an oscillatory reduction about a marginally stable state — a Hopf normal form, say —
+what makes a monomial resonant is that its frequency combination `⟨Im λ, α⟩` lands on a
+target frequency. The growth rate `Re λ` is small, and it *varies with the continuation
+parameter*, so letting it enter the detuning makes the flag pattern depend on where in a
+parameter sweep you happen to be. `:imaginary_part_only` removes that dependence.
+
+It applies to the **master eigenvalues only** — the external and outer eigenvalues are
+compared as they are. Note it also changes what `tol_relative` means, and helpfully so:
+`tol_relative * |λ|` becomes `tol_relative * |Im λ|`, a tolerance measured on the same
+frequency scale the detection now uses.
+
+The default is `:full`, so nothing changes unless it is asked for.
 
 ## Why `tol` defaults to `nothing` rather than `1e-2`
 
@@ -755,16 +774,21 @@ struct ResonanceConfig
     conjugacy_map::Union{Nothing, Vector{Int}}
     outer_targets::Bool
     warn_outer::Bool
+    eigenvalue_projection::Symbol
 
     function ResonanceConfig(; style::Symbol = :graph,
             tol::Union{Nothing, Real, AbstractVector} = nothing,
             tol_relative::Union{Nothing, Real} = nothing,
             conjugacy_map::Union{Nothing, Vector{Int}} = nothing,
             outer_targets::Bool = false,
-            warn_outer::Bool = true)
+            warn_outer::Bool = true,
+            eigenvalue_projection::Symbol = :full)
         style in (:graph, :complex_normal_form, :real_normal_form) || throw(ArgumentError(
             "unknown resonance style :$style; choose :graph, :complex_normal_form or " *
             ":real_normal_form"))
+        eigenvalue_projection in (:full, :imaginary_part_only) || throw(ArgumentError(
+            "unknown eigenvalue_projection :$eigenvalue_projection; choose :full or " *
+            ":imaginary_part_only"))
         if style === :real_normal_form && conjugacy_map === nothing
             throw(ArgumentError(
                 ":real_normal_form pairs conjugate targets, so it requires `conjugacy_map`"))
@@ -784,7 +808,8 @@ struct ResonanceConfig
         # It used to be impossible because one per-target tolerance vector was handed to
         # both target families; `outer_tol` now sizes them separately, so the combination
         # is both legal and the physically obvious reading of "relative detuning".
-        return new(style, tol, tol_relative, conjugacy_map, outer_targets, warn_outer)
+        return new(style, tol, tol_relative, conjugacy_map, outer_targets, warn_outer,
+            eigenvalue_projection)
     end
 end
 
@@ -795,7 +820,22 @@ function Base.show(io::IO, c::ResonanceConfig)
     c.conjugacy_map === nothing || print(io, ", conjugacy_map = ", c.conjugacy_map)
     c.outer_targets && print(io, ", outer_targets = true")
     c.warn_outer || print(io, ", warn_outer = false")
+    c.eigenvalue_projection === :full ||
+        print(io, ", eigenvalue_projection = :", c.eigenvalue_projection)
     print(io, ")")
+end
+
+"""
+	project_eigenvalues(λ, projection::Symbol) -> Vector{ComplexF64}
+
+Apply a [`ResonanceConfig`](@ref) eigenvalue projection: `:full` is the identity,
+`:imaginary_part_only` drops the real part so detection compares frequencies alone.
+"""
+function project_eigenvalues(λ::AbstractVector, projection::Symbol)
+    projection === :full && return Vector{ComplexF64}(λ)
+    projection === :imaginary_part_only &&
+        return ComplexF64[complex(0.0, imag(l)) for l in λ]
+    throw(ArgumentError("unknown eigenvalue_projection :$projection"))
 end
 
 # Style default for an unspecified tolerance.
@@ -897,7 +937,14 @@ function build_resonance_set(model::NthOrderModel, mset::MultiindexSet,
         spectral, config::ResonanceConfig)
     # `Vector{ComplexF64}`, not `collect`: the master eigenvalues are an `SVector`, and
     # `collect` would give a `SizedVector` that the constructors' signatures reject.
-    master_eigs = Vector{ComplexF64}(spectral.master.eigenvalues)
+    #
+    # The projection is applied HERE, before `resolve_tolerances`, so it governs both what
+    # detection compares and what `tol_relative` is relative to — with
+    # `:imaginary_part_only` that makes the threshold `tol_relative * |Im λ|`, measured on
+    # the same frequency scale the detection now uses. Master eigenvalues only: the
+    # external and outer targets are compared as they are.
+    master_eigs = project_eigenvalues(spectral.master.eigenvalues,
+        config.eigenvalue_projection)
     all_outer = Vector{ComplexF64}(spectral.outer.eigenvalues)
     external_eigs = model.external_system === nothing ? ComplexF64[] :
                     Vector(model.external_system.eigenvalues)

@@ -101,11 +101,25 @@ end
         @test master_conjugate_permutation(exp) == [2, 1]
         @test exp.conjugate_permutation == [2, 1, 3, 4]
 
-        # Master block only — a full NVAR-length vector is the wrong length here.
+        # A SPECTRUM-WIDE involution (one entry per eigenvalue) is taken verbatim — it is
+        # exactly what `:detect` derives above, and stating it spares the eigenvector
+        # verification. The master restriction is identical to the ROM-length form, so a
+        # call site moving between them leaves the solve bit-identical.
+        wide = SpectralData(model, ep; master = idx, conjugate_permutation = [2, 1, 4, 3])
+        @test wide.conjugate_permutation == [2, 1, 4, 3]
+        @test master_conjugate_permutation(wide) == master_conjugate_permutation(det)
+        @test outer_conjugate_permutation(wide) == outer_conjugate_permutation(det)
+
+        # Neither ROM-length nor spectrum-length is still a length error.
         @test_throws ArgumentError SpectralData(model, ep; master = idx,
-            conjugate_permutation = [2, 1, 4, 3])
+            conjugate_permutation = [2, 1, 3])
+        # Right length, but not a permutation / not an involution.
         @test_throws ArgumentError SpectralData(model, ep; master = idx,
             conjugate_permutation = [1, 1])
+        @test_throws ArgumentError SpectralData(model, ep; master = idx,
+            conjugate_permutation = [2, 1, 4, 4])
+        @test_throws ArgumentError SpectralData(model, ep; master = idx,
+            conjugate_permutation = [2, 3, 4, 1])
 
         # Selecting half a conjugate pair leaves no symmetry to restrict, and must be
         # rejected at construction where the offending entry can be named — not later,

@@ -417,11 +417,24 @@ function _as_blocks(a::AbstractArray, n::Int, what::AbstractString)
     end
 end
 
+# The involution over the whole spectrum, `1:n_eigs`. Unlike the master block this one is
+# not widened — it is stored as given, so every entry, master and outer alike, carries its
+# true conjugate partner.
+function _validate_spectrum_permutation(perm, n_eigs::Int)
+    perm === nothing && return nothing
+    sort(collect(perm)) == collect(1:n_eigs) || throw(ArgumentError(
+        "conjugate_permutation must be a permutation of 1:$n_eigs, got $(collect(perm))"))
+    all(i -> perm[perm[i]] == i, 1:n_eigs) || throw(ArgumentError(
+        "conjugate_permutation must be an involution, got $(collect(perm))"))
+    return nothing
+end
+
 function _validate_master_permutation(perm, ROM::Int)
     perm === nothing && return nothing
     length(perm) == ROM || throw(ArgumentError(
         "conjugate_permutation has $(length(perm)) entries but ROM = $ROM. It covers the " *
-        "MASTER BLOCK ONLY; the external block is appended at solve time from the model's " *
+        "MASTER BLOCK ONLY (or, from a solved Spectrum, the whole spectrum — one entry per " *
+        "eigenvalue); the external block is appended at solve time from the model's " *
         "external system."))
     sort(collect(perm)) == collect(1:ROM) || throw(ArgumentError(
         "conjugate_permutation must be a permutation of 1:$ROM, got $(collect(perm))"))
@@ -461,6 +474,21 @@ the eigenvectors** (`Ψ[:, σ(r)] ≈ conj(Ψ[:, r])` on every order-block, both
 returns `nothing` with an `@info` if they disagree — eigenvalue pairing alone is necessary
 but not sufficient, and a wrong permutation silently corrupts `W` and `R`. The default is
 `nothing` so that enabling conjugate symmetry is always a deliberate act.
+
+An explicit vector is accepted at **either of two lengths**:
+
+- `n_eigs` — the involution over the whole spectrum, stored verbatim. Prefer this whenever
+  the solver's pairing is known for every entry. A structural solver returning adjacent
+  conjugate pairs, for instance, has `σ = reduce(vcat, [[2p, 2p-1] for p in 1:n_pairs])`
+  exactly. Outer entries then carry their true partner, so [`physical_mode`](@ref) numbers
+  physical modes rather than individual eigenvalues, and per-mode diagnostics (the
+  outer-resonance warning) name the pair instead of warning once per conjugate.
+- `ROM` — the master block only. Outer entries are left **self-paired**, the honest reading
+  of "the caller stated the master pairing, not the spectrum's"; an outer conjugate pair
+  then reports as two separate modes.
+
+Both derive the same master restriction, so moving a call site from the second form to the
+first leaves the solve bit-identical.
 """
 function SpectralData(model::NthOrderModel, eigenproblem::Spectrum;
         master,
@@ -557,12 +585,29 @@ end
 
 _resolve_permutation(::Nothing, args...) = nothing
 
-# An explicitly supplied ROM-length master block, widened to the full spectrum. The outer
-# entries are left self-paired: the caller stated the master pairing, not the spectrum's.
+# An explicitly supplied permutation, accepted at either of two lengths.
+#
+#   length == n_eigs — the involution over the WHOLE spectrum, used verbatim. Prefer this
+#       when the solver's pairing is known for every entry (an adjacent-pair structural
+#       spectrum, say): outer entries then carry their true conjugate partner, so
+#       `_mode_numbers` numbers physical modes rather than individual eigenvalues, and
+#       anything reporting per-mode (the outer-resonance warning) names the pair.
+#
+#   length == ROM — the master block only, widened to the full spectrum by leaving every
+#       outer entry SELF-PAIRED. That is the honest reading of "the caller stated the
+#       master pairing, not the spectrum's", but it does mean an outer conjugate pair
+#       reports as two separate modes.
+#
+# Both derive the same master restriction, so switching a call site from the ROM-length
+# form to the spectrum-wide one leaves the solve bit-identical.
 function _resolve_permutation(perm::AbstractVector{Int}, ep, idx, right, left, ROM, atol)
     p = collect(Int, perm)
-    _validate_master_permutation(p, ROM)
     n_eigs = length(ep.eigenvalues)
+    if length(p) == n_eigs && n_eigs != ROM
+        _validate_spectrum_permutation(p, n_eigs)
+        return p
+    end
+    _validate_master_permutation(p, ROM)
     σ = collect(1:n_eigs)
     for (l, g) in enumerate(idx)
         σ[g] = idx[p[l]]        # local pairing re-expressed in spectrum indices
