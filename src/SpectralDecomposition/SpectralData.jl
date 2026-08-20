@@ -322,6 +322,16 @@ Two shapes are accepted:
 `conjugate_permutation` is taken as given here (no `:detect`): a caller assembling raw
 arrays is in the best position to know the pairing, and eigenvalue-based detection is not
 sufficient on its own.
+
+It is accepted at **either of two lengths**:
+
+- `ROM` — the master block. Outer entries are left self-paired, the honest statement that
+  raw arrays say nothing about their conjugate structure.
+- `ROM + length(outer_eigenvalues)` — the involution over the whole synthetic spectrum,
+  used verbatim. Pass this when the outer modes' pairing IS known, so that
+  `physical_mode` numbers physical modes rather than eigenvalues and a conjugate pair
+  among the outer targets reports once rather than twice. A real (non-oscillatory) outer
+  mode is its own conjugate and maps to itself.
 """
 function SpectralData(; eigenvalues::AbstractVector,
         right_modes::AbstractArray,
@@ -345,8 +355,18 @@ function SpectralData(; eigenvalues::AbstractVector,
     outer = ModeBundle{ORD}(Vector{ComplexF64}(outer_eigenvalues), nothing, nothing,
         (ROM + 1):(ROM + n_out))
     perm = conjugate_permutation === nothing ? nothing : collect(Int, conjugate_permutation)
-    _validate_master_permutation(perm, ROM)
-    σ = _embed_master_permutation(perm, ROM, ROM + n_out)
+    # Accepted at either length, as in `_resolve_permutation`: a ROM-length MASTER block
+    # (outer entries then self-paired), or the involution over the whole synthetic
+    # spectrum `1:(ROM + n_out)`, used verbatim. The second is what lets a caller state
+    # the pairing of its OUTER modes — without it every outer entry is its own physical
+    # mode, and a conjugate pair among them warns twice instead of once.
+    σ = if perm !== nothing && n_out > 0 && length(perm) == ROM + n_out
+        _validate_spectrum_permutation(perm, ROM + n_out)
+        perm
+    else
+        _validate_master_permutation(perm, ROM)
+        _embed_master_permutation(perm, ROM, ROM + n_out)
+    end
     return SpectralData{ORD, ROM}(master, outer, σ, ROM + n_out)
 end
 

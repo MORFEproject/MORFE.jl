@@ -288,7 +288,7 @@ Abstract supertype for conditions that test whether a monomial is resonant with 
 mode at superharmonic frequency `s`.
 
 All concrete subtypes must implement
-`is_resonant(cond, target::Int, s::ComplexF64, k::Int) -> Bool`.
+`is_resonant(cond, target::Int, s::Number, k::Int) -> Bool`.
 """
 abstract type OuterResonanceCondition end
 
@@ -306,7 +306,7 @@ Flags a monomial as resonant when `|λⱼ - s| < tol`.
   typically `1:n`.  Kept explicit so several conditions can cover disjoint targets.
 """
 struct EigenvalueCondition <: OuterResonanceCondition
-    eigenvalues::Vector{ComplexF64}
+    eigenvalues::Vector{<:Number}
     tol::Union{Float64, Vector{Vector{Float64}}}
     target_indices::Vector{Int}
     function EigenvalueCondition(eig, tol, target_indices = 1:length(eig))
@@ -331,7 +331,7 @@ so that conjugate eigenvalue pairs share the resonance flag.
 - `target_indices::Vector{Int}` — which local targets this condition applies to.
 """
 struct RealEigenvalueCondition <: OuterResonanceCondition
-    eigenvalues::Vector{ComplexF64}
+    eigenvalues::Vector{<:Number}
     conjugacy_map::Vector{Int}
     tol::Union{Float64, Vector{Vector{Float64}}}
     target_indices::Vector{Int}
@@ -365,7 +365,7 @@ raw distance tolerance.
   as in [`RealEigenvalueCondition`](@ref); `nothing` when pairing is not wanted.
 """
 struct ConditionNumberEstimateCondition <: OuterResonanceCondition
-    eigenvalues::Vector{ComplexF64}
+    eigenvalues::Vector{<:Number}
     spectral_radius::Float64
     condition_numbers::Vector{Float64}
     max_cond::Float64
@@ -381,7 +381,7 @@ end
 
 @inline _local_index(cond::OuterResonanceCondition, target::Int) = findfirst(==(target), cond.target_indices)
 
-function is_resonant(cond::EigenvalueCondition, target::Int, s::ComplexF64, k::Int)::Bool
+function is_resonant(cond::EigenvalueCondition, target::Int, s::Number, k::Int)::Bool
     local_idx = _local_index(cond, target)
     local_idx === nothing && return false
     eig = cond.eigenvalues[local_idx]
@@ -389,7 +389,7 @@ function is_resonant(cond::EigenvalueCondition, target::Int, s::ComplexF64, k::I
     return tol isa Float64 ? abs(eig - s) < tol : abs(eig - s) < tol[k][local_idx]
 end
 
-function is_resonant(cond::RealEigenvalueCondition, target::Int, s::ComplexF64, k::Int)::Bool
+function is_resonant(cond::RealEigenvalueCondition, target::Int, s::Number, k::Int)::Bool
     local_idx = _local_index(cond, target)
     local_idx === nothing && return false
     local_conj = cond.conjugacy_map[local_idx]
@@ -403,7 +403,7 @@ function is_resonant(cond::RealEigenvalueCondition, target::Int, s::ComplexF64, 
     end
 end
 
-function is_resonant(cond::ConditionNumberEstimateCondition, target::Int, s::ComplexF64,
+function is_resonant(cond::ConditionNumberEstimateCondition, target::Int, s::Number,
         ::Int)::Bool
     local_idx = _local_index(cond, target)
     local_idx === nothing && return false
@@ -496,9 +496,9 @@ proximity `|λⱼ - s| < tol`.
 """
 function resonance_set_from_graph_style(
         multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::Vector{ComplexF64},
-        external_eigenvalues::Vector{ComplexF64},
-        outer_eigenvalues::Vector{ComplexF64},
+        master_eigenvalues::AbstractVector{<:Number},
+        external_eigenvalues::AbstractVector{<:Number},
+        outer_eigenvalues::AbstractVector{<:Number},
         tol::Union{Float64, Vector{Vector{Float64}}}) where {NVAR}
     n_int = length(master_eigenvalues)
     n_out = length(outer_eigenvalues)
@@ -530,10 +530,10 @@ forcing directions.
 """
 function resonance_set_from_complex_normal_form_style(
         multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::Vector{ComplexF64},
+        master_eigenvalues::AbstractVector{<:Number},
         tol::Union{Float64, Vector{Vector{Float64}}};
-        external_eigenvalues::Vector{ComplexF64} = ComplexF64[],
-        outer_eigenvalues::Vector{ComplexF64} = ComplexF64[],
+        external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+        outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
         outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
     n_int = length(master_eigenvalues)
     n_out = length(outer_eigenvalues)
@@ -596,11 +596,11 @@ locally).  `conjugacy_map[i]` is the local index of the conjugate of target `i`.
 """
 function resonance_set_from_real_normal_form_style(
         multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::Vector{ComplexF64},
+        master_eigenvalues::AbstractVector{<:Number},
         conjugacy_map::Vector{Int},
         tol::Union{Float64, Vector{Vector{Float64}}};
-        external_eigenvalues::Vector{ComplexF64} = ComplexF64[],
-        outer_eigenvalues::Vector{ComplexF64} = ComplexF64[],
+        external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+        outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
         outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
     n_int = length(master_eigenvalues)
     n_out = length(outer_eigenvalues)
@@ -643,12 +643,12 @@ are populated (default: all).
 """
 function resonance_set_from_condition_number_estimate(
         multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::Vector{ComplexF64},
+        master_eigenvalues::AbstractVector{<:Number},
         spectral_radius::Float64,
         target_condition_numbers::Vector{Float64},
         max_cond::Float64;
-        external_eigenvalues::Vector{ComplexF64} = ComplexF64[],
-        outer_eigenvalues::Vector{ComplexF64} = ComplexF64[],
+        external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+        outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
         inner_target_indices::Union{Nothing, UnitRange{Int}, Vector{Int}} = nothing,
         outer_target_indices::Union{Nothing, UnitRange{Int}, Vector{Int}} = nothing,
         conjugacy_map::Union{Nothing, Vector{Int}} = nothing) where {NVAR}
@@ -686,8 +686,8 @@ Advanced overload that accepts a pre-built `OuterResonanceCondition` for the out
 """
 function resonance_set_from_graph_style(
         multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::Vector{ComplexF64},
-        external_eigenvalues::Vector{ComplexF64},
+        master_eigenvalues::AbstractVector{<:Number},
+        external_eigenvalues::AbstractVector{<:Number},
         outer_condition::OuterResonanceCondition) where {NVAR}
     n_int = length(master_eigenvalues)
     n_out = isempty(outer_condition.target_indices) ? 0 :
@@ -826,15 +826,40 @@ function Base.show(io::IO, c::ResonanceConfig)
 end
 
 """
-	project_eigenvalues(λ, projection::Symbol) -> Vector{ComplexF64}
+	project_eigenvalues(λ, projection::Symbol) -> Vector
 
 Apply a [`ResonanceConfig`](@ref) eigenvalue projection: `:full` is the identity,
-`:imaginary_part_only` drops the real part so detection compares frequencies alone.
+returning `Vector{ComplexF64}`; `:imaginary_part_only` returns the imaginary parts
+`Im(λ)` as `Vector{Float64}`.
+
+A projected eigenvalue `i·Im(λ)` is carried by the real number `Im(λ)` — the two are
+isomorphic for this purpose, because for real `a, b`
+
+    |i·a − i·b| = |a − b|
+
+and the whole of detection is `abs(eig - s)`. So carrying the frequencies as `Float64`
+reproduces the pure-imaginary complex computation *exactly*, with no `i·Im`
+reconstruction and one code path serving both modes.
+
+**Project every family the same way** — master, external and outer. Mixing a projected
+family with an unprojected one promotes the superharmonic `s = ⟨λ, α⟩` back to complex and
+reinstates the growth rates through the back door, which is precisely what the projection
+was asked to remove.
+
+Always returns a plain `Vector`. The master eigenvalues arrive as a static vector, and a
+comprehension over one stays static — a `SizedVector` that the `resonance_set_from_*`
+signatures reject. The loops below are the same reason the caller used
+`Vector{ComplexF64}(…)` rather than `collect`.
 """
 function project_eigenvalues(λ::AbstractVector, projection::Symbol)
     projection === :full && return Vector{ComplexF64}(λ)
-    projection === :imaginary_part_only &&
-        return ComplexF64[complex(0.0, imag(l)) for l in λ]
+    if projection === :imaginary_part_only
+        out = Vector{Float64}(undef, length(λ))
+        @inbounds for (i, l) in enumerate(λ)
+            out[i] = imag(l)
+        end
+        return out
+    end
     throw(ArgumentError("unknown eigenvalue_projection :$projection"))
 end
 
@@ -941,18 +966,26 @@ function build_resonance_set(model::NthOrderModel, mset::MultiindexSet,
     # The projection is applied HERE, before `resolve_tolerances`, so it governs both what
     # detection compares and what `tol_relative` is relative to — with
     # `:imaginary_part_only` that makes the threshold `tol_relative * |Im λ|`, measured on
-    # the same frequency scale the detection now uses. Master eigenvalues only: the
-    # external and outer targets are compared as they are.
+    # the same frequency scale the detection now uses. All three eigenvalue families are
+    # projected: master, external and outer, so the detection compares frequencies alone
+    # everywhere.
     master_eigs = project_eigenvalues(spectral.master.eigenvalues,
         config.eigenvalue_projection)
-    all_outer = Vector{ComplexF64}(spectral.outer.eigenvalues)
-    external_eigs = model.external_system === nothing ? ComplexF64[] :
-                    Vector(model.external_system.eigenvalues)
+    all_outer = project_eigenvalues(spectral.outer.eigenvalues,
+        config.eigenvalue_projection)
+    # The EMPTY cases must carry the projected element type too, or a `Float64[]` family
+    # meets a `ComplexF64[]` one and the superharmonic promotes back to complex — which
+    # would silently undo the projection for exactly the models that have no external
+    # system or no outer targets.
+    T = eltype(master_eigs)
+    external_eigs = model.external_system === nothing ? T[] :
+                    project_eigenvalues(Vector(model.external_system.eigenvalues),
+                        config.eigenvalue_projection)
 
     # Outer eigenvalues serve two distinct purposes: populating the diagnostic
     # `outer_resonances` block (opt-in), and driving the off-manifold warning (on by
     # default). Only the first puts them in the returned set.
-    target_outer = config.outer_targets ? all_outer : ComplexF64[]
+    target_outer = config.outer_targets ? all_outer : T[]
     inner_tol, outer_tol = resolve_tolerances(
         config, master_eigs, target_outer, length(mset))
 
@@ -1105,13 +1138,18 @@ function _outer_mode_description(spectral, rep::Int, partner::Int, outer_eigs)
     λ = outer_eigs[rep]
     if partner != rep
         entries = sort!([entry, _outer_entry(spectral, partner)])
-        lam = @sprintf("%.3e ± %.3ei", real(λ), abs(imag(λ)))
+        # Under `:imaginary_part_only` the targets are REAL frequencies; rendering one
+        # as `re ± im·i` would print a bare `ω + 0.0i` and invite the reader to think
+        # the growth rate had been measured and found to be zero.
+        lam = λ isa Real ? @sprintf("±%.3ei (frequency only)", abs(λ)) :
+              @sprintf("%.3e ± %.3ei", real(λ), abs(imag(λ)))
         head = p === nothing ? "an outer conjugate mode pair" :
                "outer physical mode pair $p"
         subject = p === nothing ? "those modes" : "mode $p"
         return ("$head (spectrum entries $(join(entries, ", ")); λ = $lam)", subject)
     end
-    lam = @sprintf("%.3e %s %.3ei", real(λ), imag(λ) < 0 ? "-" : "+", abs(imag(λ)))
+    lam = λ isa Real ? @sprintf("%.3ei (frequency only)", λ) :
+          @sprintf("%.3e %s %.3ei", real(λ), imag(λ) < 0 ? "-" : "+", abs(imag(λ)))
     head = p === nothing ? "an outer mode" : "outer physical mode $p"
     subject = p === nothing ? "that mode" : "mode $p"
     return ("$head (spectrum entry $entry; λ = $lam)", subject)
