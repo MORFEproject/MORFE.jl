@@ -293,7 +293,7 @@ Deleting cannot reorder a Grlex-sorted list, so the result is built through the
 pre-sorted path: no re-sort is performed, and `degree_offsets` is rebuilt so the O(1)
 degree-boundary queries stay correct even when an entire degree block disappears.
 
-Removing an exponent can break *downward closure*, which `parametrise(...; mset = ...)`
+Removing an exponent can break *downward closure*, which `parametrise(model, spectral, mset)`
 requires — check the result with [`is_downward_closed`](@ref).
 
 # Examples
@@ -366,7 +366,7 @@ end
 
 Return `true` when every divisor of every member of `set` is itself a member.
 
-This is the *downward closure* property that `parametrise(...; mset = ...)` requires: the
+This is the *downward closure* property that `parametrise(model, spectral, mset)` requires: the
 graded solve reads lower-order coefficients `W[α - eᵢ]` while working on `α`, so a
 missing divisor would be silently read as zero.  Combinatorial truncations
 (`all_multiindices_up_to`, `all_multiindices_in_box`) are closed by construction, but a
@@ -408,7 +408,7 @@ for real ones).  It acts on the **components** of an exponent,
 the same convention the cohomological solve uses when it fills a conjugate monomial from
 its partner.  Monomials with `P·α == α` are self-paired and trivially closed.
 
-`parametrise(...; mset = ..., conjugate_permutation = ...)` requires this: a member whose
+`parametrise(model, spectral, mset; conjugate_permutation = ...)` requires this: a member whose
 partner is absent is solved directly instead of being filled by conjugation, which costs
 the pairing optimisation and returns a parametrisation without the conjugate structure
 the permutation asserts.  It is enforced through `validate_multiindex_set`, which reports

@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <h4>Demos</h4>
     <ul>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">Ferrite beam notebook ↗</a></li>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
     </ul>
 
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="adm-body" style="color:var(--ink-2); font-size:0.93rem;">The reduction below
       <strong>runs today</strong> — it is
       <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/08_mems_micromirror" target="_blank" rel="noopener"><code>examples/08_mems_micromirror</code></a>
-      in MORFEFerrite.jl (<code>mesh.jl</code> → <code>mechanical_model</code> → <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>).
+      in MORFEFerrite.jl (<code>mesh.jl</code> → <code>mechanical_model</code> → <code>build_model</code> → <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>).
       Only the closing <strong>FRF continuation</strong> section uses a planned interface and is marked as such.</div>
     </div>
 
@@ -221,12 +221,12 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">MASTER</span>    <span class="op">=</span> [<span class="num">1</span>]
 <span class="var">ORDER</span>     <span class="op">=</span> <span class="num">5</span>
 
-<span class="cm"># ── PIPELINE ── identical to every other structural example</span>
-<span class="var">model</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="var">MESH</span>; <span class="var">material</span> <span class="op">=</span> <span class="var">MATERIAL</span>,
+<span class="cm"># ── Assemble the structural case</span>
+<span class="var">case</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="var">MESH</span>; <span class="var">material</span> <span class="op">=</span> <span class="var">MATERIAL</span>,
     <span class="var">damping</span> <span class="op">=</span> <span class="var">DAMPING</span>, <span class="var">dirichlet</span> <span class="op">=</span> <span class="var">DIRICHLET</span>,
     <span class="var">fe_order</span> <span class="op">=</span> <span class="num">2</span>, <span class="var">quad_order</span> <span class="op">=</span> <span class="num">3</span>)</pre>
 
-        <p>Material parameters target a typical CMOS-MEMS silicon process; <code>Rayleigh</code> damping was matched to a measured Q-factor of $\approx 4500$ on the first mode.</p>
+        <p>Material parameters target a typical CMOS-MEMS silicon process. This shipped example is conservative, with zero Rayleigh damping.</p>
       </div>
     </div>
 
@@ -234,21 +234,15 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">02</div>
       <div class="body">
-        <h3 id="step-modes">Inspect the linear spectrum</h3>
-        <p>Before parametrising, look at the eigenpairs around the operating frequency. MORFE wraps a thick-restart Lanczos in <code>linear_modes</code>:</p>
-<pre class="code"><span class="var">spectrum</span> <span class="op">=</span> <span class="fn">linear_modes</span>(<span class="var">M</span>, <span class="var">K</span>; <span class="var">n</span><span class="op">=</span><span class="num">8</span>)
+        <h3 id="step-modes">Build the MORFE model and inspect the spectrum</h3>
+        <p><code>build_model</code> selects the requested master pair and returns the complete spectrum in the separate backend metadata:</p>
+<pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <span class="fn">build_model</span>(<span class="var">case</span>;
+    <span class="var">master</span> <span class="op">=</span> <span class="var">MASTER</span>, <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">ORDER</span>)
 
-<span class="kw">for</span> <span class="var">m</span> <span class="kw">in</span> <span class="var">spectrum</span>
-    <span class="fn">println</span>(<span class="fn">@sprintf</span>(<span class="str">"  mode %d   ω = %.3f kHz   shape = %s"</span>,
-                     <span class="var">m</span>.<span class="var">id</span>, <span class="var">m</span>.<span class="var">ω</span><span class="op">/</span><span class="num">2π</span><span class="op">/</span><span class="num">1e3</span>, <span class="var">m</span>.<span class="var">label</span>))
-<span class="kw">end</span>
-<span class="cm">#   mode 1   ω = {ω₁} kHz   shape = torsion-1</span>
-<span class="cm">#   mode 2   ω = {ω₂} kHz   shape = torsion-2          ← 1:2 with mode 1</span>
-<span class="cm">#   mode 3   ω = {ω₃} kHz   shape = bending-out</span>
-<span class="cm">#   mode 4   ω = {ω₄} kHz   shape = torsion-3</span></pre>
+<span class="var">meta</span>.<span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">meta</span>.<span class="var">master_indices</span>]</pre>
         <div class="adm tip">
-          <div class="adm-head">Spotting the resonance</div>
-          <div class="adm-body"><p>Mode 2 has frequency $\omega_2 \approx 2\,\omega_1$, so any cubic non-linearity will couple them. We must include both modes in the master subspace, or the ROM will silently miss the parametric branch.</p></div>
+          <div class="adm-head">Backend data stays separate</div>
+          <div class="adm-body"><p><code>meta</code> carries eigenvalues, master indices, forcing information and timings. The reduced result itself remains the physics-independent pair <code>(W, R)</code>.</p></div>
         </div>
       </div>
     </div>
@@ -257,35 +251,13 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">03</div>
       <div class="body">
-        <h3 id="step-master">Declare the master subspace and parametrise</h3>
-        <p>We pick modes 1 and 2 as masters. Each mode contributes a complex conjugate pair, so the manifold is 4-dimensional. Order 7 is the recommended default — ample for the $\theta < 12°$ range we care about.</p>
+        <h3 id="step-master">Parametrise the invariant manifold</h3>
+        <p>The common MORFE solver consumes the model and spectral data without a structural result wrapper.</p>
 
-<pre class="code"><span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>]      <span class="cm"># torsion-1 &amp; torsion-2</span>
+<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">ORDER</span>;
+    <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>))
 
-<span class="var">forcing</span> <span class="op">=</span> <span class="fn">Harmonic</span>(<span class="var">ω</span><span class="op">=</span><span class="num">2π</span><span class="op">*</span><span class="num">24e3</span>, <span class="var">F</span><span class="op">=</span><span class="num">1.4e-4</span>, <span class="var">mode</span><span class="op">=</span><span class="num">1</span>)
-
-<span class="var">rom</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">M</span>, <span class="var">C</span>, <span class="var">K</span>, <span class="var">G</span>, <span class="var">H</span>;  <span class="cm"># planned interface</span>
-                  <span class="var">master</span><span class="op">=</span><span class="var">master</span>,
-                  <span class="var">order</span><span class="op">=</span><span class="num">7</span>,
-                  <span class="var">forcing</span><span class="op">=</span><span class="var">forcing</span>,
-                  <span class="var">tol</span><span class="op">=</span><span class="num">1e-3</span>)
-
-<span class="fn">summary</span>(<span class="var">rom</span>)</pre>
-        <p>The summary tells you what MORFE inferred about resonances:</p>
-<pre class="code"><span class="cm"># MORFE.ROM</span>
-<span class="cm">#   master modes        : [1, 2]</span>
-<span class="cm">#   manifold dimension  : 4</span>
-<span class="cm">#   expansion order     : 7</span>
-<span class="cm">#   monomials retained  : {n} (of {total})</span>
-<span class="cm">#   resonances detected : 1:2 between modes 1 and 2  ←</span>
-<span class="cm">#   wall-time           : {t} s</span></pre>
-
-        <p>The reduced vector field — projected onto its real normal coordinates $(q_1, p_1, q_2, p_2)$ — is symbolically:</p>
-        <div class="math-block" style="font-size:15px;">
-          $$\dot q_1 = p_1, \quad \dot p_1 = -\omega_1^2 q_1 - 2\zeta_1\omega_1 p_1 + a_{112}\,q_1 q_2 + a_{122}\,q_1 q_2^2 + \dots$$
-          $$\dot q_2 = p_2, \quad \dot p_2 = -\omega_2^2 q_2 - 2\zeta_2\omega_2 p_2 + b_{111}\,q_1^2 + b_{222}\,q_2^3 + \dots$$
-        </div>
-        <p>The $a_{112} q_1 q_2$ term is the parametric coupling that the 1:2 resonance keeps in the normal form. With single-mode reduction it would not exist.</p>
+<span class="fn">MORFE.save_rom</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>)</pre>
       </div>
     </div>
 
@@ -294,8 +266,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="num">04</div>
       <div class="body">
         <h3 id="step-continue">Continue the frequency response</h3>
-        <p>The ROM is a system of four ODEs. We hand it to <code>continuation</code>, which uses BifurcationKit&rsquo;s collocation method to follow the periodic-orbit branch.</p>
-<pre class="code"><span class="var">frf</span> <span class="op">=</span> <span class="fn">continuation</span>(<span class="var">rom</span>;
+        <p>The planned continuation layer will consume the reduced dynamics <code>R</code> and follow the periodic-orbit branch.</p>
+<pre class="code"><span class="var">frf</span> <span class="op">=</span> <span class="fn">continuation</span>(<span class="var">R</span>;  <span class="cm"># roadmap API</span>
                        <span class="var">ω_range</span><span class="op">=</span>(<span class="num">2π</span><span class="op">*</span><span class="num">22e3</span>, <span class="num">2π</span><span class="op">*</span><span class="num">26e3</span>),
                        <span class="var">amplitude_init</span><span class="op">=</span><span class="num">1e-3</span>,
                        <span class="var">detect_bifurcations</span><span class="op">=</span><span class="kw">true</span>)

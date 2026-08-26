@@ -11,7 +11,7 @@ interactive lattice view of every set it constructs.
 | 3 | Combining conditions: total degree in the master coordinates × per-parameter box in θ (the parametric-ROM shape) |
 | 4 | `delete_multiindices` and `filter` — both non-mutating |
 | 5 | Bounding the superharmonics `s(α) = ⟨λ, α⟩` by a spectral radius on a damped spectrum, and why that breaks downward closure |
-| 6 | Checking a custom set against the `parametrise(...; mset = ...)` contract with `validate_multiindex_set` — all five clauses, including both closures |
+| 6 | Checking a custom set against the `parametrise(model, spectral, mset)` contract with `validate_multiindex_set` — all five clauses, including both closures |
 
 No FEM backend and no solve: the script runs in a couple of seconds against the
 repository's root environment.

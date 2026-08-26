@@ -3,7 +3,7 @@ Constructing MultiindexSets
 
 A `MultiindexSet` is the object that decides **which monomials the DPIM solve
 computes**. Every parametrisation `W` and reduced dynamics `R` carries one, and
-`parametrise(model, order, ep; mset = ...)` lets you supply your own instead of the
+`parametrise(model, spectral, mset)` lets you supply your own instead of the
 default graded expansion — that single argument is the difference between an isotropic
 expansion, an anisotropic parametric ROM, and a spectrally truncated one.
 
@@ -345,7 +345,7 @@ write_lattice(joinpath(FIGDIR, "fig4_spectral.html"),
 # ------------------------------------------------------------------------------
 # 6. Handing a custom set to `parametrise`
 #
-# `parametrise(model, order, ep; mset = ...)` enforces the whole contract before it
+# `parametrise(model, spectral, mset)` enforces the whole contract before it
 # solves anything, through `validate_multiindex_set`. That function needs no model, so
 # a set can be checked the moment it is built rather than after a long assembly.
 #

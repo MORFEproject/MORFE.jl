@@ -99,15 +99,15 @@ document.addEventListener('DOMContentLoaded', function () {
     <h4>Demos</h4>
     <ul>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">Ferrite beam notebook ↗</a></li>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
     </ul>
 
     <h4>Tutorials</h4>
     <ul>
+      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
       <li><a href="full_order_model.html">Building a full-order model</a></li>
       <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
-      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
       <li><a href="karman.html">Kármán vortex street</a></li>
       <li><a href="parametric.html">Geometry as a coordinate</a></li>
       <li><a href="micromirror.html">MEMS micromirror</a></li>
@@ -157,7 +157,8 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
-    <h2 id="featured">Featured demo — works today</h2>
+<!--
+<h2 id="featured">Featured demo — works today</h2>
 
     <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener" style="display:block; margin:18px 0 28px; border:1px solid var(--hair); border-radius:6px; overflow:hidden; background:rgba(10,10,15,0.55); transition:border-color .2s;" onmouseover="this.style.borderColor='var(--jl-purple)'" onmouseout="this.style.borderColor='var(--hair)'">
       <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:0;">
@@ -186,6 +187,7 @@ W, R  = solve_cohomological_problem(
         </div>
       </div>
     </a>
+-->
 
     <h2 id="all">All tutorials</h2>
 
@@ -197,6 +199,19 @@ W, R  = solve_cohomological_problem(
     </p>
 
     <div class="tut-grid">
+    <a class="tut-card" href="structural_svk.html">
+        <div class="thumb">
+        <span class="corner">StructuralSVK</span>
+        <img src="assets/structural_svk/thumb.svg" loading="lazy"
+          alt="Clamped beam mesh with node 289 highlighted and four backbone curves" />
+        </div>
+        <div class="card-body">
+        <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L0 · start here</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+        <h3>From a mesh to a ROM</h3>
+        <p>After the mechanical case is described, <code>build_model</code> followed by <code>parametrise</code> produces the nonlinear ROM through one shared API contract.</p>
+        <div class="meta"><span>SVK</span><span>Gmsh · COMSOL · CAD</span><span>~1 min</span></div>
+        </div>
+    </a>
       <a class="tut-card" href="full_order_model.html">
         <div class="thumb">
           <span class="corner">NthOrderModel</span>
@@ -252,25 +267,6 @@ W, R  = solve_cohomological_problem(
           <h3>Monomials and multiindices</h3>
           <p>Which monomials does the solve compute? Build the set yourself — generators, anisotropic truncation, deletion, and a spectral bound on the superharmonics — with an interactive lattice at every step.</p>
           <div class="meta"><span>MultiindexSet</span><span>GrLex</span><span>&lt;5 s</span></div>
-        </div>
-      </a>
-      <a class="tut-card" href="structural_svk.html">
-        <div class="thumb">
-          <span class="corner">StructuralSVK</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(50 112)">
-              <rect x="-12" y="-46" width="12" height="92" fill="#9558B2" opacity="0.25" stroke="#9558B2" stroke-width="1"/>
-              <path d="M0,0 C 100,0 200,-40 300,-56" stroke="#9558B2" stroke-width="2.5" fill="none"/>
-              <path d="M0,0 C 100,0 200,40 300,56" stroke="#9558B2" stroke-width="2" fill="none" opacity="0.35"/>
-              <rect x="300" y="-46" width="12" height="92" fill="#9558B2" opacity="0.25" stroke="#9558B2" stroke-width="1"/>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L0 · start here</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
-          <h3>From a mesh to a ROM</h3>
-          <p>Two library calls turn a mesh into a nonlinear ROM. Shows the case/pipeline split and drives a Gmsh beam, a COMSOL arch and a CAD micromirror with one identical pipeline.</p>
-          <div class="meta"><span>SVK</span><span>Gmsh · COMSOL · CAD</span><span>~1 min</span></div>
         </div>
       </a>
       <a class="tut-card" href="parametric.html">
@@ -342,29 +338,17 @@ W, R  = solve_cohomological_problem(
           <div class="meta"><span>NthOrderModel</span><span>DPIM core</span></div>
         </div>
       </a>
-      <a class="tut-card" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">
+      <a class="tut-card" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">
         <div class="thumb">
           <span class="corner">Ferrite.jl</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(56 116)">
-              <rect x="-14" y="-52" width="14" height="104" fill="url(#mp)" stroke="#389826" stroke-width="1"/>
-              <path d="M0,0 C 96,0 190,-32 300,-60" stroke="#389826" stroke-width="2" fill="none"/>
-              <path d="M0,0 C 96,0 190,32 300,60" stroke="#389826" stroke-width="2" fill="none" opacity="0.4"/>
-              <path d="M0,0 C 96,0 190,-13 300,-24" stroke="#389826" stroke-width="1" fill="none" opacity="0.5"/>
-              <path d="M0,0 L300,0" stroke="#3a3a4a" stroke-width="1" stroke-dasharray="2 3"/>
-              <circle cx="300" cy="-60" r="3" fill="#389826"/>
-            </g>
-            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e">
-              <text x="40" y="40">GEOMETRIC NONLINEARITY</text>
-              <text x="40" y="58" fill="#389826">FEMMultilinearMap</text>
-            </g>
-          </svg>
+          <img src="assets/structural_svk/thumb.svg" loading="lazy"
+            alt="Clamped beam mesh with node 289 highlighted and four backbone curves" />
         </div>
         <div class="card-body">
           <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current code</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
           <h3>Ferrite.jl beam</h3>
-          <p>Nonlinear mechanical beam assembled with the Ferrite FEM backend via <code>FEMMultilinearMap</code>.</p>
-          <div class="meta"><span>Ferrite.jl</span><span>FEMMultilinearMap</span></div>
+          <p>Describe the structural case, then use the common <code>build_model</code> and <code>parametrise</code> workflow.</p>
+          <div class="meta"><span>Ferrite.jl</span><span>Common MORFE API</span></div>
         </div>
       </a>
       <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">

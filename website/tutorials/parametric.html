@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <h4>Demos</h4>
     <ul>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener">Ferrite beam ↗</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">Ferrite beam notebook ↗</a></li>
       <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
     </ul>
 
@@ -208,12 +208,14 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-basis">Choose the θ-box and assemble</h3>
         <p>
-          <code>ThetaBasis</code> is the per-parameter box; the parametric assembly returns one
-          stiffness and mass matrix per θ-multiindex.
+          <code>GeometryParameterBasis</code> is the per-parameter box. Separate bases retain
+          exactly the degree required by each structural form.
         </p>
-<pre class="code"><span class="var">basis</span> <span class="op">=</span> <span class="fn">PS.ThetaBasis</span>([<span class="var">N_θ</span>, <span class="var">N_θ</span>])          <span class="cm"># box: k₁ ≤ N_θ AND k₂ ≤ N_θ</span>
-<span class="fn">PS.assemble_parametric_K_M!</span>(<span class="var">K_full</span>, <span class="var">M_full</span>, <span class="var">dh</span>, <span class="var">cv</span>,
-    <span class="var">λ</span>, <span class="var">μ</span>, <span class="var">ρ</span>, <span class="var">provider</span>, <span class="var">basis</span>)</pre>
+<pre class="code"><span class="var">BASIS_K</span> <span class="op">=</span> <span class="fn">PG.GeometryParameterBasis</span>([<span class="var">GEOM_T1</span>, <span class="num">2</span>])
+<span class="var">BASIS_QUAD</span> <span class="op">=</span> <span class="fn">PG.GeometryParameterBasis</span>([<span class="var">GEOM_T1</span>, <span class="num">3</span>])
+<span class="var">BASIS_CUBIC</span> <span class="op">=</span> <span class="fn">PG.GeometryParameterBasis</span>([<span class="var">GEOM_T1</span>, <span class="num">4</span>])
+<span class="var">GEOMETRY_PARAMETER_BASES</span> <span class="op">=</span> (; <span class="var">linear</span> <span class="op">=</span> <span class="var">BASIS_K</span>,
+    <span class="var">quadratic</span> <span class="op">=</span> <span class="var">BASIS_QUAD</span>, <span class="var">cubic</span> <span class="op">=</span> <span class="var">BASIS_CUBIC</span>)</pre>
         <div class="adm note">
           <div class="adm-head">Exact degrees are known</div>
           <div class="adm-body"><p>For a degree-1 Jacobian series, $\det\mathbf J$ is exactly cubic and
@@ -229,14 +231,13 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-maps">Nonlinear maps and linear corrections</h3>
         <p>
-          Every θ-coefficient of the quadratic and cubic forms becomes a multilinear map whose
-          external multiplicity is $|\alpha|$; the non-constant K/C/M coefficients become linear
-          corrections.
+          <code>parametric_model</code> pulls the structural forms back through the geometry and
+          returns the assembled parametric case consumed by the common API.
         </p>
-<pre class="code"><span class="var">pgn_quad</span> <span class="op">=</span> <span class="fn">PS.ParametricGeometricNonlinearity</span>{<span class="num">2</span>}(<span class="var">dh</span>, <span class="var">cv</span>, <span class="var">λ</span>, <span class="var">μ</span>,
-    <span class="var">provider</span>, <span class="var">free_to_local</span>, <span class="var">n_free</span>, <span class="var">BASIS_QUAD</span>)
-<span class="var">quad_maps</span> <span class="op">=</span> <span class="fn">PS.multilinear_maps</span>(<span class="var">pgn_quad</span>)
-<span class="var">K_corrections</span> <span class="op">=</span> <span class="fn">PS.build_K_corrections</span>(<span class="var">K_arr</span>, <span class="var">BASIS_K</span>)</pre>
+<pre class="code"><span class="var">pcase</span> <span class="op">=</span> <span class="fn">SVK.parametric_model</span>(<span class="var">dh</span>, <span class="var">cv</span>, <span class="var">GEOM</span>;
+    <span class="var">geometry_parameter_basis</span> <span class="op">=</span> <span class="var">GEOMETRY_PARAMETER_BASES</span>,
+    <span class="var">material</span> <span class="op">=</span> <span class="var">MATERIAL</span>, <span class="var">damping</span> <span class="op">=</span> <span class="var">DAMPING</span>, <span class="var">free</span> <span class="op">=</span> <span class="var">free</span>)
+<span class="var">K0</span>, <span class="var">M0</span> <span class="op">=</span> <span class="fn">SVK.base_operators</span>(<span class="var">pcase</span>)</pre>
       </div>
     </div>
 
@@ -254,9 +255,11 @@ document.addEventListener('DOMContentLoaded', function () {
     <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="num">0</span>:<span class="var">MAXT</span> <span class="kw">for</span> <span class="var">d</span> <span class="kw">in</span> <span class="num">0</span>:<span class="var">MAXT</span>
     <span class="kw">if</span> <span class="var">a</span> <span class="op">+</span> <span class="var">b</span> <span class="op">≤</span> <span class="var">MAXZ</span> <span class="op">&&</span> <span class="num">1</span> <span class="op">≤</span> <span class="var">a</span> <span class="op">+</span> <span class="var">b</span> <span class="op">+</span> <span class="var">c</span> <span class="op">+</span> <span class="var">d</span>])
 
-(<span class="var">W</span>, <span class="var">R</span>) <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">MAXZ</span>, <span class="var">eigenproblem</span>;
-    <span class="var">mset</span> <span class="op">=</span> <span class="var">mset</span>, <span class="var">resonance</span> <span class="op">=</span> <span class="var">resonance_set</span>,
-    <span class="var">conjugate_permutation</span> <span class="op">=</span> <span class="var">PERMUTATION</span>)</pre>
+(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <span class="fn">build_model</span>(<span class="var">pcase</span>;
+    <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">spectrum</span> <span class="op">=</span> <span class="var">eigenproblem</span>)
+(<span class="var">W</span>, <span class="var">R</span>) <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">mset</span>;
+    <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>),
+    <span class="var">conjugate_permutation</span> <span class="op">=</span> <span class="var">meta</span>.<span class="var">conjugate_permutation</span>)</pre>
       </div>
     </div>
 

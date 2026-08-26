@@ -199,9 +199,9 @@ Two positional arguments carry everything the reduction needs — the full-order
 the spectral data — and the third says how far to expand:
 
 ```julia
-model, sd = build_model(case)              # or SpectralData(model, spectrum; master = …)
-W, R = parametrise(model, sd, 5)           # total degree ≤ 5
-W, R = parametrise(model, sd, mset)        # a monomial set you built
+(; model, spectral) = build_model(case)    # or SpectralData(model, spectrum; master = …)
+W, R = parametrise(model, spectral, 5)     # total degree ≤ 5
+W, R = parametrise(model, spectral, mset)  # a monomial set you built
 ```
 
 ## Arguments

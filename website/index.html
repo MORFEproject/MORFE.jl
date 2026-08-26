@@ -118,7 +118,7 @@ section { padding: 110px 0; position: relative; }
 .feat:nth-child(5) .accent-bar { background: var(--jl-purple); }
 .feat:nth-child(6) .accent-bar { background: var(--jl-red); }
 
-/* Backbone curve interactive */
+/* Computed structural backbone */
 .demo {
   display: grid;
   grid-template-columns: 1fr 1.1fr;
@@ -131,16 +131,6 @@ section { padding: 110px 0; position: relative; }
 .demo-info { padding: 40px; border-right: 1px solid var(--hair); }
 .demo-info h3 { margin-bottom: 14px; }
 .demo-info p { font-size: 15px; }
-.demo-info .controls {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.demo-info .ctl-row { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 13px; }
-.demo-info .ctl-row label { width: 88px; color: var(--ink-3); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
-.demo-info .ctl-row input[type=range] { flex: 1; accent-color: var(--jl-purple); }
-.demo-info .ctl-row .val { width: 64px; text-align: right; color: var(--jl-purple); }
 
 .demo-canvas {
   position: relative;
@@ -150,23 +140,7 @@ section { padding: 110px 0; position: relative; }
     linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px) 0 0/40px 100%,
     radial-gradient(ellipse at 60% 50%, rgba(149,88,178,0.05), transparent 60%);
 }
-.demo-canvas svg { width: 100%; height: 100%; display: block; }
-.demo-readout {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--ink-2);
-  background: rgba(7,7,11,0.7);
-  border: 1px solid var(--hair);
-  border-radius: 4px;
-  padding: 8px 12px;
-  line-height: 1.5;
-}
-.demo-readout .k { color: var(--ink-3); }
-.demo-readout .v-r { color: var(--jl-red); }
-.demo-readout .v-p { color: var(--jl-purple); }
+.demo-canvas iframe { width: 100%; height: 100%; min-height: 420px; display: block; border: 0; background: #07070b; }
 
 /* Compare slider (FOM vs ROM) */
 .compare {
@@ -529,7 +503,7 @@ section { padding: 110px 0; position: relative; }
     <span style="font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); flex-shrink:0;">pre-alpha</span>
     <p style="margin:0; font-size:14px; color:var(--ink-2);">
       The cohomological solver, eigenproblem pipeline, and FEM backend interface are fully functional today.
-      The high-level <code>mechanical_model</code> / <code>parametrise</code> / <code>HarmonicForcing</code> interface shown below is implemented
+      The <code>mechanical_model</code> / <code>build_model</code> / <code>parametrise</code> workflow shown below is implemented
       for SVK + Ferrite via the <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite.jl</code></a> companion package (<code>MORFEFerrite.StructuralSVK</code>); FRF <code>continuation</code> is roadmap. See <a href="documentation.html">the docs</a> for all entry points.
     </p>
   </div>
@@ -559,45 +533,25 @@ section { padding: 110px 0; position: relative; }
     <div class="section-head">
       <div>
         <span class="kicker">02 — Live</span>
-        <h2 style="margin-top:18px;">Drag the amplitude. Watch the backbone bend.</h2>
+        <h2 style="margin-top:18px;">Trace the backbone as amplitude grows.</h2>
       </div>
       <p class="desc">
         A signature of nonlinearity: as oscillation amplitude grows, the resonant frequency shifts.
-        Here is the ROM of a clamped-clamped beam in real time — DPIM order 7 — sliding amplitude moves you up the backbone curve.
+        These four curves are analytical truncations of one order-9 ROM of the clamped-clamped beam.
       </p>
     </div>
 
     <div class="demo">
       <div class="demo-info">
-        <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> Backbone curve · cubic Duffing</span>
-        <h3 style="margin-top:18px;">Hardening response</h3>
-        <p>$\dot{z}_1 = z_2$, &nbsp;$\dot{z}_2 = -\omega_0^2 z_1 - \alpha z_1^3 - 2\zeta\omega_0 z_2 + F\cos\Omega t$</p>
-        <p>The curve is the locus of stable periodic orbits parameterised by amplitude $A$. Drag the controls — the ROM evaluates instantly.</p>
-        <div class="controls">
-          <div class="ctl-row">
-            <label>α (cubic)</label>
-            <input id="ctl-alpha" type="range" min="-2" max="2" step="0.05" value="1" />
-            <span class="val mono" id="val-alpha">1.00</span>
-          </div>
-          <div class="ctl-row">
-            <label>ζ (damp)</label>
-            <input id="ctl-zeta" type="range" min="0.001" max="0.05" step="0.001" value="0.012" />
-            <span class="val mono" id="val-zeta">0.012</span>
-          </div>
-          <div class="ctl-row">
-            <label>F (force)</label>
-            <input id="ctl-force" type="range" min="0" max="0.06" step="0.001" value="0.018" />
-            <span class="val mono" id="val-force">0.018</span>
-          </div>
-        </div>
+        <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> Structural SVK · complex normal form</span>
+        <h3 style="margin-top:18px;">Conservative backbone</h3>
+        <p>The modal radius stays constant, so the resonant coefficients give the frequency directly—without time integration or numerical continuation.</p>
+        <p>Compare orders 3, 5, 7, and 9 using frequency change and node 289's transverse displacement, both shown as percentages.</p>
+        <p style="margin-top:22px;"><a class="btn" href="tutorials/structural_svk.html">See the beam tutorial <span class="arrow">→</span></a></p>
       </div>
       <div class="demo-canvas" id="bb-canvas">
-        <svg id="bb-svg" viewBox="0 0 600 420" preserveAspectRatio="none"></svg>
-        <div class="demo-readout mono">
-          <div><span class="k">ω₀</span> = <span class="v-p">1.000</span></div>
-          <div><span class="k">peak</span> = <span class="v-r" id="bb-peak">—</span></div>
-          <div><span class="k">A*</span> = <span class="v-r" id="bb-amax">—</span></div>
-        </div>
+        <iframe src="tutorials/assets/structural_svk/backbone.html?compact=1"
+          title="Order 3, 5, 7 and 9 analytical backbone curves" loading="lazy"></iframe>
       </div>
     </div>
   </div>
@@ -643,11 +597,10 @@ section { padding: 110px 0; position: relative; }
     <div class="code-teaser">
       <div class="copy">
         <span class="kicker">04 — In code</span>
-        <h2 style="margin-top:18px;">Three lines from FE assembly to a runnable ROM.</h2>
+        <h2 style="margin-top:18px;">From a mesh to a runnable ROM.</h2>
         <p>
-          MORFE consumes the matrices and tensors your FE solver already produces. It returns a
-          symbolic, executable parametrisation of the invariant manifold — including the reduced
-          dynamics and the back-projection to physical DOFs.
+          MORFEFerrite assembles this structural case from the mesh; MORFE then computes the
+          physics-independent manifold map <code>W</code> and reduced dynamics <code>R</code>.
         </p>
         <p style="margin-top:18px;">
           <a class="btn" href="tutorials/">Read the tutorial <span class="arrow">→</span></a>
@@ -656,27 +609,21 @@ section { padding: 110px 0; position: relative; }
       <div class="code-wrap">
         <div class="code-head">
           <div class="dots"><span></span><span></span><span></span></div>
-          <span class="file">cantilever_beam.jl</span>
-          <span style="margin-left:auto; color:var(--ink-3); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;">implemented for SVK + Ferrite 🚧 FRF continuation</span>
+          <span class="file">clamped_beam.ipynb</span>
+          <span style="margin-left:auto; color:var(--ink-3); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;">current common API</span>
         </div>
 <pre class="code"><span class="kw">using</span> <span class="var">MORFE</span>, <span class="var">MORFEFerrite</span>
-<span class="var">SVK</span> <span class="op">=</span> <span class="var">MORFEFerrite</span>.<span class="var">StructuralSVK</span>
+<span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> <span class="var">MORFEFerrite</span>.<span class="var">StructuralSVK</span>
 
-<span class="cm"># 1. Mesh → assembled model (K, M, C + SVK nonlinearity)</span>
-<span class="var">beam</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="str">"beam.msh"</span>;
-    <span class="var">material</span> <span class="op">=</span> <span class="fn">SVK.SVKMaterial</span>(<span class="var">E</span><span class="op">=</span><span class="num">160e3</span>, <span class="var">ν</span><span class="op">=</span><span class="num">0.22</span>, <span class="var">ρ</span><span class="op">=</span><span class="num">2.32e-3</span>),
-    <span class="var">damping</span>  <span class="op">=</span> <span class="fn">SVK.RayleighDamping</span>(<span class="var">α</span><span class="op">=</span><span class="num">5.4e-3</span>, <span class="var">β</span><span class="op">=</span><span class="num">1.9e-2</span>),
+<span class="var">order</span> <span class="op">=</span> <span class="num">3</span>
+<span class="var">case</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
+    <span class="var">material</span> <span class="op">=</span> <span class="fn">SVK.SVKMaterial</span>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
+    <span class="var">damping</span> <span class="op">=</span> <span class="fn">SVK.RayleighDamping</span>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
     <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">"Dirichlet"</span>)
 
-<span class="cm"># 2. Harmonic forcing shaped like the first bending pair</span>
-<span class="var">forcing</span> <span class="op">=</span> <span class="fn">SVK.HarmonicForcing</span>(<span class="var">mode</span><span class="op">=</span><span class="num">1</span>, <span class="var">amplitude</span><span class="op">=</span><span class="num">0.02</span>)
-
-<span class="cm"># 3. Compute the invariant manifold (DPIM, order 7)</span>
-<span class="var">rom</span> <span class="op">=</span> <span class="fn">SVK.parametrise</span>(<span class="var">beam</span>; <span class="var">master</span><span class="op">=</span>[<span class="num">1</span>], <span class="var">order</span><span class="op">=</span><span class="num">7</span>,
-                      <span class="var">forcing</span><span class="op">=</span><span class="var">forcing</span>)
-<span class="fn">SVK.print_equations</span>(<span class="var">rom</span>)
-
-<span class="cm"># 4. FRF continuation — roadmap 🚧</span></pre>
+(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <span class="fn">build_model</span>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
+<span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
+    <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>))</pre>
       </div>
     </div>
   </div>
@@ -799,14 +746,14 @@ section { padding: 110px 0; position: relative; }
         <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/ParametrisationMethod/ →</span>
       </a>
 
-      <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/main.jl" target="_blank" rel="noopener"
+      <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener"
          style="display: block; border: 1px solid var(--hair); border-radius: 6px; padding: 26px 28px; background: rgba(10,10,15,0.55); transition: border-color .2s, transform .2s;"
          onmouseover="this.style.borderColor='var(--hair-2)';this.style.transform='translateY(-2px)'"
          onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
         <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
-        <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Ferrite beam</h3>
+        <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Ferrite beam notebook</h3>
         <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">Nonlinear beam with the Ferrite.jl FEM backend. Uses <code>FEMMultilinearMap</code> for element-by-element assembly — no full tensor formed.</p>
-        <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/Ferrite/ →</span>
+        <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">examples/01…/clamped_beam.ipynb →</span>
       </a>
 
       <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener"
@@ -903,171 +850,6 @@ section { padding: 110px 0; position: relative; }
 
 <script src="assets/manifold-bg.js"></script>
 <script>
-// ===== Backbone curve interactive =====
-(function () {
-  const svg = document.getElementById('bb-svg');
-  if (!svg) return;
-  const W = 600, H = 420;
-  const pad = { l: 64, r: 24, t: 30, b: 50 };
-  const PW = W - pad.l - pad.r;
-  const PH = H - pad.t - pad.b;
-
-  const ctlA = document.getElementById('ctl-alpha');
-  const ctlZ = document.getElementById('ctl-zeta');
-  const ctlF = document.getElementById('ctl-force');
-  const valA = document.getElementById('val-alpha');
-  const valZ = document.getElementById('val-zeta');
-  const valF = document.getElementById('val-force');
-  const peakEl = document.getElementById('bb-peak');
-  const amaxEl = document.getElementById('bb-amax');
-
-  const w0 = 1.0;
-  const wMin = 0.7, wMax = 1.4;
-  const aMax = 1.6;
-
-  function xToPx(w) { return pad.l + (w - wMin) / (wMax - wMin) * PW; }
-  function aToPx(a) { return pad.t + PH - (a / aMax) * PH; }
-
-  function render() {
-    const alpha = parseFloat(ctlA.value);
-    const zeta = parseFloat(ctlZ.value);
-    const F = parseFloat(ctlF.value);
-    valA.textContent = alpha.toFixed(2);
-    valZ.textContent = zeta.toFixed(3);
-    valF.textContent = F.toFixed(3);
-
-    // Backbone (free vibration): Ω = ω0 * sqrt(1 + 3α/(8ω0²) A²)
-    // FRF (forced, Duffing-like, single mode):
-    // (Ω² - ω0² - 3α/4 A²)² A² + (2ζω0Ω)² A² = F²
-    // Solve for A given Ω by sweeping A and finding roots.
-    const N = 240;
-    const ws = [];
-    for (let i = 0; i <= N; i++) ws.push(wMin + (wMax - wMin) * i / N);
-
-    // For each A, compute Ω(A) on the FRF (two branches)
-    const upper = []; // upper branch
-    const lower = []; // lower branch
-    const Asteps = 500;
-    for (let k = 0; k < Asteps; k++) {
-      const A = (k + 1) / Asteps * aMax;
-      // Solve (Ω² - ω0² - 0.75 α A²)² + (2ζω0Ω)² = (F/A)²
-      // Let X = Ω². Then (X - ω0² - 0.75 α A²)² + 4ζ²ω0² X - (F/A)² = 0
-      const c = w0 * w0 + 0.75 * alpha * A * A;
-      const fa2 = (F / A) * (F / A);
-      const d = 4 * zeta * zeta * w0 * w0;
-      // (X - c)² + d X - fa2 = 0  =>  X² - (2c - d) X + (c² - fa2) = 0
-      const b = -(2 * c - d);
-      const cc = c * c - fa2;
-      const disc = b * b - 4 * cc;
-      if (disc < 0) continue;
-      const r = Math.sqrt(disc);
-      const x1 = (-b - r) / 2;
-      const x2 = (-b + r) / 2;
-      if (x1 > 0) {
-        const w1 = Math.sqrt(x1);
-        if (w1 >= wMin && w1 <= wMax) lower.push([w1, A]);
-      }
-      if (x2 > 0) {
-        const w2 = Math.sqrt(x2);
-        if (w2 >= wMin && w2 <= wMax) upper.push([w2, A]);
-      }
-    }
-
-    // Sort
-    lower.sort((a, b) => a[0] - b[0]);
-    upper.sort((a, b) => a[0] - b[0]);
-
-    // Backbone curve: A from 0 to aMax
-    const bb = [];
-    for (let k = 0; k <= 200; k++) {
-      const A = (k / 200) * aMax;
-      const W2 = w0 * w0 + 0.75 * alpha * A * A;
-      if (W2 <= 0) continue;
-      bb.push([Math.sqrt(W2), A]);
-    }
-
-    // Build SVG content
-    let s = '';
-    // axes & grid
-    // grid lines
-    s += `<g stroke="#1f1f2c" stroke-width="0.5">`;
-    for (let i = 0; i <= 6; i++) {
-      const x = pad.l + (PW / 6) * i;
-      s += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${pad.t + PH}" />`;
-    }
-    for (let i = 0; i <= 4; i++) {
-      const y = pad.t + (PH / 4) * i;
-      s += `<line x1="${pad.l}" y1="${y}" x2="${pad.l + PW}" y2="${y}" />`;
-    }
-    s += `</g>`;
-    // axis frame
-    s += `<g stroke="#3a3a4a" stroke-width="1" fill="none">
-      <line x1="${pad.l}" y1="${pad.t + PH}" x2="${pad.l + PW}" y2="${pad.t + PH}" />
-      <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t + PH}" />
-    </g>`;
-    // axis labels
-    s += `<g font-family="JetBrains Mono" font-size="10" fill="#6e6e7e">`;
-    for (let i = 0; i <= 6; i++) {
-      const w = wMin + (wMax - wMin) * i / 6;
-      const x = pad.l + (PW / 6) * i;
-      s += `<text x="${x}" y="${pad.t + PH + 16}" text-anchor="middle">${w.toFixed(2)}</text>`;
-    }
-    for (let i = 0; i <= 4; i++) {
-      const a = aMax * (1 - i / 4);
-      const y = pad.t + (PH / 4) * i + 4;
-      s += `<text x="${pad.l - 8}" y="${y}" text-anchor="end">${a.toFixed(1)}</text>`;
-    }
-    s += `<text x="${pad.l + PW / 2}" y="${H - 12}" text-anchor="middle" fill="#b8b8c4">Ω / ω₀  (frequency)</text>`;
-    s += `<text transform="translate(${pad.l - 44} ${pad.t + PH / 2}) rotate(-90)" text-anchor="middle" fill="#b8b8c4">A  (amplitude)</text>`;
-    s += `</g>`;
-
-    // ω0 marker
-    const w0x = xToPx(w0);
-    s += `<line x1="${w0x}" y1="${pad.t}" x2="${w0x}" y2="${pad.t + PH}" stroke="#9558b2" stroke-width="0.7" stroke-dasharray="3 4" opacity="0.6"/>`;
-    s += `<text x="${w0x + 4}" y="${pad.t + 12}" font-family="JetBrains Mono" font-size="10" fill="#9558b2">ω₀</text>`;
-
-    // backbone (red)
-    let bbPath = '';
-    bb.forEach((p, i) => {
-      bbPath += (i === 0 ? 'M' : 'L') + xToPx(p[0]) + ' ' + aToPx(p[1]);
-    });
-    s += `<path d="${bbPath}" stroke="#cb3c33" stroke-width="2" fill="none" stroke-dasharray="4 4" opacity="0.85"/>`;
-
-    // FRF lower branch (purple, solid)
-    if (lower.length) {
-      let p = '';
-      lower.forEach((pt, i) => { p += (i === 0 ? 'M' : 'L') + xToPx(pt[0]) + ' ' + aToPx(pt[1]); });
-      s += `<path d="${p}" stroke="#9558b2" stroke-width="2" fill="none" />`;
-    }
-    if (upper.length) {
-      let p = '';
-      upper.forEach((pt, i) => { p += (i === 0 ? 'M' : 'L') + xToPx(pt[0]) + ' ' + aToPx(pt[1]); });
-      s += `<path d="${p}" stroke="#9558b2" stroke-width="2" fill="none" />`;
-    }
-
-    // peak marker
-    let peakA = 0, peakW = w0;
-    [...lower, ...upper].forEach(p => { if (p[1] > peakA) { peakA = p[1]; peakW = p[0]; } });
-    if (peakA > 0) {
-      s += `<circle cx="${xToPx(peakW)}" cy="${aToPx(peakA)}" r="4" fill="#cb3c33"/>`;
-      s += `<circle cx="${xToPx(peakW)}" cy="${aToPx(peakA)}" r="10" fill="rgba(203,60,51,0.18)"/>`;
-    }
-    peakEl.textContent = peakW.toFixed(3);
-    amaxEl.textContent = peakA.toFixed(3);
-
-    // legend
-    s += `<g font-family="JetBrains Mono" font-size="10" transform="translate(${pad.l + 10} ${pad.t + 12})">`;
-    s += `<line x1="0" y1="0" x2="22" y2="0" stroke="#cb3c33" stroke-width="2" stroke-dasharray="4 4"/><text x="28" y="3" fill="#b8b8c4">backbone</text>`;
-    s += `<line x1="100" y1="0" x2="122" y2="0" stroke="#9558b2" stroke-width="2"/><text x="128" y="3" fill="#b8b8c4">FRF</text>`;
-    s += `</g>`;
-
-    svg.innerHTML = s;
-  }
-
-  [ctlA, ctlZ, ctlF].forEach(el => el.addEventListener('input', render));
-  render();
-})();
-
 // ===== FRF compare slider =====
 (function () {
   const wrap = document.getElementById('compare');

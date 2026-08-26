@@ -40,17 +40,18 @@ commands in the script header; expected numbers are asserted by the example's
 Pkg.activate&#40;@__DIR__&#41;
 if &#33;isfile&#40;joinpath&#40;@__DIR__, &quot;Manifest.toml&quot;&#41;&#41;</code></pre>
 <p>One-time environment setup. MORFE.jl is expected as a sibling checkout &#40;folder MORFE.jl or MORFE<em>jl&#41;, next to this repository or one directory above it; override with ENV&#91;&quot;MORFE</em>PATH&quot;&#93;. Collapses to plain Pkg.instantiate&#40;&#41; once the packages are registered.</p>
-<pre><code class="language-julia">	morfe &#61; get&#40;ENV, &quot;MORFE_PATH&quot;, &quot;&quot;&#41;
-	if isempty&#40;morfe&#41;
-		cands &#61; &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41; for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;
-		append&#33;&#40;cands, &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41; for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;&#41;
-		morfe &#61; first&#40;filter&#40;isdir, cands&#41;&#41;
-	end
-	Pkg.develop&#40;&#91;
-		Pkg.PackageSpec&#40;path &#61; morfe&#41;,
-		Pkg.PackageSpec&#40;path &#61; joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;&#41;&#41;,
-	&#93;&#41;
-	Pkg.add&#40;&#91;&quot;Ferrite&quot;, &quot;FerriteGmsh&quot;, &quot;Arpack&quot;, &quot;LinearMaps&quot;, &quot;StaticArrays&quot;&#93;&#41;
+<pre><code class="language-julia">    morfe &#61; get&#40;ENV, &quot;MORFE_PATH&quot;, &quot;&quot;&#41;
+    if isempty&#40;morfe&#41;
+        cands &#61; &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41; for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;
+        append&#33;&#40;cands, &#91;joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, n&#41;
+                        for n in &#40;&quot;MORFE.jl&quot;, &quot;MORFE_jl&quot;&#41;&#93;&#41;
+        morfe &#61; first&#40;filter&#40;isdir, cands&#41;&#41;
+    end
+    Pkg.develop&#40;&#91;
+        Pkg.PackageSpec&#40;path &#61; morfe&#41;,
+        Pkg.PackageSpec&#40;path &#61; joinpath&#40;@__DIR__, &quot;..&quot;, &quot;..&quot;&#41;&#41;
+    &#93;&#41;
+    Pkg.add&#40;&#91;&quot;Ferrite&quot;, &quot;FerriteGmsh&quot;, &quot;Arpack&quot;, &quot;LinearMaps&quot;, &quot;StaticArrays&quot;&#93;&#41;
 end
 Pkg.instantiate&#40;&#41;
 
@@ -71,14 +72,22 @@ FORCING &#61; nothing              # or SVK.HarmonicForcing&#40;mode &#61; 1, am
 <p>a vector of them gives multi-harmonic forcing &#40;N_EXT &#61; 2 per forcing&#41;</p>
 <p>── PIPELINE — generic; no need to edit ──────────────────────────────────────</p>
 <h2>Assemble the mechanical model &#40;K, M, C on free DOFs &#43; SVK nonlinearity&#41;</h2>
-<pre><code class="language-julia">model &#61; SVK.mechanical_model&#40;MESH;
-	material &#61; MATERIAL, damping &#61; DAMPING, dirichlet &#61; DIRICHLET,
-	fe_order &#61; FE_ORDER, quad_order &#61; QUAD_ORDER&#41;</code></pre>
-<h2>Compute the invariant-manifold ROM &#40;eigenproblem &#43; cohomological solve&#41;</h2>
-<pre><code class="language-julia">rom &#61; SVK.parametrise&#40;model; master &#61; MASTER, order &#61; ORDER, forcing &#61; FORCING&#41;</code></pre>
-<h2>Report the realified reduced dynamics and save the standard result layout</h2>
-<pre><code class="language-julia">SVK.print_equations&#40;rom&#41;
-SVK.save_rom&#40;rom, joinpath&#40;@__DIR__, &quot;results&quot;&#41;&#41;
-println&#40;&quot;\nResults written to &#36;&#40;joinpath&#40;@__DIR__, &quot;results&quot;&#41;&#41;&quot;&#41;</code></pre>
+<pre><code class="language-julia">model_case &#61; SVK.mechanical_model&#40;MESH;
+    material &#61; MATERIAL, damping &#61; DAMPING, dirichlet &#61; DIRICHLET,
+    fe_order &#61; FE_ORDER, quad_order &#61; QUAD_ORDER&#41;</code></pre>
+<h2>Compute the invariant-manifold ROM.</h2>
+<p>Three steps, deliberately: MORFEFerrite contributes <code>build_model</code> — the single contract every physics backend implements — and MORFE owns <code>parametrise</code>. There is no backend-specific <code>parametrise</code> wrapping the two.</p>
+<pre><code class="language-julia">&#40;; model, spectral, meta&#41; &#61; build_model&#40;model_case;
+    master &#61; MASTER, forcing &#61; FORCING, expansion_order &#61; ORDER&#41;
+
+t_solve &#61; @elapsed W, R &#61; parametrise&#40;model, spectral, ORDER;
+    resonance &#61; ResonanceConfig&#40;style &#61; :complex_normal_form, tol &#61; 0.05&#41;&#41;</code></pre>
+<h2>Save the physics-independent result and append the structural summary.</h2>
+<pre><code class="language-julia">results_dir &#61; joinpath&#40;@__DIR__, &quot;results&quot;&#41;
+MORFE.save_rom&#40;results_dir, W, R&#41;
+MORFEFerrite.write_summary&#40;stdout, joinpath&#40;results_dir, &quot;summary.txt&quot;&#41;, model_case;
+    rom &#61; &#40;; meta..., solve_time_s &#61; t_solve&#41;,
+    metadata &#61; Pair&#123;String, Any&#125;&#91;&quot;parametrisation_order&quot; &#61;&gt; ORDER&#93;&#41;
+println&#40;&quot;\nResults written to &#36;results_dir&quot;&#41;</code></pre>
 
 </main></body></html>

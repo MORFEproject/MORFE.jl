@@ -111,10 +111,12 @@ eig &#61; dea_eigenanalysis&#40;model_auto, B0, B1, B2, B3, fe.idx_wtip, bp.ĉ /
 mset2 &#61; all_multiindices_up_to&#40;2, 7; min_degree &#61; 1&#41;
 res2 &#61; resonance_set_from_complex_normal_form_style&#40;
     mset2, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05&#41;
+spectral &#61; SpectralData&#40;; eigenvalues &#61; master_eigenvalues,
+    right_modes &#61; master_modes, right_derivatives &#61; mmd,
+    left_modes &#61; left_eigenmodes, left_blocks &#61; Array&#40;left_modes_derivatives&#41;,
+    conjugate_permutation &#61; &#91;2, 1&#93;&#41;
 @time W_a, R_a &#61; solve_cohomological_problem&#40;
-    model_auto, mset2, master_eigenvalues, master_modes, left_eigenmodes, res2;
-    master_modes_derivatives &#61; mmd, left_modes_derivatives &#61; left_modes_derivatives,
-    conjugate_permutation &#61; &#91;2, 1&#93;&#41;</code></pre>
+    model_auto, mset2, spectral, res2&#41;</code></pre>
 <p>Realify the master equation ż₁ &#61; ẋ₁ &#43; i ẏ₁ in real variables &#40;x₁, y₁&#41;: Re&#40;c&#41; feeds ẋ₁, Im&#40;c&#41; feeds ẏ₁ &#40;imaginary parts carry the frequency content&#41;.</p>
 <pre><code class="language-julia">Rr_a &#61; realify&#40;extract_component&#40;R_a.poly, 1&#41;, &#91;2, 1&#93;&#41;
 println&#40;&quot;Autonomous reduced dynamics ż₁ in real variables &#40;x₁, y₁&#41;:&quot;&#41;
@@ -142,11 +144,9 @@ model_f &#61; build_model&#40;p, fe, bp; forced &#61; true, Ω &#61; Ω&#41;
 mset4 &#61; all_multiindices_up_to&#40;4, 5; min_degree &#61; 1&#41;
 res4 &#61; resonance_set_from_complex_normal_form_style&#40;
     mset4, Vector&#123;ComplexF64&#125;&#40;master_eigenvalues&#41;, 0.05;
-    external_eigenvalues &#61; ComplexF64&#91;im * Ω, -im * Ω&#93;&#41;
-@time W, R &#61; solve_cohomological_problem&#40;
-    model_f, mset4, master_eigenvalues, master_modes, left_eigenmodes, res4;
-    master_modes_derivatives &#61; mmd, left_modes_derivatives &#61; left_modes_derivatives,
-    conjugate_permutation &#61; &#91;2, 1, 4, 3&#93;&#41;</code></pre>
+    external_eigenvalues &#61; ComplexF64&#91;im * Ω, -im * Ω&#93;&#41;</code></pre>
+<p>The bundle carries the ROM-length master pairing; the solve extends it over the two external variables from the model&#39;s own external system.</p>
+<pre><code class="language-julia">@time W, R &#61; solve_cohomological_problem&#40;model_f, mset4, spectral, res4&#41;</code></pre>
 <p>─────────────────────────────────────────────────────────────────────────────</p>
 <ol start="7">
 <li><p>Acceptance checks &#43; realification</p>

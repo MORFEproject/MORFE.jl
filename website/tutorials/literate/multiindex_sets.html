@@ -34,7 +34,7 @@ code { font-family: "JuliaMono", ui-monospace, SFMono-Regular, Menlo, monospace;
 commands in the script header; expected numbers are asserted by the example's
 <code>validate.jl</code> and quoted in its README.</div>
 <p>Constructing MultiindexSets</p>
-<p>A <code>MultiindexSet</code> is the object that decides <strong>which monomials the DPIM solve computes</strong>. Every parametrisation <code>W</code> and reduced dynamics <code>R</code> carries one, and <code>parametrise&#40;model, order, ep; mset &#61; ...&#41;</code> lets you supply your own instead of the default graded expansion — that single argument is the difference between an isotropic expansion, an anisotropic parametric ROM, and a spectrally truncated one.</p>
+<p>A <code>MultiindexSet</code> is the object that decides <strong>which monomials the DPIM solve computes</strong>. Every parametrisation <code>W</code> and reduced dynamics <code>R</code> carries one, and <code>parametrise&#40;model, spectral, mset&#41;</code> lets you supply your own instead of the default graded expansion — that single argument is the difference between an isotropic expansion, an anisotropic parametric ROM, and a spectrally truncated one.</p>
 <p>This tutorial builds multiindex sets six ways, from the automatic generators to a spectral truncation driven by the superharmonics <code>s&#40;α&#41; &#61; ⟨λ, α⟩</code>:</p>
 <ol>
 <li><p>the automatic generators</p>
@@ -249,7 +249,7 @@ println&#40;&quot;|s&#40;α&#41;| &lt; &quot;, R, &quot;:     &quot;, length&#40
 @assert length&#40;full&#41; &#61;&#61; 34 &amp;&amp; length&#40;band&#41; &#61;&#61; 13</code></pre>
 <p>Since every eigenvalue has the same real part, Re s &#61; −|α| and Im s &#61; 2&#40;α₁ − α₂&#41;:</p>
 <p>|s|² &#61; &#40;α₁&#43;α₂&#43;α₃&#41;² &#43; 4&#40;α₁−α₂&#41;² &#61; 5α₁² &#43; 5α₂² &#43; α₃² − 6α₁α₂ &#43; 2α₁α₃ &#43; 2α₂α₃</p>
-<p>The α₁α₂ coefficient is NEGATIVE. Multiplying by z̄ cancels imaginary part contributed by z, pulling s back towards the real axis — so |s| is not monotone under divisibility, and a monomial can sit inside the band while one of its divisors does not.</p>
+<p>The α₁α₂ coefficient is NEGATIVE. Multiplying by z̄ cancels imaginary part contributed by z, pulling s back towards the real axis — so |s| is not monotone under divisibility, and a monomial can sit inside the band while one of its factors does not.</p>
 <pre><code class="language-julia">println&#40;&quot;\nα                s&#40;α&#41;              |s|     kept&quot;&#41;
 for α in full.exponents
     sum&#40;α&#41; ≤ 3 || continue
@@ -261,22 +261,22 @@ end</code></pre>
 <pre><code class="language-julia">println&#40;&quot;\nresonant monomials of degree &gt; 1: &quot;,
     count&#40;α -&gt; sum&#40;α&#41; &gt; 1 &amp;&amp; any&#40;r -&gt; abs&#40;λ&#91;r&#93; - superharmonic&#40;α&#41;&#41; &lt; 1e-8, eachindex&#40;λ&#41;&#41;,
         full.exponents&#41;&#41;</code></pre>
-<p>So the band is NOT downward closed. The graded solve reads W&#91;α − eᵢ&#93; while working on α, so DPIM rejects a set with a missing divisor.</p>
+<p>So the band is NOT downward closed. The graded solve reads W&#91;α − eᵢ&#93; while working on α, so DPIM rejects a set with a missing factor.</p>
 <pre><code class="language-julia">println&#40;&quot;\nis_downward_closed&#40;band&#41;: &quot;, is_downward_closed&#40;band&#41;&#41;
 @assert &#33;is_downward_closed&#40;band&#41;
 
 unit&#40;i, n&#41; &#61; SVector&#123;n, Int&#125;&#40;ntuple&#40;j -&gt; j &#61;&#61; i ? 1 : 0, n&#41;&#41;</code></pre>
-<p>Degree 1 is exempt — its only divisor is the constant, which min_degree &#61; 1 removed.</p>
+<p>Degree 1 is exempt — its only factor is the constant, which min_degree &#61; 1 removed.</p>
 <pre><code class="language-julia">for α in band.exponents, i in 1:3
 
     &#40;α&#91;i&#93; &gt; 0 &amp;&amp; sum&#40;α&#41; &gt; 1&#41; || continue
     β &#61; α - unit&#40;i, 3&#41;
     find_in_set&#40;band, β&#41; &#61;&#61;&#61; nothing || continue
     println&#40;&quot;  &quot;, Vector&#40;α&#41;, &quot; is kept &#40;|s| &#61; &quot;, round&#40;abs&#40;superharmonic&#40;α&#41;&#41;, digits &#61; 3&#41;,
-        &quot;&#41;, but its divisor &quot;, Vector&#40;β&#41;, &quot; has |s| &#61; &quot;,
+        &quot;&#41;, but its factor &quot;, Vector&#40;β&#41;, &quot; has |s| &#61; &quot;,
         round&#40;abs&#40;superharmonic&#40;β&#41;&#41;, digits &#61; 3&#41;, &quot; ≥ &quot;, R&#41;
 end</code></pre>
-<p>The fix: take the downward closure — add back every divisor of every member. The result is legal, and still far smaller than the full expansion.</p>
+<p>The fix: take the downward closure — add back every factor of every member. The result is legal, and still far smaller than the full expansion.</p>
 <pre><code class="language-julia">function downward_closure&#40;S::MultiindexSet&#123;N&#125;&#41; where &#123;N&#125;
     closed &#61; Set&#123;SVector&#123;N, Int&#125;&#125;&#40;&#41;
     for α in S.exponents
@@ -306,7 +306,7 @@ write_lattice&#40;joinpath&#40;FIGDIR, &quot;fig4_spectral.html&quot;&#41;,
 <li><p>Handing a custom set to <code>parametrise</code></p>
 </li>
 </ol>
-<p><code>parametrise&#40;model, order, ep; mset &#61; ...&#41;</code> enforces the whole contract before it solves anything, through <code>validate_multiindex_set</code>. That function needs no model, so a set can be checked the moment it is built rather than after a long assembly.</p>
+<p><code>parametrise&#40;model, spectral, mset&#41;</code> enforces the whole contract before it solves anything, through <code>validate_multiindex_set</code>. That function needs no model, so a set can be checked the moment it is built rather than after a long assembly.</p>
 <p>It throws an ArgumentError naming the offending exponent. Both <code>parametrise</code> and <code>solve_cohomological_problem</code> take <code>validate_mset &#61; false</code> to skip the check. –––––––––––––––––––––––––––––––––––––––</p>
 <pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
 println&#40;&quot;6. Checking the parametrise contract\n&quot;&#41;</code></pre>

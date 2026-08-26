@@ -38,7 +38,7 @@ commands in the script header; expected numbers are asserted by the example's
 <ul>
 <li><p><code>MultilinearMap</code> — one nonlinear term of the equation of motion. Its <code>multiindex</code> says which derivative fills each argument slot of <code>f&#33;</code>.</p>
 </li>
-<li><p><code>ExternalSystem</code> — the autonomous dynamics <code>ṙ &#61; f&#40;r&#41;</code> that drives the model. Its linear part <strong>must be upper triangular</strong>, a constraint with real consequences.</p>
+<li><p><code>ExternalSystem</code> — the autonomous dynamics <code>ṙ &#61; f&#40;r&#41;</code> that drives the model. Its linear part <strong>must be upper triangular</strong> — a constraint the constructor satisfies by changing coordinates itself when it has to.</p>
 </li>
 <li><p><code>NthOrderModel</code> — the assembled <code>B_ORD x^&#40;ORD&#41; &#43; … &#43; B_0 x &#61; F&#40;x, ẋ, …, r&#41;</code>.</p>
 </li>
@@ -47,14 +47,14 @@ commands in the script header; expected numbers are asserted by the example's
 <ol>
 <li><p><code>MultilinearMap</code>: what a multiindex means, drawn as force–displacement curves</p>
 </li>
-<li><p><code>ExternalSystem</code>: harmonic, quasi-periodic and nonlinear drivers, drawn as orbits</p>
+<li><p><code>ExternalSystem</code>: harmonic, multiharmonic and quasi-periodic excitation, drawn as orbits</p>
 </li>
-<li><p>Lorenz: why it is rejected, and the coordinate change that repairs it</p>
+<li><p>Chaotic excitation: a nonlinear driver, and the one coordinate change left to the caller</p>
 </li>
 <li><p><code>NthOrderModel</code>: assemble a forced Duffing oscillator and integrate it</p>
 </li>
 </ol>
-<p>Everything is evaluated through the real library code — the curves come from <code>evaluate_term&#33;</code> and <code>evaluate</code>, never from a formula written out a second time — and the two coordinate changes are checked numerically rather than asserted.</p>
+<p>Everything is evaluated through the real library code — the curves come from <code>evaluate_term&#33;</code> and <code>evaluate</code>, never from a formula written out a second time — and the coordinate changes are checked numerically rather than asserted.</p>
 <p>Each section writes an interactive figure to <code>results/figures/</code>. Nothing is solved here: the script runs in a couple of seconds and needs no FEM backend.</p>
 <p>Run it from the repository root:</p>
 <pre><code>julia --project -e &#39;include&#40;&quot;examples/internals/full_order_model/main.jl&quot;&#41;&#39;</code></pre>
@@ -72,11 +72,11 @@ const FOM_FIGDIR &#61; get&#40;ENV, &quot;MORFE_FOM_OUT&quot;, joinpath&#40;@__D
 rule&#40;title&#41; &#61; println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92 * &quot;\n  &quot; * title * &quot;\n&quot; * &quot;&#61;&quot;^92&#41;</code></pre>
 <p>One RK4 step of ẏ &#61; f&#40;y&#41;. Ten lines, no dependency, and accurate enough that the coordinate changes below can be checked to ~1e-13.</p>
 <pre><code class="language-julia">function rk4_step&#40;f, y, h&#41;
-	k1 &#61; f&#40;y&#41;
-	k2 &#61; f&#40;y .&#43; &#40;h / 2&#41; .* k1&#41;
-	k3 &#61; f&#40;y .&#43; &#40;h / 2&#41; .* k2&#41;
-	k4 &#61; f&#40;y .&#43; h .* k3&#41;
-	return y .&#43; &#40;h / 6&#41; .* &#40;k1 .&#43; 2 .* k2 .&#43; 2 .* k3 .&#43; k4&#41;
+    k1 &#61; f&#40;y&#41;
+    k2 &#61; f&#40;y .&#43; &#40;h / 2&#41; .* k1&#41;
+    k3 &#61; f&#40;y .&#43; &#40;h / 2&#41; .* k2&#41;
+    k4 &#61; f&#40;y .&#43; h .* k3&#41;
+    return y .&#43; &#40;h / 6&#41; .* &#40;k1 .&#43; 2 .* k2 .&#43; 2 .* k3 .&#43; k4&#41;
 end
 
 &quot;&quot;&quot;
@@ -88,20 +88,29 @@ Integrate &#96;ẏ &#61; f&#40;y&#41;&#96; from &#96;y0&#96; and return every st
 modal Lorenz one, where it enforces a reality condition — see section 3.
 &quot;&quot;&quot;
 function orbit&#40;f, y0, h, nsteps; project &#61; identity&#41;
-	ys &#61; Vector&#123;typeof&#40;y0&#41;&#125;&#40;undef, nsteps &#43; 1&#41;
-	ys&#91;1&#93; &#61; project&#40;y0&#41;
-	for i in 1:nsteps
-		ys&#91;i&#43;1&#93; &#61; project&#40;rk4_step&#40;f, ys&#91;i&#93;, h&#41;&#41;
-	end
-	return ys
+    ys &#61; Vector&#123;typeof&#40;y0&#41;&#125;&#40;undef, nsteps &#43; 1&#41;
+    ys&#91;1&#93; &#61; project&#40;y0&#41;
+    for i in 1:nsteps
+        ys&#91;i &#43; 1&#93; &#61; project&#40;rk4_step&#40;f, ys&#91;i&#93;, h&#41;&#41;
+    end
+    return ys
 end</code></pre>
 <p>An <code>ExternalSystem</code> carries its dynamics as a polynomial, so this is all it takes to integrate one.</p>
 <pre><code class="language-julia">external_rhs&#40;sys&#41; &#61; r -&gt; evaluate&#40;sys.first_order_dynamics, r&#41;
 function orbit&#40;sys::ExternalSystem, r0, h, nsteps; kwargs...&#41;
-	orbit&#40;external_rhs&#40;sys&#41;, r0, h, nsteps; kwargs...&#41;
+    orbit&#40;external_rhs&#40;sys&#41;, r0, h, nsteps; kwargs...&#41;
 end
 
 component&#40;ys, k&#41; &#61; &#91;y&#91;k&#93; for y in ys&#93;</code></pre>
+<p>The degree-1 polynomial of a purely linear driver ṙ &#61; A r.  The coefficient carried by the unit multiindex eⱼ is the column A&#91;:, j&#93;, because that column is what multiplies rⱼ.</p>
+<pre><code class="language-julia">function linear_polynomial&#40;A::AbstractMatrix&#41;
+    n &#61; size&#40;A, 1&#41;
+    ms &#61; all_multiindices_up_to&#40;n, 1&#41;
+    deleteat&#33;&#40;ms.exponents, 1&#41;              # an ExternalSystem carries no constant term
+    coeffs &#61; &#91;SVector&#123;n, ComplexF64&#125;&#40;A&#91;:, findfirst&#40;&#61;&#61;&#40;1&#41;, Tuple&#40;e&#41;&#41;&#93;&#41;
+              for e in ms.exponents&#93;
+    return DensePolynomial&#40;coeffs, ms&#41;
+end</code></pre>
 <p>Orbits are integrated finely for accuracy but drawn coarsely: a screen cannot resolve 24 000 points, and shipping them would make the figure a megabyte instead of a page.</p>
 <pre><code class="language-julia">thin&#40;len::Integer, n::Integer &#61; 1500&#41; &#61; 1:cld&#40;len, n&#41;:len</code></pre>
 <hr />
@@ -122,34 +131,34 @@ const Ω &#61; 1.3         # forcing frequency; sections 2 and 4 drive the model
 hardening&#33;&#40;res, x1, x2, x3&#41; &#61; &#40;res .&#43;&#61; -K3 .* x1 .* x2 .* x3&#41;
 softening&#33;&#40;res, x1, x2, x3&#41; &#61; &#40;res .&#43;&#61; &#43;K3 .* x1 .* x2 .* x3&#41;
 drag&#33;&#40;res, v1, v2&#41; &#61; &#40;res .&#43;&#61; -C_DRAG .* v1 .* v2&#41;</code></pre>
-<p>A term that mixes the state with the external state: F &#61; k·x·&#40;r₁&#43;r₂&#41;. <code>f&#33;</code> receives the whole external vector in its last slot, so <code>sum&#40;r&#41;</code> is r₁ &#43; r₂ &#61; 2cos&#40;Ωt&#41;.</p>
+<p>A term that mixes the state with the external state: F &#61; k·x·&#40;r₁&#43;r₂&#41;. <code>f&#33;</code> receives the whole external vector in its last slot, and r₂ &#61; r̄₁, so r₁ &#43; r₂ &#61; 2cos&#40;Ωt&#41; is already real along the physical orbit.  Taking <code>real</code> here instead would break multilinearity: Re is not complex-linear — it is not even complex-differentiable — and the whole method rests on each slot being linear.</p>
 <pre><code class="language-julia">const K_MIX &#61; -1.5
-mixed&#33;&#40;res, x, r&#41; &#61; &#40;res .&#43;&#61; K_MIX .* x .* real&#40;sum&#40;r&#41;&#41;&#41;
+mixed&#33;&#40;res, x, r&#41; &#61; &#40;res .&#43;&#61; K_MIX .* x .* &#40;r&#91;1&#93; &#43; r&#91;2&#93;&#41;&#41;
 
 term_quad &#61; MultilinearMap&#40;quadratic&#33;; multiindex &#61; &#40;2, 0&#41;,
-	multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;
+    multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;
 term_hard &#61; MultilinearMap&#40;hardening&#33;; multiindex &#61; &#40;3, 0&#41;,
-	multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;
+    multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;
 term_soft &#61; MultilinearMap&#40;softening&#33;; multiindex &#61; &#40;3, 0&#41;,
-	multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;
+    multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;
 term_drag &#61; MultilinearMap&#40;drag&#33;; multiindex &#61; &#40;0, 2&#41;,
-	multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;</code></pre>
+    multiplicity_external &#61; 0, fully_asymmetric &#61; false&#41;</code></pre>
 <p>multiindex &#40;1, 0&#41; with one external factor: one slot takes x, the other takes r. This split is exactly the one the constructor refuses to guess — state it and it is fine.</p>
 <pre><code class="language-julia">term_mixed &#61; MultilinearMap&#40;mixed&#33;; multiindex &#61; &#40;1, 0&#41;, multiplicity_external &#61; 1&#41;
 
 for &#40;name, t&#41; in &#40;&#40;&quot;quadratic&quot;, term_quad&#41;, &#40;&quot;hardening cubic&quot;, term_hard&#41;,
-	&#40;&quot;quadratic drag&quot;, term_drag&#41;, &#40;&quot;mixed x·r&quot;, term_mixed&#41;&#41;
-	println&#40;rpad&#40;name, 18&#41;, &quot;multiindex &#61; &quot;, rpad&#40;string&#40;t.multiindex&#41;, 8&#41;,
-		&quot; deg &#61; &quot;, t.deg, &quot;   &quot;,
-		_call_signature&#40;t.multiindex, t.multiplicity_external&#41;&#41;
+    &#40;&quot;quadratic drag&quot;, term_drag&#41;, &#40;&quot;mixed x·r&quot;, term_mixed&#41;&#41;
+    println&#40;rpad&#40;name, 18&#41;, &quot;multiindex &#61; &quot;, rpad&#40;string&#40;t.multiindex&#41;, 8&#41;,
+        &quot; deg &#61; &quot;, t.deg, &quot;   &quot;,
+        _call_signature&#40;t.multiindex, t.multiplicity_external&#41;&#41;
 end</code></pre>
 <p>The keyword constructor reports anything it had to assume. Stating <code>multiindex</code> and <code>multiplicity_external</code> — as above — keeps it silent; here is what it says when they are left out and the shape has to be inferred from the arity of <code>f&#33;</code>:</p>
 <pre><code class="language-julia">println&#40;&quot;\nLeaving the shape to be inferred:&quot;&#41;
 _ &#61; MultilinearMap&#40;hardening&#33;&#41;</code></pre>
 <p>Evaluate a term the way the solver does: one state vector per derivative order.</p>
 <pre><code class="language-julia">force&#40;term, x, v&#41; &#61; &#40;res &#61; zeros&#40;1&#41;;
-	evaluate_term&#33;&#40;res, term, &#40;&#91;x&#93;, &#91;v&#93;&#41;, nothing&#41;;
-	res&#91;1&#93;&#41;
+    evaluate_term&#33;&#40;res, term, &#40;&#91;x&#93;, &#91;v&#93;&#41;, nothing&#41;;
+    res&#91;1&#93;&#41;
 
 xs &#61; collect&#40;range&#40;-1.0, 1.0, length &#61; 241&#41;&#41;
 vs &#61; collect&#40;range&#40;-1.5, 1.5, length &#61; 241&#41;&#41;</code></pre>
@@ -157,139 +166,149 @@ vs &#61; collect&#40;range&#40;-1.5, 1.5, length &#61; 241&#41;&#41;</code></pre
 <pre><code class="language-julia">restoring&#40;term, x&#41; &#61; K_LIN * x - force&#40;term, x, 0.0&#41;
 
 panel_force &#61; ChartPanel&#40;&quot;restoring force&quot;,
-	&#91;Curve&#40;&quot;linear  K u&quot;, xs, K_LIN .* xs; colour &#61; 4, dashed &#61; true&#41;,
-		Curve&#40;&quot;hardening  K u &#43; k₃ u³&quot;, xs, restoring.&#40;Ref&#40;term_hard&#41;, xs&#41;; colour &#61; 1&#41;,
-		Curve&#40;&quot;softening  K u − k₃ u³&quot;, xs, restoring.&#40;Ref&#40;term_soft&#41;, xs&#41;; colour &#61; 3&#41;,
-		Curve&#40;&quot;quadratic  K u &#43; k₂ u²&quot;, xs, restoring.&#40;Ref&#40;term_quad&#41;, xs&#41;; colour &#61; 2&#41;&#93;;
-	xlabel &#61; &quot;displacement u&quot;, ylabel &#61; &quot;restoring force&quot;,
-	note &#61; &quot;A multiindex &#40;3, 0&#41; is for cubic f&#33;&#40;res, u, u, u&#41;; and &#40;2, 0&#41; is for quadratic f&#33;&#40;res, u, u&#41;. &quot; *
-		   &quot;Hardening stiffens with amplitude, softening goes the other way. K &#61; 4, k₂ &#61; 3, k₃ &#61; 6.&quot;&#41;</code></pre>
+    &#91;Curve&#40;&quot;linear  K u&quot;, xs, K_LIN .* xs; colour &#61; 4, dashed &#61; true&#41;,
+        Curve&#40;&quot;hardening  K u &#43; k₃ u³&quot;, xs, restoring.&#40;Ref&#40;term_hard&#41;, xs&#41;; colour &#61; 1&#41;,
+        Curve&#40;&quot;softening  K u − k₃ u³&quot;, xs, restoring.&#40;Ref&#40;term_soft&#41;, xs&#41;; colour &#61; 3&#41;,
+        Curve&#40;&quot;quadratic  K u &#43; k₂ u²&quot;, xs, restoring.&#40;Ref&#40;term_quad&#41;, xs&#41;; colour &#61; 2&#41;&#93;;
+    xlabel &#61; &quot;displacement u&quot;, ylabel &#61; &quot;restoring force&quot;,
+    note &#61; &quot;A multiindex &#40;3, 0&#41; is for cubic f&#33;&#40;res, u, u, u&#41;; and &#40;2, 0&#41; is for quadratic f&#33;&#40;res, u, u&#41;. &quot; *
+           &quot;Hardening stiffens with amplitude, softening goes the other way. K &#61; 4, k₂ &#61; 3, k₃ &#61; 6.&quot;&#41;</code></pre>
 <p>A <em>multilinear</em> quadratic drag is v·v, which is even — it decelerates for v &gt; 0 and accelerates for v &lt; 0. Physical drag is |v|·v, which is odd but not multilinear, so it cannot be a <code>MultilinearMap</code> at all: it would have to be approximated by odd terms.</p>
 <pre><code class="language-julia">panel_drag &#61; ChartPanel&#40;&quot;quadratic drag&quot;,
-	&#91;
-		Curve&#40;&quot;smooth  −0.8 u̇²&quot;, vs, &#91;force&#40;term_drag, 0.0, v&#41; for v in vs&#93;;
-			colour &#61; 1&#41;,
-		Curve&#40;&quot;not smooth  −0.8 |u̇| u̇&quot;, vs, -C_DRAG .* abs.&#40;vs&#41; .* vs; colour &#61; 3, dashed &#61; true&#41;&#93;;
-	xlabel &#61; &quot;velocity u̇&quot;, ylabel &#61; &quot;force F&quot;,
-	note &#61; &quot;The multilinear map F&#40;u̇₁,u̇₂&#41; &#61; u̇₁ u̇₂ is linear in each argument separately; and describes a quadratic function on repeated inputs: F&#40;u̇,u̇&#41; &#61; u̇². &quot; *
-		   &quot;F&#40;u̇,u̇&#41; &#61; |u̇| u̇ is not twice differentiable @ u̇ &#61; 0.&quot;&#41;</code></pre>
+    &#91;
+        Curve&#40;&quot;smooth  −0.8 u̇²&quot;, vs, &#91;force&#40;term_drag, 0.0, v&#41; for v in vs&#93;;
+            colour &#61; 1&#41;,
+        Curve&#40;&quot;not smooth  −0.8 |u̇| u̇&quot;, vs,
+            -C_DRAG .* abs.&#40;vs&#41; .* vs; colour &#61; 3, dashed &#61; true&#41;&#93;;
+    xlabel &#61; &quot;velocity u̇&quot;, ylabel &#61; &quot;force F&quot;,
+    note &#61; &quot;The multilinear map F&#40;u̇₁,u̇₂&#41; &#61; u̇₁ u̇₂ is linear in each argument separately; and describes a quadratic function on repeated inputs: F&#40;u̇,u̇&#41; &#61; u̇². &quot; *
+           &quot;F&#40;u̇,u̇&#41; &#61; |u̇| u̇ is not twice differentiable @ u̇ &#61; 0.&quot;&#41;</code></pre>
 <p>F&#40;x, t&#41; &#61; k·x·&#40;r₁&#43;r₂&#41; with r &#61; &#40;e^&#123;iΩt&#125;, e^&#123;−iΩt&#125;&#41;, so r₁ &#43; r₂ &#61; 2cos&#40;Ωt&#41;. It is a surface over the &#40;x, t&#41; plane, drawn as a wireframe: straight lines along x — the term is linear in the state — and cosines along t.</p>
-<pre><code class="language-julia">force_ext&#40;term, x, t&#41; &#61; &#40;res &#61; zeros&#40;1&#41;;
-	evaluate_term&#33;&#40;res, term, &#40;&#91;x&#93;, &#91;0.0&#93;&#41;, SVector&#40;cis&#40;Ω * t&#41;, cis&#40;-Ω * t&#41;&#41;&#41;;
-	res&#91;1&#93;&#41;
+<pre><code class="language-julia">function force_ext&#40;term, x, t&#41;
+    &#40;res &#61; zeros&#40;1&#41;;
+        evaluate_term&#33;&#40;res, term, &#40;&#91;x&#93;, &#91;0.0&#93;&#41;, SVector&#40;cis&#40;Ω * t&#41;, cis&#40;-Ω * t&#41;&#41;&#41;;
+        res&#91;1&#93;&#41;
+end
 
 x_mix &#61; collect&#40;range&#40;-1.0, 1.0, length &#61; 33&#41;&#41;
 t_mix &#61; collect&#40;range&#40;0, 2 * 2π / Ω, length &#61; 65&#41;&#41;       # two forcing periods
 surf_mixed &#61; Surface3D&#40;x_mix, t_mix, &#40;x, t&#41; -&gt; force_ext&#40;term_mixed, x, t&#41;&#41;</code></pre>
 <p>The swept line is the law at one instant, F &#61; 2k·cos&#40;Ωt&#41;·u, which is a straight line through the origin pivoting with the phase. It needs no grid: two endpoints and the closed form are exact. <code>offset</code> lifts it by ~1&#37; of the force range, just enough to sit on the surface rather than inside it.</p>
 <pre><code class="language-julia">line_mixed &#61; SweptLine&#40;&#91;first&#40;x_mix&#41;, last&#40;x_mix&#41;&#93;,
-	&#91;2K_MIX * first&#40;x_mix&#41;, 2K_MIX * last&#40;x_mix&#41;&#93;;
-	omega &#61; Ω, offset &#61; 0.01 * &#40;maximum&#40;surf_mixed.z&#41; - minimum&#40;surf_mixed.z&#41;&#41;&#41;
+    &#91;2K_MIX * first&#40;x_mix&#41;, 2K_MIX * last&#40;x_mix&#41;&#93;;
+    omega &#61; Ω, offset &#61; 0.01 * &#40;maximum&#40;surf_mixed.z&#41; - minimum&#40;surf_mixed.z&#41;&#41;&#41;
 
 panel_mixed &#61; ChartPanel&#40;&quot;time-varying stiffness&quot;, surf_mixed;
-	line &#61; line_mixed,
-	axes &#61; &#40;&quot;displacement u&quot;, &quot;time t&quot;, &quot;force F&quot;&#41;,
-	note &#61; &quot;Periodically time-varying stiffness: F &#61; k · u · &#40;r₁ &#43; r₂&#41;, with &quot; *
-		   &quot;r₁ &#43; r₂ &#61; 2 cos&#40;Ωt&#41;. The swept line is the force–displacement law at one &quot; *
-		   &quot;instant. Drag to orbit.&quot;&#41;
+    line &#61; line_mixed,
+    axes &#61; &#40;&quot;displacement u&quot;, &quot;time t&quot;, &quot;force F&quot;&#41;,
+    note &#61; &quot;Periodically time-varying stiffness: F &#61; k · u · &#40;r₁ &#43; r₂&#41;, with &quot; *
+           &quot;r₁ &#43; r₂ &#61; 2 cos&#40;Ωt&#41;. The swept line is the force–displacement law at one &quot; *
+           &quot;instant. Drag to orbit.&quot;&#41;
 
 write_charts&#40;joinpath&#40;FOM_FIGDIR, &quot;fig1_nonlinear_terms.html&quot;&#41;,
-	&#91;panel_force, panel_drag, panel_mixed&#93;;
-	title &#61; &quot;Nonlinear terms&quot;,
-	caption &#61; &quot;Every curve is produced by &#96;evaluate_term&#33;&#96; on a real &#96;MultilinearMap&#96;.&quot;&#41;</code></pre>
+    &#91;panel_force, panel_drag, panel_mixed&#93;;
+    title &#61; &quot;Nonlinear terms&quot;,
+    caption &#61; &quot;Every curve is produced by &#96;evaluate_term&#33;&#96; on a real &#96;MultilinearMap&#96;.&quot;&#41;</code></pre>
 <hr />
 <ol start="2">
-<li><p><code>ExternalSystem</code> — the driver</p>
+<li><p><code>ExternalSystem</code> — periodic excitation</p>
 </li>
 </ol>
-<p>The external state r satisfies its own autonomous dynamics ṙ &#61; f&#40;r&#41;, and enters the model&#39;s nonlinear terms as an extra argument. The canonical MORFE forcing is a pair of conjugate eigenvalues ±iΩ, whose orbit r₁&#40;t&#41; &#61; e^&#123;iΩt&#125; is a unit circle: harmonic forcing without ever writing cos&#40;Ωt&#41;. –––––––––––––––––––––––––––––––––––––––</p>
-<pre><code class="language-julia">rule&#40;&quot;2. ExternalSystem — harmonic, quasi-periodic, nonlinear&quot;&#41;
+<p>The external state r satisfies its own autonomous dynamics ṙ &#61; f&#40;r&#41;, and enters the model&#39;s nonlinear terms as an extra argument. The canonical MORFE forcing is a pair of conjugate eigenvalues ±iΩ, whose orbit r₁&#40;t&#41; &#61; e^&#123;iΩt&#125; is a unit circle: harmonic forcing without ever writing cos&#40;Ωt&#41;.  Three cases follow: a single harmonic, a multiharmonic driver whose matrix is <em>not</em> triangular, and a quasi-periodic pair. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">rule&#40;&quot;2. ExternalSystem — harmonic, multiharmonic, quasi-periodic&quot;&#41;
 
 harmonic &#61; ExternalSystem&#40;&#40;im * Ω, -im * Ω&#41;&#41;
 println&#40;&quot;harmonic       eigenvalues &#61; &quot;, harmonic.eigenvalues&#41;
 
 h_step &#61; 2π / Ω / 400
-harm &#61; orbit&#40;harmonic, ComplexF64&#91;1.0, 1.0&#93;, h_step, 1200&#41;
-t_harm &#61; h_step .* &#40;0:1200&#41;
+n_harm &#61; 2 * 400                            # two forcing periods
+harm &#61; orbit&#40;harmonic, ComplexF64&#91;1.0, 1.0&#93;, h_step, n_harm&#41;
+t_harm &#61; h_step .* &#40;0:n_harm&#41;
 ih &#61; thin&#40;length&#40;harm&#41;, 900&#41;</code></pre>
 <p>The diagonal case has the closed form r&#40;t&#41; &#61; exp&#40;λt&#41; r₀, so RK4 can be checked rather than trusted.  <code>Base.exp</code> is spelled out because the examples smoke test includes every internals demo into one scope, and one of them binds a global named <code>exp</code>.</p>
 <pre><code class="language-julia">exact &#61; &#91;Base.exp&#40;harmonic.eigenvalues&#91;1&#93; * t&#41; for t in t_harm&#93;
 err_harm &#61; maximum&#40;abs.&#40;component&#40;harm, 1&#41; .- exact&#41;&#41;
 println&#40;&quot;RK4 vs closed form exp&#40;λt&#41;r₀: max error &#61; &quot;, round&#40;err_harm, sigdigits &#61; 3&#41;&#41;</code></pre>
+<p>A <em>multiharmonic</em> driver, and the first one whose matrix is not already triangular. Two of its states are the excitation itself,</p>
+<pre><code>r₁ &#61; −cos&#40;Ωt&#41;,      r₂ &#61; a·sin&#40;Ωt&#41; − cos&#40;4Ωt&#41;,</code></pre>
+<p>and two are auxiliary, one per harmonic: r₃ &#61; sin&#40;Ωt&#41; and r₄ &#61; sin&#40;4Ωt&#41;.  Differentiating closes the system once cos&#40;4Ωt&#41; is written back in terms of the state — r₂ already carries −cos&#40;4Ωt&#41;, so cos&#40;4Ωt&#41; &#61; a·r₃ − r₂ — which is what puts entries below the diagonal.</p>
+<p><code>ExternalSystem</code> no longer rejects that: it finds a basis Q in which the linear part is triangular and re-expresses the whole polynomial in r′ &#61; Q⁻¹r.  Here A is real and diagonalisable, so the eigenvector route applies and U comes out diagonal.</p>
+<pre><code class="language-julia">A_multiharmonic &#61; &#91;0.0 0.0 Ω 0.0;
+                   -0.03Ω 0.0 0.0 4Ω;
+                   -Ω 0.0 0.0 0.0;
+                   0.0 -4Ω 0.12Ω 0.0&#93;        # 0.12 &#61; 4a
+println&#40;&quot;multiharmonic linear matrix is upper triangular &#61; &quot;,
+    istriu&#40;A_multiharmonic&#41;, &quot;  ⇒ it will be re-based:&quot;&#41;
+multiharmonic &#61; ExternalSystem&#40;linear_polynomial&#40;A_multiharmonic&#41;&#41;
+println&#40;&quot;multiharmonic  eigenvalues &#61; &quot;, round.&#40;multiharmonic.eigenvalues, digits &#61; 6&#41;&#41;
+println&#40;&quot;               expected ±iΩ, ±4iΩ &#61; &quot;,
+    round.&#40;ComplexF64&#91;im * Ω, -im * Ω, 4im * Ω, -4im * Ω&#93;, digits &#61; 6&#41;, &quot; &#40;in some order&#41;&quot;&#41;</code></pre>
+<p>The step is set by the fastest harmonic, 4Ω, not by Ω.</p>
+<pre><code class="language-julia">hm &#61; 2π / Ω / 2000
+n_multi &#61; 2 * 2000                          # two periods of the slow harmonic
+r0_multiharmonic &#61; ComplexF64&#91;-1, -1, 0, 0&#93;            # r₁&#40;0&#41; &#61; r₂&#40;0&#41; &#61; −cos 0, auxiliaries 0
+morb &#61; orbit&#40;multiharmonic,
+    SVector&#123;4, ComplexF64&#125;&#40;external_basis&#40;multiharmonic&#41; \ r0_multiharmonic&#41;,
+    hm, n_multi&#41;
+t_m &#61; hm .* &#40;0:n_multi&#41;</code></pre>
+<p>Everything is read back in <em>physical</em> coordinates: <code>to_physical_external</code> undoes the Q the constructor chose, so the tutorial never has to know which basis it picked.</p>
+<pre><code class="language-julia">mphys &#61; &#91;to_physical_external&#40;multiharmonic, v&#41; for v in morb&#93;
+m_r1 &#61; real.&#40;component&#40;mphys, 1&#41;&#41;
+m_r2 &#61; real.&#40;component&#40;mphys, 2&#41;&#41;
+err_m1 &#61; maximum&#40;abs.&#40;m_r1 .&#43; cos.&#40;Ω .* t_m&#41;&#41;&#41;
+err_m2 &#61; maximum&#40;abs.&#40;m_r2 .- &#40;0.03 .* sin.&#40;Ω .* t_m&#41; .- cos.&#40;4Ω .* t_m&#41;&#41;&#41;&#41;</code></pre>
+<p>No projection is applied above, and none is needed: on a real matrix the eigenvector route keeps the conjugate pairing exact, so the physical state stays real by itself.  Section 3 is the opposite case — there the unstable directions amplify the same round-off.</p>
+<pre><code class="language-julia">err_m_imag &#61; maximum&#40;maximum&#40;abs.&#40;imag.&#40;v&#41;&#41;&#41; for v in mphys&#41;
+println&#40;&quot;r₁ vs −cos&#40;Ωt&#41;                    max error &#61; &quot;, round&#40;err_m1, sigdigits &#61; 3&#41;&#41;
+println&#40;&quot;r₂ vs a·sin&#40;Ωt&#41; − cos&#40;4Ωt&#41;        max error &#61; &quot;, round&#40;err_m2, sigdigits &#61; 3&#41;&#41;
+println&#40;&quot;max |imag&#40;r&#41;| with no projection            &#61; &quot;, round&#40;err_m_imag, sigdigits &#61; 3&#41;&#41;
+im_ &#61; thin&#40;length&#40;mphys&#41;, 2000&#41;</code></pre>
 <p>Two incommensurate frequencies: the orbit never closes, and the envelope beats.</p>
 <pre><code class="language-julia">const Ω1, Ω2 &#61; 1.0, sqrt&#40;2&#41;
 quasi &#61; ExternalSystem&#40;&#40;im * Ω1, -im * Ω1, im * Ω2, -im * Ω2&#41;&#41;
 println&#40;&quot;quasi-periodic eigenvalues &#61; &quot;, quasi.eigenvalues&#41;
 hq &#61; 0.02
-qorb &#61; orbit&#40;quasi, ComplexF64&#91;1.0, 1.0, 0.7, 0.7&#93;, hq, 4000&#41;
-t_q &#61; hq .* &#40;0:4000&#41;
+n_quasi &#61; 8000                                  # 160 s, twice the previous window
+qorb &#61; orbit&#40;quasi, ComplexF64&#91;1.0, 1.0, 0.7, 0.7&#93;, hq, n_quasi&#41;
+t_q &#61; hq .* &#40;0:n_quasi&#41;
 q_sig &#61; real.&#40;component&#40;qorb, 1&#41;&#41; .&#43; real.&#40;component&#40;qorb, 3&#41;&#41;
 q_im &#61; imag.&#40;component&#40;qorb, 1&#41;&#41; .&#43; imag.&#40;component&#40;qorb, 3&#41;&#41;
-iq &#61; thin&#40;length&#40;qorb&#41;, 2000&#41;</code></pre>
-<p>A <em>nonlinear</em> external system. Only the linear part must be upper triangular — the nonlinear part is unconstrained — so a one-way coupling is allowed:</p>
-<pre><code>ṙ₁ &#61; iΩ₁ r₁ &#43; i c r₁r₃        ṙ₃ &#61; iΩ₂ r₃
-ṙ₂ &#61; −iΩ₁ r₂ − i c r₂r₄       ṙ₄ &#61; −iΩ₂ r₄        &#40;r₂ &#61; r̄₁, r₄ &#61; r̄₃&#41;</code></pre>
-<p>The slow pair &#40;r₃, r₄&#41; modulates the fast one and never the reverse — that asymmetry is the triangular structure, made visible. Integrating the r₃ term gives r₁ &#61; exp&#40;iΩ₁t &#43; &#40;c/Ω₂&#41;&#40;e^&#123;iΩ₂t&#125; − 1&#41;&#41;, so |r₁| swings between exp&#40;−2c/Ω₂&#41; and 1: the modulation is <em>sustained</em>, not a transient that decays onto the linear system&#39;s circle.</p>
-<pre><code class="language-julia">const Ω_SLOW, C_MOD &#61; 0.4, 0.25
-ms_casc &#61; all_multiindices_up_to&#40;4, 2&#41;
-deleteat&#33;&#40;ms_casc.exponents, 1&#41;                     # drop the constant term
-const _CASC &#61; Dict&#40;
-	&#40;1, 0, 0, 0&#41; &#61;&gt; SVector&#40;im * Ω, 0, 0, 0&#41;,         # ṙ₁ ← iΩ₁ r₁
-	&#40;0, 1, 0, 0&#41; &#61;&gt; SVector&#40;0, -im * Ω, 0, 0&#41;,        # ṙ₂ ← −iΩ₁ r₂
-	&#40;0, 0, 1, 0&#41; &#61;&gt; SVector&#40;0, 0, im * Ω_SLOW, 0&#41;,    # ṙ₃ ← iΩ₂ r₃
-	&#40;0, 0, 0, 1&#41; &#61;&gt; SVector&#40;0, 0, 0, -im * Ω_SLOW&#41;,   # ṙ₄ ← −iΩ₂ r₄
-	&#40;1, 0, 1, 0&#41; &#61;&gt; SVector&#40;im * C_MOD, 0, 0, 0&#41;,     # ṙ₁ ← i c r₁r₃
-	&#40;0, 1, 0, 1&#41; &#61;&gt; SVector&#40;0, -im * C_MOD, 0, 0&#41;&#41;    # ṙ₂ ← −i c r₂r₄
-casc_coeffs &#61; &#91;ComplexF64.&#40;get&#40;_CASC, Tuple&#40;e&#41;, SVector&#40;0, 0, 0, 0&#41;&#41;&#41;
-			   for e in ms_casc.exponents&#93;
-cascade &#61; ExternalSystem&#40;DensePolynomial&#40;casc_coeffs, ms_casc&#41;&#41;
-println&#40;&quot;cascade        eigenvalues &#61; &quot;, cascade.eigenvalues&#41;
-println&#40;&quot;               diagonal ⇒ upper triangular ⇒ accepted, nonlinear part free&quot;&#41;
-hc &#61; 0.01
-corb &#61; orbit&#40;cascade, ComplexF64&#91;1.0, 1.0, 1.0, 1.0&#93;, hc, 12000&#41;
-t_c &#61; hc .* &#40;0:12000&#41;
-ic &#61; thin&#40;length&#40;corb&#41;, 2400&#41;
-amp_c &#61; abs.&#40;component&#40;corb, 1&#41;&#41;
-println&#40;&quot;               |r₁| ∈ &#91;&quot;, round&#40;minimum&#40;amp_c&#41;, digits &#61; 3&#41;, &quot;, &quot;,
-	round&#40;maximum&#40;amp_c&#41;, digits &#61; 3&#41;, &quot;&#93;   predicted &#91;&quot;,
-	round&#40;Base.exp&#40;-2C_MOD / Ω_SLOW&#41;, digits &#61; 3&#41;, &quot;, 1.0&#93;&quot;&#41;
+iq &#61; thin&#40;length&#40;qorb&#41;, 2000&#41;
 
 write_pairs&#40;joinpath&#40;FOM_FIGDIR, &quot;fig2_external_systems.html&quot;&#41;,
-	&#91;
-		PairPanel&#40;&quot;harmonic&quot;,
-			&#91;Curve&#40;&quot;Re r₁&#40;t&#41;&quot;, t_harm&#91;ih&#93;, real.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;; colour &#61; 1&#41;,
-				Curve&#40;&quot;Im r₁&#40;t&#41;&quot;, t_harm&#91;ih&#93;, imag.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;; colour &#61; 2&#41;&#93;,
-			&#91;Curve&#40;&quot;r₁&quot;, real.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;,
-				imag.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;; colour &#61; 1&#41;&#93;;
-			tylabel &#61; &quot;r₁&quot;, pxlabel &#61; &quot;Re r₁&quot;, pylabel &#61; &quot;Im r₁&quot;,
-			note &#61; &quot;ExternalSystem&#40;&#40;iΩ, −iΩ&#41;&#41; with Ω &#61; &#36;&#40;Ω&#41;: a purely imaginary pair of &quot; *
-				   &quot;eigenvalues, so the orbit is a circle and the signal a cosine. &quot; *
-				   &quot;RK4 matches exp&#40;λt&#41;r₀ to &#36;&#40;round&#40;err_harm, sigdigits &#61; 2&#41;&#41;.&quot;&#41;,
-		PairPanel&#40;&quot;quasi-periodic&quot;,
-			&#91;Curve&#40;&quot;Re r₁ &#43; Re r₃&quot;, t_q&#91;iq&#93;, q_sig&#91;iq&#93;; colour &#61; 2&#41;&#93;,
-			&#91;Curve&#40;&quot;&#40;Re, Im&#41; of r₁ &#43; r₃&quot;, q_sig&#91;iq&#93;, q_im&#91;iq&#93;; colour &#61; 2&#41;&#93;;
-			tylabel &#61; &quot;signal&quot;, pxlabel &#61; &quot;Re&quot;, pylabel &#61; &quot;Im&quot;,
-			note &#61; &quot;Two incommensurate frequencies, Ω₁ &#61; &#36;&#40;Ω1&#41; and Ω₂ &#61; √2: the signal &quot; *
-				   &quot;beats and never repeats, and the orbit fills an annulus — a section &quot; *
-				   &quot;of the invariant torus.&quot;&#41;,
-		PairPanel&#40;&quot;nonlinear cascade&quot;,
-			&#91;Curve&#40;&quot;Re r₁&#40;t&#41;&quot;, t_c&#91;ic&#93;, real.&#40;component&#40;corb, 1&#41;&#41;&#91;ic&#93;; colour &#61; 1&#41;,
-				Curve&#40;&quot;|r₁&#40;t&#41;|&quot;, t_c&#91;ic&#93;, amp_c&#91;ic&#93;; colour &#61; 3&#41;&#93;,
-			&#91;Curve&#40;&quot;r₁&quot;, real.&#40;component&#40;corb, 1&#41;&#41;&#91;ic&#93;,
-				imag.&#40;component&#40;corb, 1&#41;&#41;&#91;ic&#93;; colour &#61; 1&#41;&#93;;
-			tylabel &#61; &quot;r₁&quot;, pxlabel &#61; &quot;Re r₁&quot;, pylabel &#61; &quot;Im r₁&quot;,
-			note &#61; &quot;ṙ₁ &#61; iΩ₁r₁ &#43; i c r₁r₃ and ṙ₃ &#61; iΩ₂r₃ with r₂ &#61; r̄₁ and r₄ &#61; r̄₃: &quot; *
-				   &quot;the slow pair &#40;r₃, r₄&#41; modulates the fast one &#40;r₁, r₂&#41;.&quot;&#41;&#93;;
-	title &#61; &quot;External systems&quot;,
-	caption &#61; &quot;Time plot left, phase portrait right. Orbits integrated with RK4 through &quot; *
-			  &quot;&#96;evaluate&#40;sys.first_order_dynamics, r&#41;&#96;.&quot;&#41;</code></pre>
+    &#91;
+        PairPanel&#40;&quot;harmonic&quot;,
+            &#91;Curve&#40;&quot;Re r₁&#40;t&#41;&quot;, t_harm&#91;ih&#93;, real.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;; colour &#61; 1&#41;,
+                Curve&#40;&quot;Im r₁&#40;t&#41;&quot;, t_harm&#91;ih&#93;, imag.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;; colour &#61; 4&#41;&#93;,
+            &#91;Curve&#40;&quot;r₁&quot;, real.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;,
+                imag.&#40;component&#40;harm, 1&#41;&#41;&#91;ih&#93;; colour &#61; 1&#41;&#93;;
+            tylabel &#61; &quot;r₁&quot;, pxlabel &#61; &quot;Re r₁&quot;, pylabel &#61; &quot;Im r₁&quot;,
+            note &#61; &quot;A purely imaginary pair ±iΩ with Ω &#61; &#36;&#40;Ω&#41;: the orbit is a circle and &quot; *
+                   &quot;the signal a cosine.&quot;&#41;,
+        PairPanel&#40;&quot;multiharmonic&quot;,
+            &#91;Curve&#40;&quot;r₁&#40;t&#41; &#61; −cos Ωt&quot;, t_m&#91;im_&#93;, m_r1&#91;im_&#93;; colour &#61; 3&#41;,
+                Curve&#40;&quot;r₂&#40;t&#41; &#61; 0.03 sin Ωt − cos 4Ωt&quot;, t_m&#91;im_&#93;, m_r2&#91;im_&#93;; colour &#61; 4&#41;&#93;,
+            &#91;Curve&#40;&quot;&#40;r₁, r₂&#41;&quot;, m_r1&#91;im_&#93;, m_r2&#91;im_&#93;; colour &#61; 3&#41;&#93;;
+            tylabel &#61; &quot;r&quot;, pxlabel &#61; &quot;r₁&quot;, pylabel &#61; &quot;r₂&quot;,
+            note &#61; &quot;A signal with two harmonics, Ω₁ &#61; &#36;&#40;Ω&#41; and 4Ω₁ &#61; &#36;&#40;4*Ω&#41; draws an M &#40;for MORFE&#41; in the phase plane.&quot;&#41;,
+        PairPanel&#40;&quot;quasi-periodic&quot;,
+            &#91;Curve&#40;&quot;Re r₁ &#43; Re r₃&quot;, t_q&#91;iq&#93;, q_sig&#91;iq&#93;; colour &#61; 2&#41;&#93;,
+            &#91;Curve&#40;&quot;&#40;Re, Im&#41; of r₁ &#43; r₃&quot;, q_sig&#91;iq&#93;, q_im&#91;iq&#93;; colour &#61; 2&#41;&#93;;
+            tylabel &#61; &quot;signal&quot;, pxlabel &#61; &quot;Re&quot;, pylabel &#61; &quot;Im&quot;,
+            note &#61; &quot;Two incommensurate frequencies, Ω₁ &#61; &#36;&#40;Ω1&#41; and Ω₂ &#61; √2, over &quot; *
+                   &quot;&#36;&#40;round&#40;Int, hq * n_quasi&#41;&#41; s: the signal beats and never repeats, and &quot; *
+                   &quot;the orbit fills an annulus — a section of the invariant torus.&quot;&#41;&#93;;
+    title &#61; &quot;Periodic excitation&quot;,
+    caption &#61; &quot;Time plot left, phase portrait right. Orbits integrated with RK4 through &quot; *
+              &quot;&#96;evaluate&#40;sys.first_order_dynamics, r&#41;&#96;.&quot;&#41;</code></pre>
 <hr />
 <ol start="3">
-<li><p>Lorenz — rejected, then repaired by a change of coordinates</p>
+<li><p>Chaotic excitation — a nonlinear driver</p>
 </li>
 </ol>
-<p>The linear part of an external system must be upper triangular. The reason is causality: the cohomological equations are solved monomial by monomial in GrLex order, and the |β| &#61; 1 lower-order coupling needs W&#91;α − eⱼ &#43; eᵢ&#93;, a coefficient of the <em>same</em> degree, which precedes α only when i &lt; j. So the solver reads only the strictly upper triangle of Λ, and a strictly-lower entry would be dropped without trace. –––––––––––––––––––––––––––––––––––––––</p>
-<pre><code class="language-julia">rule&#40;&quot;3. Lorenz — rejected, then repaired&quot;&#41;
+<p>A driver need not be periodic, and need not be linear: only the <em>linear</em> part of an external system has to be upper triangular. The reason is causality: the cohomological equations are solved monomial by monomial in GrLex order, and the |β| &#61; 1 lower-order coupling needs W&#91;α − eⱼ &#43; eᵢ&#93;, a coefficient of the <em>same</em> degree, which precedes α only when i &lt; j.</p>
+<p>That is a property of the <em>coordinates</em>, not of the system, so a matrix that fails it is re-based rather than rejected. What the user still has to supply is an <em>equilibrium</em>: an ExternalSystem&#39;s polynomial carries no constant term, so the expansion has to be centred on one. Lorenz is just a convenient example showing both halves — the translation, which is ours to do, and the change of basis, which is not. –––––––––––––––––––––––––––––––––––––––</p>
+<pre><code class="language-julia">rule&#40;&quot;3. Chaotic excitation — a nonlinear driver&quot;&#41;
 
 const SIG, RHO, BET &#61; 10.0, 28.0, 8 / 3
 lorenz&#40;r&#41; &#61; &#91;SIG * &#40;r&#91;2&#93; - r&#91;1&#93;&#41;, r&#91;1&#93; * &#40;RHO - r&#91;3&#93;&#41; - r&#91;2&#93;, r&#91;1&#93; * r&#91;2&#93; - BET * r&#91;3&#93;&#93;</code></pre>
@@ -297,140 +316,107 @@ lorenz&#40;r&#41; &#61; &#91;SIG * &#40;r&#91;2&#93; - r&#91;1&#93;&#41;, r&#91;
 <pre><code class="language-julia">lorenz_quad&#40;u&#41; &#61; &#91;0.0 &#43; 0im, -u&#91;1&#93; * u&#91;3&#93;, u&#91;1&#93; * u&#91;2&#93;&#93;
 
 function lorenz_polynomial&#40;A, quad_coeff&#41;
-	ms &#61; all_multiindices_up_to&#40;3, 2&#41;
-	deleteat&#33;&#40;ms.exponents, 1&#41;
-	coeffs &#61; map&#40;ms.exponents&#41; do e
-		ex &#61; Tuple&#40;e&#41;
-		if sum&#40;ex&#41; &#61;&#61; 1
-			k &#61; findfirst&#40;&#61;&#61;&#40;1&#41;, ex&#41;
-			return SVector&#123;3, ComplexF64&#125;&#40;A&#91;:, k&#93;&#41;
-		end
-		slots &#61; vcat&#40;&#40;fill&#40;i, ex&#91;i&#93;&#41; for i in 1:3&#41;...&#41;
-		return quad_coeff&#40;slots&#91;1&#93;, slots&#91;end&#93;&#41;
-	end
-	return DensePolynomial&#40;coeffs, ms&#41;
+    ms &#61; all_multiindices_up_to&#40;3, 2&#41;
+    deleteat&#33;&#40;ms.exponents, 1&#41;
+    coeffs &#61; map&#40;ms.exponents&#41; do e
+        ex &#61; Tuple&#40;e&#41;
+        if sum&#40;ex&#41; &#61;&#61; 1
+            k &#61; findfirst&#40;&#61;&#61;&#40;1&#41;, ex&#41;
+            return SVector&#123;3, ComplexF64&#125;&#40;A&#91;:, k&#93;&#41;
+        end
+        slots &#61; vcat&#40;&#40;fill&#40;i, ex&#91;i&#93;&#41; for i in 1:3&#41;...&#41;
+        return quad_coeff&#40;slots&#91;1&#93;, slots&#91;end&#93;&#41;
+    end
+    return DensePolynomial&#40;coeffs, ms&#41;
 end</code></pre>
-<p>–- 3a. the raw system, at the origin –––––––––––––––––––-</p>
-<pre><code class="language-julia">A_origin &#61; &#91;-SIG SIG 0.0; RHO -1.0 0.0; 0.0 0.0 -BET&#93;
-function raw_quad&#40;a, b&#41;
-	a &#61;&#61; b ? SVector&#123;3, ComplexF64&#125;&#40;lorenz_quad&#40;1.0 .* &#40;1:3 .&#61;&#61; a&#41;&#41;&#41; :
-	SVector&#123;3, ComplexF64&#125;&#40;lorenz_quad&#40;1.0 .* &#40;&#40;1:3 .&#61;&#61; a&#41; .&#43; &#40;1:3 .&#61;&#61; b&#41;&#41;&#41; .-
-						   lorenz_quad&#40;1.0 .* &#40;1:3 .&#61;&#61; a&#41;&#41; .-
-						   lorenz_quad&#40;1.0 .* &#40;1:3 .&#61;&#61; b&#41;&#41;&#41;
+<p>–- 3a. the original system ––––––––––––––––––––––––– The quadratic part as a bilinear form, via polarisation B&#40;a, b&#41; &#61; Q&#40;a&#43;b&#41; − Q&#40;a&#41; − Q&#40;b&#41;.</p>
+<pre><code class="language-julia">function raw_quad&#40;a, b&#41;
+    a &#61;&#61; b ? SVector&#123;3, ComplexF64&#125;&#40;lorenz_quad&#40;1.0 .* &#40;1:3 .&#61;&#61; a&#41;&#41;&#41; :
+    SVector&#123;3, ComplexF64&#125;&#40;lorenz_quad&#40;1.0 .* &#40;&#40;1:3 .&#61;&#61; a&#41; .&#43; &#40;1:3 .&#61;&#61; b&#41;&#41;&#41; .-
+                           lorenz_quad&#40;1.0 .* &#40;1:3 .&#61;&#61; a&#41;&#41; .-
+                           lorenz_quad&#40;1.0 .* &#40;1:3 .&#61;&#61; b&#41;&#41;&#41;
 end
-println&#40;&quot;Lorenz linearised at the origin — linear matrix:&quot;&#41;
+A_origin &#61; &#91;-SIG SIG 0.0; RHO -1.0 0.0; 0.0 0.0 -BET&#93;
+println&#40;&quot;Lorenz at the origin — linear matrix:&quot;&#41;
 println&#40;repr&#40;&quot;text/plain&quot;, A_origin&#41;&#41;
-try
-	ExternalSystem&#40;lorenz_polynomial&#40;ComplexF64.&#40;A_origin&#41;, raw_quad&#41;&#41;
-	println&#40;&quot;accepted &#40;unexpected&#41;&quot;&#41;
-catch e
-	println&#40;&quot;\nRejected, as it must be:\n&quot;&#41;
-	println&#40;e.msg&#41;
-end
-println&#40;&quot;\nNo reordering of the variables helps: both off-diagonal entries of the x–y&quot;&#41;
-println&#40;&quot;block are non-zero, so one of them is always strictly below the diagonal.&quot;&#41;</code></pre>
-<p>–- 3b. shift to a non-trivial fixed point –––––––––––––––––- The two non-trivial fixed points lost stability through a Hopf bifurcation at ρ_H &#61; σ&#40;σ&#43;β&#43;3&#41;/&#40;σ−β−1&#41;; past it there is no stable fixed point and no stable periodic orbit, which is what leaves the chaotic attractor. Stability is not what we need here: the fixed point is needed only to remove the constant term, since an ExternalSystem&#39;s polynomial has none.</p>
-<pre><code class="language-julia">rho_hopf &#61; SIG * &#40;SIG &#43; BET &#43; 3&#41; / &#40;SIG - BET - 1&#41;
-xe &#61; sqrt&#40;BET * &#40;RHO - 1&#41;&#41;
+println&#40;&quot;upper triangular &#61; &quot;, istriu&#40;A_origin&#41;,
+    &quot;   &#40;and no reordering helps: both off-diagonal entries of the x–y block are non-zero&#41;&quot;&#41;</code></pre>
+<p>–- 3b. why the origin will not do –––––––––––––––––––––- The origin <em>is</em> an equilibrium, so it would serve — but it is not the interesting one, and the attractor lives around the other two. An ExternalSystem&#39;s polynomial has no constant term, so whichever point we expand about has to be an equilibrium of the field.</p>
+<pre><code class="language-julia">xe &#61; sqrt&#40;BET * &#40;RHO - 1&#41;&#41;
 C_plus &#61; &#91;xe, xe, RHO - 1&#93;
-println&#40;
-	&quot;\nHopf threshold ρ_H &#61; &quot;, round&#40;rho_hopf, digits &#61; 3&#41;, &quot;   &#40;running at ρ &#61; &quot;, RHO, &quot;&#41;&quot;&#41;
-println&#40;&quot;fixed point C₊     &#61; &quot;, round.&#40;C_plus, digits &#61; 4&#41;,
-	&quot;   ‖f&#40;C₊&#41;‖ &#61; &quot;, round&#40;norm&#40;lorenz&#40;C_plus&#41;&#41;, sigdigits &#61; 3&#41;&#41;</code></pre>
+println&#40;&quot;\nfixed point C₊ &#61; &quot;, round.&#40;C_plus, digits &#61; 4&#41;,
+    &quot;   ‖f&#40;C₊&#41;‖ &#61; &quot;, round&#40;norm&#40;lorenz&#40;C_plus&#41;&#41;, sigdigits &#61; 3&#41;, &quot; ⇒ an equilibrium&quot;&#41;</code></pre>
 <p>Because Lorenz is quadratic, u &#61; r − C₊ gives exactly u̇ &#61; J u &#43; Q&#40;u, u&#41;: the same quadratic part, and no constant because C₊ is an equilibrium. Writing u &#61; &#40;X, Y, Z&#41; and C &#61; √&#40;β&#40;ρ−1&#41;&#41;, the centred system is</p>
 <pre><code>Ẋ &#61; σ&#40;Y − X&#41;
 Ẏ &#61; X − Y − Z&#40;X &#43; C&#41;     &#61;  X − Y − C·Z  −  X·Z
 Ż &#61; C&#40;X &#43; Y&#41; &#43; X·Y − β·Z</code></pre>
 <p>so the linear part is the Jacobian below and the quadratic part is &#40;0, −X·Z, &#43;X·Y&#41;, unchanged from the original system. J is still not triangular — the &#40;2,1&#41; entry is now 1 rather than ρ, but it is not zero — so a shift alone is not enough.</p>
 <pre><code class="language-julia">J &#61; &#91;-SIG SIG 0.0; RHO-C_plus&#91;3&#93; -1.0 -C_plus&#91;1&#93;; C_plus&#91;2&#93; C_plus&#91;1&#93; -BET&#93;</code></pre>
-<p>–- 3c. diagonalise –––––––––––––––––––––––––––––</p>
-<pre><code class="language-julia">F &#61; eigen&#40;J&#41;
-Λ, T &#61; F.values, F.vectors
-Ti &#61; inv&#40;T&#41;
-println&#40;&quot;eigenvalues at C₊  &#61; &quot;, round.&#40;Λ, digits &#61; 4&#41;&#41;
-println&#40;&quot;→ diagonal, hence upper triangular by construction.&quot;&#41;</code></pre>
-<p>v &#61; T⁻¹u  ⇒  v̇ &#61; Λ v &#43; T⁻¹ Q&#40;T v, T v&#41;.  The quadratic coefficients follow from the polarisation identity B&#40;a, b&#41; &#61; Q&#40;a&#43;b&#41; − Q&#40;a&#41; − Q&#40;b&#41;.</p>
-<pre><code class="language-julia">function modal_quad&#40;a, b&#41;
-	a &#61;&#61; b ? SVector&#123;3, ComplexF64&#125;&#40;Ti * lorenz_quad&#40;T&#91;:, a&#93;&#41;&#41; :
-	SVector&#123;3, ComplexF64&#125;&#40;Ti * &#40;lorenz_quad&#40;T&#91;:, a&#93; .&#43; T&#91;:, b&#93;&#41; .-
-								 lorenz_quad&#40;T&#91;:, a&#93;&#41; .- lorenz_quad&#40;T&#91;:, b&#93;&#41;&#41;&#41;
+<p>–- 3c. hand the centred system over ––––––––––––––––––––– That is the whole of the user&#39;s work. J is not triangular, and it does not need to be: the constructor finds its own basis and re-expresses the quadratic part along with it.</p>
+<pre><code class="language-julia">lorenz_ext &#61; ExternalSystem&#40;lorenz_polynomial&#40;ComplexF64.&#40;J&#41;, raw_quad&#41;&#41;
+Q &#61; external_basis&#40;lorenz_ext&#41;
+println&#40;&quot;\nre-based                     &#61; &quot;, Q &#33;&#61;&#61; nothing&#41;
+println&#40;&quot;linear part now triangular   &#61; &quot;, istriu&#40;lorenz_ext.linear_matrix&#41;&#41;
+println&#40;&quot;eigenvalues &#40;diag U&#41;         &#61; &quot;, round.&#40;lorenz_ext.eigenvalues, digits &#61; 4&#41;&#41;</code></pre>
+<p>–- 3d. the reality condition ––––––––––––––––––––––––- The system&#39;s own coordinates are complex, but a <em>physical</em> state is not an arbitrary point of ℂ³: one eigenvalue is real, so its coordinate is real, and the other two are a conjugate pair, so their coordinates are conjugate. Those conditions cut out a real 3-dimensional subspace which the exact flow preserves — but round-off does not, and here the unstable directions amplify the drift until the orbit leaves the attractor altogether &#40;measured, without the projection: the pairing defect reaches 10² by t ≈ 45 s and x wanders to −79, far outside Lorenz&#39;s |x| ≲ 18&#41;. It is the same reality condition MORFE&#39;s <code>Realification</code> module imposes on a parametrisation.</p>
+<p>Which slot holds which is <em>not</em> assumed. The re-basing keeps a conjugate pair adjacent but does not promise where the pair lands — section 2&#39;s matrix returns the two pairs in one order at a &#61; 0.027 and the other at a &#61; 0.03 — so the indices are read off the eigenvalues.</p>
+<pre><code class="language-julia">const λ_ext &#61; lorenz_ext.eigenvalues
+const I_REAL &#61; findfirst&#40;λ -&gt; abs&#40;imag&#40;λ&#41;&#41; &lt; 1e-8 * max&#40;1, abs&#40;λ&#41;&#41;, λ_ext&#41;
+@assert I_REAL &#33;&#61;&#61; nothing &quot;expected one real eigenvalue, got &#36;&#40;λ_ext&#41;&quot;
+const I_POS &#61; findfirst&#40;k -&gt; k &#33;&#61; I_REAL &amp;&amp; imag&#40;λ_ext&#91;k&#93;&#41; &gt; 0, eachindex&#40;λ_ext&#41;&#41;
+const I_NEG &#61; findfirst&#40;k -&gt; k &#33;&#61; I_REAL &amp;&amp; k &#33;&#61; I_POS, eachindex&#40;λ_ext&#41;&#41;
+@assert λ_ext&#91;I_NEG&#93;≈conj&#40;λ_ext&#91;I_POS&#93;&#41; &quot;slots &#36;I_POS/&#36;I_NEG are not a conjugate pair&quot;
+println&#40;&quot;reality condition: slot &quot;, I_REAL, &quot; real, slots &quot;, I_POS, &quot;/&quot;, I_NEG,
+    &quot; conjugate — read from the eigenvalues, not assumed&quot;&#41;
+
+function realify&#40;v&#41;
+    SVector&#123;3, ComplexF64&#125;&#40;ntuple&#40;
+        k -&gt; k &#61;&#61; I_REAL ? real&#40;v&#91;I_REAL&#93;&#41; &#43; 0im : k &#61;&#61; I_POS ? v&#91;I_POS&#93; : conj&#40;v&#91;I_POS&#93;&#41;, 3&#41;&#41;
 end
-modal_poly &#61; lorenz_polynomial&#40;ComplexF64.&#40;Diagonal&#40;Λ&#41;&#41;, modal_quad&#41;
-lorenz_ext &#61; ExternalSystem&#40;modal_poly&#41;
-println&#40;&quot;ExternalSystem accepted; eigenvalues &#61; &quot;, round.&#40;lorenz_ext.eigenvalues, digits &#61; 4&#41;&#41;</code></pre>
-<p>–- 3d. check the coordinate change, do not assert it ––––––––––––</p>
-<pre><code class="language-julia">rhs_err &#61; 0.0
-for _ in 1:200
-	u &#61; 3.0 .* randn&#40;3&#41;
-	back &#61; T * evaluate&#40;modal_poly, SVector&#123;3, ComplexF64&#125;&#40;Ti * ComplexF64.&#40;u&#41;&#41;&#41;
-	global rhs_err &#61; max&#40;rhs_err, norm&#40;real.&#40;back&#41; .- lorenz&#40;C_plus .&#43; u&#41;&#41;&#41;
-end
-println&#40;&quot;\nmax ‖T·f_modal&#40;T⁻¹u&#41; − f_lorenz&#40;C₊&#43;u&#41;‖ over 200 points &#61; &quot;,
-	round&#40;rhs_err, sigdigits &#61; 3&#41;&#41;
 
 const hL &#61; 1e-4</code></pre>
-<p>Start inside the butterfly loops, at r₀ &#61; &#40;1, 1, 20&#41; in physical coordinates: the orbit is on the attractor from the first step, so there is no transient to discard. Starting beside C₊ instead would be a poor choice — it is an unstable focus with Re λ &#61; 0.094, so the orbit would spend tens of seconds spiralling slowly outwards and the picture would show that spiral rather than the attractor.</p>
+<p>Start inside the butterfly loops, at r₀ &#61; &#40;1, 1, 20&#41; in physical coordinates: the orbit is on the attractor from the first step, so there is no transient to discard.</p>
 <pre><code class="language-julia">r0 &#61; &#91;1.0, 1.0, 20.0&#93;
-u0 &#61; r0 .- C_plus                 # same point, measured from the fixed point
-v0 &#61; SVector&#123;3, ComplexF64&#125;&#40;Ti * ComplexF64.&#40;u0&#41;&#41;</code></pre>
-<p>The modal coordinates are complex, but a <em>physical</em> state is not an arbitrary point of ℂ³: λ₁ is real, so v₁ is real, and λ₃ &#61; conj&#40;λ₂&#41;, so v₃ &#61; conj&#40;v₂&#41;. Those reality conditions cut out a real 3-dimensional subspace that the exact flow preserves — but round-off does not, and here the unstable directions amplify the drift until the orbit leaves the attractor altogether &#40;measured: ‖v₃ − conj&#40;v₂&#41;‖ reaches 10² by t ≈ 45 s without this, and x wanders to −79, far outside Lorenz&#39;s |x| ≲ 18&#41;.  Projecting back after every step costs nothing and is the same reality condition MORFE&#39;s <code>Realification</code> module imposes on a parametrisation.</p>
-<pre><code class="language-julia">realify&#40;v&#41; &#61; SVector&#123;3, ComplexF64&#125;&#40;real&#40;v&#91;1&#93;&#41; &#43; 0im, v&#91;2&#93;, conj&#40;v&#91;2&#93;&#41;&#41;</code></pre>
-<p>Agreement is checked over a short window on purpose. The attractor is chaotic — its largest Lyapunov exponent is ≈ 0.9/s — so two integrations of the same orbit separate like e^&#123;0.9 t&#125;: by t &#61; 12 s round-off has already been amplified by ~5·10⁴, and the comparison would be measuring the Lyapunov exponent rather than the change of coordinates. Five seconds keeps it a statement about the coordinates.</p>
+v0 &#61; realify&#40;SVector&#123;3, ComplexF64&#125;&#40;Q \ ComplexF64.&#40;r0 .- C_plus&#41;&#41;&#41;</code></pre>
+<p>The window is short on purpose: the attractor is chaotic, so two integrations of the same orbit separate like e^&#123;0.9t&#125; and a long comparison would measure the Lyapunov exponent rather than the coordinates.</p>
 <pre><code class="language-julia">n_val &#61; 5000
 vorb_val &#61; orbit&#40;lorenz_ext, v0, hL, n_val; project &#61; realify&#41;
 rorb_val &#61; orbit&#40;lorenz, r0, hL, n_val&#41;
-orbit_err &#61; maximum&#40;norm&#40;real.&#40;T * v&#41; .&#43; C_plus .- r&#41;
-					for &#40;v, r&#41; in zip&#40;vorb_val, rorb_val&#41;&#41;
-println&#40;&quot;max ‖modal orbit mapped back − direct Lorenz orbit‖ over &quot;,
-	round&#40;hL * n_val, digits &#61; 1&#41;, &quot; s &#61; &quot;, round&#40;orbit_err, sigdigits &#61; 3&#41;&#41;
+orbit_err &#61; maximum&#40;norm&#40;real.&#40;to_physical_external&#40;lorenz_ext, v&#41;&#41; .&#43; C_plus .- r&#41;
+for &#40;v, r&#41; in zip&#40;vorb_val, rorb_val&#41;&#41;
+println&#40;&quot;max ‖orbit mapped back − direct Lorenz orbit‖ over &quot;,
+    round&#40;hL * n_val, digits &#61; 1&#41;, &quot; s &#61; &quot;, round&#40;orbit_err, sigdigits &#61; 3&#41;&#41;
 
 n_rec &#61; 300000
 vorb &#61; orbit&#40;lorenz_ext, v0, hL, n_rec; project &#61; realify&#41;
-mapped &#61; &#91;real.&#40;T * v&#41; .&#43; C_plus for v in vorb&#93;
+mapped &#61; &#91;real.&#40;to_physical_external&#40;lorenz_ext, v&#41;&#41; .&#43; C_plus for v in vorb&#93;
 xs_rec &#61; component&#40;mapped, 1&#41;
 println&#40;&quot;recorded &quot;, round&#40;hL * n_rec, digits &#61; 1&#41;, &quot; s on the attractor; x ∈ &#91;&quot;,
-	round&#40;minimum&#40;xs_rec&#41;, digits &#61; 1&#41;, &quot;, &quot;, round&#40;maximum&#40;xs_rec&#41;, digits &#61; 1&#41;,
-	&quot;&#93;, wings swapped &quot;, count&#40;i -&gt; xs_rec&#91;i&#93; * xs_rec&#91;i&#43;1&#93; &lt; 0, 1:&#40;length&#40;xs_rec&#41;-1&#41;&#41;,
-	&quot; times&quot;&#41;
+    round&#40;minimum&#40;xs_rec&#41;, digits &#61; 1&#41;, &quot;, &quot;, round&#40;maximum&#40;xs_rec&#41;, digits &#61; 1&#41;,
+    &quot;&#93;, wings swapped &quot;, count&#40;i -&gt; xs_rec&#91;i&#93; * xs_rec&#91;i &#43; 1&#93; &lt; 0, 1:&#40;length&#40;xs_rec&#41; - 1&#41;&#41;,
+    &quot; times&quot;&#41;
 
 t_L &#61; hL .* &#40;0:n_rec&#41;
 iL &#61; thin&#40;length&#40;mapped&#41;, 4000&#41;
-iLt &#61; thin&#40;length&#40;mapped&#41;, 1800&#41;</code></pre>
-<p>The modal coordinates are complex, but not independently so: v₁ belongs to the real eigenvalue and stays real, while v₃ &#61; conj&#40;v₂&#41;. Three real numbers therefore carry the whole state, and &#40;Re v₁, Re v₂, Im v₂&#41; is the phase space the ExternalSystem really moves in.</p>
-<pre><code class="language-julia">mv1 &#61; real.&#40;component&#40;vorb, 1&#41;&#41;
-mv2r &#61; real.&#40;component&#40;vorb, 2&#41;&#41;
-mv2i &#61; imag.&#40;component&#40;vorb, 2&#41;&#41;
+iLt &#61; thin&#40;length&#40;mapped&#41;, 1800&#41;
 
 write_split&#40;joinpath&#40;FOM_FIGDIR, &quot;fig3_lorenz.html&quot;&#41;,
-	&#91;
-		SplitPanel&#40;&quot;physical coordinates&quot;,</code></pre>
-<p>One curve, not two: over 90 s of a chaotic orbit a second integration would trace the same attractor but a visibly different trajectory. The agreement between the two is measured above, on a window short enough to mean something.</p>
-<pre><code class="language-julia">			&#91;Orbit3D&#40;&quot;modal, mapped back through T&quot;, component&#40;mapped, 1&#41;&#91;iL&#93;,
-				component&#40;mapped, 2&#41;&#91;iL&#93;, component&#40;mapped, 3&#41;&#91;iL&#93;; colour &#61; 1&#41;&#93;,
-			&#91;Curve&#40;&quot;x&#40;t&#41;&quot;, t_L&#91;iLt&#93;, component&#40;mapped, 1&#41;&#91;iLt&#93;; colour &#61; 1&#41;,
-				Curve&#40;&quot;y&#40;t&#41;&quot;, t_L&#91;iLt&#93;, component&#40;mapped, 2&#41;&#91;iLt&#93;; colour &#61; 2&#41;,
-				Curve&#40;&quot;z&#40;t&#41;&quot;, t_L&#91;iLt&#93;, component&#40;mapped, 3&#41;&#91;iLt&#93;; colour &#61; 3&#41;&#93;;
-			axes &#61; &#40;&quot;x&quot;, &quot;y&quot;, &quot;z&quot;&#41;, xlabel &#61; &quot;t&quot;, ylabel &#61; &quot;state&quot;,
-			note &#61; &quot;The butterfly, drawn twice: integrated as an ExternalSystem in modal &quot; *
-				   &quot;coordinates then mapped back through T, over a direct integration of &quot; *
-				   &quot;Lorenz. Aperiodic switching between the two wings.&quot;&#41;,
-		SplitPanel&#40;&quot;modal coordinates&quot;,
-			&#91;Orbit3D&#40;&quot;&#40;Re v₁, Re v₂, Im v₂&#41;&quot;, mv1&#91;iL&#93;, mv2r&#91;iL&#93;, mv2i&#91;iL&#93;; colour &#61; 2&#41;&#93;,
-			&#91;Curve&#40;&quot;Re v₁&#40;t&#41;&quot;, t_L&#91;iLt&#93;, mv1&#91;iLt&#93;; colour &#61; 1&#41;,
-				Curve&#40;&quot;Re v₂&#40;t&#41;&quot;, t_L&#91;iLt&#93;, mv2r&#91;iLt&#93;; colour &#61; 2&#41;,
-				Curve&#40;&quot;Im v₂&#40;t&#41;&quot;, t_L&#91;iLt&#93;, mv2i&#91;iLt&#93;; colour &#61; 3&#41;&#93;;
-			axes &#61; &#40;&quot;Re v₁&quot;, &quot;Re v₂&quot;, &quot;Im v₂&quot;&#41;, xlabel &#61; &quot;t&quot;, ylabel &#61; &quot;modal state&quot;,
-			note &#61; &quot;What the ExternalSystem actually integrates. v₁ follows the fast real &quot; *
-				   &quot;eigenvalue −13.85; v₂ and its conjugate spiral out of the unstable &quot; *
-				   &quot;focus left behind by the Hopf bifurcation.&quot;&#41;&#93;;
-	title &#61; &quot;Lorenz as an external system&quot;,
-	caption &#61; &quot;Shift to a fixed point, diagonalise the Jacobian, and the full nonlinear &quot; *
-			  &quot;system becomes admissible — agreement with direct integration ≈ &quot; *
-			  &quot;&#36;&#40;round&#40;orbit_err, sigdigits &#61; 2&#41;&#41;.&quot;&#41;
-
-println&#40;&quot;\nNote: this driver&#39;s linear part is unstable &#40;Re λ &#61; &quot;,
-	round&#40;maximum&#40;real, Λ&#41;, digits &#61; 3&#41;, &quot;&#41;, unusual for a forcing term. &quot;,
-	&quot;\nThe section is about the construction, not about a recommended forcing.&quot;&#41;</code></pre>
+    &#91;
+        SplitPanel&#40;&quot;physical coordinates&quot;,</code></pre>
+<p>One curve, not two: over 30 s of a chaotic orbit a second integration would trace the same attractor but a visibly different trajectory. The agreement between the two is measured above, on a window short enough to mean something.</p>
+<pre><code class="language-julia">        &#91;Orbit3D&#40;&quot;integrated as an ExternalSystem, mapped back&quot;,
+            component&#40;mapped, 1&#41;&#91;iL&#93;, component&#40;mapped, 2&#41;&#91;iL&#93;,
+            component&#40;mapped, 3&#41;&#91;iL&#93;; colour &#61; 1&#41;&#93;,
+        &#91;Curve&#40;&quot;x&#40;t&#41;&quot;, t_L&#91;iLt&#93;, component&#40;mapped, 1&#41;&#91;iLt&#93;; colour &#61; 1&#41;,
+            Curve&#40;&quot;y&#40;t&#41;&quot;, t_L&#91;iLt&#93;, component&#40;mapped, 2&#41;&#91;iLt&#93;; colour &#61; 2&#41;,
+            Curve&#40;&quot;z&#40;t&#41;&quot;, t_L&#91;iLt&#93;, component&#40;mapped, 3&#41;&#91;iLt&#93;; colour &#61; 3&#41;&#93;;
+        axes &#61; &#40;&quot;x&quot;, &quot;y&quot;, &quot;z&quot;&#41;, xlabel &#61; &quot;t&quot;, ylabel &#61; &quot;state&quot;,</code></pre>
+<p>The one thing the user supplies: the origin of the expansion.</p>
+<pre><code class="language-julia">        arrows &#61; &#91;Arrow3D&#40;&#40;0.0, 0.0, 0.0&#41;, Tuple&#40;C_plus&#41;;
+            label &#61; &quot;C₊&quot;, colour &#61; 3&#41;&#93;,
+        note &#61; &quot;σ &#61; &#36;&#40;SIG&#41;, ρ &#61; &#36;&#40;RHO&#41;, β &#61; &#36;&#40;BET&#41;.&quot;&#41;&#93;;
+    title &#61; &quot;Chaotic excitation&quot;,
+    caption &#61; &quot;&quot;&#41;</code></pre>
 <hr />
 <ol start="4">
 <li><p><code>NthOrderModel</code> — assemble and drive it</p>
@@ -444,12 +430,12 @@ const C_MAT &#61; fill&#40;0.08, 1, 1&#41;
 const K_MAT &#61; fill&#40;K_LIN, 1, 1&#41;
 const F_AMP &#61; 2.5
 
-forcing&#33;&#40;res, r&#41; &#61; &#40;res .&#43;&#61; F_AMP * real&#40;sum&#40;r&#41;&#41;&#41;
+forcing&#33;&#40;res, r&#41; &#61; &#40;res .&#43;&#61; F_AMP * &#40;r&#91;1&#93; &#43; r&#91;2&#93;&#41;&#41;
 term_forcing &#61; MultilinearMap&#40;forcing&#33;; multiindex &#61; &#40;0, 0&#41;, multiplicity_external &#61; 1&#41;
 
 model &#61; NthOrderModel&#40;&#40;K_MAT, C_MAT, M_MAT&#41;, &#40;term_hard, term_forcing&#41;, harmonic&#41;
 println&#40;&quot;model       &#61; &quot;, typeof&#40;model&#41;.name.name, &quot;&#123;ORD&#61;2&#125;, n_fom &#61; &quot;, model.n_fom,
-	&quot;, terms &#61; &quot;, length&#40;model.nonlinear_terms&#41;, &quot;, max_nl_degree &#61; &quot;, model.max_nl_degree&#41;
+    &quot;, terms &#61; &quot;, length&#40;model.nonlinear_terms&#41;, &quot;, max_nl_degree &#61; &quot;, model.max_nl_degree&#41;
 
 A_fo, B_fo &#61; linear_first_order_matrices&#40;model&#41;
 println&#40;&quot;first-order companion pair from &#96;linear_first_order_matrices&#96;:&quot;&#41;
@@ -457,26 +443,26 @@ println&#40;&quot;  A &#61; &quot;, A_fo&#91;1, :&#93;, &quot; / &quot;, A_fo&#9
 println&#40;&quot;  B &#61; &quot;, B_fo&#91;1, :&#93;, &quot; / &quot;, B_fo&#91;2, :&#93;&#41;</code></pre>
 <p>A term that reads the external state needs a model that has one — otherwise the mismatch would only surface much later, during evaluation.</p>
 <pre><code class="language-julia">try
-	NthOrderModel&#40;&#40;K_MAT, C_MAT, M_MAT&#41;, &#40;term_forcing,&#41;&#41;
+    NthOrderModel&#40;&#40;K_MAT, C_MAT, M_MAT&#41;, &#40;term_forcing,&#41;&#41;
 catch e
-	println&#40;&quot;\nWithout an external system:\n&quot;, e.msg&#41;
+    println&#40;&quot;\nWithout an external system:\n&quot;, e.msg&#41;
 end</code></pre>
 <p>Right-hand side of the coupled system &#40;x, ẋ, r&#41;, assembled through the model itself.</p>
 <pre><code class="language-julia">function nl_force&#40;model, x, v, r&#41;
-	&#40;res &#61; zeros&#40;model.n_fom&#41;;
-		for ord in 1:&#40;model.max_nl_degree&#41;
-			evaluate_nonlinear_terms&#33;&#40;res, model, ord, &#40;&#91;x&#93;, &#91;v&#93;&#41;, r&#41;
-		end;
-		res&#41;
+    &#40;res &#61; zeros&#40;model.n_fom&#41;;
+        for ord in 1:&#40;model.max_nl_degree&#41;
+            evaluate_nonlinear_terms&#33;&#40;res, model, ord, &#40;&#91;x&#93;, &#91;v&#93;&#41;, r&#41;
+        end;
+        res&#41;
 end
 
 function duffing_rhs&#40;y&#41;
-	x, v &#61; y&#91;1&#93;, y&#91;2&#93;
-	r &#61; SVector&#40;y&#91;3&#93;, y&#91;4&#93;&#41;
-	F &#61; nl_force&#40;model, x, v, r&#41;&#91;1&#93;
-	acc &#61; &#40;F - K_MAT&#91;1, 1&#93; * x - C_MAT&#91;1, 1&#93; * v&#41; / M_MAT&#91;1, 1&#93;
-	dr &#61; evaluate&#40;harmonic.first_order_dynamics, r&#41;
-	return &#91;v, acc, dr&#91;1&#93;, dr&#91;2&#93;&#93;
+    x, v &#61; y&#91;1&#93;, y&#91;2&#93;
+    r &#61; SVector&#40;y&#91;3&#93;, y&#91;4&#93;&#41;
+    F &#61; nl_force&#40;model, x, v, r&#41;&#91;1&#93;
+    acc &#61; &#40;F - K_MAT&#91;1, 1&#93; * x - C_MAT&#91;1, 1&#93; * v&#41; / M_MAT&#91;1, 1&#93;
+    dr &#61; evaluate&#40;harmonic.first_order_dynamics, r&#41;
+    return &#91;v, acc, dr&#91;1&#93;, dr&#91;2&#93;&#93;
 end
 
 const STEPS_PER_PERIOD &#61; 400
@@ -488,47 +474,47 @@ xD &#61; real.&#40;component&#40;dorb, 1&#41;&#41;
 vD &#61; real.&#40;component&#40;dorb, 2&#41;&#41;</code></pre>
 <p>The steady state is the final forcing period, drawn as 1.01 of one so the curve laps itself slightly and the loop visibly closes rather than leaving a hairline gap. The transient is everything before it, and the two share their boundary point so the time trace reads as one continuous curve.</p>
 <pre><code class="language-julia">n_steady &#61; round&#40;Int, 1.01 * STEPS_PER_PERIOD&#41;
-steady &#61; &#40;length&#40;xD&#41;-n_steady&#41;:length&#40;xD&#41;
+steady &#61; &#40;length&#40;xD&#41; - n_steady&#41;:length&#40;xD&#41;
 transient &#61; 1:steady&#91;1&#93;
 itr &#61; transient&#91;thin&#40;length&#40;transient&#41;, 1600&#41;&#93;
 ist &#61; steady</code></pre>
 <p>A closed loop is the claim the phase portrait makes, so measure it: how far is the state from where it was exactly one period earlier, relative to the size of the loop?</p>
-<pre><code class="language-julia">closure &#61; hypot&#40;xD&#91;end&#93; - xD&#91;end-STEPS_PER_PERIOD&#93;,
-	vD&#91;end&#93; - vD&#91;end-STEPS_PER_PERIOD&#93;&#41;
+<pre><code class="language-julia">closure &#61; hypot&#40;xD&#91;end&#93; - xD&#91;end - STEPS_PER_PERIOD&#93;,
+    vD&#91;end&#93; - vD&#91;end - STEPS_PER_PERIOD&#93;&#41;
 loop &#61; hypot&#40;maximum&#40;xD&#91;steady&#93;&#41; - minimum&#40;xD&#91;steady&#93;&#41;,
-	maximum&#40;vD&#91;steady&#93;&#41; - minimum&#40;vD&#91;steady&#93;&#41;&#41;
+    maximum&#40;vD&#91;steady&#93;&#41; - minimum&#40;vD&#91;steady&#93;&#41;&#41;
 println&#40;&quot;\nintegrated &quot;, round&#40;hD * nD, digits &#61; 1&#41;, &quot; s &#61; &quot;, nD ÷ STEPS_PER_PERIOD,
-	&quot; forcing periods;  |x|max &#61; &quot;, round&#40;maximum&#40;abs, xD&#41;, digits &#61; 4&#41;,
-	&quot;,  steady |x|max &#61; &quot;, round&#40;maximum&#40;abs, xD&#91;steady&#93;&#41;, digits &#61; 4&#41;&#41;
+    &quot; forcing periods;  |x|max &#61; &quot;, round&#40;maximum&#40;abs, xD&#41;, digits &#61; 4&#41;,
+    &quot;,  steady |x|max &#61; &quot;, round&#40;maximum&#40;abs, xD&#91;steady&#93;&#41;, digits &#61; 4&#41;&#41;
 println&#40;&quot;loop closure after one period: &quot;, round&#40;100 * closure / loop, sigdigits &#61; 2&#41;,
-	&quot; &#37; of the loop diameter&quot;&#41;
+    &quot; &#37; of the loop diameter&quot;&#41;
 
 write_charts&#40;joinpath&#40;FOM_FIGDIR, &quot;fig4_forced_response.html&quot;&#41;,
-	&#91;</code></pre>
+    &#91;</code></pre>
 <p>One quantity, x&#40;t&#41;, in two colours: purple while the transient is still dying, red once it has. The same two colours carry over to the phase portrait, so a feature can be traced from one panel to the other.</p>
-<pre><code class="language-julia">		ChartPanel&#40;&quot;response — time&quot;,
-			&#91;Curve&#40;&quot;transient&quot;, t_D&#91;itr&#93;, xD&#91;itr&#93;; colour &#61; 1&#41;,
-				Curve&#40;&quot;steady state — last period&quot;, t_D&#91;ist&#93;, xD&#91;ist&#93;; colour &#61; 3&#41;&#93;;
-			xlabel &#61; &quot;t&quot;, ylabel &#61; &quot;x&quot;,
-			note &#61; &quot;Forced Duffing: M ẍ &#43; C ẋ &#43; K x &#61; −k₃x³ &#43; f·&#40;r₁&#43;r₂&#41;, with r from &quot; *
-				   &quot;the harmonic ExternalSystem of section 2.&quot;&#41;,</code></pre>
+<pre><code class="language-julia">        ChartPanel&#40;&quot;response — time&quot;,
+            &#91;Curve&#40;&quot;transient&quot;, t_D&#91;itr&#93;, xD&#91;itr&#93;; colour &#61; 1&#41;,
+                Curve&#40;&quot;steady state — last period&quot;, t_D&#91;ist&#93;, xD&#91;ist&#93;; colour &#61; 3&#41;&#93;;
+            xlabel &#61; &quot;t&quot;, ylabel &#61; &quot;x&quot;,
+            note &#61; &quot;Forced Duffing: M ẍ &#43; C ẋ &#43; K x &#61; −k₃x³ &#43; 5cos&#40;Ωt&#41;, with 2cos&#40;Ωt&#41; &#61; r₁&#43;r₂ using &quot; *
+                   &quot;the harmonic ExternalSystem of section 2.&quot;&#41;,</code></pre>
 <p>No equal_aspect here: x and ẋ are different physical quantities whose ranges differ by a factor of a few, so forcing one scale on both would letterbox the orbit into a sliver. Scaling each axis to its own data fills the panel, and the statement below survives it — a non-uniform scaling of an ellipse is still one.</p>
-<pre><code class="language-julia">		ChartPanel&#40;&quot;phase portrait&quot;,
-			&#91;Curve&#40;&quot;transient&quot;, xD&#91;itr&#93;, vD&#91;itr&#93;; colour &#61; 1&#41;,</code></pre>
+<pre><code class="language-julia">        ChartPanel&#40;&quot;phase portrait&quot;,
+            &#91;Curve&#40;&quot;transient&quot;, xD&#91;itr&#93;, vD&#91;itr&#93;; colour &#61; 1&#41;,</code></pre>
 <p>The closed loop is the point of this panel, so draw it twice as heavy as the spiral that leads into it.</p>
-<pre><code class="language-julia">				Curve&#40;&quot;steady state — last period&quot;, xD&#91;ist&#93;, vD&#91;ist&#93;;
-					colour &#61; 3, width &#61; 2&#41;&#93;;
-			xlabel &#61; &quot;x&quot;, ylabel &#61; &quot;ẋ&quot;,
-			note &#61; &quot;Damping pulls the orbit onto the periodic response, a closed loop; &quot; *
-				   &quot;the hardening cubic is what bends it away from an ellipse.&quot;&#41;&#93;;
-	title &#61; &quot;Forced response of the assembled model&quot;,
-	caption &#61; &quot;The nonlinear force at each step comes from &quot; *
-			  &quot;&#96;evaluate_nonlinear_terms&#33;&#96; on the &#96;NthOrderModel&#96; itself.&quot;&#41;</code></pre>
+<pre><code class="language-julia">                Curve&#40;&quot;steady state; last period&quot;, xD&#91;ist&#93;, vD&#91;ist&#93;;
+                    colour &#61; 3, width &#61; 2&#41;&#93;;
+            xlabel &#61; &quot;x&quot;, ylabel &#61; &quot;ẋ&quot;,
+            note &#61; &quot;Damping pulls the orbit onto the periodic response, a closed loop; &quot; *
+                   &quot;the hardening cubic is what bends it away from an ellipse.&quot;&#41;&#93;;
+    title &#61; &quot;Forced response of the assembled model&quot;,
+    caption &#61; &quot;The nonlinear force at each step comes from &quot; *
+              &quot;&#96;evaluate_nonlinear_terms&#33;&#96; on the &#96;NthOrderModel&#96; itself.&quot;&#41;</code></pre>
 <p>The website card for this tutorial uses the phase portrait itself rather than a drawing of one, so it is generated from the same arrays as the figure above.</p>
 <pre><code class="language-julia">ith &#61; itr&#91;thin&#40;length&#40;itr&#41;, 420&#41;&#93;        # a card needs far fewer points than a figure
 write_thumbnail&#40;joinpath&#40;FOM_FIGDIR, &quot;thumb.svg&quot;&#41;,
-	&#91;Curve&#40;&quot;transient&quot;, xD&#91;ith&#93;, vD&#91;ith&#93;; colour &#61; 1, width &#61; 0.55&#41;,
-		Curve&#40;&quot;steady state&quot;, xD&#91;ist&#93;, vD&#91;ist&#93;; colour &#61; 3, width &#61; 2.1&#41;&#93;&#41;</code></pre>
+    &#91;Curve&#40;&quot;transient&quot;, xD&#91;ith&#93;, vD&#91;ith&#93;; colour &#61; 1, width &#61; 0.55&#41;,
+        Curve&#40;&quot;steady state&quot;, xD&#91;ist&#93;, vD&#91;ist&#93;; colour &#61; 3, width &#61; 2.1&#41;&#93;&#41;</code></pre>
 <hr />
 <pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
 println&#40;&quot;Figures written to &quot;, FOM_FIGDIR&#41;

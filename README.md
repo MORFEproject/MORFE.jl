@@ -110,7 +110,9 @@ using Pkg
 Pkg.add(url="https://github.com/MORFEproject/MORFEFerrite.jl.git")
 ```
 
-The shortest path from mesh to ROM:
+The shortest path from mesh to ROM is shown below. Here
+`dirichlet = "Dirichlet"` selects the Gmsh facet group named `Dirichlet`; all
+displacement components on those facets are fixed to zero.
 
 ```julia
 using MORFE, MORFEFerrite
@@ -119,22 +121,17 @@ SVK = MORFEFerrite.StructuralSVK
 beam = SVK.mechanical_model("beam.msh";
     material  = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
     damping   = SVK.RayleighDamping(α = 5.4e-3, β = 1.9e-2),
-    dirichlet = "Dirichlet")              # clamped facetset name
+    dirichlet = "Dirichlet")
 
-rom = SVK.parametrise(beam; master = [1], order = 7)   # autonomous (backbone)
-
-# Near-resonant harmonic forcing, shaped like mode 1 at mode 1's frequency:
-rom = SVK.parametrise(beam; master = [1], order = 7,
-    forcing = SVK.HarmonicForcing(mode = 1, amplitude = 0.02))
-
-SVK.print_equations(rom)                  # realified reduced dynamics
-SVK.save_rom(rom, "results")
+(; model, spectral, meta) = build_model(beam;
+    master = [1], expansion_order = 7)
+W, R = parametrise(model, spectral, 7;
+    resonance = ResonanceConfig(style = :complex_normal_form, tol = 0.05))
+MORFE.save_rom("results", W, R)
 ```
 
-The low-level API (explicit `NthOrderModel`, eigensolvers, resonance sets,
-`solve_cohomological_problem`) remains fully available — see
-[`examples/01_clamped_beam_ferrite/low_level.jl`](https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/low_level.jl)
-in MORFEFerrite for the same computation written out in full.
+The notebook-only [clamped-beam example](https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb)
+shows this common API without example-specific solver code.
 
 ---
 
