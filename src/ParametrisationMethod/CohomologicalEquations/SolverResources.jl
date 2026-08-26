@@ -211,16 +211,17 @@ function SparseLinearSolverState{T}(
         L_mappings::Vector{Vector{Int}},
         FOM::Int,
         ROM::Int;
-        config::CohomologicalSolverConfig=CohomologicalSolverConfig()
+        config::CohomologicalSolverConfig = CohomologicalSolverConfig()
 ) where {T}
     requested = config.backend
     ps = requested in (:auto, :pardiso) ? _try_build_pardiso_solver() : nothing
-    requested == :pardiso && ps === nothing && error(
-        "CohomologicalSolverConfig requested Pardiso, but no Pardiso backend is active")
+    requested == :pardiso && ps === nothing &&
+        error(
+            "CohomologicalSolverConfig requested Pardiso, but no Pardiso backend is active")
     backend = requested == :auto ? (ps === nothing ? :klu : :pardiso) : requested
     bordered, border_row_base = precompute_sparse_bordered_template(L_template, ROM)
     needs_input_copy = backend in (:umfpack, :pardiso) ||
-        config.residual_tolerance !== nothing
+                       config.residual_tolerance !== nothing
     nsys = FOM + ROM
     state = SparseLinearSolverState{T}(
         bordered, L_template, L_mappings, border_row_base,

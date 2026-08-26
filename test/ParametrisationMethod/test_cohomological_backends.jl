@@ -14,10 +14,10 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template
 
     @test CohomologicalSolverConfig().backend == :auto
     @test CohomologicalSolverConfig().group_superharmonics == false
-    @test_throws ArgumentError CohomologicalSolverConfig(backend=:unknown)
-    @test_throws ArgumentError CohomologicalSolverConfig(residual_tolerance=0.0)
-    @test_throws ArgumentError CohomologicalCheckpoint(""; id="valid")
-    @test_throws ArgumentError CohomologicalCheckpoint("state.jls"; id="")
+    @test_throws ArgumentError CohomologicalSolverConfig(backend = :unknown)
+    @test_throws ArgumentError CohomologicalSolverConfig(residual_tolerance = 0.0)
+    @test_throws ArgumentError CohomologicalCheckpoint(""; id = "valid")
+    @test_throws ArgumentError CohomologicalCheckpoint("state.jls"; id = "")
 
     B0 = [2.0 -1.0; -1.0 2.0]
     B2 = Matrix{Float64}(I, 2, 2)
@@ -26,21 +26,21 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template
         (res, x1, x2, x3) -> (@. res += -x1 * x2 * x3), (3, 0))
     dense_model = NthOrderModel((B0, B1, B2), (cubic,))
     sparse_model = NthOrderModel(map(sparse, (B0, B1, B2)), (cubic,))
-    ep = spectrum(dense_model; solver=DefaultEigensolver())
-    sd = SpectralData(dense_model, ep; master=master_by_sorting(2))
+    ep = spectrum(dense_model; solver = DefaultEigensolver())
+    sd = SpectralData(dense_model, ep; master = master_by_sorting(2))
     resonance = ResonanceConfig(
-        style=:complex_normal_form, tol=0.05, warn_outer=false)
+        style = :complex_normal_form, tol = 0.05, warn_outer = false)
 
-    solve_with(config; checkpoint=nothing) = parametrise(
-        sparse_model, sd, 5; resonance, solver_config=config, checkpoint,
-        show_progress=false, verbose=false)
+    solve_with(config; checkpoint = nothing) = parametrise(
+        sparse_model, sd, 5; resonance, solver_config = config, checkpoint,
+        show_progress = false, verbose = false)
 
     klu_plain = CohomologicalSolverConfig(
-        backend=:klu, residual_tolerance=1e-10)
+        backend = :klu, residual_tolerance = 1e-10)
     klu_grouped = CohomologicalSolverConfig(
-        backend=:klu, residual_tolerance=1e-10, group_superharmonics=true)
+        backend = :klu, residual_tolerance = 1e-10, group_superharmonics = true)
     umf_grouped = CohomologicalSolverConfig(
-        backend=:umfpack, residual_tolerance=1e-10, group_superharmonics=true)
+        backend = :umfpack, residual_tolerance = 1e-10, group_superharmonics = true)
 
     Wk, Rk = solve_with(klu_plain)
     Wkg, Rkg = solve_with(klu_grouped)
@@ -54,7 +54,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template
         lt = map(complex, sparse_model.linear_terms)
         L_template, L_mappings = precompute_sparse_L_template(lt)
         config = CohomologicalSolverConfig(
-            backend=:umfpack, residual_tolerance=1e-10)
+            backend = :umfpack, residual_tolerance = 1e-10)
         ss = MORFE.CohomologicalEquations.SparseLinearSolverState{ComplexF64}(
             L_template, L_mappings, 2, 2; config)
         fill!(ss.bordered.nzval, 0)
@@ -88,7 +88,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template
     @testset "atomic degree checkpoint and exact resume contract" begin
         mktempdir() do directory
             path = joinpath(directory, "cohomological.jls")
-            checkpoint = CohomologicalCheckpoint(path; id="fixture-v1")
+            checkpoint = CohomologicalCheckpoint(path; id = "fixture-v1")
             W0, R0 = solve_with(umf_grouped; checkpoint)
             @test isfile(path)
 
@@ -102,10 +102,10 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template
             @test Rr.poly.coefficients == R0.poly.coefficients
 
             @test_throws ArgumentError solve_with(umf_grouped;
-                checkpoint=CohomologicalCheckpoint(path; id="stale-id"))
+                checkpoint = CohomologicalCheckpoint(path; id = "stale-id"))
             changed = CohomologicalSolverConfig(
-                backend=:umfpack, residual_tolerance=1e-9,
-                group_superharmonics=true)
+                backend = :umfpack, residual_tolerance = 1e-9,
+                group_superharmonics = true)
             @test_throws ArgumentError solve_with(changed; checkpoint)
 
             # Simulate an interruption after degree three. Higher coefficients are
@@ -121,7 +121,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template
             end
             open(path, "w") do io
                 serialize(io, merge(saved, (;
-                    completed_degree=3, W=partial_W, R=partial_R)))
+                    completed_degree = 3, W = partial_W, R = partial_R)))
             end
             Wi, Ri = solve_with(umf_grouped; checkpoint)
             @test relerr(Wi.poly.coefficients, W0.poly.coefficients) <= 1e-12

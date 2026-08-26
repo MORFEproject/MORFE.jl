@@ -37,8 +37,8 @@ using ..SpectralDecomposition: SpectralData, master_eigenvalues,
                                master_conjugate_permutation
 using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
 using ..CohomologicalEquations: solve_cohomological_problem,
-                               CohomologicalSolverConfig,
-                               CohomologicalCheckpoint
+                                CohomologicalSolverConfig,
+                                CohomologicalCheckpoint
 
 # Re-exported wholesale so `ParametrisationMethod` stays the one namespace users (and
 # `ext/MORFEBifurcationKitExt.jl`, which reaches for
@@ -250,7 +250,7 @@ function parametrise(
         verbose::Bool = true,
         setup_io::IO = stderr,
         solver_config::CohomologicalSolverConfig = CohomologicalSolverConfig(),
-        checkpoint::Union{Nothing,CohomologicalCheckpoint} = nothing
+        checkpoint::Union{Nothing, CohomologicalCheckpoint} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}
     NVAR = ROM + N_EXT
 

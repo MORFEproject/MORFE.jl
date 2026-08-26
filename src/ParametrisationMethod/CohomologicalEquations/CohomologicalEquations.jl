@@ -409,7 +409,7 @@ of `W` and `R`, processing them in *causal order* (ascending total degree).
 """
 function solve_cohomological_equations!(
         W, R, ctx, model, ml_cache; show_progress::Bool = true,
-        group_superharmonics::Bool=false, checkpoint_callback=nothing)
+        group_superharmonics::Bool = false, checkpoint_callback = nothing)
     nterms = length(multiindex_set(W))
     sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
     solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
@@ -422,7 +422,7 @@ function _cohomological_schedule(ctx, sym, mset, group_superharmonics)
     schedule = Int[]
     for degree in sort!(unique(sum(mset[idx]) for idx in indices))
         keys = Any[]
-        groups = Dict{Any,Vector{Int}}()
+        groups = Dict{Any, Vector{Int}}()
         for idx in indices
             sum(mset[idx]) == degree || continue
             multi = mset[idx]
@@ -453,8 +453,8 @@ function solve_cohomological_equations!(
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         show_progress::Bool = true,
-        group_superharmonics::Bool=false,
-        checkpoint_callback=nothing
+        group_superharmonics::Bool = false,
+        checkpoint_callback = nothing
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     nterms = length(multiindex_set(W))
     schedule = _cohomological_schedule(ctx, sym, multiindex_set(W), group_superharmonics)
@@ -486,8 +486,8 @@ function solve_cohomological_equations!(
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         show_progress::Bool = true,
-        group_superharmonics::Bool=false,
-        checkpoint_callback=nothing
+        group_superharmonics::Bool = false,
+        checkpoint_callback = nothing
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     pairs = sym.primary_pairs
     secondary_for_primary = Dict(src => dst for (src, dst) in pairs)

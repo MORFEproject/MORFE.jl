@@ -93,22 +93,31 @@ end
 # Backward-compatible internal name retained for the established KLU regression
 # tests and downstream diagnostic code. Public backend selection goes through
 # `CohomologicalSolverConfig`.
-_refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC) =
-    _refactorise_klu!(ss, A)
+_refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC) = _refactorise_klu!(ss, A)
 
 function _refactorise_umfpack!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     F = ss.fact
     if F === nothing
-        F = lu(A; check=false)
+        F = lu(A; check = false)
         issuccess(F) && (ss.fact = F)
         return F
     end
     # UMFPACK owns the numeric factors outside Julia's managed heap. Replacing the
     # wrapper and waiting for GC can retain several large factors at once, so release
     # the old numeric object explicitly before the next value-only factorisation.
-    finalize(F.numeric)
-    lu!(F, A; check=false, reuse_symbolic=true)
-    return F
+    # Transfer the cached Symbolic handle to a fresh Julia factor wrapper instead of
+    # mutating the old wrapper with `lu!`: repeated large numeric replacement in the
+    # same wrapper triggers macOS allocator reclamation faults. There remains exactly
+    # one Symbolic C handle and, after the explicit free below, at most one Numeric.
+    numeric = F.numeric
+    SparseArrays.UMFPACK.umfpack_free_numeric(
+        numeric, eltype(F.nzval), eltype(F.colptr))
+    numeric.p = C_NULL
+    next = SparseArrays.UMFPACK.UmfpackLU(A; control = F.control)
+    next.symbolic = F.symbolic
+    SparseArrays.UMFPACK.umfpack_numeric!(next; reuse_numeric = false)
+    ss.fact = next
+    return next
 end
 
 function _relative_sparse_residual!(ss::SparseLinearSolverState, x)

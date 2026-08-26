@@ -149,23 +149,25 @@ Dispatch helper: returns a `SparseLinearSolverState` when `MT <: SparseMatrixCSC
 _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int) = nothing
 function _make_sparse_solver(
         ::Type{<:SparseMatrixCSC}, linear_terms, FOM::Int, ROM::Int,
-        config::CohomologicalSolverConfig=CohomologicalSolverConfig()
+        config::CohomologicalSolverConfig = CohomologicalSolverConfig()
 )
     L_template, L_mappings = precompute_sparse_L_template(linear_terms)
     T = eltype(L_template)
     return SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM; config)
 end
-_make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int,
-    ::CohomologicalSolverConfig) = nothing
+function _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int,
+        ::CohomologicalSolverConfig)
+    nothing
+end
 
 function _checkpoint_signature(mset, ORD, FOM, ROM, N_EXT, T, conj_perm,
         config::CohomologicalSolverConfig, id)
-    return (; schema_version=1, id=String(id), ORD, FOM, ROM, N_EXT,
-        scalar_type=string(T), exponents=Tuple.(mset.exponents),
-        conjugate_permutation=isnothing(conj_perm) ? nothing : collect(Int, conj_perm),
-        backend=config.backend, residual_tolerance=config.residual_tolerance,
-        group_superharmonics=config.group_superharmonics,
-        diagnostics_path=config.diagnostics_path)
+    return (; schema_version = 1, id = String(id), ORD, FOM, ROM, N_EXT,
+        scalar_type = string(T), exponents = Tuple.(mset.exponents),
+        conjugate_permutation = isnothing(conj_perm) ? nothing : collect(Int, conj_perm),
+        backend = config.backend, residual_tolerance = config.residual_tolerance,
+        group_superharmonics = config.group_superharmonics,
+        diagnostics_path = config.diagnostics_path)
 end
 
 function _load_checkpoint(checkpoint, signature)
@@ -187,13 +189,13 @@ function _write_checkpoint(checkpoint, signature, completed_degree, W, R, sparse
     mkpath(dirname(path))
     temporary = path * ".tmp.$(getpid())"
     diagnostics = isnothing(sparse_solver) ?
-        (; backend=:dense, max_relative_residual=0.0,
-            refinement_count=0, factorization_count=0, solve_count=0) :
-        (; backend=sparse_solver.backend,
-            max_relative_residual=sparse_solver.max_relative_residual,
-            refinement_count=sparse_solver.refinement_count,
-            factorization_count=sparse_solver.factorization_count,
-            solve_count=sparse_solver.solve_count)
+                  (; backend = :dense, max_relative_residual = 0.0,
+        refinement_count = 0, factorization_count = 0, solve_count = 0) :
+                  (; backend = sparse_solver.backend,
+        max_relative_residual = sparse_solver.max_relative_residual,
+        refinement_count = sparse_solver.refinement_count,
+        factorization_count = sparse_solver.factorization_count,
+        solve_count = sparse_solver.solve_count)
     open(temporary, "w") do io
         serialize(io, (; signature, completed_degree, W, R, diagnostics))
     end
@@ -334,13 +336,14 @@ function solve_cohomological_problem(
         show_progress::Bool = true,
         benchmark_dir::Union{Nothing, AbstractString} = nothing,
         solver_config::CohomologicalSolverConfig = CohomologicalSolverConfig(),
-        checkpoint::Union{Nothing,CohomologicalCheckpoint} = nothing
+        checkpoint::Union{Nothing, CohomologicalCheckpoint} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
     xor(initial_W === nothing, initial_R === nothing) && throw(ArgumentError(
         "initial_W and initial_R must either both be supplied or both be omitted"))
-    benchmark_dir !== nothing && checkpoint !== nothing && throw(ArgumentError(
-        "checkpointing is not supported by the benchmarked cohomological solve"))
+    benchmark_dir !== nothing && checkpoint !== nothing &&
+        throw(ArgumentError(
+            "checkpointing is not supported by the benchmarked cohomological solve"))
     # Bind to concrete locals here, at the setup boundary, and nowhere else. The bundle's
     # block fields are `Union{Nothing, Array}` so that ORD == 1 is representable, and every
     # access to them is a type-unstable branch — harmless once, unacceptable in the loop.
@@ -361,7 +364,8 @@ function solve_cohomological_problem(
     @assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
     T = ComplexF64
 
-    signature = isnothing(checkpoint) ? nothing : _checkpoint_signature(
+    signature = isnothing(checkpoint) ? nothing :
+                _checkpoint_signature(
         mset, ORD, FOM, ROM, N_EXT, T, conj_perm, solver_config, checkpoint.id)
     saved_checkpoint = _load_checkpoint(checkpoint, signature)
     if saved_checkpoint !== nothing
@@ -404,16 +408,15 @@ function solve_cohomological_problem(
     lower_order = LowerOrderResources{NVAR, T}(mset, ORD, FOM)
     sparse_solver = _make_sparse_solver(MT, linear_terms, FOM, ROM, solver_config)
     if saved_checkpoint !== nothing && sparse_solver !== nothing
-        saved_checkpoint.diagnostics.backend == sparse_solver.backend || throw(ArgumentError(
-            "checkpoint sparse backend $(saved_checkpoint.diagnostics.backend) does not " *
-            "match the resolved backend $(sparse_solver.backend)"))
-        sparse_solver.max_relative_residual =
-            saved_checkpoint.diagnostics.max_relative_residual
-        sparse_solver.factorization_count =
-            saved_checkpoint.diagnostics.factorization_count
+        saved_checkpoint.diagnostics.backend == sparse_solver.backend ||
+            throw(ArgumentError(
+                "checkpoint sparse backend $(saved_checkpoint.diagnostics.backend) does not " *
+                "match the resolved backend $(sparse_solver.backend)"))
+        sparse_solver.max_relative_residual = saved_checkpoint.diagnostics.max_relative_residual
+        sparse_solver.factorization_count = saved_checkpoint.diagnostics.factorization_count
         sparse_solver.refinement_count = hasproperty(
             saved_checkpoint.diagnostics, :refinement_count) ?
-            saved_checkpoint.diagnostics.refinement_count : 0
+                                         saved_checkpoint.diagnostics.refinement_count : 0
         sparse_solver.solve_count = saved_checkpoint.diagnostics.solve_count
     end
 
@@ -532,7 +535,6 @@ function solve_cohomological_problem(
         end
     end
 
-
     if checkpoint !== nothing && completed_degree < 1
         _write_checkpoint(checkpoint, signature, 1, W, R, sparse_solver)
         completed_degree = 1
@@ -568,13 +570,14 @@ function solve_cohomological_problem(
         solve_cohomological_equations_benchmarked!(W, R, ctx, sym, model, ml_cache;
             benchmark_dir, show_progress)
     else
-        checkpoint_callback = checkpoint === nothing ? nothing : degree -> begin
+        checkpoint_callback = checkpoint === nothing ? nothing :
+                              degree -> begin
             _write_checkpoint(checkpoint, signature, degree, W, R, sparse_solver)
             completed_degree = degree
         end
         solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
             show_progress,
-            group_superharmonics=solver_config.group_superharmonics,
+            group_superharmonics = solver_config.group_superharmonics,
             checkpoint_callback)
     end
 
