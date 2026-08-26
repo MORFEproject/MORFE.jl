@@ -145,9 +145,9 @@ environment and writes outputs under a git-ignored `results/` folder — run the
 root with:
 
 ```bash
-julia --project=examples/02_clamped_beam_gridap -e '
+julia --project=examples/internals -e '
   using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/02_clamped_beam_gridap/main.jl")'
+  include("examples/internals/multiindex_sets/main.jl")'
 ```
 
 See [`examples/README.md`](examples/README.md) for the example contract and validation workflow.
@@ -156,15 +156,18 @@ See [`examples/README.md`](examples/README.md) for the example contract and vali
 
 | Folder | Model | Demonstrates |
 |--------|-------|--------------|
-| [`02_clamped_beam_gridap/`](examples/02_clamped_beam_gridap/) | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with the Gridap.jl FEM backend |
-| [`06_dielectric_elastomer_actuator/`](examples/06_dielectric_elastomer_actuator/) | Dielectric elastomer actuator (pure-Julia Hermite beam) | Coupled electrostatic-mechanical ROM, order-3 `NthOrderModel` |
 | [`mesh_import/`](examples/mesh_import/) | Test meshes | Abaqus/COMSOL → GMSH format conversion |
 | [`internals/`](examples/internals/) | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method |
 
-### In MORFEFerrite.jl
+### Developed outside this repository
 
-All Ferrite-backed examples moved to the companion package:
-[MORFEFerrite.jl/examples](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples)
+Every example with its own FEM stack lives outside the package tree, so that a heavy backend
+(and its meshes and result archives) never becomes a dependency of the library:
+
+- **Ferrite-backed** — the companion package
+  [MORFEFerrite.jl/examples](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples).
+- **Gridap-backed clamped beam** and the **dielectric elastomer actuator** — maintained
+  alongside this repository rather than in it.
 
 | Folder | Model |
 |--------|-------|

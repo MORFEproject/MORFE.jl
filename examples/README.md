@@ -32,12 +32,12 @@ Every runnable example satisfies:
 
 | Folder | Model | Demonstrates | Status | Approx. runtime |
 | ------ | ----- | ------------ | ------ | --------------- |
-| `02_clamped_beam_gridap/` | Clamped-clamped beam (St. Venant-Kirchhoff) | Full DPIM pipeline with Gridap.jl FEM backend | runnable | 8 min |
-| `06_dielectric_elastomer_actuator/` | Dielectric elastomer actuator (pure-Julia Hermite beam) | Coupled electrostatic-mechanical ROM, order-3 `NthOrderModel` | runnable | minutes |
 | `mesh_import/` | Test meshes | Abaqus/COMSOL → GMSH format conversion | utility | seconds |
 | `internals/` | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method | utility | seconds–1 min |
 
-All **Ferrite.jl-backed examples** moved to the companion package
+Examples that carry their own FEM stack are developed outside this repository, so a heavy
+backend never becomes a dependency of the library. The **Ferrite.jl-backed** ones live in the
+companion package
 [MORFEFerrite.jl](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples):
 
 | Folder (in MORFEFerrite.jl) | Model |
@@ -56,9 +56,9 @@ All **Ferrite.jl-backed examples** moved to the companion package
 From the repository root:
 
 ```bash
-julia --project=examples/02_clamped_beam_gridap -e '
+julia --project=examples/internals -e '
   using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/02_clamped_beam_gridap/main.jl")'
+  include("examples/internals/multiindex_sets/main.jl")'
 ```
 
 Each example's own `README.md` has the exact command.
