@@ -77,40 +77,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   <aside class="docs-side">
     <div class="ver"><span>Tutorials</span></div>
+    <ul>
+      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
+      <li><a href="karman.html" class="active">Kármán vortex street</a></li>
+      <li><a href="full_order_model.html">Building a full-order model</a></li>
+      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
+    </ul>
+
     <h4>Getting started</h4>
     <ul>
       <li><a href="../index.html#install">Installation</a></li>
       <li><a href="../documentation.html">Code documentation</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
-    </ul>
-
-    <h4>Demos</h4>
-    <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">Ferrite beam notebook ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
-    </ul>
-
-    <h4>Tutorials</h4>
-    <ul>
-      <li><a href="full_order_model.html">Building a full-order model</a></li>
-      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
-      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
-      <li><a href="karman.html" class="active">Kármán vortex street</a></li>
-      <li><a href="parametric.html">Geometry as a coordinate</a></li>
-      <li><a href="micromirror.html">MEMS micromirror</a></li>
-      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
-      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
-      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
-    </ul>
-
-    <h4>Manual</h4>
-    <ul>
-      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
-      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
-      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
-      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
     </ul>
 
   </aside>
@@ -127,7 +104,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <div style="display:flex; gap:10px; margin-bottom:14px;">
       <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> FLUIDS</span>
-      <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
       <span class="tag" style="color:var(--ink-3);">~10 MIN COMPUTE</span>
     </div>
 
@@ -147,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div class="adm tip">
-      <div class="adm-head">Runs today — current code</div>
+      <div class="adm-head">Reproduce this page</div>
       <div class="adm-body">
         <p>All code on this page is the real, shipped implementation in
         <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener"><code>examples/05_karman_vortex_street</code></a>.
@@ -439,7 +415,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
 
     <h2 id="next">Where to next?</h2>
     <ul>
-      <li><a class="inline" href="micromirror.html">MEMS micromirror</a> — the structural counterpart with a 1:2 internal resonance (planned-interface preview).</li>
+      <li><a class="inline" href="full_order_model.html">Building a full-order model</a> — the same three ingredients built from scratch, without a FEM backend.</li>
       <li><a class="inline" href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, multilinear maps, resonance sets, <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a>.</li>
       <li><a class="inline" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
     </ul>
@@ -458,7 +434,7 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
 
     <div style="margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--ink-3);">
       <a href="index.html">← Tutorials</a>
-      <a href="micromirror.html">MEMS micromirror →</a>
+      <a href="full_order_model.html">Building a full-order model →</a>
     </div>
 
   </main>

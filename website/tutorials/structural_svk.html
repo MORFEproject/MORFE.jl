@@ -75,40 +75,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   <aside class="docs-side">
     <div class="ver"><span>Tutorials</span></div>
+    <ul>
+      <li><a href="structural_svk.html" class="active">From a mesh to a ROM</a></li>
+      <li><a href="karman.html">Kármán vortex street</a></li>
+      <li><a href="full_order_model.html">Building a full-order model</a></li>
+      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
+    </ul>
+
     <h4>Getting started</h4>
     <ul>
       <li><a href="../index.html#install">Installation</a></li>
       <li><a href="../documentation.html">Code documentation</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
-    </ul>
-
-    <h4>Demos</h4>
-    <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">Ferrite beam notebook ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
-    </ul>
-
-    <h4>Tutorials</h4>
-    <ul>
-      <li><a href="full_order_model.html">Building a full-order model</a></li>
-      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
-      <li><a href="structural_svk.html" class="active">From a mesh to a ROM</a></li>
-      <li><a href="karman.html">Kármán vortex street</a></li>
-      <li><a href="parametric.html">Geometry as a coordinate</a></li>
-      <li><a href="micromirror.html">MEMS micromirror</a></li>
-      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
-      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
-      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
-    </ul>
-
-    <h4>Manual</h4>
-    <ul>
-      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
-      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
-      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
-      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
     </ul>
 
   </aside>
@@ -125,13 +102,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <div style="display:flex; gap:10px; margin-bottom:14px;">
       <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> STRUCTURES</span>
-      <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
       <span class="tag" style="color:var(--ink-3);">~1 MIN COMPUTE</span>
     </div>
 
     <h1 id="overview">From a mesh to a ROM</h1>
     <p style="margin:6px 0 14px;"><a class="btn" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Open the notebook ↗</a></p>
-    <p class="lede">Build a reduced order model of a clamped beam with geometric nonlinearity.</p>
+    <p class="lede">Build a reduced order model of a clamped beam with geometric nonlinearity. No damping or forcing makes this case
+          conservative.</p>
 
     <div class="fig">
       <iframe src="assets/structural_svk/beam_mesh.html"
@@ -143,44 +120,36 @@ document.addEventListener('DOMContentLoaded', function () {
           (40×3×1 hexahedra, quadratic Lagrange). <strong>Drag to rotate.</strong> </div>
     </div>
 
-    <div class="adm note">
-      <div class="adm-head">Why use both MORFE and MORFEFerrite</div>
-      <div class="adm-body">
-      <p><code>MORFE</code> contains the DPIM reduced order modelling, which is physics-agnostic. 
-        It is independent of any one finite-element library or physics backend. 
-        You can connect it to your favourite library.</p>
-      <p>Use <code>MORFEFerrite</code> to benefit from the mesh
-      and finite-element capabilities of 
-      <a href="https://ferrite-fem.github.io/" target="_blank" rel="noopener"><code>Ferrite</code></a>.</p>
-      </div>
-    </div>
-
     <h2 id="setup">Setup</h2>
     <p>
-      Activate the environment stored beside the notebook and load both packages. 
-      <code>SVK</code> is only a short name for the structural backend (Saint-Venant-Kirchhoff); 
-      <code>build_model</code> and <code>parametrise</code> are the common <code>MORFE</code> interfaces.
+      Activate the environment stored beside the notebook and load both packages.
+      <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl" target="_blank" rel="noopener"><code>build_model</code></a>
+      is <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite</code></a>'s backend-independent interface, shared by every physics backend;
+      <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>
+      is <a href="../documentation.html"><code>MORFE</code></a>'s entry point to the reduction.
     </p>
 <pre class="code"><span class="kw">import</span> Pkg
 Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
 <span class="kw">using</span> MORFE, MORFEFerrite
-<span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> MORFEFerrite.StructuralSVK</pre>
+<span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> MORFEFerrite.StructuralSVK <span class="cm"># for Saint-Venant-Kirchhoff hyperelasticity</span></pre>
 
     <div class="step">
       <div class="num">01</div>
       <div class="body">
         <h3 id="step-case">State the case</h3>
         <p>
-          Set the expansion order directly: <code>order = 3</code> gives the quick run,
-          while changing that line to <code>order = 9</code> reproduces the higher-order reference.
-          <code>mechanical_model</code> then reads the mesh and supplies the required material,
-          damping, and boundary information. Zero Rayleigh coefficients and no forcing make this case
-          conservative. The finite-element and quadrature orders use their API defaults (see).
+          Set the expansion order: <code>order = 3</code> for a quick run;
+          <code>order = 9</code> to reproduce the reference.
+          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/mechanical_model.jl" target="_blank" rel="noopener"><code>mechanical_model</code></a>
+          reads the mesh, the elastic material properties,
+          damping, and boundary information. Pass the finite-element and quadrature orders to
+          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/mechanical_model.jl" target="_blank" rel="noopener"><code>mechanical_model</code></a>
+          to override the defaults (<code>fe_order = 2</code>, <code>quad_order = fe_order + 1</code>).
         </p>
         <p>
-          <code>dirichlet = "Dirichlet"</code> names a facet group stored in
-          the Gmsh file. If your mesh uses a different physical-group name, pass that name instead. 
-          Those labeled facets are fixed, producing the two clamped beam ends.
+          <code>dirichlet = "Dirichlet"</code> names a facet group in
+          the Gmsh file, for the two clamped beam ends. 
+          If your mesh uses a different physical-group name, pass that name instead.
         </p>
 <pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span> <span class="cm"># Change to 9 for the reference calculation.</span>
 <span class="var">case</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
@@ -195,7 +164,8 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
       <div class="body">
         <h3 id="step-build">Build a physics-independent model for MORFE</h3>
         <p>
-          <code>build_model</code> converts the structural case into MORFE's physics-independent
+          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl" target="_blank" rel="noopener"><code>build_model</code></a>
+          converts the structural case into MORFE's physics-independent
           model and computes its spectral data. <code>master = [1]</code> selects the first
           conjugate vibration-mode pair. <code>meta</code> holds auxiliary backend information.
         </p>
@@ -209,8 +179,14 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
       <div class="body">
         <h3 id="step-parametrise">Compute the invariant manifold</h3>
         <p>
-          <code>parametrise</code> computes the manifold parametrisation <code>W</code> and associated reduced dynamics
-          <code>R</code> up until the chosen order.
+          <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>
+          computes the manifold parametrisation
+          <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>
+          and associated reduced dynamics
+          <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a>
+          up until the chosen order. The
+          <a class="doc-link" href="../documentation.html#Resonance-ResonanceConfig"><code>ResonanceConfig</code></a>
+          keyword selects the parametrisation style and the resonance tolerance.
         </p>
 <pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
     <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>))
@@ -240,24 +216,34 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
         <p>
           The ROM is already available in memory as <code>(W, R)</code>. This optional cell writes
           <code>W</code>, <code>R</code>, their coefficient table, and a summary to
-          <code>results</code> using the common MORFE saver.
+          <code>results</code> using MORFE's common saver,
+          <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl" target="_blank" rel="noopener"><code>save_rom</code></a>.
         </p>
 <pre class="code"><span class="fn">MORFE.save_rom</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>);</pre>
       </div>
     </div>
 
-    <div class="repro" style="margin-top:38px; padding:22px; border:1px solid var(--hair); border-radius:8px; display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
-      <div style="flex:1; min-width:240px;">
-        <div class="kicker">Reproduce</div>
-        <h3 style="margin-top:14px; font-size:20px;">Run it yourself</h3>
-        <pre class="code" style="margin-top:10px;">jupyter nbconvert --execute --to notebook --inplace clamped_beam.ipynb
-julia --project=. validate.jl</pre>
-      </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/01_clamped_beam_ferrite" target="_blank" rel="noopener">Example 01 <span class="arrow">→</span></a>
+    <div class="adm note">
+      <div class="adm-head">Why use both MORFE and MORFEFerrite</div>
+      <div class="adm-body">
+      <p><a href="../documentation.html"><code>MORFE</code></a> contains the DPIM reduced order modelling, which is physics-agnostic.
+        It is independent of any one finite-element library or physics backend.
+        You can connect it to your favourite library.</p>
+      <p>Use <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite</code></a> to benefit from the mesh
+      and finite-element capabilities of 
+      <a href="https://ferrite-fem.github.io/" target="_blank" rel="noopener"><code>Ferrite</code></a>.</p>
       </div>
     </div>
 
+    <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:240px;">
+        <div class="kicker">Run it yourself</div>
+        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">The full pipeline ships in <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener"><code>examples/01_clamped_beam_ferrite/clamped_beam.ipynb</code></a>.</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/01_clamped_beam_ferrite" target="_blank" rel="noopener">Example 01<span class="arrow">→</span></a>
+      </div>
+    </div>
 
   </main>
 

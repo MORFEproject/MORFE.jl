@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Parametric Kármán profile — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
+<style>
+.pk-lab{margin:28px 0 34px;border:1px solid var(--hair-2);border-radius:8px;background:linear-gradient(145deg,rgba(20,20,29,.92),rgba(7,7,11,.96));overflow:hidden}
+.pk-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 18px;border-bottom:1px solid var(--hair);font:11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pk-status{display:inline-flex;align-items:center;gap:7px;color:var(--jl-green)}.pk-status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}
+.pk-stage{padding:14px;position:relative}.pk-stage svg{display:block;width:100%;height:auto;min-height:300px;touch-action:none;background:#08080d;border:1px solid var(--hair);border-radius:6px}
+.pk-gridline{stroke:#20202c;stroke-width:1}.pk-profile{fill:rgba(149,88,178,.16);stroke:#b877d5;stroke-width:2.6;vector-effect:non-scaling-stroke}.pk-ghost{fill:none;stroke:#484855;stroke-width:1.2;stroke-dasharray:5 7;vector-effect:non-scaling-stroke}.pk-chord{stroke:#d6d6df;stroke-width:1.2;stroke-dasharray:4 4}.pk-thick{stroke:#389826;stroke-width:2}.pk-camber{stroke:#4063d8;stroke-width:2}.pk-dot{fill:#fff;stroke:#08080d;stroke-width:2}
+.pk-controls{display:grid;grid-template-columns:minmax(220px,1.15fr) minmax(220px,.85fr);gap:1px;background:var(--hair);border-top:1px solid var(--hair)}.pk-control{padding:18px;background:#0c0c12}.pk-label{display:flex;justify-content:space-between;gap:12px;font:12px var(--mono);color:var(--ink-2);margin-bottom:12px}.pk-value{color:#fff}.pk-control input[type=range]{width:100%;accent-color:var(--jl-purple);cursor:pointer}.pk-control input:disabled{cursor:not-allowed;opacity:.35}.pk-scale{display:flex;justify-content:space-between;font:10px var(--mono);color:var(--ink-3);margin-top:6px}.pk-reset{font:11px var(--mono);color:var(--ink-2);background:transparent;border:1px solid var(--hair-2);border-radius:4px;padding:6px 9px;cursor:pointer}.pk-reset:hover{color:#fff;border-color:var(--ink-3)}
+.pk-readouts{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));border-top:1px solid var(--hair)}.pk-readout{padding:15px 16px;border-right:1px solid var(--hair);min-height:82px}.pk-readout:nth-child(4n){border-right:0}.pk-readout .k{font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}.pk-readout .v{font:19px var(--mono);color:#fff;margin-top:5px}.pk-readout .u{font:11px var(--mono);color:var(--ink-3)}.pk-readout.pending .v{font-size:12px;color:#d4a056;margin-top:9px}.pk-legend{position:absolute;left:28px;bottom:27px;display:flex;flex-wrap:wrap;gap:13px;font:10px var(--mono);color:var(--ink-3);pointer-events:none}.pk-legend span::before{content:"";display:inline-block;width:16px;height:2px;margin-right:6px;vertical-align:middle;background:var(--c)}
+.evidence{width:100%;border-collapse:collapse;font-size:13px;margin:18px 0}.evidence th,.evidence td{padding:10px 12px;border:1px solid var(--hair);text-align:left}.evidence th{font:11px var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;background:#07070b}.evidence td{color:var(--ink-2)}
+details.derivation{border:1px solid var(--hair);border-radius:6px;margin:18px 0;background:rgba(7,7,11,.55)}details.derivation summary{cursor:pointer;padding:13px 16px;font:12px var(--mono);color:var(--ink-2)}details.derivation>div{padding:0 16px 16px}
+@media(max-width:900px){.pk-controls{grid-template-columns:1fr}.pk-readouts{grid-template-columns:repeat(2,1fr)}.pk-readout:nth-child(2n){border-right:0}.pk-stage{padding:8px}.pk-legend{position:static;padding:0 16px 14px}}
+</style>
+</head>
+<body class="docs-page">
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+<div class="site">
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav><script src="../assets/nav.js"></script>
+<div class="docs-shell">
+<aside class="docs-side">
+  <div class="ver"><span>Tutorials</span></div>
+  <h4>Tutorials</h4><ul>
+    <li><a href="full_order_model.html">Building a full-order model</a></li><li><a href="multiindex_sets.html">Monomials and multiindices</a></li><li><a href="structural_svk.html">From a mesh to a ROM</a></li><li><a href="karman.html">Kármán vortex street</a></li><li><a class="active" href="parametric-karman.html">Parametric Kármán profile</a></li><li><a href="parametric.html">Geometry as a coordinate</a></li><li><a href="micromirror.html">MEMS micromirror</a></li>
+  </ul>
+  <h4>On this page</h4><ul><li class="sub"><a href="#profile">Interactive profile</a></li><li class="sub"><a href="#reference">Reference geometry</a></li><li class="sub"><a href="#pullback">Fixed-domain equations</a></li><li class="sub"><a href="#ord2">Why ORD = 2</a></li><li class="sub"><a href="#verification">Verification</a></li><li class="sub"><a href="#reproduce">Reproduce</a></li></ul>
+</aside>
+<main class="docs-main">
+  <div class="crumbs"><a href="index.html">Tutorials</a><span class="sep">/</span><a href="karman.html">Kármán vortex street</a><span class="sep">/</span><span>Parametric profile</span></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"><span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> FLUIDS + GEOMETRY</span><span class="tag" style="color:#d4a056;border-color:rgba(212,160,86,.35);background:rgba(212,160,86,.06)">CENTERED FOM + FAST MORFE VERIFIED · PRODUCTION GATES PENDING</span></div>
+  <h1>Parametric Kármán profile</h1>
+  <p class="lede">The circle obstacle becomes a Joukowski family. The stored mesh is the middle profile, so moving the shape parameter away from zero means exactly what it should: moving away from the geometry actually assembled.</p>
+
+  <h2 id="profile">Explore the full geometry family</h2>
+  <p>The geometry control spans the complete homotopy from the circle at $t=0$ to the formal Joukowski profile at $t=1$, centred on the stored mesh at $t=0.5$. Geometry selection and numerical certification are intentionally separate: outside the published mesh interval the analytic outline remains interactive, but solver values are unavailable.</p>
+  <section class="pk-lab" id="pk-lab" aria-label="Interactive parametric Joukowski profile">
+    <div class="pk-head"><span>Joukowski homotopy · fixed midpoint mesh · equal axes</span><span id="pk-status" class="pk-status">loading certificate</span></div>
+    <div class="pk-stage"><svg id="pk-svg" viewBox="0 0 900 440" role="img" aria-labelledby="pk-title pk-desc"><title id="pk-title">Parametric Joukowski obstacle</title><desc id="pk-desc">Profile, chord, maximum thickness, and centreline camber update with t.</desc><g id="pk-grid"></g><path id="pk-circle" class="pk-ghost"></path><path id="pk-sharp" class="pk-ghost"></path><path id="pk-shape" class="pk-profile"></path><line id="pk-chord" class="pk-chord"></line><line id="pk-thickness" class="pk-thick"></line><line id="pk-camber" class="pk-camber"></line><circle id="pk-camber-dot" r="4" class="pk-dot"></circle></svg><div class="pk-legend"><span style="--c:#b877d5">active profile</span><span style="--c:#d6d6df">chord</span><span style="--c:#389826">thickness</span><span style="--c:#4063d8">centreline camber</span><span style="--c:#484855">context only</span></div></div>
+    <div class="pk-controls">
+      <div class="pk-control"><div class="pk-label"><label for="pk-t">Geometry $t$ · $\mu=t-0.5$</label><span><span id="pk-t-value" class="pk-value">0.500</span> <button id="pk-reset" class="pk-reset" type="button">midpoint</button></span></div><input id="pk-t" type="range" min="0" max="1" step="0.001" value="0.5" aria-describedby="pk-t-range pk-certified-range"/><div class="pk-scale" id="pk-t-range"><span id="pk-t-min">circle · t = 0</span><span>stored mesh · μ = 0</span><span id="pk-t-max">formal profile · t = 1</span></div><div class="pk-scale" style="justify-content:center;margin-top:10px"><span id="pk-certified-range">loading mesh certificate</span></div></div>
+      <div class="pk-control"><div class="pk-label"><label for="pk-re">Reynolds number</label><span id="pk-re-value" class="pk-value">unavailable</span></div><input id="pk-re" type="range" disabled aria-describedby="pk-re-note"/><div class="pk-scale" id="pk-re-note"><span>enabled only inside verified ROM/DNS envelope</span></div></div>
+    </div>
+    <div class="pk-readouts">
+      <div class="pk-readout"><div class="k">thickness</div><div class="v" id="pk-h">—</div><div class="u" id="pk-hr">—</div></div><div class="pk-readout"><div class="k">centreline camber</div><div class="v" id="pk-f">—</div><div class="u" id="pk-fr">—</div></div><div class="pk-readout"><div class="k">minimum det F</div><div class="v" id="pk-det">—</div><div class="u" id="pk-valid">certificate</div></div><div class="pk-readout pending"><div class="k">critical Reynolds</div><div class="v" id="pk-rec">accepted points only</div></div><div class="pk-readout pending"><div class="k">Hopf angular frequency</div><div class="v" id="pk-freq">accepted points only</div></div><div class="pk-readout pending"><div class="k">full lift amplitude</div><div class="v" id="pk-lift">awaiting DNS</div></div><div class="pk-readout pending"><div class="k">mean full drag</div><div class="v" id="pk-drag">awaiting DNS</div></div><div class="pk-readout"><div class="k">geometry coordinate</div><div class="v" id="pk-mu">0.000</div><div class="u">frozen · μ̇ = 0</div></div>
+    </div>
+  </section>
+  <div class="adm warn"><div class="adm-head">Evidence boundary</div><div class="adm-body"><p>The generated dataset now contains the centered geometry certificate, the five accepted direct-FOM Hopf reference points, and the measured Reynolds coordinate. The Reynolds slider and continuous solver curves remain disabled because geometry-order, mesh, quadrature, independent-remesh, production-ROM, and DNS gates are still open. The values shown at the five exact sample positions are evidence points, not interpolated ROM predictions.</p></div></div>
+
+  <h2 id="reference">Why $t=0.5$ is zero</h2>
+  <p>The Joukowski homotopy is $H_t(\zeta)=\zeta+t c^2/\zeta$, with $c=1$, $\zeta_c=-0.03884761+0.1449935065756745i$, and $R=|1-\zeta_c|$. The negative real offset puts the rounded leading edge at minimum $x$, upstream for the left-to-right flow, while the formal cusp is downstream. We store the mesh at $t_\mathrm{ref}=0.5$ and define</p>
+  <div class="math-block">$$\mu=t-0.5,\qquad x(X,\mu)=X+\mu\psi(X).$$</div>
+  <p>Consequently $x(X,0)=X$, $F_0=I$, and $\det F_0=1$ exactly. At the midpoint, the resolved chord is 0.1 m, its midpoint is $(0.2,0.2)$ m, maximum chord-normal thickness is 37.10%, and maximum centreline camber distance is 6%. “Curvature” on this page always means that camber distance—not differential curvature $\kappa$.</p>
+  <details class="derivation"><summary>How chord, thickness, and camber are measured</summary><div><p>Leading and trailing points are global streamwise extrema refined from roots of $d\operatorname{Re}(H_t)/d\phi=0$. In the resulting chord frame, chord-normal lines intersect the closed boundary to give $y_u(s)$ and $y_l(s)$. Then $h=\max_s(y_u-y_l)$ and $f=\max_s|(y_u+y_l)/2|$. Plot samples never define the endpoints or acceptance values.</p></div></details>
+
+  <h2 id="mesh">Move one topology, do not remesh the ROM</h2>
+  <p>The topology originates from a circular obstacle mesh, but the stored finite-element reference is the moved midpoint profile itself. The analytic obstacle displacement is extended through the fluid by a weighted P1 linear-elasticity problem, with zero mesh displacement on `Inlet`, `Outlet`, and `Farfield`. Physical flow conditions are different: `Inlet` and `Farfield` prescribe the uniform freestream $(1,0)$ m/s, only `Obstacle` is no-slip, and `Outlet` uses natural traction.</p>
+  <pre class="code">motion = generate_reference_mesh(meshfile; level = MESH_LEVELS.FAST)
+certificate = certify_geometry(motion)
+
+# reference triangles carry a constant gradient
+Fμ = I + μ * ∇ψ
+jμ = det(Fμ)
+Aμ = adj(Fμ)</pre>
+
+  <h2 id="pullback">Navier–Stokes on the fixed midpoint domain</h2>
+  <p>Velocity uses the composition pullback. There is no Piola transformation. With $A_\mu=\operatorname{adj}F_\mu$ and $j_\mu=\det F_\mu$, the mixed forms are</p>
+  <div class="math-block">$$m_\mu(v,\dot u)=\int v\cdot\dot u\,j_\mu\,dX,$$
+  $$c_\mu(v;a,b)=\int v\cdot[(\nabla_Xb\,A_\mu)a],dX,$$
+  $$a_{\mu,\xi}(v,u)=2\nu(\xi)\int\frac{\mathrm{sym}(\nabla_XvA_\mu):\mathrm{sym}(\nabla_XuA_\mu)}{j_\mu},dX,$$
+  $$b_\mu(q,u)=\int q\,\mathrm{tr}(\nabla_XuA_\mu),dX.$$</div>
+  <p>The second frozen coordinate normalises inverse Reynolds number: $\xi=(1/\mathrm{Re}-1/\mathrm{Re}_0)/\Delta_\eta$, with $\dot\mu=\dot\xi=0$. The five-sample direct-FOM study determines $\Delta_\eta$ with a 10% margin; it is not guessed in configuration.</p>
+
+  <h2 id="ord2">Why changing geometry raises the model to `ORD = 2`</h2>
+  <p>The pressure mass remains singular, but the velocity mass now depends on geometry: $B_1(\mu)\dot U$. MORFE therefore receives the augmented linear tuple $(B_{0,0},B_{1,0},0)$. Geometry corrections to $B_1$ have derivative arity `(0, 1)`; treating this as an order-one model would attach $\mu$ to $U$ instead of $\dot U$.</p>
+  <pre class="code">pcase = parametric_model(case, geometry;
+    geometry_parameter_basis = GeometryParameterBasis([8]),
+    reynolds_scale = Δη)
+
+# external order is fixed: r = (μ, ξ)
+# conjugate permutation for one Hopf pair: [2, 1, 3, 4]
+(; model, spectral, meta) = build_model(pcase; spectrum, master = [1])</pre>
+  <p>Pure-parameter forcing is assembled from the full midpoint state before free-row restriction, so contributions from the prescribed uniform-freestream degrees of freedom are retained. The implementation rejects the model unless $\|h(0,0)\|\le10^{-10}\max(1,\|s_0\|)$.</p>
+
+  <h2 id="forces">Full transformed forces</h2>
+  <p>Lift and drag use pressure and viscous stress. Nanson’s formula carries the normal and boundary measure together:</p>
+  <div class="math-block">$$\sigma=-pI+2\nu\,\mathrm{sym}(\nabla_xu),\qquad n\,d\Gamma=A_\mu^T N\,d\Gamma_\mathrm{ref}.$$</div>
+  <p>The implementation’s `compute_transformed_drag_lift` evaluates this on the reference obstacle. A pressure-only lift polynomial is not reused.</p>
+
+  <h2 id="verification">What must pass before solver values appear</h2>
+  <p>The following points are read directly from the versioned Example 11 dataset. The frequency column is the imaginary part of the neutral eigenvalue in rad/s.</p>
+  <table class="evidence"><thead><tr><th>$t$</th><th>$Re_c$</th><th>$\operatorname{Re}\lambda$</th><th>$\operatorname{Im}\lambda$</th><th>Eigen residual</th><th>Overlap</th></tr></thead><tbody id="pk-fom-points"><tr><td colspan="6">Loading direct-FOM evidence…</td></tr></tbody></table>
+  <table class="evidence"><thead><tr><th>Gate</th><th>Acceptance</th><th>Current page</th></tr></thead><tbody>
+    <tr><td>Analytic midpoint profile</td><td>0.1 m chord; 37.10% / 6%</td><td>passed</td></tr><tr><td>Centered mesh map</td><td>$0.25\le j\le1.75$, $\operatorname{cond}F\le10$</td><td>passed; published $t\in[0,0.88]$</td></tr><tr><td>Midpoint FOM and Hopf</td><td>neutral tracked physical pair</td><td>passed: $Re_0=259.7735$, $\omega_0=24.6058$ rad/s</td></tr><tr><td>Centered Hopf branch</td><td>overlap, residual, separation, localization</td><td>passed at 28 tracking points over $[0.4,0.6]$</td></tr><tr><td>FAST `ORD=2` MORFE</td><td>33 monomials; frozen coordinates; conjugate symmetry</td><td>passed, pipeline qualification only</td></tr><tr><td>Geometry order + moved/remeshed FOM</td><td>orders 4–12 and operator/action tolerances</td><td>pending</td></tr><tr><td>Production DPIM orders 3, 5, 7</td><td>converged critical curve, frequency, Landau, forces</td><td>pending</td></tr><tr><td>DNS at $t=0.4,0.5,0.6$</td><td>frequency &lt;1%, lift &lt;5%, drag &lt;3%</td><td>pending</td></tr>
+  </tbody></table>
+
+  <h2 id="reproduce">Reproduce without duplicated notebook logic</h2>
+  <pre class="code"><span class="cm"># from examples/11_parametric_karman_profile</span>
+julia --project=. setup_centered_case.jl
+julia --project=. verify_centered_hopf.jl
+julia --project=. continue_centered_hopf.jl
+
+<span class="cm"># validate saved evidence and regenerate browser data</span>
+julia --project=. validate.jl
+julia --project=. main.jl
+
+<span class="cm"># reproduce the FAST ORD=2 pipeline qualification</span>
+MORFE_ASSEMBLE=1 MORFE_REDUCE=1 julia --project=. run_centered_morfe.jl</pre>
+  <p>The narrative notebook calls these same files and contains no assembly copy. The original cylinder notebook and tutorial remain unchanged.</p>
+</main>
+</div></div>
+<script src="assets/parametric-karman/interactive.js"></script>
+<script src="../assets/manifold-bg.js"></script>
+</body></html>

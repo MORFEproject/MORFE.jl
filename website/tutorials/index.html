@@ -89,41 +89,17 @@ document.addEventListener('DOMContentLoaded', function () {
   <!-- Sidebar -->
   <aside class="docs-side">
     <div class="ver"><span><a href="index.html" class="active">Tutorials</a></span></div>
+    <ul>
+      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
+      <li><a href="karman.html">Kármán vortex street</a></li>
+      <li><a href="full_order_model.html">Building a full-order model</a></li>
+      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
+    </ul>
+
     <h4>Getting started</h4>
     <ul>
       <li><a href="../index.html#install">Installation</a></li>
       <li><a href="../documentation.html">Code documentation</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
-    </ul>
-
-    <h4>Demos</h4>
-    <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">Ferrite beam notebook ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
-    </ul>
-
-    <h4>Tutorials</h4>
-    <ul>
-      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
-      <li><a href="full_order_model.html">Building a full-order model</a></li>
-      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
-      <li><a href="karman.html">Kármán vortex street</a></li>
-      <li><a href="parametric.html">Geometry as a coordinate</a></li>
-      <li><a href="micromirror.html">MEMS micromirror</a></li>
-      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
-      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
-      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
-    </ul>
-
-    <h4>Manual</h4>
-    <ul>
-      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
-      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
-      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
-      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
-      <li><a href="../documentation.html#InvarianceError">Post-processing</a></li>
     </ul>
 
   </aside>
@@ -145,17 +121,6 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <h1>Tutorials</h1>
-    <p class="lede">
-      Hands-on walkthroughs that take you from a finite-element mesh to a closed, continuable ROM
-      in under fifty lines of Julia. Each tutorial is reproducible — meshes and scripts ship with the package.
-    </p>
-
-    <div class="adm tip">
-      <div class="adm-head">Pick your starting point</div>
-      <div class="adm-body">
-        <p>The quickest way to get MORFE running is to open one of the <strong>demo scripts</strong> — they work today against the current code. The named tutorials below are written against the planned high-level interface and show what the workflow <em>will</em> look like, but are not yet runnable.</p>
-      </div>
-    </div>
 
 <!--
 <h2 id="featured">Featured demo — works today</h2>
@@ -165,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <div style="padding: 30px 32px;">
           <div style="display:flex; gap:10px; margin-bottom:10px;">
             <span class="tag"><span class="tag-dot" style="background:var(--jl-green)"></span> CURRENT CODE</span>
-            <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
+            <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);"></span>
           </div>
           <h3 style="font-size:24px; margin:6px 0 12px;">Parametrisation method demo</h3>
           <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current code: <code>NthOrderModel</code> → eigenproblem → resonance detection → <code>solve_cohomological_problem</code>. Ships in <code>examples/internals/</code>.</p>
@@ -189,29 +154,32 @@ W, R  = solve_cohomological_problem(
     </a>
 -->
 
-    <h2 id="all">All tutorials</h2>
-
-    <h3 id="demos" style="margin-top:0; font-size:16px; color:var(--ink-2); font-weight:500; letter-spacing:0.02em;">Available now — current code</h3>
-    <p style="color:var(--ink-2); font-size:14px; margin:6px 0 18px;">
-      A ladder: <strong>L0</strong> edit one case block · <strong>L1</strong> a config-driven
-      pipeline · <strong>L2</strong> a case that carries its own code. Every tutorial links a
-      standardized <em>Literate</em> rendering of the script it describes.
-    </p>
-
     <div class="tut-grid">
     <a class="tut-card" href="structural_svk.html">
         <div class="thumb">
-        <span class="corner">StructuralSVK</span>
+        <span class="corner">Structural</span>
         <img src="assets/structural_svk/thumb.svg" loading="lazy"
           alt="Clamped beam mesh with node 289 highlighted and four backbone curves" />
         </div>
         <div class="card-body">
-        <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L0 · start here</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+        <div class="row"><span class="lvl intro">Get started</span></div>
         <h3>From a mesh to a ROM</h3>
-        <p>After the mechanical case is described, <code>build_model</code> followed by <code>parametrise</code> produces the nonlinear ROM through one shared API contract.</p>
-        <div class="meta"><span>SVK</span><span>Gmsh · COMSOL · CAD</span><span>~1 min</span></div>
+        <p>Compute the backbone curve of the first bending mode of a clamped beam with geometric nonlinearity.</p>
+        <div class="meta"><span>Hyperelasticty</span><span>Gmsh</span><span>COMSOL</span><span>~1 min</span></div>
         </div>
     </a>
+    <a class="tut-card" href="karman.html">
+        <div class="thumb">
+          <span class="corner">Navier–Stokes</span>
+          <img src="assets/karman/karman_thumb.svg" alt="Vorticity of the base flow plus the Hopf mode past the cylinder — the Kármán vortex street" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="row"><span class="lvl intro">Intro</span></div>
+          <h3>Kármán vortex street</h3>
+          <p>Reduce the Navier–Stokes equations to understand how increasing the Reynolds number creates vortex shedding past a cylinder.</p>
+          <div class="meta"><span>Navier–Stokes</span><span>parametric ROM</span><span>order 9</span></div>
+        </div>
+      </a>
       <a class="tut-card" href="full_order_model.html">
         <div class="thumb">
           <span class="corner">NthOrderModel</span>
@@ -219,9 +187,10 @@ W, R  = solve_cohomological_problem(
             alt="Phase portrait of the forced Duffing oscillator: the transient spiralling in, and the closed steady-state loop it settles onto" />
         </div>
         <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L0 · core library</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+          <div class="row"><span class="lvl mid">Mid · Core Library</span></div>
           <h3>Building a full-order model</h3>
-          <p>The three objects every solve starts from — nonlinear terms, the external system that drives them, and the model that holds them together. Includes why the Lorenz system is rejected, and the change of coordinates that repairs it.</p>
+          <p>MORFE's full-order models have 3 components: the matrices of the linear terms, 
+            the nonlinear terms, and (optionally) a external system.</p>
           <div class="meta"><span>MultilinearMap</span><span>ExternalSystem</span><span>&lt;15 s</span></div>
         </div>
       </a>
@@ -263,301 +232,24 @@ W, R  = solve_cohomological_problem(
           </svg>
         </div>
         <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L0 · core library</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
+          <div class="row"><span class="lvl mid">Mid · Core Library</span></div>
           <h3>Monomials and multiindices</h3>
           <p>Which monomials does the solve compute? Build the set yourself — generators, anisotropic truncation, deletion, and a spectral bound on the superharmonics — with an interactive lattice at every step.</p>
           <div class="meta"><span>MultiindexSet</span><span>GrLex</span><span>&lt;5 s</span></div>
         </div>
       </a>
-      <a class="tut-card" href="parametric.html">
-        <div class="thumb">
-          <span class="corner">ParametricStructural</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(50 130)">
-              <path d="M0,0 C 100,-30 200,-30 300,0" stroke="#9558B2" stroke-width="2.5" fill="none"/>
-              <path d="M0,0 C 100,-58 200,-58 300,0" stroke="#9558B2" stroke-width="2" fill="none" opacity="0.6"/>
-              <path d="M0,0 C 100,-86 200,-86 300,0" stroke="#9558B2" stroke-width="1.6" fill="none" opacity="0.35"/>
-              <path d="M0,0 C 100,-114 200,-114 300,0" stroke="#9558B2" stroke-width="1.2" fill="none" opacity="0.2"/>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L2 · case with code</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
-          <h3>Geometry as a coordinate</h3>
-          <p>Carry shape parameters inside the ROM: one solve covers a family of geometries, and the frequency sensitivities fall straight out of the reduced dynamics.</p>
-          <div class="meta"><span>θ-series</span><span>box truncation</span><span>~2 min</span></div>
-        </div>
-      </a>
-      <a class="tut-card" href="karman.html">
-        <div class="thumb">
-          <span class="corner">Navier–Stokes</span>
-          <img src="assets/karman/karman_thumb.svg" alt="Vorticity of the base flow plus the Hopf mode past the cylinder — the Kármán vortex street" loading="lazy" />
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">L1 · config-driven</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
-          <h3>Kármán vortex street</h3>
-          <p>The complete MORFE setup on a 57 860-DOF Navier–Stokes flow: steady state, multilinear maps, master modes, and a ROM parametric in Re. The recommended full walkthrough.</p>
-          <div class="meta"><span>Navier–Stokes</span><span>parametric ROM</span><span>order 9</span></div>
-        </div>
-      </a>
-      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">
-        <div class="thumb">
-          <span class="corner">DPIM core</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(200 116)">
-              <!-- invariant manifold: two curved iso-lines forming a saddle-ish surface -->
-              <g stroke="#9558b2" fill="none" opacity="0.85">
-                <path d="M-150,-40 C -70,-92 70,-92 150,-40" stroke-width="1.3"/>
-                <path d="M-150,-8 C -70,-58 70,-58 150,-8" stroke-width="0.9" opacity="0.7"/>
-                <path d="M-150,26 C -70,-22 70,-22 150,26" stroke-width="0.9" opacity="0.55"/>
-                <path d="M-150,60 C -70,14 70,14 150,60" stroke-width="0.9" opacity="0.4"/>
-              </g>
-              <!-- transverse generators -->
-              <g stroke="#3a3a4a" stroke-width="0.5" fill="none" opacity="0.7">
-                <path d="M-150,-40 L-150,60"/>
-                <path d="M-75,-70 L-75,37"/>
-                <path d="M0,-80 L0,28"/>
-                <path d="M75,-70 L75,37"/>
-                <path d="M150,-40 L150,60"/>
-              </g>
-              <!-- reduced trajectory spiralling in on the manifold -->
-              <path d="M120,-20 C 60,-70 -40,-56 -30,-14 C -22,18 44,20 44,-6 C 44,-24 8,-22 8,-4 C 8,8 26,8 24,-2"
-                    stroke="#cb3c33" stroke-width="1.6" fill="none"/>
-              <circle cx="16" cy="-4" r="3" fill="#cb3c33"/>
-            </g>
-            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e">
-              <text x="40" y="40">INVARIANT MANIFOLD</text>
-              <text x="40" y="58" fill="#9558b2">W(z) · reduced ż = R(z)</text>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current code</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
-          <h3>Parametrisation method</h3>
-          <p>Complete pipeline: <code>NthOrderModel</code> → resonance detection → <code>solve_cohomological_problem</code>. The recommended starting point.</p>
-          <div class="meta"><span>NthOrderModel</span><span>DPIM core</span></div>
-        </div>
-      </a>
-      <a class="tut-card" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">
-        <div class="thumb">
-          <span class="corner">Ferrite.jl</span>
-          <img src="assets/structural_svk/thumb.svg" loading="lazy"
-            alt="Clamped beam mesh with node 289 highlighted and four backbone curves" />
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current code</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
-          <h3>Ferrite.jl beam</h3>
-          <p>Describe the structural case, then use the common <code>build_model</code> and <code>parametrise</code> workflow.</p>
-          <div class="meta"><span>Ferrite.jl</span><span>Common MORFE API</span></div>
-        </div>
-      </a>
-      <a class="tut-card" href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">
-        <div class="thumb">
-          <span class="corner">Gridap.jl</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(56 116)">
-              <rect x="-14" y="-52" width="14" height="104" fill="url(#mp)" stroke="#4063d8" stroke-width="1"/>
-              <path d="M0,0 C 96,0 190,-32 300,-60" stroke="#4063d8" stroke-width="2" fill="none"/>
-              <path d="M0,0 C 96,0 190,32 300,60" stroke="#4063d8" stroke-width="2" fill="none" opacity="0.4"/>
-              <path d="M0,0 C 96,0 190,-13 300,-24" stroke="#4063d8" stroke-width="1" fill="none" opacity="0.5"/>
-              <path d="M0,0 L300,0" stroke="#3a3a4a" stroke-width="1" stroke-dasharray="2 3"/>
-              <circle cx="300" cy="-60" r="3" fill="#4063d8"/>
-            </g>
-            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e">
-              <text x="40" y="40">SWAP THE FE BACKEND</text>
-              <text x="40" y="58" fill="#4063d8">FEMMultilinearMap</text>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro" style="background:rgba(56,152,38,0.12); color:#389826;">Demo · current code</span><span class="mono" style="color:var(--jl-green); font-size:11px;">✅</span></div>
-          <h3>Gridap.jl beam</h3>
-          <p>Same mechanical problem via the Gridap FEM backend — illustrates how to swap backends.</p>
-          <div class="meta"><span>Gridap.jl</span><span>FEMMultilinearMap</span></div>
-        </div>
-      </a>
-    </div>
-
-    <h3 id="all" style="margin-top:40px; font-size:16px; color:var(--ink-2); font-weight:500; letter-spacing:0.02em;">🚧 Roadmap tutorials — planned interface</h3>
-    <div class="tut-grid">
-      <a class="tut-card" href="micromirror.html">
-        <div class="thumb">
-          <span class="corner">MEMS</span><span class="flag">🚧 Roadmap</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(200 108)">
-              <g transform="rotate(-8)">
-                <rect x="-120" y="-72" width="240" height="144" fill="url(#mp)" stroke="#9558b2" stroke-width="1.2"/>
-                <rect x="-120" y="-72" width="240" height="144" fill="rgba(149,88,178,0.05)"/>
-                <g opacity="0.55">
-                  <ellipse cx="-60" cy="0" rx="40" ry="54" fill="none" stroke="#cb3c33" stroke-width="0.6"/>
-                  <ellipse cx="60" cy="0" rx="40" ry="54" fill="none" stroke="#cb3c33" stroke-width="0.6"/>
-                </g>
-                <line x1="-120" y1="0" x2="-172" y2="0" stroke="#cb3c33" stroke-width="2"/>
-                <line x1="120" y1="0" x2="172" y2="0" stroke="#cb3c33" stroke-width="2"/>
-                <rect x="-190" y="-12" width="18" height="24" fill="#1f1f2c" stroke="#3a3a4a"/>
-                <rect x="172" y="-12" width="18" height="24" fill="#1f1f2c" stroke="#3a3a4a"/>
-              </g>
-              <g opacity="0.6">
-                <path d="M-172,-74 Q 0,-120 172,-74" stroke="#389826" stroke-width="0.8" fill="none" stroke-dasharray="3 3"/>
-                <path d="M-172,74 Q 0,120 172,74" stroke="#389826" stroke-width="0.8" fill="none" stroke-dasharray="3 3"/>
-              </g>
-            </g>
-            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e">
-              <text x="40" y="204">Ω = 24 kHz · 1:2 parametric</text>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro">Tutorial · planned interface</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-01</span></div>
-          <h3>MEMS micromirror</h3>
-          <p>Full pipeline via <code>FEModel</code>, <code>parametrise</code>, <code>continuation</code>. Shows the planned high-level interface — not yet runnable.</p>
-          <div class="meta"><span>Ferrite.jl</span><span>BifurcationKit</span><span>4-DOF ROM</span></div>
-        </div>
-      </a>
-      <div class="tut-card" style="opacity:0.62; cursor:default;">
-        <div class="thumb">
-          <span class="corner">Structural</span><span class="flag">🚧 soon</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(56 116)">
-              <rect x="-14" y="-52" width="14" height="104" fill="url(#mp)" stroke="#cb3c33" stroke-width="1"/>
-              <path d="M0,0 C 96,0 190,-32 300,-60" stroke="#cb3c33" stroke-width="2" fill="none"/>
-              <path d="M0,0 C 96,0 190,32 300,60" stroke="#cb3c33" stroke-width="2" fill="none" opacity="0.4"/>
-              <path d="M0,0 C 96,0 190,-13 300,-24" stroke="#cb3c33" stroke-width="1" fill="none" opacity="0.5"/>
-              <path d="M0,0 L300,0" stroke="#3a3a4a" stroke-width="1" stroke-dasharray="2 3"/>
-              <circle cx="300" cy="-60" r="3" fill="#cb3c33"/>
-            </g>
-            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e"><text x="40" y="204">A/L = 0.34 · hardening</text></g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl intro">Intro · 18 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-02</span></div>
-          <h3>Cantilever beam</h3>
-          <p>The hello-world of geometric nonlinearity. Single-mode reduction, hardening backbone.</p>
-          <div class="meta"><span>Gridap.jl</span><span>2-DOF ROM</span></div>
-        </div>
-      </div>
-      <div class="tut-card" style="opacity:0.62; cursor:default;">
-        <div class="thumb">
-          <span class="corner">Civil</span><span class="flag">🚧 soon</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(200 150)">
-              <path d="M-150,0 Q 0,-100 150,0" stroke="#4063d8" stroke-width="2" fill="none"/>
-              <path d="M-150,0 Q 0,-60 150,0" stroke="#4063d8" stroke-width="1" fill="none" opacity="0.5" stroke-dasharray="2 3"/>
-              <path d="M-150,0 Q 0,-25 150,0" stroke="#cb3c33" stroke-width="1.4" fill="none"/>
-              <line x1="-150" y1="0" x2="-150" y2="14" stroke="#1f1f2c" stroke-width="6"/>
-              <line x1="150" y1="0" x2="150" y2="14" stroke="#1f1f2c" stroke-width="6"/>
-              <line x1="-180" y1="14" x2="180" y2="14" stroke="#3a3a4a" stroke-width="1"/>
-              <path d="M0,-100 L0,-30" stroke="#389826" stroke-width="1.2" stroke-dasharray="3 3"/>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl mid">Mid · 35 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-03</span></div>
-          <h3>Shallow arch — snap-through</h3>
-          <p>Bistable wells, sub-harmonic 1:2 resonance, homoclinic transition.</p>
-          <div class="meta"><span>Ferrite.jl</span><span>2-DOF ROM</span><span>order 9</span></div>
-        </div>
-      </div>
-      <div class="tut-card" style="opacity:0.62; cursor:default;">
-        <div class="thumb">
-          <span class="corner">Shell</span><span class="flag">🚧 soon</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(200 112)">
-              <ellipse cx="-84" cy="0" rx="30" ry="78" fill="none" stroke="#3a3a4a" stroke-width="1"/>
-              <ellipse cx="84" cy="0" rx="30" ry="78" fill="none" stroke="#3a3a4a" stroke-width="1"/>
-              <line x1="-84" y1="-78" x2="84" y2="-78" stroke="#3a3a4a" stroke-width="1"/>
-              <line x1="-84" y1="78" x2="84" y2="78" stroke="#3a3a4a" stroke-width="1"/>
-              <g stroke="#d4a056" stroke-width="0.5" fill="none" opacity="0.85">
-                <path d="M-84,-70 Q 0,-66 84,-70"/>
-                <path d="M-84,-36 Q 0,-28 84,-36"/>
-                <path d="M-84,0 Q 0,10 84,0"/>
-                <path d="M-84,36 Q 0,44 84,36"/>
-                <path d="M-84,70 Q 0,74 84,70"/>
-              </g>
-              <g stroke="#cb3c33" stroke-width="0.7" fill="none">
-                <path d="M-64,-74 C -38,-50 -38,50 -64,74"/>
-                <path d="M-8,-74 C 18,-50 18,50 -8,74"/>
-                <path d="M48,-74 C 74,-50 74,50 48,74" opacity="0.6"/>
-              </g>
-            </g>
-            <g font-family="JetBrains Mono" font-size="11" fill="#6e6e7e"><text x="40" y="204" fill="#d4a056">1:1:1 internal resonance</text></g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl mid">Mid · 40 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-04</span></div>
-          <h3>Cylindrical shell — companion modes</h3>
-          <p>Travelling- vs standing-wave bifurcation under harmonic forcing.</p>
-          <div class="meta"><span>Ferrite.jl</span><span>6-DOF ROM</span><span>1:1:1 IR</span></div>
-        </div>
-      </div>
-      <div class="tut-card" style="opacity:0.62; cursor:default;">
-        <div class="thumb">
-          <span class="corner">Multi-physics</span><span class="flag">🚧 soon</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(40 140)">
-              <rect x="0" y="0" width="320" height="12" fill="#1f1f2c" stroke="#3a3a4a"/>
-              <rect x="54" y="-10" width="108" height="10" fill="rgba(122,162,255,0.18)" stroke="#7aa2ff" stroke-width="1.1"/>
-              <text x="108" y="-16" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7aa2ff">PZT</text>
-              <line x1="68" y1="-10" x2="68" y2="-38" stroke="#cb3c33" stroke-width="1"/>
-              <line x1="148" y1="-10" x2="148" y2="-38" stroke="#cb3c33" stroke-width="1"/>
-              <line x1="68" y1="-38" x2="148" y2="-38" stroke="#cb3c33" stroke-width="1"/>
-              <text x="108" y="-44" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#cb3c33">V(t)</text>
-              <path d="M0,6 Q 160,-22 320,32" stroke="#cb3c33" stroke-width="1.3" fill="none" opacity="0.7"/>
-              <rect x="-16" y="0" width="10" height="30" fill="#1f1f2c"/>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl adv">Advanced · 50 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-05</span></div>
-          <h3>Piezoelectric energy harvester</h3>
-          <p>Coupled electro-mechanical FE; ROM exposes load resistance as a continuation parameter.</p>
-          <div class="meta"><span>multi-physics</span><span>3-DOF ROM</span></div>
-        </div>
-      </div>
-      <div class="tut-card" style="opacity:0.62; cursor:default;">
-        <div class="thumb">
-          <span class="corner">Rotating</span><span class="flag">🚧 soon</span>
-          <svg viewBox="0 0 400 225" preserveAspectRatio="xMidYMid meet">
-            <g transform="translate(200 112)">
-              <circle cx="0" cy="0" r="14" fill="#1f1f2c" stroke="#3a3a4a"/>
-              <circle cx="0" cy="0" r="3" fill="#389826"/>
-              <g>
-                <rect x="12" y="-4" width="140" height="8" fill="url(#mp)" stroke="#389826" stroke-width="0.8"/>
-                <path d="M152,-4 Q 162,-8 166,-20" stroke="#cb3c33" stroke-width="1.5" fill="none"/>
-                <path d="M152,4 Q 162,8 166,20" stroke="#cb3c33" stroke-width="1.5" fill="none"/>
-              </g>
-              <g transform="rotate(120)"><rect x="12" y="-4" width="140" height="8" fill="url(#mp)" stroke="#389826" stroke-width="0.8" opacity="0.5"/></g>
-              <g transform="rotate(240)"><rect x="12" y="-4" width="140" height="8" fill="url(#mp)" stroke="#389826" stroke-width="0.8" opacity="0.5"/></g>
-              <path d="M0,-46 A 46,46 0 0,1 40,-23" stroke="#9558b2" stroke-width="1.2" fill="none" stroke-dasharray="3 3"/>
-              <text x="0" y="-54" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#9558b2">Ω</text>
-            </g>
-          </svg>
-        </div>
-        <div class="card-body">
-          <div class="row"><span class="lvl adv">Advanced · 60 min</span><span class="mono" style="color:var(--ink-3); font-size:11px;">T-06</span></div>
-          <h3>Rotating beam — Coriolis &amp; centrifugal</h3>
-          <p>Speed-dependent ROM; Campbell diagram and veering automatically resolved.</p>
-          <div class="meta"><span>parametric ROM</span><span>6-DOF</span></div>
-        </div>
-      </div>
     </div>
 
     <div class="adm note" style="margin-top:36px;">
       <div class="adm-head">Reproducibility</div>
-      <div class="adm-body"><p>Every tutorial pins a Julia version and Project.toml. Mesh files (Gmsh format) are downloaded automatically by the script. See <a href="../index.html#install">Installation</a> for how to add MORFE.jl from GitHub.</p></div>
+      <div class="adm-body"><p>Every tutorial ships with everything needed to run it: the mesh and the MORFE code.</p></div>
     </div>
 
   </main>
 
   <!-- ToC -->
   <aside class="docs-toc">
-    <h5>On this page</h5>
-    <ul>
-      <li><a href="#featured" class="active">Featured demo</a></li>
-      <li><a href="#demos">Working demos</a></li>
-      <li><a href="#all">Roadmap tutorials</a></li>
-    </ul>
-    <h5 style="margin-top:32px;">Edit</h5>
+    <h5>Edit</h5>
     <ul>
       <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples" target="_blank" rel="noopener">Demo scripts ↗</a></li>
     </ul>

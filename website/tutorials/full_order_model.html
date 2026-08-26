@@ -81,40 +81,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   <aside class="docs-side">
     <div class="ver"><span>Tutorials</span></div>
+    <ul>
+      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
+      <li><a href="karman.html">Kármán vortex street</a></li>
+      <li><a href="full_order_model.html" class="active">Building a full-order model</a></li>
+      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
+    </ul>
+
     <h4>Getting started</h4>
     <ul>
       <li><a href="../index.html#install">Installation</a></li>
       <li><a href="../documentation.html">Code documentation</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Concepts &amp; vocabulary</a></li>
-    </ul>
-
-    <h4>Demos</h4>
-    <ul>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener">Parametrisation method ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener">Ferrite beam notebook ↗</a></li>
-      <li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener">Gridap beam ↗</a></li>
-    </ul>
-
-    <h4>Tutorials</h4>
-    <ul>
-      <li><a href="full_order_model.html" class="active">Building a full-order model</a></li>
-      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
-      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
-      <li><a href="karman.html">Kármán vortex street</a></li>
-      <li><a href="parametric.html">Geometry as a coordinate</a></li>
-      <li><a href="micromirror.html">MEMS micromirror</a></li>
-      <li><a href="roadmap.html">Cantilever beam 🚧</a></li>
-      <li><a href="roadmap.html">Shallow arch 🚧</a></li>
-      <li><a href="roadmap.html">Cylindrical shell 🚧</a></li>
-    </ul>
-
-    <h4>Manual</h4>
-    <ul>
-      <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
-      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
-      <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
-      <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
-      <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
     </ul>
 
   </aside>
@@ -131,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
       <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> CORE LIBRARY</span>
-      <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);">✅ RUNS TODAY</span>
       <span class="tag" style="color:var(--ink-3);">&lt; 15 S · NO FEM</span>
     </div>
 
@@ -153,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div class="adm tip">
-      <div class="adm-head">Runs today — current code</div>
+      <div class="adm-head">Reproduce this page</div>
       <div class="adm-body">
         <p>Every line on this page comes from
         <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/full_order_model" target="_blank" rel="noopener"><code>examples/internals/full_order_model</code></a>.

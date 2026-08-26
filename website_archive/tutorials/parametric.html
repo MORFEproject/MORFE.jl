@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <h4>Manual</h4>
     <ul>
       <li><a href="../documentation.html#MultilinearMaps">FE input format</a></li>
-      <li><a href="../documentation.html#Eigenproblems">Master subspace</a></li>
+      <li><a href="../documentation.html#SpectralDecomposition">Master subspace</a></li>
       <li><a href="../documentation.html#ParametrisationMethod">Choosing order</a></li>
       <li><a href="../documentation.html#Resonance">Forcing &amp; resonances</a></li>
       <li><a href="../documentation.html#BifurcationKitInterface">Continuation</a></li>
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <p>The code below is
         <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/07_parametric_arch" target="_blank" rel="noopener"><code>examples/07_parametric_arch</code></a>
         and <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/04_parametric_clamped_beam" target="_blank" rel="noopener"><code>examples/04_parametric_clamped_beam</code></a>.
-        Their <code>main.jl</code> files are textually identical — the physics lives in <code>config.jl</code>.</p>
+        Their <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/07_parametric_arch/main.jl" target="_blank" rel="noopener"><code>main.jl</code></a> files are textually identical — the physics lives in <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/07_parametric_arch/config.jl" target="_blank" rel="noopener"><code>config.jl</code></a>.</p>
       </div>
     </div>
 
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-basis">Choose the θ-box and assemble</h3>
         <p>
-          <code>GeometryParameterBasis</code> is the per-parameter box. Separate bases retain
+          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/geometry_parameter_series.jl" target="_blank" rel="noopener"><code>GeometryParameterBasis</code></a> is the per-parameter box. Separate bases retain
           exactly the degree required by each structural form.
         </p>
 <pre class="code"><span class="var">BASIS_K</span> <span class="op">=</span> <span class="fn">PG.GeometryParameterBasis</span>([<span class="var">GEOM_T1</span>, <span class="num">2</span>])
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-maps">Nonlinear maps and linear corrections</h3>
         <p>
-          <code>parametric_model</code> pulls the structural forms back through the geometry and
+          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/parametric_model.jl" target="_blank" rel="noopener"><code>parametric_model</code></a> pulls the structural forms back through the geometry and
           returns the assembled parametric case consumed by the common API.
         </p>
 <pre class="code"><span class="var">pcase</span> <span class="op">=</span> <span class="fn">SVK.parametric_model</span>(<span class="var">dh</span>, <span class="var">cv</span>, <span class="var">GEOM</span>;
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <li>Shape parameters become ROM coordinates through an additive reference map.</li>
       <li>Each parameter scales an independent shape field — analytic or an FE field.</li>
       <li>Truncation is per parameter (a box), not total degree.</li>
-      <li>Two physically different studies share one pipeline file; only <code>config.jl</code> differs.</li>
+      <li>Two physically different studies share one pipeline file; only <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/07_parametric_arch/config.jl" target="_blank" rel="noopener"><code>config.jl</code></a> differs.</li>
       <li>Parametric sensitivities in the ROM match independent FEM identities.</li>
     </ul>
 
