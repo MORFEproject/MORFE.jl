@@ -78,8 +78,6 @@ examples/internals/eigensolver/.plotenv/
 benchmark/morfe20/Morfe_2_0/
 examples/mesh_import/Abaqus/output/
 examples/mesh_import/Comsol/output/
-examples/02_clamped_beam_gridap
-examples/06_dielectric_elastomer_actuator
 *.h5
 profile*.html
 __pycache__/
