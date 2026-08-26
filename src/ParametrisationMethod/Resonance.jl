@@ -980,7 +980,7 @@ function build_resonance_set(model::NthOrderModel, mset::MultiindexSet,
     T = eltype(master_eigs)
     external_eigs = model.external_system === nothing ? T[] :
                     project_eigenvalues(Vector(model.external_system.eigenvalues),
-                        config.eigenvalue_projection)
+        config.eigenvalue_projection)
 
     # Outer eigenvalues serve two distinct purposes: populating the diagnostic
     # `outer_resonances` block (opt-in), and driving the off-manifold warning (on by

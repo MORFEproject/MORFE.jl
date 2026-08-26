@@ -1,5 +1,17 @@
 name: Format
 
+# SciML style, per .JuliaFormatter.toml at the repository root.
+#
+# The formatter environment lives in .github/format/ and pins JuliaFormatter exactly,
+# Manifest included: its output depends on its own dependencies (CSTParser, Tokenize),
+# so an unpinned run would reformat files nobody touched and turn this check red.
+# Bump the pin deliberately, together with a reformat commit.
+#
+# Run the identical check locally — same environment, therefore the same output:
+#
+#   julia --project=.github/format -e 'using Pkg; Pkg.instantiate()'
+#   julia --project=.github/format -e 'using JuliaFormatter; format(["src", "ext", "test", "examples"])'
+
 on:
   push:
   pull_request:
@@ -22,10 +34,20 @@ jobs:
         uses: julia-actions/cache@v2
 
       - name: Install formatter
-        run: julia --project=format -e 'using Pkg; Pkg.instantiate()'
+        run: julia --project=.github/format -e 'using Pkg; Pkg.instantiate()'
 
+      # `format` returns true when nothing needed changing, so this doubles as the
+      # gate: a non-zero exit here means the tree is unformatted, and the diff below
+      # shows the contributor exactly what to apply.
       - name: Check formatting
-        run: julia --project=format format/format.jl
+        run: |
+          julia --project=.github/format -e '
+            using JuliaFormatter
+            ok = format(["src", "ext", "test", "examples"]; verbose = true)
+            if !ok
+                @warn "Files were reformatted. Review and commit the changes."
+                exit(1)
+            end'
 
       - name: Show required changes
         if: failure()
