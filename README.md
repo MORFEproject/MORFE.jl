@@ -10,7 +10,7 @@
 MORFE.jl implements the **Direct Parametrisation of Invariant Manifolds (DPIM)** algorithm — a
 spectral submanifold reduction technique that computes invariant manifolds of large finite-element
 models in a single pass, collapsing million-DOF nonlinear oscillators into ROMs of usually **two to
-four variables** that run in microseconds while preserving the true backbone, internal resonances and
+four variables** that run in seconds while preserving the true backbone, internal resonances and
 bifurcations.
 
 $$\mathbf{B}_0\,\mathbf{u} + \mathbf{B}_1\,\dot{\mathbf{u}} + \mathbf{B}_2\,\ddot{\mathbf{u}} + \cdots = \mathbf{F}(\mathbf{u}, \dot{\mathbf{u}}, \ldots, \mathbf{r}), \qquad \dot{\mathbf{r}} = \mathbf{E}(\mathbf{r})$$
