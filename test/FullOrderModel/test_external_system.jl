@@ -391,14 +391,24 @@ end
             @test to_physical_external(sys, r) ≈ Q * r
         end
 
-        @testset "materialising an argument allocates nothing on the heap" begin
+        @testset "arguments are isbits statics, so indexing them cannot allocate" begin
             # The vectors are built once per solve, but indexing them happens in the
-            # innermost loop, so the elements must stay stack-allocated statics.
+            # innermost loop, so the elements must stay stack-allocated statics.  That is
+            # asserted on the element type rather than with `@allocated(...) == 0`:
+            # indexing a `Vector{T}` with isbits `T` cannot touch the heap, whereas the
+            # allocation count of a toy call depends on the escape analysis of whichever
+            # architecture and Julia version is running — the old assertion held on
+            # aarch64 and reported 48 bytes on x86_64.
             sys = ExternalSystem((im * 2.0, -im * 2.0))
             v = external_argument_vectors(sys, 2)
-            f(vs) = @inbounds (vs[1], vs[2])
-            f(v)                                   # compile
-            @test @allocated(f(v)) == 0
+            @test eltype(v) <: SVector{2}
+            @test isbitstype(eltype(v))
+
+            # Same for the re-based path, where the elements are columns of an SMatrix.
+            rebased = ExternalSystem(_linear_polynomial([0.0 -1.0; 1.0 0.0]))
+            w = external_argument_vectors(rebased, 2)
+            @test eltype(w) <: SVector{2}
+            @test isbitstype(eltype(w))
         end
     end
 
