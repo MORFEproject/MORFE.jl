@@ -1,7 +1,12 @@
 name = "MORFE"
 uuid = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
-version = "3.1.0"
-authors = ["MORFEproject <https://github.com/MORFE.jl>"]
+version = "0.1.0"
+authors = [
+    "Tiago Martins <tiago.martins@tum.de>",
+    "Florian Tuschner <florian.tuschner@imfd.tu-freiberg.de>",
+    "Alessandra Vizzaccaro <alessandra.vizzaccaro@polimi.it>",
+    "Francesco Trainotti <francesco.trainotti@tum.de>",
+]
 
 [deps]
 KLU = "ef3ab10e-7fda-4108-b977-705223b18434"
@@ -40,4 +45,6 @@ LinearMaps = "3"
 Pardiso = "1.1.2"
 Plots = "1.41.6"
 StaticArrays = "1"
+Statistics = "1"
+Symbolics = "7"
 julia = "1.10"

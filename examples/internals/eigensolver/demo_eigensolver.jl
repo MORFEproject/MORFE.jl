@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------
 # import modules, define helper functions
 
-include(joinpath(@__DIR__, "../../src/SpectralDecomposition/Eigensolvers.jl"))
+include(joinpath(@__DIR__, "../../../src/SpectralDecomposition/Eigensolvers.jl"))
 import .Eigensolvers
 
 using SparseArrays
@@ -34,8 +34,24 @@ end
 # -------------------------------------------------------------------
 # define necessary directories, time, plot
 
-K_path = joinpath(@__DIR__, "K.csv")
-M_path = joinpath(@__DIR__, "M.csv")
+# The 17973-DOF K/M pair is ~22 MB of CSV, so it lives in the results archive rather than in
+# the package tree — every `Pkg.add("MORFE")` downloads that tree.  Point
+# MORFE_EIGENSOLVER_DATA at the directory holding K.csv and M.csv, or drop the two files
+# next to this script.
+data_dir = get(ENV, "MORFE_EIGENSOLVER_DATA", @__DIR__)
+K_path = joinpath(data_dir, "K.csv")
+M_path = joinpath(data_dir, "M.csv")
+
+if !(isfile(K_path) && isfile(M_path))
+    error("""
+    Eigensolver demo data not found in $data_dir.
+    K.csv and M.csv live in MORFE_results_archive/Eigensolver/data.  Run with
+
+        MORFE_EIGENSOLVER_DATA=/path/to/MORFE_results_archive/Eigensolver/data \\
+            julia examples/internals/eigensolver/demo_eigensolver.jl
+
+    or copy the two files next to this script.""")
+end
 
 show_time = true
 enable_plot = true

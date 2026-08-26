@@ -1,0 +1,40 @@
+name: TagBot
+
+# Creates the git tag and GitHub release for a version once its registration is merged
+# into the General registry.  The trigger is a comment from the JuliaTagBot account; if
+# that never arrives (or a release predates this workflow), run the workflow manually and
+# raise `lookback` to the number of days to scan.
+
+on:
+  issue_comment:
+    types:
+      - created
+  workflow_dispatch:
+    inputs:
+      lookback:
+        description: Days of registry history to scan for untagged releases
+        default: "3"
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+  deployments: read
+  discussions: read
+  issues: read
+  packages: read
+  pages: read
+  pull-requests: read
+  repository-projects: read
+  security-events: read
+  statuses: read
+
+jobs:
+  TagBot:
+    if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: JuliaRegistries/TagBot@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

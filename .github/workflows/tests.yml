@@ -9,6 +9,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # Both ends of the declared `julia = "1.10"` compat bound, so the registry entry is
+    # backed by a run: the lower bound users may resolve to, and the current stable.
+    strategy:
+      fail-fast: false
+      matrix:
+        julia-version: ['1.10', '1']
+
+    name: Julia ${{ matrix.julia-version }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,7 +25,7 @@ jobs:
       - name: Set up Julia
         uses: julia-actions/setup-julia@v2
         with:
-          version: '1'
+          version: ${{ matrix.julia-version }}
 
       - name: Cache packages
         uses: julia-actions/cache@v2
