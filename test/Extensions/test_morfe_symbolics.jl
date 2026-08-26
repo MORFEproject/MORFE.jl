@@ -80,9 +80,12 @@ ext = Base.get_extension(MORFE, :MORFESymbolicsExt)
         @test isequal(result, [x^2])
         @test length(result) == 1
 
-        # sum of two monomials
+        # sum of two monomials.  SymbolicUtils keeps a sum as a dictionary of term ⇒
+        # coefficient, so `arguments` hands the terms back in hash order — [x, y] on
+        # aarch64, [y, x] on the x86 runner.  Assert membership, not order; nothing
+        # downstream reads these positionally, each monomial carries its own exponents.
         result = ext.MORFESymbolicsExt.seperate_into_monomials(x + y)
-        @test isequal(result, [x, y])
+        @test all(m -> any(isequal(m), Num.(result)), [x, y])
         @test length(result) == 2
 
         # sum of three monomials
