@@ -92,3 +92,6 @@ timing_*.txt
 # Never track IFX content, even if the folder reappears anywhere in the repo
 IFX/
 private/
+
+# Tutorial pages retired from the website — kept locally for reference, not published
+website_archive/

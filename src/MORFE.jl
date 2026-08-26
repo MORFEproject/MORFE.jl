@@ -100,6 +100,7 @@ export ResonanceSet,
 # ParametrisationMethod
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
        restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree
+export CohomologicalSolverConfig, CohomologicalCheckpoint
 export compute_multilinear_terms
 export CohomologicalContext,
        InvarianceOperators, OrthogonalityOperators,

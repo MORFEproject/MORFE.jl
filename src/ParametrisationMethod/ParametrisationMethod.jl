@@ -36,7 +36,9 @@ using ..FullOrderModel: NthOrderModel, _term_label
 using ..SpectralDecomposition: SpectralData, master_eigenvalues,
                                master_conjugate_permutation
 using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
-using ..CohomologicalEquations: solve_cohomological_problem
+using ..CohomologicalEquations: solve_cohomological_problem,
+                               CohomologicalSolverConfig,
+                               CohomologicalCheckpoint
 
 # Re-exported wholesale so `ParametrisationMethod` stays the one namespace users (and
 # `ext/MORFEBifurcationKitExt.jl`, which reaches for
@@ -57,7 +59,8 @@ export Parametrisation,
        compute_higher_derivative_coefficients!,
        restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree,
        validate_multiindex_set,
-       parametrise, build_multiindex_set, print_setup
+       parametrise, build_multiindex_set, print_setup,
+       CohomologicalSolverConfig, CohomologicalCheckpoint
 
 # ==================== Expansion order → multiindex set ====================
 
@@ -245,7 +248,9 @@ function parametrise(
         validate_mset::Bool = true,
         show_progress::Bool = true,
         verbose::Bool = true,
-        setup_io::IO = stderr
+        setup_io::IO = stderr,
+        solver_config::CohomologicalSolverConfig = CohomologicalSolverConfig(),
+        checkpoint::Union{Nothing,CohomologicalCheckpoint} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}
     NVAR = ROM + N_EXT
 
@@ -276,7 +281,8 @@ function parametrise(
     return solve_cohomological_problem(model, mset, spectral, resonance_set;
         conjugate_permutation = conjugate_permutation,
         validate_mset = false,   # already checked above; don't walk the set twice
-        show_progress = show_progress)
+        show_progress = show_progress,
+        solver_config, checkpoint)
 end
 
 # Same policy as `_make_progress`: on the default `stderr`, print only when it is a TTY, so

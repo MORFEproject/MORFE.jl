@@ -124,6 +124,7 @@ using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
 using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using SparseArrays
+using Serialization
 # `klu_factor!` is deliberately not the exported `klu!`. `klu!` maps to
 # `klu_refactor`, which reuses the pivot sequence from the first factorisation;
 # `klu_factor!` re-pivots while reusing the cached symbolic analysis, which is what a
@@ -146,6 +147,7 @@ _pardiso_release!(args...) = nothing                           # phase -1, on fi
 export _try_build_pardiso_solver, _pardiso_prepare!, _pardiso_factorise_solve!,
        _pardiso_release!
 
+include("SolverConfiguration.jl")
 include("OperatorData.jl")
 include("SolverResources.jl")
 include("CohomologicalContext.jl")
@@ -154,6 +156,8 @@ include("CohomologicalSolver.jl")
 include("CohomologicalDriver.jl")
 
 export CohomologicalContext,
+       CohomologicalSolverConfig,
+       CohomologicalCheckpoint,
        InvarianceOperators,
        OrthogonalityOperators,
        LowerOrderResources,
@@ -404,10 +408,39 @@ Solve the cohomological equations for **all** monomials in the multiindex set
 of `W` and `R`, processing them in *causal order* (ascending total degree).
 """
 function solve_cohomological_equations!(
-        W, R, ctx, model, ml_cache; show_progress::Bool = true)
+        W, R, ctx, model, ml_cache; show_progress::Bool = true,
+        group_superharmonics::Bool=false, checkpoint_callback=nothing)
     nterms = length(multiindex_set(W))
     sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
-    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
+    solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
+        show_progress, group_superharmonics, checkpoint_callback)
+end
+
+function _cohomological_schedule(ctx, sym, mset, group_superharmonics)
+    indices = [idx for idx in eachindex(mset.exponents) if !sym.skip_bits[idx]]
+    group_superharmonics || return indices
+    schedule = Int[]
+    for degree in sort!(unique(sum(mset[idx]) for idx in indices))
+        keys = Any[]
+        groups = Dict{Any,Vector{Int}}()
+        for idx in indices
+            sum(mset[idx]) == degree || continue
+            multi = mset[idx]
+            s = sum(multi[i] * ctx.lambda_diag[i] for i in eachindex(multi))
+            key = (s, Tuple(view(ctx.resonance_set.inner_resonances, :, idx)))
+            haskey(groups, key) || (groups[key] = Int[]; push!(keys, key))
+            push!(groups[key], idx)
+        end
+        for key in keys
+            append!(schedule, groups[key])
+        end
+    end
+    return schedule
+end
+
+function _degree_callback!(callback, degree)
+    isnothing(callback) || callback(degree)
+    return nothing
 end
 
 # Overload without active symmetry: skip_bits covers only linear monomials; uses sym-aware
@@ -419,18 +452,26 @@ function solve_cohomological_equations!(
         sym::ConjugateSymmetryData{NoConjugatePermutation},
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
-        show_progress::Bool = true
+        show_progress::Bool = true,
+        group_superharmonics::Bool=false,
+        checkpoint_callback=nothing
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     nterms = length(multiindex_set(W))
-    n_to_solve = count(!b for b in sym.skip_bits)
+    schedule = _cohomological_schedule(ctx, sym, multiindex_set(W), group_superharmonics)
+    n_to_solve = length(schedule)
     prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
     n_done = 0
-    for idx in 1:nterms
-        @inbounds sym.skip_bits[idx] && continue
+    current_degree = 0
+    for idx in schedule
+        degree = sum(multiindex_set(W)[idx])
+        current_degree != 0 && degree != current_degree &&
+            _degree_callback!(checkpoint_callback, current_degree)
+        current_degree = degree
         solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
         n_done += 1
-        _progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
+        _progress_tick!(prog, n_done, degree)
     end
+    current_degree == 0 || _degree_callback!(checkpoint_callback, current_degree)
     _progress_done!(prog, n_done)
     return nothing
 end
@@ -444,34 +485,33 @@ function solve_cohomological_equations!(
         sym::ConjugateSymmetryData{<:SVector},
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
-        show_progress::Bool = true
+        show_progress::Bool = true,
+        group_superharmonics::Bool=false,
+        checkpoint_callback=nothing
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
-    nterms = length(multiindex_set(W))
     pairs = sym.primary_pairs
-    ptr = 1
+    secondary_for_primary = Dict(src => dst for (src, dst) in pairs)
 
-    n_to_solve = count(!b for b in sym.skip_bits)
+    schedule = _cohomological_schedule(ctx, sym, multiindex_set(W), group_superharmonics)
+    n_to_solve = length(schedule)
     prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
     n_done = 0
+    current_degree = 0
 
-    for idx in 1:nterms
-        @inbounds sym.skip_bits[idx] && continue   # skips linears AND secondary monomials
-
+    for idx in schedule
+        degree = sum(multiindex_set(W)[idx])
+        current_degree != 0 && degree != current_degree &&
+            _degree_callback!(checkpoint_callback, current_degree)
+        current_degree = degree
         solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
         n_done += 1
-        _progress_tick!(prog, n_done, sum(multiindex_set(W)[idx]))
+        _progress_tick!(prog, n_done, degree)
 
-        # Advance ptr past any pairs whose primary was already handled before this loop
-        # (e.g. external linear monomials solved by _solve_external_directions!).
-        while ptr <= length(pairs) && @inbounds sym.skip_bits[pairs[ptr][1]]
-            ptr += 1
-        end
-        if ptr <= length(pairs) && @inbounds pairs[ptr][1] == idx
-            (src, dst) = @inbounds pairs[ptr]
-            fill_conjugate_monomial!(W, R, dst, src, sym)
-            ptr += 1
+        if haskey(secondary_for_primary, idx)
+            fill_conjugate_monomial!(W, R, secondary_for_primary[idx], idx, sym)
         end
     end
+    current_degree == 0 || _degree_callback!(checkpoint_callback, current_degree)
     _progress_done!(prog, n_done)
     return nothing
 end

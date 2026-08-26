@@ -71,7 +71,7 @@ initialised object. Singularity is reported through `issuccess` rather than an
 exception (`check = false`, `allowsingular = true`) so that all monomials — including
 the first — surface it through the same path.
 """
-function _refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
+function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     F = ss.fact
     if F === nothing
         # `check = false` so that a singular *first* monomial surfaces through the
@@ -88,6 +88,39 @@ function _refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     end
     klu_factor!(F; check = false, allowsingular = true)
     return F
+end
+
+# Backward-compatible internal name retained for the established KLU regression
+# tests and downstream diagnostic code. Public backend selection goes through
+# `CohomologicalSolverConfig`.
+_refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC) =
+    _refactorise_klu!(ss, A)
+
+function _refactorise_umfpack!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
+    F = ss.fact
+    if F === nothing
+        F = lu(A; check=false)
+        issuccess(F) && (ss.fact = F)
+        return F
+    end
+    # UMFPACK owns the numeric factors outside Julia's managed heap. Replacing the
+    # wrapper and waiting for GC can retain several large factors at once, so release
+    # the old numeric object explicitly before the next value-only factorisation.
+    finalize(F.numeric)
+    lu!(F, A; check=false, reuse_symbolic=true)
+    return F
+end
+
+function _check_sparse_residual!(ss::SparseLinearSolverState, x)
+    tolerance = ss.residual_tolerance
+    tolerance === nothing && return nothing
+    mul!(ss.residual_work, ss.bordered, x)
+    ss.residual_work .-= ss.rhs_input
+    relative = norm(ss.residual_work) / max(norm(ss.rhs_input), eps(Float64))
+    ss.max_relative_residual = max(ss.max_relative_residual, relative)
+    relative <= tolerance || error(
+        "bordered cohomological solve residual $relative exceeds tolerance $tolerance")
+    return nothing
 end
 
 """
@@ -131,8 +164,10 @@ KLU's `ldiv!` is genuinely in-place, so the KLU branch needs no intermediate buf
 `ss.solve_scratch` exists for Pardiso, whose solve requires distinct input and output
 arrays.
 """
-function _bordered_solve!(ss::SparseLinearSolverState, x::AbstractVector, s)
-    if ss.pardiso !== nothing
+function _bordered_solve!(ss::SparseLinearSolverState, x::AbstractVector, s, factor_key)
+    isempty(ss.rhs_input) || copyto!(ss.rhs_input, x)
+    reuse = ss.fact !== nothing && isequal(ss.last_factor_key, factor_key)
+    if ss.backend == :pardiso
         if ss.pardiso_matrix === nothing
             # Configure and analyse once. The matrix handed back is whatever form
             # Pardiso wants for the detected type; the pattern never changes after
@@ -141,11 +176,28 @@ function _bordered_solve!(ss::SparseLinearSolverState, x::AbstractVector, s)
         end
         copyto!(ss.solve_scratch, x)
         _pardiso_factorise_solve!(ss.pardiso, ss.pardiso_matrix, x, ss.solve_scratch)
-        return x
+        ss.factorization_count += 1
+    elseif ss.backend == :umfpack
+        if !reuse
+            F = _refactorise_umfpack!(ss, ss.bordered)
+            issuccess(F) || _singular_bordered_system(s)
+            ss.factorization_count += 1
+            ss.last_factor_key = factor_key
+        end
+        ldiv!(x, ss.fact, ss.rhs_input)
+    elseif ss.backend == :klu
+        if !reuse
+            F = _refactorise_klu!(ss, ss.bordered)
+            issuccess(F) || _singular_bordered_system(s)
+            ss.factorization_count += 1
+            ss.last_factor_key = factor_key
+        end
+        ldiv!(ss.fact, x)
+    else
+        error("unsupported sparse cohomological backend $(ss.backend)")
     end
-    F = _refactorise!(ss, ss.bordered)
-    issuccess(F) || _singular_bordered_system(s)
-    ldiv!(F, x)
+    ss.solve_count += 1
+    _check_sparse_residual!(ss, x)
     return x
 end
 
@@ -295,6 +347,7 @@ function _solve_monomial!(
     end
 
     # ── 5. One factorisation, one solve ───────────────────────────────────────
-    _bordered_solve!(ss, view(ctx.buffers.rhs, 1:n_sys), s)
+    factor_key = (s, Tuple(resonance))
+    _bordered_solve!(ss, view(ctx.buffers.rhs, 1:n_sys), s, factor_key)
     return
 end

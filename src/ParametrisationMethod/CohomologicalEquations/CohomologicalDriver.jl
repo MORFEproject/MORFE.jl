@@ -148,11 +148,70 @@ Dispatch helper: returns a `SparseLinearSolverState` when `MT <: SparseMatrixCSC
 """
 _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int) = nothing
 function _make_sparse_solver(
-        ::Type{<:SparseMatrixCSC}, linear_terms, FOM::Int, ROM::Int
+        ::Type{<:SparseMatrixCSC}, linear_terms, FOM::Int, ROM::Int,
+        config::CohomologicalSolverConfig=CohomologicalSolverConfig()
 )
     L_template, L_mappings = precompute_sparse_L_template(linear_terms)
     T = eltype(L_template)
-    return SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM)
+    return SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM; config)
+end
+_make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int,
+    ::CohomologicalSolverConfig) = nothing
+
+function _checkpoint_signature(mset, ORD, FOM, ROM, N_EXT, T, conj_perm,
+        config::CohomologicalSolverConfig, id)
+    return (; schema_version=1, id=String(id), ORD, FOM, ROM, N_EXT,
+        scalar_type=string(T), exponents=Tuple.(mset.exponents),
+        conjugate_permutation=isnothing(conj_perm) ? nothing : collect(Int, conj_perm),
+        backend=config.backend, residual_tolerance=config.residual_tolerance,
+        group_superharmonics=config.group_superharmonics,
+        diagnostics_path=config.diagnostics_path)
+end
+
+function _load_checkpoint(checkpoint, signature)
+    isnothing(checkpoint) && return nothing
+    (!checkpoint.resume || !isfile(checkpoint.path)) && return nothing
+    saved = deserialize(checkpoint.path)
+    hasproperty(saved, :signature) || throw(ArgumentError(
+        "checkpoint $(checkpoint.path) has no structural signature"))
+    saved.signature == signature || throw(ArgumentError(
+        "checkpoint $(checkpoint.path) does not match this cohomological problem"))
+    hasproperty(saved, :completed_degree) || throw(ArgumentError(
+        "checkpoint $(checkpoint.path) has no completed degree"))
+    return saved
+end
+
+function _write_checkpoint(checkpoint, signature, completed_degree, W, R, sparse_solver)
+    isnothing(checkpoint) && return nothing
+    path = checkpoint.path
+    mkpath(dirname(path))
+    temporary = path * ".tmp.$(getpid())"
+    diagnostics = isnothing(sparse_solver) ?
+        (; backend=:dense, max_relative_residual=0.0,
+            factorization_count=0, solve_count=0) :
+        (; backend=sparse_solver.backend,
+            max_relative_residual=sparse_solver.max_relative_residual,
+            factorization_count=sparse_solver.factorization_count,
+            solve_count=sparse_solver.solve_count)
+    open(temporary, "w") do io
+        serialize(io, (; signature, completed_degree, W, R, diagnostics))
+    end
+    Base.Filesystem.rename(temporary, path)
+    return nothing
+end
+
+function _write_solver_diagnostics(config, sparse_solver, completed_degree)
+    isnothing(config.diagnostics_path) && return nothing
+    isnothing(sparse_solver) && return nothing
+    mkpath(dirname(config.diagnostics_path))
+    open(config.diagnostics_path, "w") do io
+        println(io, "backend=", sparse_solver.backend)
+        println(io, "completed_degree=", completed_degree)
+        println(io, "max_relative_residual=", sparse_solver.max_relative_residual)
+        println(io, "factorization_count=", sparse_solver.factorization_count)
+        println(io, "solve_count=", sparse_solver.solve_count)
+    end
+    return nothing
 end
 
 """
@@ -271,9 +330,15 @@ function solve_cohomological_problem(
         conjugate_permutation = :from_spectral,
         validate_mset::Bool = true,
         show_progress::Bool = true,
-        benchmark_dir::Union{Nothing, AbstractString} = nothing
+        benchmark_dir::Union{Nothing, AbstractString} = nothing,
+        solver_config::CohomologicalSolverConfig = CohomologicalSolverConfig(),
+        checkpoint::Union{Nothing,CohomologicalCheckpoint} = nothing
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
+    xor(initial_W === nothing, initial_R === nothing) && throw(ArgumentError(
+        "initial_W and initial_R must either both be supplied or both be omitted"))
+    benchmark_dir !== nothing && checkpoint !== nothing && throw(ArgumentError(
+        "checkpointing is not supported by the benchmarked cohomological solve"))
     # Bind to concrete locals here, at the setup boundary, and nowhere else. The bundle's
     # block fields are `Union{Nothing, Array}` so that ORD == 1 is representable, and every
     # access to them is a type-unstable branch — harmless once, unacceptable in the loop.
@@ -293,6 +358,18 @@ function solve_cohomological_problem(
     FOM = size(master_modes, 1)
     @assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
     T = ComplexF64
+
+    signature = isnothing(checkpoint) ? nothing : _checkpoint_signature(
+        mset, ORD, FOM, ROM, N_EXT, T, conj_perm, solver_config, checkpoint.id)
+    saved_checkpoint = _load_checkpoint(checkpoint, signature)
+    if saved_checkpoint !== nothing
+        (initial_W === nothing && initial_R === nothing) || throw(ArgumentError(
+            "initial_W/initial_R cannot be combined with a resumable checkpoint"))
+        initial_W = saved_checkpoint.W
+        initial_R = saved_checkpoint.R
+    end
+    completed_degree = saved_checkpoint === nothing ? 0 :
+                       Int(saved_checkpoint.completed_degree)
 
     linear_terms = model.linear_terms
 
@@ -323,7 +400,17 @@ function solve_cohomological_problem(
     # non-master monomials and are pre-solved by _solve_external_directions!.
     linear_skip_set = Set(_linear_monomial_indices(mset)[1:ROM])
     lower_order = LowerOrderResources{NVAR, T}(mset, ORD, FOM)
-    sparse_solver = _make_sparse_solver(MT, linear_terms, FOM, ROM)
+    sparse_solver = _make_sparse_solver(MT, linear_terms, FOM, ROM, solver_config)
+    if saved_checkpoint !== nothing && sparse_solver !== nothing
+        saved_checkpoint.diagnostics.backend == sparse_solver.backend || throw(ArgumentError(
+            "checkpoint sparse backend $(saved_checkpoint.diagnostics.backend) does not " *
+            "match the resolved backend $(sparse_solver.backend)"))
+        sparse_solver.max_relative_residual =
+            saved_checkpoint.diagnostics.max_relative_residual
+        sparse_solver.factorization_count =
+            saved_checkpoint.diagnostics.factorization_count
+        sparse_solver.solve_count = saved_checkpoint.diagnostics.solve_count
+    end
 
     _conj_perm = conj_perm !== nothing ?
                  SVector{NVAR, Int}(conj_perm) : NoConjugatePermutation()
@@ -351,6 +438,15 @@ function solve_cohomological_problem(
     else
         _build_conjugate_symmetry(_conj_perm, linear_skip_set, mset,
             lower_order.multiindex_dict)
+    end
+
+    if completed_degree > 0
+        max_degree = maximum(sum, mset.exponents)
+        0 <= completed_degree <= max_degree || throw(ArgumentError(
+            "checkpoint completed degree $completed_degree is outside 0:$max_degree"))
+        for idx in eachindex(mset.exponents)
+            sum(mset[idx]) <= completed_degree && (sym.skip_bits[idx] = true)
+        end
     end
 
     ml_cache = build_multilinear_terms_cache(model, W, sym.skip_bits)
@@ -431,6 +527,12 @@ function solve_cohomological_problem(
         end
     end
 
+
+    if checkpoint !== nothing && completed_degree < 1
+        _write_checkpoint(checkpoint, signature, 1, W, R, sparse_solver)
+        completed_degree = 1
+    end
+
     # ── 5. Full eigenmodes and operators ──────────────────────────────────────
     external_directions = zeros(T, FOM, N_EXT)
     for e in 1:N_EXT
@@ -461,8 +563,18 @@ function solve_cohomological_problem(
         solve_cohomological_equations_benchmarked!(W, R, ctx, sym, model, ml_cache;
             benchmark_dir, show_progress)
     else
-        solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; show_progress)
+        checkpoint_callback = checkpoint === nothing ? nothing : degree -> begin
+            _write_checkpoint(checkpoint, signature, degree, W, R, sparse_solver)
+            completed_degree = degree
+        end
+        solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
+            show_progress,
+            group_superharmonics=solver_config.group_superharmonics,
+            checkpoint_callback)
     end
+
+    completed_degree = maximum(sum, mset.exponents)
+    _write_solver_diagnostics(solver_config, sparse_solver, completed_degree)
 
     return W, R
 end

@@ -188,6 +188,14 @@ mutable struct SparseLinearSolverState{T}
     pardiso::Any                         # nothing, or an AbstractPardisoSolver
     pardiso_matrix::Any                  # nothing until _pardiso_prepare! has run
     fact::Any                            # nothing until the first factorisation
+    backend::Symbol
+    residual_tolerance::Union{Nothing, Float64}
+    rhs_input::Vector{T}
+    residual_work::Vector{T}
+    last_factor_key::Any
+    max_relative_residual::Float64
+    factorization_count::Int
+    solve_count::Int
 end
 
 """
@@ -201,14 +209,26 @@ function SparseLinearSolverState{T}(
         L_template::SparseMatrixCSC{T},
         L_mappings::Vector{Vector{Int}},
         FOM::Int,
-        ROM::Int
+        ROM::Int;
+        config::CohomologicalSolverConfig=CohomologicalSolverConfig()
 ) where {T}
-    ps = _try_build_pardiso_solver()
+    requested = config.backend
+    ps = requested in (:auto, :pardiso) ? _try_build_pardiso_solver() : nothing
+    requested == :pardiso && ps === nothing && error(
+        "CohomologicalSolverConfig requested Pardiso, but no Pardiso backend is active")
+    backend = requested == :auto ? (ps === nothing ? :klu : :pardiso) : requested
     bordered, border_row_base = precompute_sparse_bordered_template(L_template, ROM)
+    needs_input_copy = backend in (:umfpack, :pardiso) ||
+        config.residual_tolerance !== nothing
+    nsys = FOM + ROM
     state = SparseLinearSolverState{T}(
         bordered, L_template, L_mappings, border_row_base,
-        ps === nothing ? T[] : Vector{T}(undef, FOM + ROM),
-        ps, nothing, nothing
+        backend == :pardiso ? Vector{T}(undef, nsys) : T[],
+        ps, nothing, nothing,
+        backend, config.residual_tolerance,
+        needs_input_copy ? Vector{T}(undef, nsys) : T[],
+        config.residual_tolerance === nothing ? T[] : Vector{T}(undef, nsys),
+        nothing, 0.0, 0, 0
     )
     # Pardiso's factorisation lives in C-side memory the GC does not track, so it has
     # to be released explicitly or every solve leaks one factorisation. This is also
