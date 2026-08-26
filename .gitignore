@@ -10,8 +10,8 @@
 Manifest.toml
 docs/Manifest.toml
 # The formatter environment is pinned on purpose, so that everyone and CI
-# produce byte-identical formatting.
-!format/Manifest.toml
+# produce byte-identical formatting.  It lives beside the workflow that runs it.
+!.github/format/Manifest.toml
 
 # Package artifacts (stores downloaded dependencies)
 /artifacts/
@@ -43,6 +43,29 @@ website/*.zip
 
 .claude
 CLAUDE.md
+
+# Knowledge graph: regenerated machine state (AST cache, dated snapshots, HTML).
+# Rebuild with `graphify update .`; it is never worth carrying in the repository.
+graphify-out/
+
+# Scratch notes, plans and analyses: the home for anything written for a
+# developer rather than a user, so it never reaches the index by accident.
+notes/
+
+# Examples kept out of the package repository: they carry their own Project/Manifest,
+# meshes and result archives, and are developed independently of the library.
+examples/02_clamped_beam_gridap/
+examples/06_dielectric_elastomer_actuator/
+
+# Developer-only documents. Named individually rather than by a blanket *.md,
+# which would swallow README.md and the example documentation that users read.
+REFACTOR_HANDOFF.md
+next_steps.md
+plan_conjugate.md
+profile_analysis.md
+analytic_performance_analysis.md
+multi_threaded_solve_analysis.md
+test/SpectralDecomposition/EigensolverTestsFrancesco/statement.md
 /publications
 /legacy_morfe
 # Generated example/benchmark outputs — ignore contents but allow results/reference/
@@ -55,6 +78,8 @@ examples/internals/eigensolver/.plotenv/
 benchmark/morfe20/Morfe_2_0/
 examples/mesh_import/Abaqus/output/
 examples/mesh_import/Comsol/output/
+examples/02_clamped_beam_gridap
+examples/06_dielectric_elastomer_actuator
 *.h5
 profile*.html
 __pycache__/
