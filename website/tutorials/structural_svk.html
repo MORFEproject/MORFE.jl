@@ -129,25 +129,37 @@ document.addEventListener('DOMContentLoaded', function () {
       <span class="tag" style="color:var(--ink-3);">~1 MIN COMPUTE</span>
     </div>
 
-    <h1 id="overview">Clamped beam with the common MORFE API</h1>
+    <h1 id="overview">From a mesh to a ROM</h1>
     <p style="margin:6px 0 14px;"><a class="btn" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Open the notebook ↗</a></p>
-    <p class="lede">This conservative St. Venant–Kirchhoff example follows the notebook exactly:
-    describe the beam, call <code>build_model</code>, then call <code>parametrise</code>. The
-    committed output uses order 3; changing one line to order 9 reproduces the reference.</p>
+    <p class="lede">Build a reduced order model of a clamped beam with geometric nonlinearity.</p>
+
+    <div class="fig">
+      <iframe src="assets/structural_svk/beam_mesh.html"
+        style="aspect-ratio: 900/420;"
+        title="Gray clamped beam mesh overlapped by its opaque blue first bending mode"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 01</span>Clamped beam (grey) and its first bending mode (blue)
+        scaled such that maximum transverse displacement is 10x the thickness. 
+        Clamped ends are in purple. The green arrow marks the $y$ displacement of node 289. <strong>4977 free DOFs</strong>
+          (40×3×1 hexahedra, quadratic Lagrange). <strong>Drag to rotate.</strong> </div>
+    </div>
 
     <div class="adm note">
-      <div class="adm-head">Why MORFEFerrite as well as MORFE?</div>
-      <div class="adm-body"><p><code>MORFE</code> contains the physics-independent reduction
-      algorithms; <code>MORFEFerrite</code> is separate because it supplies Ferrite mesh handling
-      and finite-element assembly for particular physical models. This keeps the MORFE core
-      independent of any one FEM library or physics backend.</p></div>
+      <div class="adm-head">Why use both MORFE and MORFEFerrite</div>
+      <div class="adm-body">
+      <p><code>MORFE</code> contains the DPIM reduced order modelling, which is physics-agnostic. 
+        It is independent of any one finite-element library or physics backend. 
+        You can connect it to your favourite library.</p>
+      <p>Use <code>MORFEFerrite</code> to benefit from the mesh
+      and finite-element capabilities of 
+      <a href="https://ferrite-fem.github.io/" target="_blank" rel="noopener"><code>Ferrite</code></a>.</p>
+      </div>
     </div>
 
     <h2 id="setup">Setup</h2>
     <p>
-      Activate the environment stored beside the notebook and load both packages. <code>SVK</code>
-      is only a short name for the structural backend; <code>build_model</code> and
-      <code>parametrise</code> are the common MORFE API.
+      Activate the environment stored beside the notebook and load both packages. 
+      <code>SVK</code> is only a short name for the structural backend (Saint-Venant-Kirchhoff); 
+      <code>build_model</code> and <code>parametrise</code> are the common <code>MORFE</code> interfaces.
     </p>
 <pre class="code"><span class="kw">import</span> Pkg
 Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
@@ -159,55 +171,36 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
       <div class="body">
         <h3 id="step-case">State the case</h3>
         <p>
-          Set the expansion order directly: <code>order = 3</code> gives the quick notebook run,
-          while changing that line to <code>order = 9</code> reproduces the conservative reference.
+          Set the expansion order directly: <code>order = 3</code> gives the quick run,
+          while changing that line to <code>order = 9</code> reproduces the higher-order reference.
           <code>mechanical_model</code> then reads the mesh and supplies the required material,
-          damping, and boundary information. The zero Rayleigh coefficients make this case
-          conservative. The finite-element and quadrature orders use their API defaults.
+          damping, and boundary information. Zero Rayleigh coefficients and no forcing make this case
+          conservative. The finite-element and quadrature orders use their API defaults (see).
         </p>
         <p>
-          <code>dirichlet = "Dirichlet"</code> is the name of a physical facet group stored in
-          the Gmsh file. The structural backend fixes all three displacement components on those
-          labeled facets to zero, producing the two clamped beam ends.
+          <code>dirichlet = "Dirichlet"</code> names a facet group stored in
+          the Gmsh file. If your mesh uses a different physical-group name, pass that name instead. 
+          Those labeled facets are fixed, producing the two clamped beam ends.
         </p>
-<pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span>  <span class="cm"># Change to 9 for the reference calculation.</span>
+<pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span> <span class="cm"># Change to 9 for the reference calculation.</span>
 <span class="var">case</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
     <span class="var">material</span> <span class="op">=</span> <span class="fn">SVK.SVKMaterial</span>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
     <span class="var">damping</span> <span class="op">=</span> <span class="fn">SVK.RayleighDamping</span>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
     <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">"Dirichlet"</span>)</pre>
-        <div class="fig">
-          <iframe src="assets/structural_svk/beam_mesh.html"
-            style="aspect-ratio: 900/420;"
-            title="Gray clamped beam mesh overlapped by its opaque blue first bending mode"
-            loading="lazy"></iframe>
-          <div class="fig-cap"><span class="lab">FIG · 01</span>The gray reference mesh has
-          purple clamped ends. The opaque blue first mode is displayed at
-          $\max |u_y|/t_y = 10$; the green arrow marks node 289's $y$ displacement.</div>
-        </div>
-        <div class="adm note">
-          <div class="adm-head">The mesh name is data, not magic</div>
-          <div class="adm-body"><p>If your mesh uses a different physical-group name for its fixed
-          boundary, pass that name instead of <code>"Dirichlet"</code>.</p></div>
-        </div>
       </div>
     </div>
 
     <div class="step">
       <div class="num">02</div>
       <div class="body">
-        <h3 id="step-build">Build the common MORFE model</h3>
+        <h3 id="step-build">Build a physics-independent model for MORFE</h3>
         <p>
           <code>build_model</code> converts the structural case into MORFE's physics-independent
           model and computes its spectral data. <code>master = [1]</code> selects the first
-          conjugate vibration-mode pair. <code>meta</code> holds auxiliary backend information;
-          the final line below displays the selected eigenvalues.
+          conjugate vibration-mode pair. <code>meta</code> holds auxiliary backend information.
         </p>
 <pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <span class="fn">build_model</span>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
-<span class="var">meta</span>.<span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">meta</span>.<span class="var">master_indices</span>]</pre>
-        <p>
-          The clamped–clamped beam of example 01 gives <strong>4 977 free DOFs</strong>
-          (40×3×1 hexahedra, quadratic Lagrange).
-        </p>
+<span class="var">meta</span>.<span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">meta</span>.<span class="var">master_indices</span>] <span class="cm"># print master eigenvalues</span></pre>
       </div>
     </div>
 
@@ -216,28 +209,26 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
       <div class="body">
         <h3 id="step-parametrise">Compute the invariant manifold</h3>
         <p>
-          <code>parametrise</code> computes the manifold map <code>W</code> and its reduced dynamics
-          <code>R</code> through the chosen order. The resonance setting keeps near-resonant
-          monomials in complex normal form. The final <code>R</code> displays the reduced system.
+          <code>parametrise</code> computes the manifold parametrisation <code>W</code> and associated reduced dynamics
+          <code>R</code> up until the chosen order.
         </p>
 <pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
     <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>))
-<span class="var">R</span></pre>
-        <div class="adm note">
-          <div class="adm-head">The backbone is analytical</div>
-          <div class="adm-body"><p>For this conservative complex normal form,
-          <code>|z₁|</code> is constant and the oscillation frequency is read directly from
-          the resonant coefficients of <code>R</code>; no continuation or time integration is
-          needed.</p></div>
-        </div>
+<span class="var">R</span> <span class="cm"># print reduced dynamics</span></pre>
+
         <div class="fig">
           <iframe src="assets/structural_svk/backbone.html"
             title="Order 3, 5, 7 and 9 analytical backbone curves"
             loading="lazy"></iframe>
-          <div class="fig-cap"><span class="lab">FIG · 02</span>Orders 3, 5, 7, and 9
-          truncate the same order-9 reference. $Delta\omega$ is the change in frequency from
-          the linear eigenfrequency; node 289's transverse displacement is shown as a percentage
-          of the beam thickness.</div>
+          <div class="fig-cap"><span class="lab">FIG · 02</span>Backbone curves at orders 3, 5, 7, and 9. 
+            Δω is the change in frequency from
+          the linear eigenfrequency. The first panel displays the y displacement of node 289 as a percentage
+          of the beam thickness. The second panel displays the modal coordinate z₁.</div>
+        </div>
+        <div class="adm note">
+          <div class="adm-head">The backbone is analytical</div>
+          <div class="adm-body"><p>In single mode complex normal form, ω is an explicit function of |z₁|. 
+            The backbone curve is therefore analytical, and there is no need for continuation or time integration.</p></div>
         </div>
       </div>
     </div>

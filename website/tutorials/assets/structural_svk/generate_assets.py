@@ -39,11 +39,12 @@ PROBE_GLOBAL_DOF = 2468
 PROBE_FREE_DOF = 2405
 ORDERS = (3, 5, 7, 9)
 COLORS = {3: "#4063d8", 5: "#389826", 7: "#cb3c33", 9: "#9558b2"}
-N_RADIUS = 201
-R_MAX = 50.0
+N_RADIUS = 341
+R_MAX = 85.0
 N_PHASE = 4096
 TRANSVERSE_THICKNESS = 10.0
 MODE_MAX_Y = 10.0 * TRANSVERSE_THICKNESS
+HOME_FREQUENCY_CHANGE = 13.0
 
 
 def read_nodes_and_hexes(path: Path):
@@ -188,6 +189,46 @@ def physical_amplitude(terms, order: int, radius: float, phase_basis):
     return 0.5 * (max(values) - min(values))
 
 
+def backbone_home_limits(resonant, w_terms, omega0, phase_basis):
+    def signed_frequency_change(radius):
+        omega = sum(
+            coefficient.imag * radius ** (degree - 1)
+            for degree, coefficient in resonant.items()
+            if degree <= 9
+        )
+        return 100.0 * (omega / omega0 - 1.0) - HOME_FREQUENCY_CHANGE
+
+    lo = 0.0
+    flo = signed_frequency_change(lo)
+    bracket = None
+    for i in range(1, N_RADIUS):
+        hi = R_MAX * i / (N_RADIUS - 1)
+        fhi = signed_frequency_change(hi)
+        if flo <= 0.0 <= fhi:
+            bracket = (lo, hi)
+            break
+        lo, flo = hi, fhi
+    assert bracket is not None
+
+    lo, hi = bracket
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        if signed_frequency_change(mid) < 0.0:
+            lo = mid
+        else:
+            hi = mid
+    radius = 0.5 * (lo + hi)
+    physical = (
+        100.0
+        * physical_amplitude(w_terms, 9, radius, phase_basis)
+        / TRANSVERSE_THICKNESS
+    )
+    assert abs(signed_frequency_change(radius)) < 1e-10
+    assert math.isclose(radius, 59.9418323, rel_tol=2e-9)
+    assert math.isclose(physical, 73.2501101, rel_tol=2e-9)
+    return {"modal": radius, "physical": physical}
+
+
 def build_backbone_data():
     r_terms = read_complex_csv(REFERENCE / "R_coefficients_ref.csv", "R1")
     w_terms = read_complex_csv(
@@ -207,6 +248,7 @@ def build_backbone_data():
         )
         for harmonic in range(-9, 10)
     }
+    home = backbone_home_limits(resonant, w_terms, omega0, phase_basis)
     radii = [R_MAX * i / (N_RADIUS - 1) for i in range(N_RADIUS)]
     curves = {}
     for order in ORDERS:
@@ -252,7 +294,7 @@ def build_backbone_data():
         "curves": curves,
     }
     (HERE / "backbone.v1.json").write_text(json.dumps(data, indent=2) + "\n")
-    return data
+    return data, home
 
 
 MESH_HTML = r'''<!doctype html>
@@ -293,17 +335,27 @@ BACKBONE_HTML = r'''<!doctype html>
 <style>
 :root{--bg:#0a0a0f;--stage:#07070b;--ink:#e8e8ee;--ink2:#a0a0b0;--ink3:#6e6e7e;--hair:#26262f;--purple:#9558b2}*{box-sizing:border-box}html,body{margin:0;height:100%}body{background:var(--bg);color:var(--ink);overflow:hidden;font:13px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif}
 #wrap{display:flex;flex-direction:column;height:100%;padding:10px 12px;gap:8px}#bar{display:flex;gap:6px;align-items:center;min-height:28px}button{font:inherit;font-size:12px;padding:4px 10px;border-radius:5px;cursor:pointer;background:transparent;color:var(--ink2);border:1px solid var(--hair)}button:hover{border-color:var(--purple);color:var(--ink)}button.on{background:rgba(149,88,178,.16);border-color:var(--purple);color:var(--ink)}#meta{margin-left:auto;color:var(--ink3);font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
-#stage{position:relative;flex:1;min-height:0;border:1px solid var(--hair);border-radius:6px;background:var(--stage);overflow:hidden}svg{display:block;width:100%;height:100%}.axis{stroke:var(--ink3);stroke-width:1}.grid{stroke:var(--hair);stroke-width:.8}.tick,.label{fill:var(--ink3);font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.label{fill:var(--ink2)}.curve{fill:none;stroke-width:2.4;vector-effect:non-scaling-stroke}
-#legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap}#legend button{border:0;padding:0;color:var(--ink3);font-size:11px}#legend button.off{opacity:.3}#legend i{display:inline-block;width:14px;height:0;vertical-align:3px;border-top:2px solid currentColor;margin-right:6px}#note{color:var(--ink3);font-size:11.5px;min-height:1.3em}.tip{position:absolute;pointer-events:none;display:none;background:#14141c;border:1px solid var(--hair);border-radius:5px;padding:6px 9px;font-size:11.5px;color:var(--ink);white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;z-index:5}.compact #note{display:none}.compact #wrap{padding:7px 9px;gap:6px}.compact #meta{display:none}
-</style></head><body><div id="wrap"><div id="bar"><span id="meta">one order-9 ROM · nested truncations</span></div>
-<div id="stage"><svg id="chart" viewBox="0 0 900 470" role="img" aria-label="Order 3, 5, 7 and 9 backbone curves in frequency-change and transverse-displacement percentages"><g id="grid"></g><g id="axes"></g><g id="curves"></g><g id="probe" visibility="hidden"><line id="cross-x" stroke="#6e6e7e" stroke-dasharray="3 3"/><line id="cross-y" stroke="#6e6e7e" stroke-dasharray="3 3"/><circle id="dot" r="4" fill="#e8e8ee" stroke="#07070b"/></g><text class="label" x="474" y="459" text-anchor="middle">frequency change Δω / ω₀ [%]</text><text class="label" transform="translate(18 235) rotate(-90)" text-anchor="middle">transverse displacement / thickness [%]</text><rect id="hit" x="78" y="22" width="798" height="388" fill="transparent"/></svg><div id="tip" class="tip"></div></div>
-<div id="legend"></div><div id="note">Δω is the change in frequency from the linear eigenfrequency.</div></div>
+#stage{position:relative;flex:1;min-height:0;border:1px solid var(--hair);border-radius:6px;background:var(--stage);overflow:hidden}svg{display:block;width:100%;height:100%}.axis{stroke:var(--ink3);stroke-width:1}.grid{stroke:var(--hair);stroke-width:.8}.tick,.label{fill:var(--ink3);font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.label{fill:var(--ink2)}.curve{fill:none;stroke-width:2}.tool{cursor:pointer}.tool .btn{fill:rgba(255,255,255,.04);stroke:var(--hair)}.tool .icn{stroke:var(--ink3)}.tool:hover .btn{fill:rgba(255,255,255,.09)}.tool.active .btn{stroke:var(--purple);fill:rgba(149,88,178,.12)}.tool.active .icn{stroke:var(--purple)}svg.mode-zoom #hit{cursor:crosshair}svg.mode-pan #hit{cursor:grab}svg.mode-pan.panning #hit{cursor:grabbing}svg.mode-zoom,svg.mode-pan{touch-action:none}
+#legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap}#legend button{border:0;padding:0;color:var(--ink3);font-size:11px}#legend button.off{opacity:.3}#legend i{display:inline-block;width:14px;height:0;vertical-align:3px;border-top:2.5px solid currentColor;margin-right:6px}#note{color:var(--ink3);font-size:11.5px;min-height:1.3em}.tip{position:absolute;pointer-events:none;display:none;background:#14141c;border:1px solid var(--hair);border-radius:5px;padding:6px 9px;font-size:11.5px;color:var(--ink);white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;z-index:5}.compact #note{display:none}.compact #wrap{padding:7px 9px;gap:6px}.compact #meta{display:none}
+</style></head><body><div id="wrap"><div id="bar"><button id="physical">transverse displacement</button><button id="modal">modal coordinate</button><span id="meta">one order-9 ROM · nested truncations</span></div>
+<div id="stage"><svg id="chart" viewBox="0 0 900 470" role="img" aria-label="Order 3, 5, 7 and 9 backbone curves in physical and modal coordinates">
+<defs><clipPath id="plot-clip"><rect x="78" y="22" width="798" height="388"/></clipPath></defs><g id="grid"></g><g id="axes"></g><g clip-path="url(#plot-clip)"><g id="curves"></g><g id="probe" visibility="hidden"><line id="cross-x" stroke="#6e6e7e" stroke-dasharray="3 3"/><line id="cross-y" stroke="#6e6e7e" stroke-dasharray="3 3"/><circle id="dot" r="4" stroke="#07070b"/></g><rect id="zoombox" visibility="hidden" fill="rgba(149,88,178,.10)" stroke="#6e6e7e" stroke-width=".8" stroke-dasharray="4 3" pointer-events="none"/></g>
+<text class="label" x="474" y="459" text-anchor="middle">frequency change Δω / ω₀ [%]</text><text id="ylabel" class="label" transform="translate(18 235) rotate(-90)" text-anchor="middle"></text><rect id="hit" x="78" y="22" width="798" height="388" fill="transparent"/>
+<g id="toolbar"><g class="tool" id="tool-zoom" transform="translate(784 14)"><title>Zoom: drag a rectangle</title><rect class="btn" width="26" height="26" rx="4"/><g class="icn" transform="translate(4 4)"><circle cx="7.5" cy="7.5" r="5" fill="none" stroke-width="1.6"/><line x1="11.2" y1="11.2" x2="16" y2="16" stroke-width="1.8"/><line x1="5.2" y1="7.5" x2="9.8" y2="7.5" stroke-width="1.3"/><line x1="7.5" y1="5.2" x2="7.5" y2="9.8" stroke-width="1.3"/></g></g><g class="tool" id="tool-pan" transform="translate(816 14)"><title>Pan: drag to move</title><rect class="btn" width="26" height="26" rx="4"/><g class="icn" transform="translate(4 3.5)"><path fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M7.2 10.5 V4.6 a1.25 1.25 0 0 1 2.5 0 V9.3 M9.7 9 V3.6 a1.25 1.25 0 0 1 2.5 0 V9.3 M12.2 9.3 V4.8 a1.25 1.25 0 0 1 2.5 0 V11.5 c0 3.4 -2 5.4 -4.9 5.4 c-2.3 0 -3.4 -.9 -4.5 -2.6 L3.4 11.1 a1.3 1.3 0 0 1 2.2 -1.3 l1.6 2.2"/></g></g><g class="tool" id="tool-home" transform="translate(848 14)"><title>Reset view</title><rect class="btn" width="26" height="26" rx="4"/><g class="icn" transform="translate(4 4)"><path fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M2.2 8.2 L9 2.6 L15.8 8.2 M4.2 7.5 V15 H13.8 V7.5"/></g></g></g></svg><div id="tip" class="tip"></div></div>
+<div id="legend"></div><div id="note">Home view ends at order 9's 13% frequency change; arm a toolbar tool to zoom or pan.</div></div>
 <script>
-const DATA=__DATA__,ORDERS=[3,5,7,9],X_TICKS=[0,2,4,6,8,10,12],Y_TICKS=[0,10,20,30,40,50,60,70],B={x0:0,x1:12,y0:0,y1:70},NS='http://www.w3.org/2000/svg',M={l:78,r:24,t:22,b:60},W=900,H=470,params=new URLSearchParams(location.search);if(params.has('compact'))document.body.classList.add('compact');const visible={3:true,5:true,7:true,9:true},svg=document.getElementById('chart'),stage=document.getElementById('stage');
-function el(name,attrs={}){const node=document.createElementNS(NS,name);for(const[key,value]of Object.entries(attrs))node.setAttribute(key,value);return node}function xv(q){return 100*(q.omega_ratio-1)}function yv(q){return 100*q.amplitude_ratio}function px(x){return M.l+(x-B.x0)/(B.x1-B.x0)*(W-M.l-M.r)}function py(y){return H-M.b-(y-B.y0)/(B.y1-B.y0)*(H-M.t-M.b)}function fmt(value,digits=2){return Number(value).toFixed(digits).replace(/0+$/,'').replace(/\.$/,'')}
-function buildLegend(){const legend=document.getElementById('legend');legend.replaceChildren();for(const order of ORDERS){const button=document.createElement('button'),curve=DATA.curves[order];button.className=visible[order]?'':'off';button.innerHTML=`<i style="color:${curve.color}"></i>order ${order}`;button.onclick=()=>{visible[order]=!visible[order];redraw()};legend.append(button)}}
-function redraw(){const grid=document.getElementById('grid'),axes=document.getElementById('axes'),curves=document.getElementById('curves');grid.replaceChildren();axes.replaceChildren();curves.replaceChildren();for(const x of X_TICKS){const X=px(x);grid.append(el('line',{class:'grid',x1:X,x2:X,y1:M.t,y2:H-M.b}));const tick=el('text',{class:'tick',x:X,y:H-M.b+20,'text-anchor':'middle'});tick.textContent=String(x);axes.append(tick)}for(const y of Y_TICKS){const Y=py(y);grid.append(el('line',{class:'grid',x1:M.l,x2:W-M.r,y1:Y,y2:Y}));const tick=el('text',{class:'tick',x:M.l-9,y:Y+4,'text-anchor':'end'});tick.textContent=String(y);axes.append(tick)}axes.append(el('line',{class:'axis',x1:M.l,x2:W-M.r,y1:H-M.b,y2:H-M.b}),el('line',{class:'axis',x1:M.l,x2:M.l,y1:M.t,y2:H-M.b}));for(const order of ORDERS){const curve=DATA.curves[order],path=el('polyline',{class:'curve',stroke:curve.color,points:curve.points.map(q=>`${px(xv(q)).toFixed(2)},${py(yv(q)).toFixed(2)}`).join(' ')});if(!visible[order])path.style.display='none';curves.append(path)}document.getElementById('probe').setAttribute('visibility','hidden');document.getElementById('tip').style.display='none';buildLegend()}
-const hit=document.getElementById('hit'),tip=document.getElementById('tip');hit.addEventListener('pointermove',event=>{const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;const local=point.matrixTransform(svg.getScreenCTM().inverse());let best=null,distance=Infinity;for(const order of ORDERS)if(visible[order])for(const q of DATA.curves[order].points){const X=px(xv(q)),Y=py(yv(q)),d=(X-local.x)**2+(Y-local.y)**2;if(d<distance){distance=d;best={order,q,X,Y}}}if(!best)return;document.getElementById('probe').setAttribute('visibility','visible');const vx=document.getElementById('cross-x'),vy=document.getElementById('cross-y');vx.setAttribute('x1',best.X);vx.setAttribute('x2',best.X);vx.setAttribute('y1',M.t);vx.setAttribute('y2',H-M.b);vy.setAttribute('x1',M.l);vy.setAttribute('x2',W-M.r);vy.setAttribute('y1',best.Y);vy.setAttribute('y2',best.Y);document.getElementById('dot').setAttribute('cx',best.X);document.getElementById('dot').setAttribute('cy',best.Y);const rect=stage.getBoundingClientRect();tip.style.display='block';tip.style.left=Math.min(event.clientX-rect.left+12,rect.width-250)+'px';tip.style.top=Math.max(8,event.clientY-rect.top-58)+'px';tip.innerHTML=`order ${best.order}<br>frequency change ${fmt(xv(best.q))}%<br>transverse displacement / thickness ${fmt(yv(best.q),1)}%`});hit.addEventListener('pointerleave',()=>{document.getElementById('probe').setAttribute('visibility','hidden');tip.style.display='none'});redraw();
+const DATA=__DATA__,ORDERS=[3,5,7,9],HOME={physical:{x0:-1,x1:13,y0:0,y1:__HOME_PHYSICAL__},modal:{x0:-1,x1:13,y0:0,y1:__HOME_MODAL__}},NS='http://www.w3.org/2000/svg',M={l:78,r:24,t:22,b:60},W=900,H=470,params=new URLSearchParams(location.search);let panel='physical',tool=null,pan=null,zoomStart=null;const V={...HOME.physical},visible={3:true,5:true,7:true,9:true},svg=document.getElementById('chart'),stage=document.getElementById('stage'),hit=document.getElementById('hit'),tip=document.getElementById('tip'),zoombox=document.getElementById('zoombox');if(params.has('compact'))document.body.classList.add('compact');
+function el(name,attrs={}){const node=document.createElementNS(NS,name);for(const[key,value]of Object.entries(attrs))node.setAttribute(key,value);return node}function xv(q){return 100*(q.omega_ratio-1)}function yv(q){return panel==='modal'?q.r:100*q.amplitude_ratio}function px(x){return M.l+(x-V.x0)/(V.x1-V.x0)*(W-M.l-M.r)}function py(y){return H-M.b-(y-V.y0)/(V.y1-V.y0)*(H-M.t-M.b)}function dx(x){return V.x0+(x-M.l)/(W-M.l-M.r)*(V.x1-V.x0)}function dy(y){return V.y0+(H-M.b-y)/(H-M.t-M.b)*(V.y1-V.y0)}function fmt(value,digits=2){return Number(value).toFixed(digits).replace(/0+$/,'').replace(/\.$/,'')}function niceTicks(lo,hi,count){const span=hi-lo;if(!(span>0))return[];let step=10**Math.floor(Math.log10(span/count));for(const multiple of[1,2,2.5,5,10])if(span/(step*multiple)<=count){step*=multiple;break}const ticks=[];for(let value=Math.ceil(lo/step)*step;value<=hi+1e-12;value+=step)ticks.push(Math.abs(value)<1e-12?0:value);return ticks}
+function buildLegend(){const legend=document.getElementById('legend');legend.replaceChildren();for(const order of ORDERS){const button=document.createElement('button'),curve=DATA.curves[order];button.className=visible[order]?'':'off';button.innerHTML=`<i style="color:${curve.color}"></i>order ${order}`;button.onclick=()=>{visible[order]=!visible[order];redraw()};legend.append(button)}}function hideProbe(){document.getElementById('probe').setAttribute('visibility','hidden');tip.style.display='none'}
+function redraw(){const grid=document.getElementById('grid'),axes=document.getElementById('axes'),curves=document.getElementById('curves');grid.replaceChildren();axes.replaceChildren();curves.replaceChildren();for(const x of niceTicks(V.x0,V.x1,7)){const X=px(x);grid.append(el('line',{class:'grid',x1:X,x2:X,y1:M.t,y2:H-M.b}));const tick=el('text',{class:'tick',x:X,y:H-M.b+20,'text-anchor':'middle'});tick.textContent=fmt(x);axes.append(tick)}for(const y of niceTicks(V.y0,V.y1,8)){const Y=py(y);grid.append(el('line',{class:'grid',x1:M.l,x2:W-M.r,y1:Y,y2:Y}));const tick=el('text',{class:'tick',x:M.l-9,y:Y+4,'text-anchor':'end'});tick.textContent=fmt(y);axes.append(tick)}axes.append(el('line',{class:'axis',x1:M.l,x2:W-M.r,y1:H-M.b,y2:H-M.b}),el('line',{class:'axis',x1:M.l,x2:M.l,y1:M.t,y2:H-M.b}));for(const order of ORDERS){const curve=DATA.curves[order],path=el('polyline',{class:'curve',id:`curve-${order}`,stroke:curve.color,points:curve.points.map(q=>`${px(xv(q)).toFixed(2)},${py(yv(q)).toFixed(2)}`).join(' ')});if(!visible[order])path.style.display='none';curves.append(path)}document.getElementById('ylabel').textContent=panel==='modal'?'modal coordinate |z₁|':'transverse displacement / thickness [%]';document.getElementById('physical').classList.toggle('on',panel==='physical');document.getElementById('modal').classList.toggle('on',panel==='modal');hideProbe();buildLegend()}
+function resetView(){Object.assign(V,HOME[panel]);redraw()}function setPanel(next){panel=next;resetView()}document.getElementById('physical').onclick=()=>setPanel('physical');document.getElementById('modal').onclick=()=>setPanel('modal');
+function setTool(next){tool=tool===next?null:next;svg.classList.toggle('mode-zoom',tool==='zoom');svg.classList.toggle('mode-pan',tool==='pan');document.getElementById('tool-zoom').classList.toggle('active',tool==='zoom');document.getElementById('tool-pan').classList.toggle('active',tool==='pan')}document.getElementById('tool-zoom').onclick=()=>setTool('zoom');document.getElementById('tool-pan').onclick=()=>setTool('pan');document.getElementById('tool-home').onclick=resetView;
+function svgPoint(event){const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;return point.matrixTransform(svg.getScreenCTM().inverse())}function inPlot(point){return point.x>=M.l&&point.x<=W-M.r&&point.y>=M.t&&point.y<=H-M.b}function mix(hex,amount){const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)),background=[20,20,28];return`rgb(${rgb.map((value,i)=>Math.round(background[i]+(value-background[i])*amount)).join(',')})`}
+function updateProbe(point,event){let best=null,distance=400;for(const order of ORDERS)if(visible[order])for(const q of DATA.curves[order].points){const X=px(xv(q)),Y=py(yv(q));if(X<M.l||X>W-M.r||Y<M.t||Y>H-M.b)continue;const d=(X-point.x)**2+(Y-point.y)**2;if(d<distance){distance=d;best={order,q,X,Y}}}if(!best){hideProbe();return}document.getElementById('probe').setAttribute('visibility','visible');const vx=document.getElementById('cross-x'),vy=document.getElementById('cross-y'),dot=document.getElementById('dot'),color=DATA.curves[best.order].color;vx.setAttribute('x1',best.X);vx.setAttribute('x2',best.X);vx.setAttribute('y1',M.t);vx.setAttribute('y2',H-M.b);vy.setAttribute('x1',M.l);vy.setAttribute('x2',W-M.r);vy.setAttribute('y1',best.Y);vy.setAttribute('y2',best.Y);dot.setAttribute('cx',best.X);dot.setAttribute('cy',best.Y);dot.setAttribute('fill',color);const value=panel==='modal'?`modal coordinate |z₁| ${fmt(best.q.r,2)}`:`transverse displacement / thickness ${fmt(100*best.q.amplitude_ratio,1)}%`;tip.innerHTML=`order ${best.order}<br>frequency change ${fmt(xv(best.q))}%<br>${value}`;tip.style.display='block';tip.style.background=mix(color,.18);tip.style.borderColor=mix(color,.62);const rect=stage.getBoundingClientRect(),left=event.clientX-rect.left,top=event.clientY-rect.top;tip.style.left=Math.min(Math.max(4,left+12),rect.width-tip.offsetWidth-4)+'px';tip.style.top=Math.min(Math.max(4,top-tip.offsetHeight-10),rect.height-tip.offsetHeight-4)+'px'}
+function updateZoomBox(point){const x=Math.max(M.l,Math.min(W-M.r,point.x)),y=Math.max(M.t,Math.min(H-M.b,point.y));zoombox.setAttribute('x',Math.min(zoomStart.x,x));zoombox.setAttribute('y',Math.min(zoomStart.y,y));zoombox.setAttribute('width',Math.abs(x-zoomStart.x));zoombox.setAttribute('height',Math.abs(y-zoomStart.y));zoombox.setAttribute('visibility','visible')}
+hit.addEventListener('pointerdown',event=>{if(!tool)return;const point=svgPoint(event);if(!inPlot(point))return;event.preventDefault();hit.setPointerCapture(event.pointerId);hideProbe();if(tool==='pan'){pan={x:point.x,y:point.y,x0:V.x0,x1:V.x1,y0:V.y0,y1:V.y1};svg.classList.add('panning')}else zoomStart=point});
+hit.addEventListener('pointermove',event=>{const point=svgPoint(event);if(pan){const sx=(pan.x1-pan.x0)/(W-M.l-M.r),sy=(pan.y1-pan.y0)/(H-M.t-M.b);const mx=(pan.x-point.x)*sx,my=(point.y-pan.y)*sy;V.x0=pan.x0+mx;V.x1=pan.x1+mx;V.y0=pan.y0+my;V.y1=pan.y1+my;redraw();return}if(zoomStart){updateZoomBox(point);return}if(inPlot(point))updateProbe(point,event);else hideProbe()});
+function finishPointer(event,commit){if(zoomStart&&commit){const x=Number(zoombox.getAttribute('x')),y=Number(zoombox.getAttribute('y')),width=Number(zoombox.getAttribute('width')),height=Number(zoombox.getAttribute('height'));if(width>8&&height>8){const x0=dx(x),x1=dx(x+width),y1=dy(y),y0=dy(y+height);Object.assign(V,{x0,x1,y0,y1})}}zoomStart=null;pan=null;zoombox.setAttribute('visibility','hidden');svg.classList.remove('panning');if(hit.hasPointerCapture(event.pointerId))hit.releasePointerCapture(event.pointerId);redraw()}hit.addEventListener('pointerup',event=>finishPointer(event,true));hit.addEventListener('pointercancel',event=>finishPointer(event,false));hit.addEventListener('pointerleave',()=>{if(!pan&&!zoomStart)hideProbe()});redraw();
 </script></body></html>'''
 
 
@@ -363,7 +415,7 @@ def thumbnail_svg(nodes, faces, mode):
     )
 
 
-def write_assets(nodes, faces, mode, data):
+def write_assets(nodes, faces, mode, data, home):
     node_json = json.dumps({str(k): list(v) for k, v in sorted(nodes.items())}, separators=(",", ":"))
     mode_json = json.dumps({str(k): list(v) for k, v in sorted(mode.items())}, separators=(",", ":"))
     face_json = json.dumps(faces, separators=(",", ":"))
@@ -373,7 +425,12 @@ def write_assets(nodes, faces, mode, data):
         .replace("__FACES__", face_json)
     )
     compact_data = json.dumps(data, separators=(",", ":"))
-    (HERE / "backbone.html").write_text(BACKBONE_HTML.replace("__DATA__", compact_data))
+    backbone_html = (
+        BACKBONE_HTML.replace("__DATA__", compact_data)
+        .replace("__HOME_PHYSICAL__", f'{home["physical"]:.15g}')
+        .replace("__HOME_MODAL__", f'{home["modal"]:.15g}')
+    )
+    (HERE / "backbone.html").write_text(backbone_html)
     (HERE / "thumb.svg").write_text(thumbnail_svg(nodes, faces, mode))
 
 
@@ -386,7 +443,12 @@ def main():
             assert max(abs(value) for value in mode[node]) < 1e-12
     faces = boundary_faces(hexes)
     assert len(faces) == 326
-    data = build_backbone_data()
+    data, home = build_backbone_data()
+    assert max(
+        point["amplitude_ratio"]
+        for curve in data["curves"].values()
+        for point in curve["points"]
+    ) > 1.0
     for curve in data["curves"].values():
         for point in curve["points"]:
             assert math.isclose(
@@ -395,7 +457,7 @@ def main():
                 rel_tol=2e-13,
                 abs_tol=1e-14,
             )
-    write_assets(nodes, faces, mode, data)
+    write_assets(nodes, faces, mode, data, home)
     for name in ("beam_mesh.html", "backbone.html", "backbone.v1.json", "thumb.svg"):
         path = HERE / name
         print(f"wrote {path.relative_to(REPO)} ({path.stat().st_size // 1024} KiB)")
