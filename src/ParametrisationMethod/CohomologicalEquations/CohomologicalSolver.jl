@@ -111,12 +111,32 @@ function _refactorise_umfpack!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     return F
 end
 
+function _relative_sparse_residual!(ss::SparseLinearSolverState, x)
+    mul!(ss.residual_work, ss.bordered, x)
+    ss.residual_work .-= ss.rhs_input
+    return norm(ss.residual_work) / max(norm(ss.rhs_input), eps(Float64))
+end
+
 function _check_sparse_residual!(ss::SparseLinearSolverState, x)
     tolerance = ss.residual_tolerance
     tolerance === nothing && return nothing
-    mul!(ss.residual_work, ss.bordered, x)
-    ss.residual_work .-= ss.rhs_input
-    relative = norm(ss.residual_work) / max(norm(ss.rhs_input), eps(Float64))
+    relative = _relative_sparse_residual!(ss, x)
+    if ss.backend == :umfpack
+        # The bordered FE systems can span many physical scales. UMFPACK's first
+        # backward-stable solve may therefore miss a strict *unscaled* residual
+        # target even though the factorization is sound. Correct the measured
+        # residual with the same numeric factors; separate input/output vectors
+        # are load-bearing for UMFPACK's ldiv! contract.
+        for _ in 1:3
+            relative <= tolerance && break
+            copyto!(ss.solve_scratch, ss.residual_work)
+            rmul!(ss.solve_scratch, -one(eltype(ss.solve_scratch)))
+            ldiv!(ss.residual_work, ss.fact, ss.solve_scratch)
+            x .+= ss.residual_work
+            ss.refinement_count += 1
+            relative = _relative_sparse_residual!(ss, x)
+        end
+    end
     ss.max_relative_residual = max(ss.max_relative_residual, relative)
     relative <= tolerance || error(
         "bordered cohomological solve residual $relative exceeds tolerance $tolerance")

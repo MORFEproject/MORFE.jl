@@ -194,6 +194,7 @@ mutable struct SparseLinearSolverState{T}
     residual_work::Vector{T}
     last_factor_key::Any
     max_relative_residual::Float64
+    refinement_count::Int
     factorization_count::Int
     solve_count::Int
 end
@@ -223,12 +224,12 @@ function SparseLinearSolverState{T}(
     nsys = FOM + ROM
     state = SparseLinearSolverState{T}(
         bordered, L_template, L_mappings, border_row_base,
-        backend == :pardiso ? Vector{T}(undef, nsys) : T[],
+        backend in (:pardiso, :umfpack) ? Vector{T}(undef, nsys) : T[],
         ps, nothing, nothing,
         backend, config.residual_tolerance,
         needs_input_copy ? Vector{T}(undef, nsys) : T[],
         config.residual_tolerance === nothing ? T[] : Vector{T}(undef, nsys),
-        nothing, 0.0, 0, 0
+        nothing, 0.0, 0, 0, 0
     )
     # Pardiso's factorisation lives in C-side memory the GC does not track, so it has
     # to be released explicitly or every solve leaks one factorisation. This is also

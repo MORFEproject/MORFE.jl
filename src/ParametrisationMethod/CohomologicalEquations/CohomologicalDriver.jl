@@ -188,9 +188,10 @@ function _write_checkpoint(checkpoint, signature, completed_degree, W, R, sparse
     temporary = path * ".tmp.$(getpid())"
     diagnostics = isnothing(sparse_solver) ?
         (; backend=:dense, max_relative_residual=0.0,
-            factorization_count=0, solve_count=0) :
+            refinement_count=0, factorization_count=0, solve_count=0) :
         (; backend=sparse_solver.backend,
             max_relative_residual=sparse_solver.max_relative_residual,
+            refinement_count=sparse_solver.refinement_count,
             factorization_count=sparse_solver.factorization_count,
             solve_count=sparse_solver.solve_count)
     open(temporary, "w") do io
@@ -208,6 +209,7 @@ function _write_solver_diagnostics(config, sparse_solver, completed_degree)
         println(io, "backend=", sparse_solver.backend)
         println(io, "completed_degree=", completed_degree)
         println(io, "max_relative_residual=", sparse_solver.max_relative_residual)
+        println(io, "refinement_count=", sparse_solver.refinement_count)
         println(io, "factorization_count=", sparse_solver.factorization_count)
         println(io, "solve_count=", sparse_solver.solve_count)
     end
@@ -409,6 +411,9 @@ function solve_cohomological_problem(
             saved_checkpoint.diagnostics.max_relative_residual
         sparse_solver.factorization_count =
             saved_checkpoint.diagnostics.factorization_count
+        sparse_solver.refinement_count = hasproperty(
+            saved_checkpoint.diagnostics, :refinement_count) ?
+            saved_checkpoint.diagnostics.refinement_count : 0
         sparse_solver.solve_count = saved_checkpoint.diagnostics.solve_count
     end
 
