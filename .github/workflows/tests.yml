@@ -34,4 +34,19 @@ jobs:
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
       - name: Run tests
-        run: julia --project=. -e 'using Pkg; Pkg.test()'
+        run: julia --project=. -e 'using Pkg; Pkg.test(coverage = true)'
+
+      # `ext/` is included deliberately, even though the suite loads only Symbolics and so
+      # leaves five of the six extensions unexecuted: hiding them would flatter the number.
+      - name: Process coverage
+        uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: src,ext
+
+      # Soft-fails while CODECOV_TOKEN is unset, so a missing secret never turns the suite red.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

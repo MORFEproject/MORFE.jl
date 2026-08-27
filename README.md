@@ -6,6 +6,7 @@
 [![Docs](https://img.shields.io/badge/docs-morfeproject.github.io-blue)](https://morfeproject.github.io/MORFE.jl/documentation.html)
 [![Tests](https://github.com/MORFEproject/MORFE.jl/actions/workflows/tests.yml/badge.svg)](https://github.com/MORFEproject/MORFE.jl/actions/workflows/tests.yml)
 [![Format](https://github.com/MORFEproject/MORFE.jl/actions/workflows/format.yml/badge.svg)](https://github.com/MORFEproject/MORFE.jl/actions/workflows/format.yml)
+[![codecov](https://codecov.io/gh/MORFEproject/MORFE.jl/graph/badge.svg)](https://codecov.io/gh/MORFEproject/MORFE.jl)
 
 MORFE.jl implements the **Direct Parametrisation of Invariant Manifolds (DPIM)** algorithm — a
 spectral submanifold reduction technique that computes invariant manifolds of large finite-element
@@ -19,218 +20,91 @@ $$\Downarrow \quad \text{DPIM, order } k \quad \Downarrow$$
 
 $$\dot{\mathbf{z}} = \mathbf{R}(\mathbf{z}, \mathbf{r}), \qquad \mathbf{u} = \mathbf{W}(\mathbf{z}, \mathbf{r}), \qquad n = 2 \sim 4 \ll N$$
 
+> **Pre-Alpha**: the API may still change between versions. The cohomological solver, eigenproblem
+> pipeline and FEM backend interface are fully functional today.
+
 ---
 
-## Documentation & Website
+## Installation
 
-The full project website lives at **[morfeproject.github.io/MORFE.jl](https://morfeproject.github.io/MORFE.jl)**:
+```julia
+using Pkg
+Pkg.add("MORFE")
+```
+
+---
+
+## Usage
+
+A complete reduction, using nothing but this package — two coupled Duffing oscillators reduced to a
+fifth-order normal form on the first mode pair:
+
+```julia
+using MORFE
+
+# M ü + C u̇ + K u + u³ = 0
+K = [2.0 -1.0; -1.0 2.0]
+M = [1.0 0.0; 0.0 1.0]
+C = 0.001 * M
+cubic = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3), (3, 0);
+    fully_asymmetric = false)                        # symmetric in its three arguments
+
+model = NthOrderModel((K, C, M), (cubic,))           # linear terms as (B₀, B₁, B₂)
+
+spec = spectrum(model)                               # generalised eigenproblem
+sd = SpectralData(model, spec; master = master_by_sorting(2))
+W, R = parametrise(model, sd, 5;                     # 5th-order expansion
+    resonance = ResonanceConfig(style = :complex_normal_form, tol = 0.05))
+
+R.poly.coefficients    # reduced dynamics  ż = R(z)
+W.poly.coefficients    # parametrisation   u = W(z)
+```
+
+The same three calls drive a million-DOF finite-element model; only the construction of `model`
+changes. The [tutorials](https://morfeproject.github.io/MORFE.jl/tutorials/) walk through external
+forcing, internal resonances, parametric models and FEM backends.
+
+---
+
+## Finite-element backends
+
+MORFE owns the DPIM solver and the abstract `FEMMultilinearMap` interface, so any FEM library can
+supply the physics. The Ferrite.jl backends — the St. Venant-Kirchhoff "mesh → ROM" interface
+(`StructuralSVK`), the parametric-structural engine (`ParametricStructural`) and the incompressible
+fluid backend (`FluidNavierStokes`) — live in the companion package
+[MORFEFerrite.jl](https://github.com/MORFEproject/MORFEFerrite.jl), which will be registered once
+its documentation and tutorials are written:
+
+```julia
+Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")
+```
+
+Its [clamped-beam notebook](https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb)
+is the shortest path from a mesh to a ROM.
+
+---
+
+## Documentation
 
 | Page | Contents |
 |------|----------|
-| [Tutorials](https://morfeproject.github.io/MORFE.jl/tutorials/) | Step-by-step guides: full-order model building, multiindex sets, SVK mesh → ROM, Kármán vortex street, parametric models, MEMS micromirror |
+| [Tutorials](https://morfeproject.github.io/MORFE.jl/tutorials/) | Full-order model building, multiindex sets, SVK mesh → ROM, Kármán vortex street, parametric models, MEMS micromirror |
 | [Code documentation](https://morfeproject.github.io/MORFE.jl/documentation.html) | API reference and docstrings for every module |
 | [Features](https://morfeproject.github.io/MORFE.jl/features.html) | How DPIM works, and why it differs from classical reduction |
 | [Gallery](https://morfeproject.github.io/MORFE.jl/gallery.html) | Application showcase — MEMS, beams, arches, shells |
 | [Publications](https://morfeproject.github.io/MORFE.jl/publications.html) | Method papers and citation info |
 | [Team](https://morfeproject.github.io/MORFE.jl/team.html) | Developers, contributors and institutions |
 
----
-
-## Features
-
-| Capability | What it means |
-|------------|---------------|
-| **DPIM implementation** | Direct Parametrisation of Invariant Manifolds for nonlinear model order reduction |
-| **N-th order ODEs** | Native support for second-order (and higher-order) mechanical systems — no manual conversion to first-order form |
-| **External forcing** | Polynomial external forcing systems handled at the level of the invariance equation |
-| **Resonance handling** | Graph-style, complex/real normal form, and condition-number-based resonance detection |
-| **Polynomial framework** | Built-in multiindex sets, dense polynomials, and realification utilities |
-| **FEM-agnostic** | Works with Gridap.jl, Ferrite.jl, or any custom FEM backend via the `FEMMultilinearMap` interface |
-| **Julia-native** | Multiple dispatch and static type parameters (`SVector`, compile-time dimensions) for performance |
-
----
-
-## How it works
-
-A DPIM computation is a single pipeline from FE model to reduced dynamics:
-
-```text
-NthOrderModel
-    │
-    ▼
-linear_first_order_matrices ──► generalised_eigenpairs
-                                         │
-                                         ▼
-                                  select master modes
-                                         │
-                                         ▼
-                                  ResonanceSet construction
-                                         │
-                                         ▼
-                                  solve_cohomological_problem
-                                         │
-                                         ▼
-                     (Parametrisation W, ReducedDynamics R)
-```
-
-The cohomological equations are solved order-by-order on a GrLex-ordered multiindex set, producing a
-symbolic, executable parametrisation `W` (full-state map) and reduced dynamics `R` on a
-low-dimensional invariant manifold tangent to the chosen eigenmodes.
-
----
-
-## Installation
-
-MORFE.jl is not yet registered in the Julia General Registry. Install directly from GitHub:
-
-```julia
-using Pkg
-Pkg.add(url="https://github.com/MORFEproject/MORFE.jl.git")
-```
-
-Or in Pkg REPL mode (`]`):
-
-```julia-repl
-add https://github.com/MORFEproject/MORFE.jl.git
-```
-
----
-
-## Quick Start
-
-MORFE is FEM-backend-agnostic: it owns the DPIM solver and the abstract
-`FEMMultilinearMap` interface. The Ferrite.jl backends — the St. Venant-Kirchhoff
-"mesh → ROM" UI (`StructuralSVK`), the general parametric-structural engine
-(`ParametricStructural`), and the incompressible-fluid backend
-(`FluidNavierStokes`) — live in the companion package
-[**MORFEFerrite.jl**](https://github.com/MORFEproject/MORFEFerrite.jl):
-
-```julia
-using Pkg
-Pkg.add(url="https://github.com/MORFEproject/MORFEFerrite.jl.git")
-```
-
-The shortest path from mesh to ROM is shown below. Here
-`dirichlet = "Dirichlet"` selects the Gmsh facet group named `Dirichlet`; all
-displacement components on those facets are fixed to zero.
-
-```julia
-using MORFE, MORFEFerrite
-SVK = MORFEFerrite.StructuralSVK
-
-beam = SVK.mechanical_model("beam.msh";
-    material  = SVK.SVKMaterial(E = 160e3, ν = 0.22, ρ = 2.32e-3),
-    damping   = SVK.RayleighDamping(α = 5.4e-3, β = 1.9e-2),
-    dirichlet = "Dirichlet")
-
-(; model, spectral, meta) = build_model(beam;
-    master = [1], expansion_order = 7)
-W, R = parametrise(model, spectral, 7;
-    resonance = ResonanceConfig(style = :complex_normal_form, tol = 0.05))
-MORFE.save_rom("results", W, R)
-```
-
-The notebook-only [clamped-beam example](https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb)
-shows this common API without example-specific solver code.
-
----
-
-## Examples
-
-Self-contained, runnable examples demonstrate the full pipeline. Each manages its own Julia
-environment and writes outputs under a git-ignored `results/` folder — run them from the repository
-root with:
-
-```bash
-julia --project=examples/internals -e '
-  using Pkg; Pkg.develop(path="."); Pkg.instantiate();
-  include("examples/internals/multiindex_sets/main.jl")'
-```
-
-See [`examples/README.md`](examples/README.md) for the example contract and validation workflow.
-
-### In this repository
-
-| Folder | Model | Demonstrates |
-|--------|-------|--------------|
-| [`mesh_import/`](examples/mesh_import/) | Test meshes | Abaqus/COMSOL → GMSH format conversion |
-| [`internals/`](examples/internals/) | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method |
-
-### Developed outside this repository
-
-Every example with its own FEM stack lives outside the package tree, so that a heavy backend
-(and its meshes and result archives) never becomes a dependency of the library:
-
-- **Ferrite-backed** — the companion package
-  [MORFEFerrite.jl/examples](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples).
-- **Gridap-backed clamped beam** and the **dielectric elastomer actuator** — maintained
-  alongside this repository rather than in it.
-
-| Folder | Model |
-|--------|-------|
-| `01_clamped_beam_ferrite/` | Clamped-clamped SVK beam — high-level `StructuralSVK` UI + low-level pipeline |
-| `03_arch_comsol_wedge/` | Arch wedge, COMSOL `.mphtxt` P18 mesh |
-| `04_parametric_clamped_beam/` | Two-parameter ROM (axial stretch θ₁ + bending-mode arch θ₂), general `ParametricStructural` engine |
-| `05_karman_vortex_street/` | Cylinder wake flow (Kármán), `FluidNavierStokes` backend |
-| `07_parametric_arch/` | Single-parameter sinusoidal arch, `ParametricStructural` |
-| `08_mems_micromirror/` | MEMS scanning micromirror, `StructuralSVK` |
-
----
-
-## Project Structure
-
-```text
-MORFE.jl/
-├── src/
-│   ├── MORFE.jl                      # Main package module
-│   ├── Multiindices.jl               # Multiindex set utilities
-│   ├── Polynomials.jl                # Dense polynomial representation
-│   ├── Realification.jl              # Complex-to-real transformation
-│   ├── FullOrderModel/               # FOM types and nonlinear maps (FEMMultilinearMap interface)
-│   ├── SpectralDecomposition/        # Eigensolvers and mode propagation
-│   └── ParametrisationMethod/        # DPIM core: resonance, invariance equation, ROM
-├── examples/                         # Gridap beam, dielectric actuator, internals/, mesh_import/
-├── benchmark/                        # Benchmark scripts
-├── test/                             # Test suite
-└── website/                          # Project website (morfeproject.github.io/MORFE.jl)
-```
-
-Ferrite.jl backends, the SVK/parametric/fluid UIs, and all Ferrite examples live in
-[MORFEFerrite.jl](https://github.com/MORFEproject/MORFEFerrite.jl).
-
----
-
-## Modules
-
-| Module | Description |
-|--------|-------------|
-| `Multiindices` | Multiindex sets with graded lex ordering and factorisation utilities |
-| `Polynomials` | Dense multivariate polynomials aligned to multiindex sets |
-| `Realification` | Change of variables from complex (z, z̄) to real (x, y) coordinates |
-| `FullOrderModel` | `NthOrderModel` and `FirstOrderModel` with multilinear nonlinear terms |
-| `Eigensolvers` | ARPACK-based generalised eigensolver with shift-and-invert |
-| `EigenModesPropagation` | Left/right eigenvector and Jordan vector propagation for N-th order systems |
-| `Resonance` | Resonance set construction (graph, normal form, condition-number strategies) |
-| `InvarianceEquation` | Cohomological system assembly via fused Horner passes |
-| `MasterModeOrthogonality` | Orthogonality condition assembly for resonant master modes |
-| `ParametrisationMethod` | Core `Parametrisation` and `ReducedDynamics` types |
-| `MultilinearTerms` | Nonlinear right-hand side contributions with caching |
-| `LowerOrderCouplings` | Lower-order coupling vectors for the cohomological equation |
-
----
-
-## Status
-
-> **Pre-Alpha**: The API may change significantly between versions. The cohomological solver,
-> eigenproblem pipeline, and FEM backend interface are fully functional today.
+Runnable low-level demos live in [`examples/`](examples/README.md); the FEM-backed examples, which
+carry their own meshes and environments, live in
+[MORFEFerrite.jl/examples](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples).
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please open an issue or submit a pull request on
-[GitHub](https://github.com/MORFEproject/MORFE.jl). See the
-[team page](https://morfeproject.github.io/MORFE.jl/team.html) for the contribution guide and
+Contributions are welcome — please open an issue or a pull request. The
+[team page](https://morfeproject.github.io/MORFE.jl/team.html) has the contribution guide and the
 current contributors.
 
 ---
