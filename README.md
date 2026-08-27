@@ -91,7 +91,6 @@ is the shortest path from a mesh to a ROM.
 | [Tutorials](https://morfeproject.github.io/MORFE.jl/tutorials/) | Full-order model building, multiindex sets, SVK mesh → ROM, Kármán vortex street, parametric models, MEMS micromirror |
 | [Code documentation](https://morfeproject.github.io/MORFE.jl/documentation.html) | API reference and docstrings for every module |
 | [Features](https://morfeproject.github.io/MORFE.jl/features.html) | How DPIM works, and why it differs from classical reduction |
-| [Gallery](https://morfeproject.github.io/MORFE.jl/gallery.html) | Application showcase — MEMS, beams, arches, shells |
 | [Publications](https://morfeproject.github.io/MORFE.jl/publications.html) | Method papers and citation info |
 | [Team](https://morfeproject.github.io/MORFE.jl/team.html) | Developers, contributors and institutions |
 
