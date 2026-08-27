@@ -35,7 +35,7 @@
 .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
 
 .hero-meta {
-  margin-top: 64px;
+  margin-top: 24px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
@@ -81,6 +81,7 @@
 }
 
 section { padding: 110px 0; position: relative; }
+body.home-page .foot { margin-top: 0; }
 
 .section-head { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-bottom: 56px; align-items: end; }
 .section-head h2 { max-width: 16ch; }
@@ -118,108 +119,20 @@ section { padding: 110px 0; position: relative; }
 .feat:nth-child(5) .accent-bar { background: var(--jl-purple); }
 .feat:nth-child(6) .accent-bar { background: var(--jl-red); }
 
-/* Computed structural backbone */
-.demo {
-  display: grid;
-  grid-template-columns: 1fr 1.1fr;
-  gap: 0;
-  border: 1px solid var(--hair);
-  border-radius: 6px;
-  overflow: hidden;
-  background: rgba(7,7,11,0.55);
-}
-.demo-info { padding: 40px; border-right: 1px solid var(--hair); }
-.demo-info h3 { margin-bottom: 14px; }
-.demo-info p { font-size: 15px; }
-
-.demo-canvas {
-  position: relative;
-  min-height: 420px;
-  background:
-    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px) 0 0/100% 40px,
-    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px) 0 0/40px 100%,
-    radial-gradient(ellipse at 60% 50%, rgba(149,88,178,0.05), transparent 60%);
-}
-.demo-canvas iframe { width: 100%; height: 100%; min-height: 420px; display: block; border: 0; background: #07070b; }
-
-/* Compare slider (FOM vs ROM) */
-.compare {
-  position: relative;
-  width: 100%;
-  height: 380px;
-  background: #07070b;
-  border: 1px solid var(--hair);
-  border-radius: 6px;
-  overflow: hidden;
-  user-select: none;
-  cursor: ew-resize;
-}
-.compare svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.compare .pane {
-  position: absolute;
-  inset: 0;
-}
-.compare .pane.right { clip-path: inset(0 0 0 50%); }
-.compare .handle {
-  position: absolute;
-  top: 0; bottom: 0;
-  left: 50%;
-  width: 1px;
-  background: rgba(255,255,255,0.6);
-  pointer-events: none;
-}
-.compare .handle::before {
-  content: "↔";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 36px; height: 36px;
-  background: #14141d;
-  border: 1px solid var(--hair-2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-family: var(--mono);
-  font-size: 14px;
-}
-.compare .label {
-  position: absolute;
-  top: 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-  background: rgba(7,7,11,0.7);
-  padding: 5px 10px;
-  border: 1px solid var(--hair);
-  border-radius: 3px;
-}
-.compare .label.l { left: 16px; }
-.compare .label.r { right: 16px; }
-.compare .stat {
-  position: absolute;
-  bottom: 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--ink-3);
-  letter-spacing: 0.04em;
-}
-.compare .stat.l { left: 16px; }
-.compare .stat.r { right: 16px; }
-
 /* code teaser */
 .code-teaser {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 48px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
 }
-.code-teaser .copy h2 { margin-bottom: 18px; }
-.code-teaser .copy p { font-size: 16px; }
+.code-teaser .copy { grid-column: 1 / -1; padding-bottom: 24px; }
+.code-teaser .copy h2 { margin-bottom: 0; }
+.code-teaser .copy p { font-size: 16px; max-width: 60ch; }
+.teaser-actions { display: flex; gap: 14px; margin-top: 48px; flex-wrap: wrap; }
+.teaser-actions button { cursor: pointer; }
+.teaser-actions .install-command { border-style: dashed; }
+.teaser-actions .install-command.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.5); background: rgba(56,152,38,0.08); }
 .code-teaser .code-wrap {
   border: 1px solid var(--hair);
   border-radius: 6px;
@@ -244,39 +157,15 @@ section { padding: 110px 0; position: relative; }
 .code-head .dots span:nth-child(3) { background: #27c93f; }
 .code-head .file { color: var(--ink-2); }
 .code-wrap .code { border: none; border-radius: 0; margin: 0; }
-
-/* Use-case strip */
-.cases-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.case {
+.backbone-teaser {
+  min-height: 330px;
   border: 1px solid var(--hair);
   border-radius: 6px;
-  background: rgba(10,10,15,0.55);
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: border-color .2s, transform .25s;
+  background: #07070b;
 }
-.case:hover { border-color: var(--hair-2); transform: translateY(-2px); }
-.case-thumb {
-  height: 200px;
-  position: relative;
-  border-bottom: 1px solid var(--hair);
-  background:
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px) 0 0/100% 24px,
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px) 0 0/24px 100%,
-    #07070b;
-  overflow: hidden;
-}
-.case-thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.case-body { padding: 22px 24px 26px; }
-.case-body .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.case-body h3 { font-size: 19px; font-weight: 500; margin-bottom: 8px; }
-.case-body p { font-size: 14px; color: var(--ink-2); margin: 0; }
-.case-body .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; }
+.backbone-teaser iframe { width: 100%; height: 100%; display: block; border: 0; background: #07070b; }
+.tutorial-link { grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 4px; }
 
 /* CTA band */
 .cta-band {
@@ -403,10 +292,10 @@ section { padding: 110px 0; position: relative; }
 @media (max-width: 960px) {
   .section-head { grid-template-columns: 1fr; gap: 24px; }
   .feat-grid { grid-template-columns: 1fr; }
-  .demo { grid-template-columns: 1fr; }
-  .demo-info { border-right: 0; border-bottom: 1px solid var(--hair); }
   .code-teaser { grid-template-columns: 1fr; }
-  .cases-grid { grid-template-columns: 1fr; }
+  .code-teaser .copy { grid-column: auto; }
+  .tutorial-link { grid-column: auto; }
+  .backbone-teaser { min-height: 300px; }
   .hero-meta { grid-template-columns: repeat(2, 1fr); }
   .hero-meta > div:nth-child(2) { border-right: 0; }
   .foot-grid { grid-template-columns: 1fr 1fr; }
@@ -418,7 +307,7 @@ section { padding: 110px 0; position: relative; }
 }
 </style>
 </head>
-<body>
+<body class="home-page">
 
 <div class="backdrop" aria-hidden="true">
   <canvas id="manifold-bg"></canvas>
@@ -436,19 +325,12 @@ section { padding: 110px 0; position: relative; }
     <span class="kicker">pre-alpha · Julia 1.10+ · MIT licensed</span>
     <h1><span class="accent-2">M</span>odel <span class="accent-2">O</span>rder <span class="accent-2">R</span>eduction<br/> for <span class="accent-2">F</span>inite <span class="accent-2">E</span>lements</h1>
     <p class="lede">
-      MORFE.jl computes <em>invariant manifolds</em> of large finite-element models in a single pass —
-      collapsing million-DOF nonlinear oscillators into ROMs of usually two to four variables
-      that run in microseconds while preserving the true backbone, internal resonances and bifurcations.
+      MORFE.jl computes <em>invariant manifolds</em> of large finite-element models. Reduced order models have usually 2 to 4 variables and preserve the true backbone, internal resonances and bifurcations.
     </p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="tutorials/">
         Get started
         <span class="arrow">→</span>
-      </a>
-      <a class="btn" href="features.html">Why MORFE</a>
-      <a class="btn mono" href="#install" style="border-style:dashed">
-        <span class="code-prompt" style="color:var(--jl-green)">julia&gt;</span>
-        Pkg.add(url="…/MORFE.jl")
       </a>
     </div>
 
@@ -468,11 +350,6 @@ section { padding: 110px 0; position: relative; }
           $$ \dot{\mathbf{z}} = \mathbf{R}(\mathbf{z}, \mathbf{r}) \,, \qquad \qquad \mathbf{u} = \mathbf{W}(\mathbf{z}, \mathbf{r}) $$
         </div>
       </div>
-    </div>
-    <div class="arrow-line", style="justify-content:center; margin-top:65px;">
-        <a href="features.html" style="text-decoration:none; display:flex; flex-direction:column; align-items:center; gap:4px;">
-          <span style="font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--jl-purple)">How DPIM works →</span>
-        </a>
     </div>
 
     <!-- meta strip -->
@@ -494,10 +371,18 @@ section { padding: 110px 0; position: relative; }
         <div class="v" style="font-family:var(--mono); font-size:18px; letter-spacing:0">Open-source · modular</div>
       </div>
     </div>
+
+    <div class="tutorial-link" style="margin-top:65px;">
+        <a href="features.html" style="text-decoration:none; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <span style="font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--jl-purple)">How DPIM works →</span>
+        </a>
+    </div>
+
   </div>
 </section>
 
 <!-- STATUS STRIP -->
+<!--
 <div style="background:rgba(149,88,178,0.06); border-top:1px solid var(--hair); border-bottom:1px solid var(--hair); padding:18px 0;">
   <div class="wrap" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
     <span style="font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); flex-shrink:0;">pre-alpha</span>
@@ -508,6 +393,7 @@ section { padding: 110px 0; position: relative; }
     </p>
   </div>
 </div>
+-->
 
 <!-- FEATURES -->
 <section id="features">
@@ -517,77 +403,9 @@ section { padding: 110px 0; position: relative; }
         <span class="kicker">01 — Capabilities</span>
         <h2 style="margin-top:18px;">What MORFE.jl does.</h2>
       </div>
-      <p class="desc">
-        DPIM computes directly from FE models, invariant manifolds tangent
-        to the chosen eigenmodes. No projection, no slow/fast decomposition, no time-marching.
-      </p>
     </div>
 
     <div id="feat-grid-mount"></div>
-  </div>
-</section>
-
-<!-- INTERACTIVE BACKBONE DEMO -->
-<section>
-  <div class="wrap">
-    <div class="section-head">
-      <div>
-        <span class="kicker">02 — Live</span>
-        <h2 style="margin-top:18px;">Trace the backbone as amplitude grows.</h2>
-      </div>
-      <p class="desc">
-        A signature of nonlinearity: as oscillation amplitude grows, the resonant frequency shifts.
-        These four curves are analytical truncations of one order-9 ROM of the clamped-clamped beam.
-      </p>
-    </div>
-
-    <div class="demo">
-      <div class="demo-info">
-        <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> Structural SVK · complex normal form</span>
-        <h3 style="margin-top:18px;">Conservative backbone</h3>
-        <p>The modal radius stays constant, so the resonant coefficients give the frequency directly—without time integration or numerical continuation.</p>
-        <p>Compare orders 3, 5, 7, and 9 using frequency change and node 289's transverse displacement, both shown as percentages.</p>
-        <p style="margin-top:22px;"><a class="btn" href="tutorials/structural_svk.html">See the beam tutorial <span class="arrow">→</span></a></p>
-      </div>
-      <div class="demo-canvas" id="bb-canvas">
-        <iframe src="tutorials/assets/structural_svk/backbone.html?compact=1"
-          title="Order 3, 5, 7 and 9 analytical backbone curves" loading="lazy"></iframe>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- COMPARE FOM vs ROM -->
-<section>
-  <div class="wrap">
-    <div class="section-head">
-      <div>
-        <span class="kicker">03 — Verification</span>
-        <h2 style="margin-top:18px;">Pixel-identical to the full model. <span style="color:var(--ink-3)">10⁵× faster.</span></h2>
-      </div>
-      <p class="desc">
-        Drag the slider. Left half: a large-DOF FE time-marching simulation taking hours of wall-time.
-        Right half: the 4-equation MORFE ROM evaluated in seconds. The frequency response curves are indistinguishable.
-      </p>
-    </div>
-
-    <div class="compare" id="compare">
-      <div class="pane left">
-        <svg viewBox="0 0 800 380" preserveAspectRatio="none">
-          <g id="frf-fom"></g>
-        </svg>
-        <span class="label l">FOM · large DOF · hours</span>
-        <span class="stat l mono">FE · time-marching · Newmark</span>
-      </div>
-      <div class="pane right">
-        <svg viewBox="0 0 800 380" preserveAspectRatio="none">
-          <g id="frf-rom"></g>
-        </svg>
-        <span class="label r" style="background:rgba(149,88,178,0.2); border-color:var(--jl-purple); color:#fff;">ROM · 4 eq · seconds</span>
-        <span class="stat r mono">MORFE · DPIM order 7</span>
-      </div>
-      <div class="handle" id="compare-handle"></div>
-    </div>
   </div>
 </section>
 
@@ -596,15 +414,12 @@ section { padding: 110px 0; position: relative; }
   <div class="wrap">
     <div class="code-teaser">
       <div class="copy">
-        <span class="kicker">04 — In code</span>
-        <h2 style="margin-top:18px;">From a mesh to a runnable ROM.</h2>
-        <p>
-          MORFEFerrite assembles this structural case from the mesh; MORFE then computes the
-          physics-independent manifold map <code>W</code> and reduced dynamics <code>R</code>.
-        </p>
-        <p style="margin-top:18px;">
-          <a class="btn" href="tutorials/">Read the tutorial <span class="arrow">→</span></a>
-        </p>
+        <span class="kicker">02 — In code</span>
+        <h2 style="margin-top:18px;">Get started.</h2>
+        <div class="teaser-actions">
+          <a class="btn btn-primary" href="tutorials/installation.html">Installation guide <span class="arrow">→</span></a>
+          <button class="btn mono install-command" id="copy-install" type="button" aria-label="Copy MORFE installation command"><span class="code-prompt" style="color:var(--jl-green)">julia&gt;</span> Pkg.add("MORFE")</button>
+        </div>
       </div>
       <div class="code-wrap">
         <div class="code-head">
@@ -625,155 +440,26 @@ section { padding: 110px 0; position: relative; }
 <span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
     <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>))</pre>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- USE CASES -->
-<section>
-  <div class="wrap">
-    <div class="section-head">
-      <div>
-        <span class="kicker">05 — Gallery</span>
-        <h2 style="margin-top:18px;">From milligram MEMS to multi-tonne arches.</h2>
+      <div class="backbone-teaser">
+        <iframe src="tutorials/assets/structural_svk/backbone.html?teaser=1"
+          title="Order 3, 5, 7 and 9 backbone curves for transverse displacement"
+          loading="lazy"></iframe>
       </div>
-      <p class="desc">
-        DPIM is geometry-agnostic — the same pipeline reduces a 1 mm² scanning micromirror and a 30 m parabolic shell.
-        <a href="gallery.html" style="color:#fff; border-bottom:1px solid var(--hair-2)">See full gallery →</a>
-      </p>
+
+    <div class="tutorial-link" style="margin-top:41px;">
+        <a href="tutorials/" style="text-decoration:none; display:flex; flex-direction:column; align-items:center; gap:4px;">
+        <span style="font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--jl-purple)">Check the tutorials →</span>
+        </a>
     </div>
-
-    <div class="cases-grid">
-      <a class="case" href="gallery.html">
-        <div class="case-thumb">
-          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
-          <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <pattern id="g1" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M0 20 L20 0" stroke="#1f1f2c" stroke-width="0.5"/>
-              </pattern>
-            </defs>
-            <!-- micromirror plate -->
-            <g transform="translate(160 110)">
-              <g transform="rotate(-12)">
-                <rect x="-70" y="-44" width="140" height="88" fill="url(#g1)" stroke="#9558b2" stroke-width="1"/>
-                <rect x="-70" y="-44" width="140" height="88" fill="rgba(149,88,178,0.06)"/>
-                <line x1="-70" y1="0" x2="-100" y2="0" stroke="#cb3c33" stroke-width="1"/>
-                <line x1="70" y1="0" x2="100" y2="0" stroke="#cb3c33" stroke-width="1"/>
-                <circle cx="-100" cy="0" r="2.5" fill="#cb3c33"/>
-                <circle cx="100" cy="0" r="2.5" fill="#cb3c33"/>
-              </g>
-              <!-- oscillation arc -->
-              <path d="M-70,-58 Q 0,-90 70,-58" stroke="#389826" stroke-width="0.8" fill="none" stroke-dasharray="2 3"/>
-              <path d="M-70,58 Q 0,90 70,58" stroke="#389826" stroke-width="0.8" fill="none" stroke-dasharray="2 3"/>
-            </g>
-          </svg>
-        </div>
-        <div class="case-body">
-          <div class="row"><span class="meta">CASE-01</span><span class="meta" style="color:var(--jl-purple)">MEMS</span></div>
-          <h3>Scanning micromirror</h3>
-          <p>2-DOF ROM captures the parametric resonance and pull-in instability of a torsional MEMS mirror at 24 kHz.</p>
-        </div>
-      </a>
-      <a class="case" href="gallery.html">
-        <div class="case-thumb">
-          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
-          <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet">
-            <!-- cantilever beam with deflection -->
-            <g transform="translate(40 100)">
-              <rect x="-8" y="-40" width="8" height="80" fill="#1f1f2c"/>
-              <path d="M0,0 C 80,0 160,-22 240,-46" stroke="#cb3c33" stroke-width="2" fill="none"/>
-              <path d="M0,0 C 80,0 160,22 240,46" stroke="#cb3c33" stroke-width="2" fill="none" opacity="0.4"/>
-              <path d="M0,0 L240,0" stroke="#3a3a4a" stroke-width="1" stroke-dasharray="2 3"/>
-              <circle cx="240" cy="-46" r="3" fill="#cb3c33"/>
-              <text x="120" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6e6e7e">L = 0.5 m · A/L = 0.32</text>
-            </g>
-          </svg>
-        </div>
-        <div class="case-body">
-          <div class="row"><span class="meta">CASE-02</span><span class="meta" style="color:var(--jl-red)">STRUCTURAL</span></div>
-          <h3>Cantilever beam — large amplitude</h3>
-          <p>Geometric nonlinearity at A/L &gt; 0.3. Backbone reproduced to within 0.04% of the FE reference.</p>
-        </div>
-      </a>
-      <a class="case" href="gallery.html">
-        <div class="case-thumb">
-          <div style="position:absolute; top:10px; right:12px; z-index:2; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);">🚧 Roadmap</div>
-          <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet">
-            <!-- shallow arch -->
-            <g transform="translate(160 130)">
-              <path d="M-110,0 Q 0,-72 110,0" stroke="#4063d8" stroke-width="2" fill="none"/>
-              <path d="M-110,0 Q 0,-50 110,0" stroke="#4063d8" stroke-width="1" fill="none" opacity="0.5" stroke-dasharray="2 3"/>
-              <path d="M-110,0 Q 0,-24 110,0" stroke="#cb3c33" stroke-width="1.4" fill="none"/>
-              <line x1="-110" y1="0" x2="-110" y2="14" stroke="#1f1f2c" stroke-width="6"/>
-              <line x1="110" y1="0" x2="110" y2="14" stroke="#1f1f2c" stroke-width="6"/>
-              <line x1="-130" y1="14" x2="130" y2="14" stroke="#3a3a4a" stroke-width="1"/>
-              <!-- snap arrows -->
-              <path d="M0,-72 L0,-30" stroke="#389826" stroke-width="1" marker-end="url(#arr)" stroke-dasharray="2 2"/>
-              <defs>
-                <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-                  <path d="M0,0 L10,5 L0,10 z" fill="#389826"/>
-                </marker>
-              </defs>
-            </g>
-          </svg>
-        </div>
-        <div class="case-body">
-          <div class="row"><span class="meta">CASE-03</span><span class="meta" style="color:var(--jl-blue)">CIVIL</span></div>
-          <h3>Shallow arch — snap-through</h3>
-          <p>Bistable snap-through under base excitation. ROM tracks both wells and the homoclinic transition.</p>
-        </div>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- EXAMPLES -->
-<section id="examples" style="padding: 80px 0; border-top: 1px solid var(--hair);">
-  <div class="wrap">
-    <span class="kicker">06 — Examples</span>
-    <h2 style="margin: 18px 0 12px;">Running today.</h2>
-    <p style="max-width: 60ch; margin-bottom: 40px;">These demo scripts work with the current low-level interface. Each is a self-contained Julia file you can run directly.</p>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-
-      <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals" target="_blank" rel="noopener"
-         style="display: block; border: 1px solid var(--hair); border-radius: 6px; padding: 26px 28px; background: rgba(10,10,15,0.55); transition: border-color .2s, transform .2s;"
-         onmouseover="this.style.borderColor='var(--hair-2)';this.style.transform='translateY(-2px)'"
-         onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
-        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
-        <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Parametrisation method</h3>
-        <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">End-to-end DPIM on a two-degree-of-freedom Duffing system. Covers <code style="font-family:var(--mono);font-size:0.88em;background:#07070b;border:1px solid var(--hair);padding:1px 4px;border-radius:3px;">NthOrderModel</code>, eigenpairs, resonance set, and solver.</p>
-        <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/ParametrisationMethod/ →</span>
-      </a>
-
-      <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb" target="_blank" rel="noopener"
-         style="display: block; border: 1px solid var(--hair); border-radius: 6px; padding: 26px 28px; background: rgba(10,10,15,0.55); transition: border-color .2s, transform .2s;"
-         onmouseover="this.style.borderColor='var(--hair-2)';this.style.transform='translateY(-2px)'"
-         onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
-        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
-        <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Ferrite beam notebook</h3>
-        <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">Nonlinear beam with the Ferrite.jl FEM backend. Uses <code>FEMMultilinearMap</code> for element-by-element assembly — no full tensor formed.</p>
-        <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">examples/01…/clamped_beam.ipynb →</span>
-      </a>
-
-      <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/02_clamped_beam_gridap/main.jl" target="_blank" rel="noopener"
-         style="display: block; border: 1px solid var(--hair); border-radius: 6px; padding: 26px 28px; background: rgba(10,10,15,0.55); transition: border-color .2s, transform .2s;"
-         onmouseover="this.style.borderColor='var(--hair-2)';this.style.transform='translateY(-2px)'"
-         onmouseout="this.style.borderColor='var(--hair)';this.style.transform=''">
-        <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jl-green); margin-bottom: 12px;">✅ Current code</div>
-        <h3 style="font-size: 18px; font-weight: 500; margin: 0 0 8px; color: var(--ink);">Gridap beam</h3>
-        <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 16px;">Same beam benchmark using the Gridap.jl backend. Demonstrates the FEM backend interface and interchangeability.</p>
-        <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3);">demo/Gridap/ →</span>
-      </a>
 
     </div>
   </div>
 </section>
 
 <!-- TEAM -->
-<section id="team" style="padding: 80px 0; border-top: 1px solid var(--hair);">
+<section id="team" style="border-top: 1px solid var(--hair);">
   <div class="wrap">
-    <span class="kicker">07 — People</span>
+    <span class="kicker">03 — People</span>
     <h2 style="margin: 18px 0 0;">Team.</h2>
 
     <!-- Developers -->
@@ -789,9 +475,10 @@ section { padding: 110px 0; position: relative; }
 </section>
 
 <!-- CTA -->
+<!--
 <section class="cta-band">
   <div class="wrap-tight">
-    <span class="kicker">08 — Start</span>
+    <span class="kicker">04 — Start</span>
     <h2 style="margin-top:18px;">Reduce. Resolve. Resonate.</h2>
     <p class="lede">
       An open-source Julia package built by the nonlinear-dynamics community across
@@ -803,6 +490,7 @@ section { padding: 110px 0; position: relative; }
     </div>
   </div>
 </section>
+-->
 
 <!-- FOOTER -->
 <footer class="foot">
@@ -816,7 +504,6 @@ section { padding: 110px 0; position: relative; }
         <h4>Project</h4>
         <ul>
           <li><a href="features.html">Features</a></li>
-          <li><a href="gallery.html">Gallery</a></li>
           <li><a href="tutorials/">Tutorials</a></li>
           <li><a href="documentation.html">Documentation</a></li>
         </ul>
@@ -850,107 +537,21 @@ section { padding: 110px 0; position: relative; }
 
 <script src="assets/manifold-bg.js"></script>
 <script>
-// ===== FRF compare slider =====
 (function () {
-  const wrap = document.getElementById('compare');
-  if (!wrap) return;
-  const handle = document.getElementById('compare-handle');
-  const right = wrap.querySelector('.pane.right');
+  var button = document.getElementById('copy-install');
+  if (!button) return;
 
-  // Render the same FRF inside both panes
-  function frf(group, color, jitter) {
-    const W = 800, H = 380;
-    const pad = { l: 70, r: 30, t: 30, b: 50 };
-    const PW = W - pad.l - pad.r;
-    const PH = H - pad.t - pad.b;
-    const wMin = 0.85, wMax = 1.15;
-    const aMax = 1.0;
-    const xToPx = (w) => pad.l + (w - wMin) / (wMax - wMin) * PW;
-    const aToPx = (a) => pad.t + PH - (a / aMax) * PH;
-
-    let s = '';
-    // grid
-    s += `<g stroke="#1f1f2c" stroke-width="0.5">`;
-    for (let i = 0; i <= 6; i++) {
-      const x = pad.l + (PW / 6) * i;
-      s += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${pad.t + PH}" />`;
-    }
-    for (let i = 0; i <= 5; i++) {
-      const y = pad.t + (PH / 5) * i;
-      s += `<line x1="${pad.l}" y1="${y}" x2="${pad.l + PW}" y2="${y}" />`;
-    }
-    s += `</g>`;
-    s += `<g stroke="#3a3a4a" stroke-width="1" fill="none">
-      <line x1="${pad.l}" y1="${pad.t + PH}" x2="${pad.l + PW}" y2="${pad.t + PH}" />
-      <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t + PH}" />
-    </g>`;
-    // labels
-    s += `<g font-family="JetBrains Mono" font-size="10" fill="#6e6e7e">`;
-    for (let i = 0; i <= 6; i++) {
-      const w = wMin + (wMax - wMin) * i / 6;
-      s += `<text x="${pad.l + (PW / 6) * i}" y="${pad.t + PH + 16}" text-anchor="middle">${w.toFixed(2)}</text>`;
-    }
-    s += `<text x="${pad.l + PW / 2}" y="${H - 12}" text-anchor="middle" fill="#b8b8c4">Ω / ω₀</text>`;
-    s += `<text transform="translate(${pad.l - 44} ${pad.t + PH / 2}) rotate(-90)" text-anchor="middle" fill="#b8b8c4">|A|</text>`;
-    s += `</g>`;
-
-    // The FRF curve (folded resonance, hardening Duffing)
-    // We use parametric A from 0..aMax giving (Ω, A) two branches
-    const lower = [], upper = [];
-    const w0 = 1.0, alpha = 4.5, zeta = 0.012, F = 0.014;
-    for (let k = 1; k <= 600; k++) {
-      const A = (k / 600) * aMax;
-      const c = w0 * w0 + 0.75 * alpha * A * A;
-      const d = 4 * zeta * zeta * w0 * w0;
-      const fa2 = (F / A) * (F / A);
-      const b = -(2 * c - d);
-      const cc = c * c - fa2;
-      const disc = b * b - 4 * cc;
-      if (disc < 0) continue;
-      const r = Math.sqrt(disc);
-      const x1 = (-b - r) / 2, x2 = (-b + r) / 2;
-      if (x1 > 0) { const w = Math.sqrt(x1); if (w >= wMin && w <= wMax) lower.push([w, A]); }
-      if (x2 > 0) { const w = Math.sqrt(x2); if (w >= wMin && w <= wMax) upper.push([w, A]); }
-    }
-    function pathOf(arr) {
-      let p = '';
-      arr.forEach((pt, i) => {
-        const j = jitter ? (Math.sin(i * 7.13 + 0.7) * 0.0035) : 0;
-        p += (i === 0 ? 'M' : 'L') + xToPx(pt[0] + j) + ' ' + aToPx(pt[1] + (jitter ? Math.sin(i * 3.1) * 0.004 : 0));
-      });
-      return p;
-    }
-    s += `<path d="${pathOf(lower)}" stroke="${color}" stroke-width="${jitter ? 2.4 : 2}" fill="none" ${jitter ? 'stroke-dasharray="0"' : ''}/>`;
-    s += `<path d="${pathOf(upper)}" stroke="${color}" stroke-width="${jitter ? 2.4 : 2}" fill="none" ${jitter ? '' : ''}/>`;
-
-    // Scatter points (sparse) for FOM to suggest discrete simulations
-    if (jitter) {
-      // sparse circles along curve
-      const all = [...lower, ...upper];
-      for (let i = 0; i < all.length; i += 28) {
-        const p = all[i];
-        s += `<circle cx="${xToPx(p[0])}" cy="${aToPx(p[1])}" r="2" fill="${color}" opacity="0.9"/>`;
-      }
-    }
-
-    group.innerHTML = s;
-  }
-
-  frf(document.getElementById('frf-fom'), '#cb3c33', true);
-  frf(document.getElementById('frf-rom'), '#9558b2', false);
-
-  // drag
-  let dragging = false;
-  function setX(clientX) {
-    const rect = wrap.getBoundingClientRect();
-    let x = (clientX - rect.left) / rect.width;
-    x = Math.max(0.05, Math.min(0.95, x));
-    right.style.clipPath = `inset(0 0 0 ${x * 100}%)`;
-    handle.style.left = (x * 100) + '%';
-  }
-  wrap.addEventListener('pointerdown', (e) => { dragging = true; setX(e.clientX); wrap.setPointerCapture(e.pointerId); });
-  wrap.addEventListener('pointermove', (e) => { if (dragging) setX(e.clientX); });
-  wrap.addEventListener('pointerup', () => { dragging = false; });
+  var command = 'using Pkg\nPkg.add("MORFE")\nusing MORFE';
+  button.addEventListener('click', function () {
+    navigator.clipboard.writeText(command).then(function () {
+      button.textContent = 'Copied!';
+      button.classList.add('copied');
+      setTimeout(function () {
+        button.innerHTML = '<span class="code-prompt" style="color:var(--jl-green)">julia&gt;</span> Pkg.add("MORFE")';
+        button.classList.remove('copied');
+      }, 2000);
+    });
+  });
 })();
 </script>
 

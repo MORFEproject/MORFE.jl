@@ -55,7 +55,8 @@ module MORFEPardisoExt
 
 using MORFE
 using MORFE.CohomologicalEquations: _try_build_pardiso_solver, _pardiso_prepare!,
-                                    _pardiso_factorise_solve!, _pardiso_release!
+                                    _pardiso_factorise_solve!, _pardiso_solve!,
+                                    _pardiso_release!
 using Pardiso
 using SparseArrays
 using LinearAlgebra: norm
@@ -141,6 +142,13 @@ function MORFE.CohomologicalEquations._pardiso_factorise_solve!(
           (iparm[12]) or the matrix type. Load MORFE without Pardiso to fall back to
           KLU, which is exercised by the test suite.""")
     end
+    return x
+end
+
+function MORFE.CohomologicalEquations._pardiso_solve!(
+        ps, A_pardiso, x::AbstractVector, b::AbstractVector)
+    Pardiso.set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
+    Pardiso.pardiso(ps, x, A_pardiso, b)
     return x
 end
 

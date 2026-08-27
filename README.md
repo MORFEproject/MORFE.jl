@@ -27,9 +27,18 @@ $$\dot{\mathbf{z}} = \mathbf{R}(\mathbf{z}, \mathbf{r}), \qquad \mathbf{u} = \ma
 
 ## Installation
 
+Install [Julia 1.10 or later](https://julialang.org/downloads/), then add MORFE from the Julia registry:
+
 ```julia
 using Pkg
 Pkg.add("MORFE")
+using MORFE
+```
+
+To use the latest development version instead, install directly from GitHub:
+
+```julia
+Pkg.add(url = "https://github.com/MORFEproject/MORFE.jl.git")
 ```
 
 ---
@@ -71,9 +80,8 @@ forcing, internal resonances, parametric models and FEM backends.
 MORFE owns the DPIM solver and the abstract `FEMMultilinearMap` interface, so any FEM library can
 supply the physics. The Ferrite.jl backends — the St. Venant-Kirchhoff "mesh → ROM" interface
 (`StructuralSVK`), the parametric-structural engine (`ParametricStructural`) and the incompressible
-fluid backend (`FluidNavierStokes`) — live in the companion package
-[MORFEFerrite.jl](https://github.com/MORFEproject/MORFEFerrite.jl), which will be registered once
-its documentation and tutorials are written:
+fluid backend (`FluidNavierStokes`) — live in the optional companion package
+[MORFEFerrite.jl](https://github.com/MORFEproject/MORFEFerrite.jl), installed directly from GitHub:
 
 ```julia
 Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")
@@ -91,7 +99,6 @@ is the shortest path from a mesh to a ROM.
 | [Tutorials](https://morfeproject.github.io/MORFE.jl/tutorials/) | Full-order model building, multiindex sets, SVK mesh → ROM, Kármán vortex street, parametric models, MEMS micromirror |
 | [Code documentation](https://morfeproject.github.io/MORFE.jl/documentation.html) | API reference and docstrings for every module |
 | [Features](https://morfeproject.github.io/MORFE.jl/features.html) | How DPIM works, and why it differs from classical reduction |
-| [Gallery](https://morfeproject.github.io/MORFE.jl/gallery.html) | Application showcase — MEMS, beams, arches, shells |
 | [Publications](https://morfeproject.github.io/MORFE.jl/publications.html) | Method papers and citation info |
 | [Team](https://morfeproject.github.io/MORFE.jl/team.html) | Developers, contributors and institutions |
 
@@ -103,9 +110,9 @@ carry their own meshes and environments, live in
 
 ## Contributing
 
-Contributions are welcome — please open an issue or a pull request. The
-[team page](https://morfeproject.github.io/MORFE.jl/team.html) has the contribution guide and the
-current contributors.
+Contributions are welcome — see the [contribution guide](CONTRIBUTING.md) for setup, quality checks,
+and pull-request guidance. For questions, feature proposals, or research collaborations, please
+[open an issue](https://github.com/MORFEproject/MORFE.jl/issues).
 
 ---
 

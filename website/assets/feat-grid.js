@@ -30,14 +30,15 @@
       num: 'F.01',
       color: '--jl-purple',
       tint: 'rgba(149,88,178,0.10)',
-      title: 'Spectral Submanifold',
+      title: 'Invariant Manifolds',
       short: 'An $n$-dimensional invariant manifold tangent to the chosen eigenspace — curved coordinates, not a Galerkin projection.',
       detail: {
-        body: 'DPIM parametrises a invariant manifold tangent to the chosen eigenspace. Coordinates on the SSM satisfy the reduced ODE $\\dot{\\mathbf{z}} = \\mathbf{R}(\\mathbf{z}, \\mathbf{r})$ up to the specified expansion order.',
+        body: 'MORFE parametrises invariant manifolds tangent to chosen eigenspaces. The reduced ODE $\\dot{\\mathbf{z}} = \\mathbf{R}(\\mathbf{z}, \\mathbf{r})$ governs the reduced coordinates on the curved manifold.',
         bullets: [
-          'Distinct from POD/Galerkin: curved coordinates, no projection error',
-          'Parametrisation computed order-by-order via cohomological equations',
-          'Nonlinear extension of normal modes, capturing interactions'
+          'Distinct from projection-based methods: no projection error',
+          'Builds an asymptotic expansion order-by-order by solving cohomological equations',
+          'Computes Nonlinear Normal Modes (NNMs)',
+          'Computes Spectral Submanifolds (SSMs) provided special non-resonance conditions hold'
         ],
         link: { href: 'features.html', label: 'Method details →' }
       }

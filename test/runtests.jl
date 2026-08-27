@@ -36,6 +36,9 @@ should_run(group) = GROUP == "all" || GROUP == group
             end
             include("ParametrisationMethod/test_bordered_solver.jl")
             include("ParametrisationMethod/test_cohomological_backends.jl")
+            if get(ENV, "MORFE_RUN_PERFORMANCE_REGRESSION", "0") == "1"
+                include("ParametrisationMethod/benchmark_default_solver.jl")
+            end
             include("ParametrisationMethod/test_external_coupling.jl")
         end
     end

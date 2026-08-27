@@ -312,21 +312,19 @@
     <div class="contrib-grid">
       <div>
         <span class="kicker">Get involved</span>
-        <h2 style="margin: 18px 0 14px;">Join the team.</h2>
-        <p style="color:var(--ink-2); max-width: 48ch;">MORFE.jl is open source. Contributions of code, tutorials, benchmarks and applications are all welcome. If you're using DPIM in your research and would like to collaborate, get in touch.</p>
+        <h2 style="margin: 18px 0 14px;">Contribute or collaborate.</h2>
+        <p style="color:var(--ink-2); max-width: 48ch;">Help improve MORFE.jl with code, tutorials, tests, benchmarks, and applications—or start a research collaboration around nonlinear dynamics and finite-element reduction.</p>
         <div style="display:flex; gap:14px; margin-top: 24px; flex-wrap: wrap;">
-          <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/issues">Open an issue <span class="arrow">→</span></a>
-          <a class="btn" href="https://github.com/MORFEproject/MORFE.jl/blob/main/CONTRIBUTING.md">Contribution guide</a>
+          <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribution guide <span class="arrow">→</span></a>
+          <a class="btn" href="https://github.com/MORFEproject/MORFE.jl/issues" target="_blank" rel="noopener">Start a collaboration</a>
         </div>
       </div>
       <div class="ascii"><span class="ink">$ git clone https://github.com/MORFEproject/MORFE.jl</span>
-<span class="ink">$ cd MORFE.jl && julia --project</span>
-<span class="acc">julia&gt;</span> ] test MORFE
+<span class="ink">$ cd MORFE.jl</span>
+<span class="ink">$ julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'</span>
 <span class="grn">[ Info: tests passed ]</span>
 
-<span class="acc">julia&gt;</span> using Pkg
-<span class="acc">julia&gt;</span> Pkg.add(url=<span class="grn">"https://github.com/MORFEproject/MORFE.jl.git"</span>)
-<span class="acc">julia&gt;</span> Pkg.add(url=<span class="grn">"https://github.com/MORFEproject/MORFEFerrite.jl.git"</span>)  <span class="ink"># Ferrite backends + examples</span></div>
+<span class="ink">$ julia --project=.github/format -e 'using Pkg; Pkg.instantiate(); using JuliaFormatter; format(["src", "ext", "test", "examples"])'</span></div>
     </div>
   </div>
 </section>
@@ -338,9 +336,9 @@
         <div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
         <p style="color:var(--ink-3); font-size:13px; max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
       </div>
-      <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="tutorials/">Tutorials</a></li><li><a href="documentation.html">Documentation</a></li></ul></div>
+      <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="tutorials/">Tutorials</a></li><li><a href="documentation.html">Documentation</a></li></ul></div>
       <div><h4>People</h4><ul><li><a href="team.html">Team</a></li><li><a href="publications.html">Publications</a></li></ul></div>
-      <div><h4>Code</h4><ul><li><a href="#">GitHub</a></li><li><a href="#">Releases</a></li></ul></div>
+      <div><h4>Code</h4><ul><li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/releases" target="_blank" rel="noopener">Releases</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li></ul></div>
     </div>
     <div style="display:flex; justify-content:space-between; margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); color:var(--ink-3); font-size:12px;">
       <div>© MORFE contributors · MIT license</div>

@@ -93,12 +93,23 @@ The unused buffer is a `0×0` placeholder.
 - `ml_result::Vector{T}` — length `FOM`, receiving the nonlinear (multilinear-term)
   contribution from `compute_multilinear_terms!`.
 """
-struct CohomologicalBuffers{T}
+struct CohomologicalBuffers{T, RT <: Real}
     system_matrix::Matrix{T}       # (FOM+ROM)²; dense path only
     orthogonality_rows::Matrix{T}  # ROM×(FOM+ROM); sparse path only
     rhs::Vector{T}                 # length FOM+ROM; rhs in, solution out
     external_rhs::Vector{T}        # length FOM
     ml_result::Vector{T}           # length FOM
+    dense_solution::Vector{T}      # dense backward-error path only
+    dense_refinement::Vector{T}    # allocated lazily after a failed first check
+    residual_tolerance::Union{Nothing, RT}
+    max_refinement_steps::Int
+end
+
+function _configured_residual_tolerance(::Type{T}, options::ParametrisationOptions) where {T}
+    RT = typeof(real(zero(T)))
+    options.residual_check == :off && return nothing
+    return isnothing(options.residual_tolerance) ?
+           sqrt(eps(RT)) / RT(100) : convert(RT, options.residual_tolerance)
 end
 
 """
@@ -108,23 +119,33 @@ Allocate all buffers for a system of full-order dimension `FOM` and `ROM` master
 modes.  Dispatches on the FOM matrix type `MT`: `MT <: SparseMatrixCSC` selects the
 sparse layout, everything else the dense one.
 """
-function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int) where {T, MT}
-    return CohomologicalBuffers{T}(
-        Matrix{T}(undef, FOM + ROM, FOM + ROM),
+function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int,
+        options::ParametrisationOptions = ParametrisationOptions()) where {T, MT}
+    nsys = FOM + ROM
+    RT = typeof(real(zero(T)))
+    return CohomologicalBuffers{T, RT}(
+        Matrix{T}(undef, nsys, nsys),
         Matrix{T}(undef, 0, 0),
-        Vector{T}(undef, FOM + ROM),
+        Vector{T}(undef, nsys),
         zeros(T, FOM),
-        zeros(T, FOM)
+        zeros(T, FOM),
+        _configured_residual_tolerance(T, options) === nothing ? T[] : Vector{T}(undef, nsys),
+        T[],
+        _configured_residual_tolerance(T, options),
+        options.max_refinement_steps
     )
 end
-function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int) where {
+function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int,
+        options::ParametrisationOptions = ParametrisationOptions()) where {
         T, MT <: SparseMatrixCSC}
-    return CohomologicalBuffers{T}(
+    RT = typeof(real(zero(T)))
+    return CohomologicalBuffers{T, RT}(
         Matrix{T}(undef, 0, 0),
         Matrix{T}(undef, ROM, FOM + ROM),
         Vector{T}(undef, FOM + ROM),
         zeros(T, FOM),
-        zeros(T, FOM)
+        zeros(T, FOM),
+        T[], T[], nothing, options.max_refinement_steps
     )
 end
 
@@ -179,24 +200,30 @@ varying `s` requires.  Note `klu_factor!`, not the exported `klu!`: that one is
 `mutable` is load-bearing, not incidental: the Pardiso branch attaches a finaliser to
 release C-side memory, and Julia refuses to finalise an immutable object.
 """
-mutable struct SparseLinearSolverState{T}
+abstract type AbstractSparseBackend end
+struct KLUBackend{VERIFY} <: AbstractSparseBackend end
+struct PardisoBackend{P,VERIFY} <: AbstractSparseBackend
+    solver::P
+end
+
+_backend_name(::KLUBackend) = :klu
+_backend_name(::PardisoBackend) = :pardiso
+
+mutable struct SparseLinearSolverState{T, B <: AbstractSparseBackend, RT <: Real}
     bordered::SparseMatrixCSC{T}         # (FOM+ROM)²; constant pattern
     L_template::SparseMatrixCSC{T}       # FOM²; workspace for L(s)
     L_mappings::Vector{Vector{Int}}      # linear_terms[k].nzval → L_template.nzval
     border_row_base::Vector{Int}         # length FOM
     solve_scratch::Vector{T}             # Pardiso only; empty on the KLU path
-    pardiso::Any                         # nothing, or an AbstractPardisoSolver
     pardiso_matrix::Any                  # nothing until _pardiso_prepare! has run
     fact::Any                            # nothing until the first factorisation
-    backend::Symbol
-    residual_tolerance::Union{Nothing, Float64}
-    rhs_input::Vector{T}
+    backend::B
+    residual_tolerance::Union{Nothing, RT}
+    max_refinement_steps::Int
     residual_work::Vector{T}
-    last_factor_key::Any
-    max_relative_residual::Float64
+    refinement_work::Vector{T}
+    max_relative_residual::RT
     refinement_count::Int
-    factorization_count::Int
-    solve_count::Int
 end
 
 """
@@ -211,26 +238,26 @@ function SparseLinearSolverState{T}(
         L_mappings::Vector{Vector{Int}},
         FOM::Int,
         ROM::Int;
-        config::CohomologicalSolverConfig = CohomologicalSolverConfig()
+        options::ParametrisationOptions = ParametrisationOptions()
 ) where {T}
-    requested = config.backend
+    requested = options.backend
     ps = requested in (:auto, :pardiso) ? _try_build_pardiso_solver() : nothing
     requested == :pardiso && ps === nothing &&
         error(
-            "CohomologicalSolverConfig requested Pardiso, but no Pardiso backend is active")
-    backend = requested == :auto ? (ps === nothing ? :klu : :pardiso) : requested
+            "ParametrisationOptions requested Pardiso, but no Pardiso backend is active")
     bordered, border_row_base = precompute_sparse_bordered_template(L_template, ROM)
-    needs_input_copy = backend in (:umfpack, :pardiso) ||
-                       config.residual_tolerance !== nothing
     nsys = FOM + ROM
-    state = SparseLinearSolverState{T}(
+    RT = typeof(real(zero(T)))
+    residual_tolerance = _configured_residual_tolerance(T, options)
+    verify = !isnothing(residual_tolerance)
+    backend = ps === nothing ? KLUBackend{verify}() : PardisoBackend{typeof(ps),verify}(ps)
+    state = SparseLinearSolverState{T, typeof(backend), RT}(
         bordered, L_template, L_mappings, border_row_base,
-        backend in (:pardiso, :umfpack) ? Vector{T}(undef, nsys) : T[],
-        ps, nothing, nothing,
-        backend, config.residual_tolerance,
-        needs_input_copy ? Vector{T}(undef, nsys) : T[],
-        config.residual_tolerance === nothing ? T[] : Vector{T}(undef, nsys),
-        nothing, 0.0, 0, 0, 0
+        backend isa PardisoBackend ? Vector{T}(undef, nsys) : T[],
+        nothing, nothing,
+        backend, residual_tolerance, options.max_refinement_steps,
+        isnothing(residual_tolerance) || backend isa PardisoBackend ? T[] : Vector{T}(undef, nsys),
+        T[], zero(RT), 0
     )
     # Pardiso's factorisation lives in C-side memory the GC does not track, so it has
     # to be released explicitly or every solve leaks one factorisation. This is also
@@ -246,10 +273,12 @@ end
 Finaliser: hand the Pardiso factorisation back. No-op on the KLU path, and
 never allowed to throw — a finaliser that raises would be reported out of context.
 """
-function _release_pardiso!(state::SparseLinearSolverState)
-    state.pardiso === nothing && return nothing
+function _release_pardiso!(state::SparseLinearSolverState{T, <:KLUBackend}) where {T}
+    return nothing
+end
+function _release_pardiso!(state::SparseLinearSolverState{T, <:PardisoBackend}) where {T}
     try
-        _pardiso_release!(state.pardiso, state.pardiso_matrix)
+        _pardiso_release!(state.backend.solver, state.pardiso_matrix)
     catch
         # Nothing useful to do during finalisation.
     end

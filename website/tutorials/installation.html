@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Install MORFE.jl — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
+<style>
+.pre-wrap { position: relative; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px; padding: 3px 9px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+  background: rgba(255,255,255,.06); color: var(--ink-3); border: 1px solid var(--hair); border-radius: 4px;
+  cursor: pointer;
+}
+.copy-btn:hover { color: var(--ink); border-color: var(--ink-3); }
+.copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,.4); }
+</style>
+</head>
+<body class="docs-page">
+<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+<div class="site">
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav>
+<script src="../assets/nav.js"></script>
+
+<div class="docs-shell">
+  <aside id="tutorial-nav" class="docs-side tutorial-side" data-active="installation.html"></aside>
+  <script src="assets/tutorial-nav.js"></script>
+
+  <main class="docs-main">
+    <div class="crumbs"><a href="../documentation.html">MORFE.jl</a><span class="sep">/</span><a href="index.html">Tutorials</a><span class="sep">/</span><span>Installation</span></div>
+    <h1>Install MORFE.jl</h1>
+    <p class="lede">Install Julia, add MORFE from the package registry, and verify that it loads.</p>
+
+    <h2>Standard installation</h2>
+    <p>Install <a class="inline" href="https://julialang.org/downloads/" target="_blank" rel="noopener">Julia 1.10 or later</a>, then run:</p>
+<pre class="code">using Pkg
+Pkg.add("MORFE")
+using MORFE</pre>
+
+    <h2>Development version</h2>
+    <p>To install the latest development version from GitHub instead of the registered release, run:</p>
+<pre class="code">using Pkg
+Pkg.add(url = "https://github.com/MORFEproject/MORFE.jl.git")</pre>
+
+    <h2>FEM tutorials</h2>
+    <p>The structural and fluid tutorials also use the unregistered MORFEFerrite backend:</p>
+<pre class="code">using Pkg
+Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")</pre>
+
+    <div class="adm note">
+      <div class="adm-head">Next step</div>
+      <div class="adm-body"><p>Once MORFE is installed, choose a tutorial from the <a class="inline" href="index.html">tutorial hub</a>.</p></div>
+    </div>
+  </main>
+
+  <aside class="docs-toc"><h5>On this page</h5><ul><li><a href="#">Installation</a></li></ul></aside>
+</div>
+</div>
+<script src="../assets/manifold-bg.js"></script>
+<script>
+document.querySelectorAll('.docs-main pre').forEach(function (pre) {
+  var wrap = document.createElement('div'); wrap.className = 'pre-wrap';
+  pre.parentNode.insertBefore(wrap, pre); wrap.appendChild(pre);
+  var button = document.createElement('button'); button.className = 'copy-btn'; button.textContent = 'Copy';
+  button.addEventListener('click', function () {
+    navigator.clipboard.writeText(pre.innerText).then(function () {
+      button.textContent = 'Copied!'; button.classList.add('copied');
+      setTimeout(function () { button.textContent = 'Copy'; button.classList.remove('copied'); }, 2000);
+    });
+  });
+  wrap.appendChild(button);
+});
+</script>
+</body>
+</html>

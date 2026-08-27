@@ -27,7 +27,7 @@
 .copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--ink); border-color: var(--ink-3); }
 .copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.4); background: rgba(56,152,38,0.08); }
 
-/* gallery-style thumbnails on the tutorial cards (scoped to this page) */
+/* Thumbnail styling on the tutorial cards (scoped to this page) */
 .tut-card { padding: 0; overflow: hidden; }
 .tut-card .thumb {
   position: relative; aspect-ratio: 16/9; overflow: hidden;
@@ -87,22 +87,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="docs-shell">
 
   <!-- Sidebar -->
-  <aside class="docs-side">
-    <div class="ver"><span><a href="index.html" class="active">Tutorials</a></span></div>
-    <ul>
-      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
-      <li><a href="karman.html">Kármán vortex street</a></li>
-      <li><a href="full_order_model.html">Building a full-order model</a></li>
-      <li><a href="multiindex_sets.html">Monomials and multiindices</a></li>
-    </ul>
-
-    <h4>Getting started</h4>
-    <ul>
-      <li><a href="../index.html#install">Installation</a></li>
-      <li><a href="../documentation.html">Code documentation</a></li>
-    </ul>
-
-  </aside>
+  <aside id="tutorial-nav" class="docs-side tutorial-side" data-active="index.html"></aside>
+  <script src="assets/tutorial-nav.js"></script>
 
   <!-- Main -->
   <main class="docs-main">

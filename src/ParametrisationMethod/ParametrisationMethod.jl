@@ -37,8 +37,13 @@ using ..SpectralDecomposition: SpectralData, master_eigenvalues,
                                master_conjugate_permutation
 using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
 using ..CohomologicalEquations: solve_cohomological_problem,
+                                ParametrisationOptions,
+                                CheckpointOptions,
+                                checkpoint_fingerprint_data,
                                 CohomologicalSolverConfig,
-                                CohomologicalCheckpoint
+                                CohomologicalCheckpoint,
+                                _translate_legacy_options,
+                                _replace_options
 
 # Re-exported wholesale so `ParametrisationMethod` stays the one namespace users (and
 # `ext/MORFEBifurcationKitExt.jl`, which reaches for
@@ -60,6 +65,8 @@ export Parametrisation,
        restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree,
        validate_multiindex_set,
        parametrise, build_multiindex_set, print_setup,
+       ParametrisationOptions, CheckpointOptions,
+       checkpoint_fingerprint_data,
        CohomologicalSolverConfig, CohomologicalCheckpoint
 
 # ==================== Expansion order → multiindex set ====================
@@ -227,13 +234,10 @@ W, R = parametrise(model, spectral, mset)  # a monomial set you built
   `spectral`, extended over the external variables using the model's external system.
   Pass an explicit `NVAR`-length vector to override, or `nothing` to disable conjugate
   symmetry for this solve.
-- `validate_mset::Bool = true` — check the monomial set against the five-clause contract
-  before solving. The solve is then told to skip its own check, so the set is walked once.
-- `show_progress::Bool = true`.
-- `verbose::Bool = true`, `setup_io::IO = stderr` — print the [`print_setup`](@ref) banner.
-  On the default `stderr` it is gated on `stderr isa Base.TTY`, exactly as the progress
-  reporter is, so redirected output and test logs stay as they were. An explicitly passed
-  `setup_io` is always written to — a caller who names a destination asked for the output.
+- `options::ParametrisationOptions = ParametrisationOptions()` — backend selection,
+  exact structural grouping, backward-error verification, multiindex validation,
+  durable checkpointing, and presentation controls. Mathematical choices are not hidden
+  in this object.
 
 ## Returns
 
@@ -245,13 +249,10 @@ function parametrise(
         expansion_order;
         resonance::Union{ResonanceConfig, ResonanceSet} = ResonanceConfig(),
         conjugate_permutation = :from_spectral,
-        validate_mset::Bool = true,
-        show_progress::Bool = true,
-        verbose::Bool = true,
-        setup_io::IO = stderr,
-        solver_config::CohomologicalSolverConfig = CohomologicalSolverConfig(),
-        checkpoint::Union{Nothing, CohomologicalCheckpoint} = nothing
+        options::ParametrisationOptions = ParametrisationOptions(),
+        kwargs...
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}
+    options = _translate_legacy_options(options, kwargs)
     NVAR = ROM + N_EXT
 
     # Each step is a separate, independently dispatchable function.
@@ -260,7 +261,7 @@ function parametrise(
     # Validated here rather than only in the solve, so a malformed set is rejected before
     # the resonance-set construction. The permutation is needed for the closure clause,
     # so it is resolved first.
-    if validate_mset
+    if options.validate_mset
         perm_for_check = conjugate_permutation === :from_spectral ?
                          master_conjugate_permutation(spectral) : conjugate_permutation
         validate_multiindex_set(mset, NVAR, ROM;
@@ -272,17 +273,15 @@ function parametrise(
     # term label — is built inside this branch, because interpolation boxes what it captures
     # even when the result is thrown away. Printed before the resonance set is built so the
     # banner precedes any tolerance `@info` it emits.
-    _setup_output_enabled(verbose, setup_io) &&
-        print_setup(setup_io, model, spectral, mset, resonance)
+    _setup_output_enabled(options.verbose, options.setup_io) &&
+        print_setup(options.setup_io, model, spectral, mset, resonance)
 
     resonance_set = resonance isa ResonanceSet ? resonance :
                     build_resonance_set(model, mset, spectral, resonance)
 
     return solve_cohomological_problem(model, mset, spectral, resonance_set;
         conjugate_permutation = conjugate_permutation,
-        validate_mset = false,   # already checked above; don't walk the set twice
-        show_progress = show_progress,
-        solver_config, checkpoint)
+        options = _replace_options(options; validate_mset = false))
 end
 
 # Same policy as `_make_progress`: on the default `stderr`, print only when it is a TTY, so

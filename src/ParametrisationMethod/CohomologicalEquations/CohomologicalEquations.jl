@@ -124,13 +124,14 @@ using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
 using ..Resonance: ResonanceSet, is_resonant
 using LinearAlgebra
 using SparseArrays
-using Serialization
+using SHA
+using TOML
 # `klu_factor!` is deliberately not the exported `klu!`. `klu!` maps to
 # `klu_refactor`, which reuses the pivot sequence from the first factorisation;
 # `klu_factor!` re-pivots while reusing the cached symbolic analysis, which is what a
 # value-varying `s` requires. See `_refactorise!`.
 using KLU: klu, klu_factor!
-using StaticArrays: SVector
+using StaticArrays: SVector, MVector
 
 # Extension hooks: overridden by ext/MORFEPardisoExt.jl when Pardiso is loaded.
 #
@@ -142,12 +143,14 @@ const _PARDISO_INACTIVE = "Pardiso solver object present but MORFEPardisoExt not
 _try_build_pardiso_solver(::Vararg{Any}) = nothing
 _pardiso_prepare!(args...) = error(_PARDISO_INACTIVE)          # configure + phase 11, once
 _pardiso_factorise_solve!(args...) = error(_PARDISO_INACTIVE)  # phases 22 + 33, per monomial
+_pardiso_solve!(args...) = error(_PARDISO_INACTIVE)            # phase 33, reused factor group
 _pardiso_release!(args...) = nothing                           # phase -1, on finalisation
 
 export _try_build_pardiso_solver, _pardiso_prepare!, _pardiso_factorise_solve!,
-       _pardiso_release!
+       _pardiso_solve!, _pardiso_release!
 
 include("SolverConfiguration.jl")
+include("CheckpointIO.jl")
 include("OperatorData.jl")
 include("SolverResources.jl")
 include("CohomologicalContext.jl")
@@ -156,6 +159,9 @@ include("CohomologicalSolver.jl")
 include("CohomologicalDriver.jl")
 
 export CohomologicalContext,
+       ParametrisationOptions,
+       CheckpointOptions,
+       checkpoint_fingerprint_data,
        CohomologicalSolverConfig,
        CohomologicalCheckpoint,
        InvarianceOperators,
@@ -343,6 +349,11 @@ function solve_single_monomial!(
     solve_single_monomial!(W, R, idx, ctx, _NO_SYM, model, ml_cache)
 end
 
+solve_single_monomial!(W, R, idx::Int, ctx, sym, model, ml_cache,
+    reuse_factor::Bool) = reuse_factor ?
+    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(true)) :
+    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(false))
+
 # Canonical implementation: dispatches the solve step at compile time via sym.
 function solve_single_monomial!(
         W::Parametrisation{ORD, NVAR, T},
@@ -351,8 +362,9 @@ function solve_single_monomial!(
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
         ::ConjugateSymmetryData,
         model::NthOrderModel,
-        ml_cache::MultilinearTermsCache
-) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
+        ml_cache::MultilinearTermsCache,
+        reuse_factor::Val{REUSE} = Val(false)
+) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT, REUSE}
     multi = multiindex_set(W)[idx]
 
     s = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
@@ -374,7 +386,8 @@ function solve_single_monomial!(
     external_dynamics = view(R.poly.coefficients, (ROM + 1):NVAR, idx)
     n_sys = FOM + ROM
 
-    _solve_monomial!(ctx, s, resonance, lower_order_couplings, external_dynamics)
+    _solve_monomial!(
+        ctx, s, resonance, lower_order_couplings, external_dynamics, reuse_factor)
 
     sol = view(ctx.buffers.rhs, 1:n_sys)
     W.poly.coefficients[:, 1, idx] .= view(sol, 1:FOM)
@@ -409,37 +422,84 @@ of `W` and `R`, processing them in *causal order* (ascending total degree).
 """
 function solve_cohomological_equations!(
         W, R, ctx, model, ml_cache; show_progress::Bool = true,
-        group_superharmonics::Bool = false, checkpoint_callback = nothing)
+        grouping::Symbol = :off, checkpoint_callback = nothing)
     nterms = length(multiindex_set(W))
     sym = _build_conjugate_symmetry(NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
     solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
-        show_progress, group_superharmonics, checkpoint_callback)
+        show_progress, grouping, checkpoint_callback)
 end
 
-function _cohomological_schedule(ctx, sym, mset, group_superharmonics)
-    indices = [idx for idx in eachindex(mset.exponents) if !sym.skip_bits[idx]]
-    group_superharmonics || return indices
-    schedule = Int[]
-    for degree in sort!(unique(sum(mset[idx]) for idx in indices))
-        keys = Any[]
-        groups = Dict{Any, Vector{Int}}()
-        for idx in indices
+struct StructuralFactorKey{NVAR, ROM}
+    exponents::SVector{NVAR, Int}
+    resonance::SVector{ROM, Bool}
+end
+
+function _eigenvalue_representatives(lambda_diag)
+    representatives = collect(eachindex(lambda_diag))
+    for i in eachindex(lambda_diag)
+        if iszero(lambda_diag[i])
+            representatives[i] = 0
+            continue
+        end
+        for j in firstindex(lambda_diag):(i - 1)
+            if isequal(lambda_diag[i], lambda_diag[j])
+                representatives[i] = representatives[j]
+                break
+            end
+        end
+    end
+    return representatives
+end
+
+function _has_structural_factor_reuse(lambda_diag)
+    for i in eachindex(lambda_diag)
+        iszero(lambda_diag[i]) && return true
+        for j in firstindex(lambda_diag):(i - 1)
+            isequal(lambda_diag[i], lambda_diag[j]) && return true
+        end
+    end
+    return false
+end
+
+function _structural_factor_key(multi::SVector{NVAR, Int},
+        resonance::SVector{ROM, Bool}, representatives) where {NVAR, ROM}
+    exponents = zeros(MVector{NVAR, Int})
+    for i in 1:NVAR
+        representative = representatives[i]
+        representative == 0 || (exponents[representative] += multi[i])
+    end
+    return StructuralFactorKey(SVector(exponents), resonance)
+end
+
+function _cohomological_groups(ctx, sym, mset, grouping::Symbol, ::Val{ROM}) where {ROM}
+    grouping == :off && return nothing
+    grouping == :auto && !_has_structural_factor_reuse(ctx.lambda_diag) && return nothing
+    representatives = _eigenvalue_representatives(ctx.lambda_diag)
+
+    NVAR = length(ctx.lambda_diag)
+    Key = StructuralFactorKey{NVAR, ROM}
+    ordered_groups = Vector{Vector{Int}}()
+    degrees = sort!(unique(sum(mset[idx]) for idx in eachindex(mset.exponents)
+        if !sym.skip_bits[idx]))
+    for degree in degrees
+        keys = Key[]
+        groups = Dict{Key, Vector{Int}}()
+        for idx in eachindex(mset.exponents)
+            sym.skip_bits[idx] && continue
             sum(mset[idx]) == degree || continue
-            multi = mset[idx]
-            s = sum(multi[i] * ctx.lambda_diag[i] for i in eachindex(multi))
-            key = (s, Tuple(view(ctx.resonance_set.inner_resonances, :, idx)))
+            resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
+            key = _structural_factor_key(mset[idx], resonance, representatives)
             haskey(groups, key) || (groups[key] = Int[]; push!(keys, key))
             push!(groups[key], idx)
         end
-        for key in keys
-            append!(schedule, groups[key])
-        end
+        append!(ordered_groups, (groups[key] for key in keys))
     end
-    return schedule
+    grouping == :auto && length(ordered_groups) == count(!, sym.skip_bits) && return nothing
+    return ordered_groups
 end
 
-function _degree_callback!(callback, degree)
-    isnothing(callback) || callback(degree)
+function _checkpoint_event!(callback, event, degree, indices = Int[])
+    isnothing(callback) || callback(event, degree, indices)
     return nothing
 end
 
@@ -453,25 +513,59 @@ function solve_cohomological_equations!(
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         show_progress::Bool = true,
-        group_superharmonics::Bool = false,
+        grouping::Symbol = :off,
         checkpoint_callback = nothing
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     nterms = length(multiindex_set(W))
-    schedule = _cohomological_schedule(ctx, sym, multiindex_set(W), group_superharmonics)
-    n_to_solve = length(schedule)
+    groups = _cohomological_groups(ctx, sym, multiindex_set(W), grouping, Val(ROM))
+    n_to_solve = count(!, sym.skip_bits)
     prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
     n_done = 0
     current_degree = 0
-    for idx in schedule
-        degree = sum(multiindex_set(W)[idx])
-        current_degree != 0 && degree != current_degree &&
-            _degree_callback!(checkpoint_callback, current_degree)
-        current_degree = degree
-        solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
-        n_done += 1
-        _progress_tick!(prog, n_done, degree)
+    if groups === nothing
+        # The established allocation-free GrLex path remains untouched when no exact
+        # structural factor reuse is available.
+        if isnothing(checkpoint_callback)
+            for idx in 1:nterms
+                @inbounds sym.skip_bits[idx] && continue
+                degree = sum(multiindex_set(W)[idx])
+                solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+                n_done += 1
+                _progress_tick!(prog, n_done, degree)
+            end
+        else
+            for idx in 1:nterms
+                @inbounds sym.skip_bits[idx] && continue
+                degree = sum(multiindex_set(W)[idx])
+                current_degree != 0 && degree != current_degree &&
+                    _checkpoint_event!(checkpoint_callback, :degree, current_degree)
+                current_degree = degree
+                solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+                _checkpoint_event!(checkpoint_callback, :group, degree, [idx])
+                n_done += 1
+                _progress_tick!(prog, n_done, degree)
+            end
+        end
+    else
+        for group in groups
+            for (position, idx) in enumerate(group)
+                degree = sum(multiindex_set(W)[idx])
+                current_degree != 0 && degree != current_degree &&
+                    _checkpoint_event!(checkpoint_callback, :degree, current_degree)
+                current_degree = degree
+                if position == 1
+                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache)
+                else
+                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(true))
+                end
+                n_done += 1
+                _progress_tick!(prog, n_done, degree)
+            end
+            _checkpoint_event!(checkpoint_callback, :group, current_degree, group)
+        end
     end
-    current_degree == 0 || _degree_callback!(checkpoint_callback, current_degree)
+    isnothing(checkpoint_callback) || current_degree == 0 ||
+        _checkpoint_event!(checkpoint_callback, :degree, current_degree)
     _progress_done!(prog, n_done)
     return nothing
 end
@@ -486,32 +580,84 @@ function solve_cohomological_equations!(
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache;
         show_progress::Bool = true,
-        group_superharmonics::Bool = false,
+        grouping::Symbol = :off,
         checkpoint_callback = nothing
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
     pairs = sym.primary_pairs
-    secondary_for_primary = Dict(src => dst for (src, dst) in pairs)
-
-    schedule = _cohomological_schedule(ctx, sym, multiindex_set(W), group_superharmonics)
-    n_to_solve = length(schedule)
+    groups = _cohomological_groups(ctx, sym, multiindex_set(W), grouping, Val(ROM))
+    n_to_solve = count(!, sym.skip_bits)
     prog = _make_progress(n_to_solve, show_progress, model.max_nl_degree)
     n_done = 0
     current_degree = 0
-
-    for idx in schedule
-        degree = sum(multiindex_set(W)[idx])
-        current_degree != 0 && degree != current_degree &&
-            _degree_callback!(checkpoint_callback, current_degree)
-        current_degree = degree
-        solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
-        n_done += 1
-        _progress_tick!(prog, n_done, degree)
-
-        if haskey(secondary_for_primary, idx)
-            fill_conjugate_monomial!(W, R, secondary_for_primary[idx], idx, sym)
+    if groups === nothing
+        ptr = 1
+        if isnothing(checkpoint_callback)
+            for idx in eachindex(multiindex_set(W).exponents)
+                @inbounds sym.skip_bits[idx] && continue
+                degree = sum(multiindex_set(W)[idx])
+                solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+                n_done += 1
+                _progress_tick!(prog, n_done, degree)
+                while ptr <= length(pairs) && @inbounds sym.skip_bits[pairs[ptr][1]]
+                    ptr += 1
+                end
+                if ptr <= length(pairs) && @inbounds pairs[ptr][1] == idx
+                    src, dst = @inbounds pairs[ptr]
+                    fill_conjugate_monomial!(W, R, dst, src, sym)
+                    ptr += 1
+                end
+            end
+        else
+            for idx in eachindex(multiindex_set(W).exponents)
+                @inbounds sym.skip_bits[idx] && continue
+                degree = sum(multiindex_set(W)[idx])
+                current_degree != 0 && degree != current_degree &&
+                    _checkpoint_event!(checkpoint_callback, :degree, current_degree)
+                current_degree = degree
+                solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
+                n_done += 1
+                _progress_tick!(prog, n_done, degree)
+                while ptr <= length(pairs) && @inbounds sym.skip_bits[pairs[ptr][1]]
+                    ptr += 1
+                end
+                if ptr <= length(pairs) && @inbounds pairs[ptr][1] == idx
+                    src, dst = @inbounds pairs[ptr]
+                    fill_conjugate_monomial!(W, R, dst, src, sym)
+                    _checkpoint_event!(checkpoint_callback, :group, degree, [src, dst])
+                    ptr += 1
+                else
+                    _checkpoint_event!(checkpoint_callback, :group, degree, [idx])
+                end
+            end
+        end
+    else
+        secondary_for_primary = Dict(src => dst for (src, dst) in pairs)
+        for group in groups
+            for (position, idx) in enumerate(group)
+                degree = sum(multiindex_set(W)[idx])
+                current_degree != 0 && degree != current_degree &&
+                    _checkpoint_event!(checkpoint_callback, :degree, current_degree)
+                current_degree = degree
+                if position == 1
+                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache)
+                else
+                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(true))
+                end
+                n_done += 1
+                _progress_tick!(prog, n_done, degree)
+                if haskey(secondary_for_primary, idx)
+                    fill_conjugate_monomial!(W, R, secondary_for_primary[idx], idx, sym)
+                end
+            end
+            chunk_indices = copy(group)
+            append!(chunk_indices, (secondary_for_primary[idx] for idx in group
+                if haskey(secondary_for_primary, idx)))
+            sort!(unique!(chunk_indices))
+            _checkpoint_event!(checkpoint_callback, :group, current_degree, chunk_indices)
         end
     end
-    current_degree == 0 || _degree_callback!(checkpoint_callback, current_degree)
+    isnothing(checkpoint_callback) || current_degree == 0 ||
+        _checkpoint_event!(checkpoint_callback, :degree, current_degree)
     _progress_done!(prog, n_done)
     return nothing
 end

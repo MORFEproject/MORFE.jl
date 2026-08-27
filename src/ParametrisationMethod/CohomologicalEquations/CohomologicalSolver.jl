@@ -90,65 +90,72 @@ function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     return F
 end
 
-# Backward-compatible internal name retained for the established KLU regression
-# tests and downstream diagnostic code. Public backend selection goes through
-# `CohomologicalSolverConfig`.
+# Backward-compatible internal name retained for the established KLU regression tests.
 _refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC) = _refactorise_klu!(ss, A)
 
-function _refactorise_umfpack!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
-    F = ss.fact
-    if F === nothing
-        F = lu(A; check = false)
-        issuccess(F) && (ss.fact = F)
-        return F
+function _backward_error(ss::SparseLinearSolverState, x, norm_r, norm_b, norm_A)
+    RT = typeof(ss.max_relative_residual)
+    denominator = norm_A * norm(x, Inf) + norm_b
+    return norm_r / max(denominator, floatmin(RT))
+end
+
+function _sparse_inf_norm!(workspace, A::SparseMatrixCSC)
+    fill!(workspace, zero(eltype(workspace)))
+    @inbounds for column in axes(A, 2)
+        for position in nzrange(A, column)
+            workspace[A.rowval[position]] += abs(A.nzval[position])
+        end
     end
-    # UMFPACK owns the numeric factors outside Julia's managed heap. Replacing the
-    # wrapper and waiting for GC can retain several large factors at once, so release
-    # the old numeric object explicitly before the next value-only factorisation.
-    # Transfer the cached Symbolic handle to a fresh Julia factor wrapper instead of
-    # mutating the old wrapper with `lu!`: repeated large numeric replacement in the
-    # same wrapper triggers macOS allocator reclamation faults. There remains exactly
-    # one Symbolic C handle and, after the explicit free below, at most one Numeric.
-    numeric = F.numeric
-    SparseArrays.UMFPACK.umfpack_free_numeric(
-        numeric, eltype(F.nzval), eltype(F.colptr))
-    numeric.p = C_NULL
-    next = SparseArrays.UMFPACK.UmfpackLU(A; control = F.control)
-    next.symbolic = F.symbolic
-    SparseArrays.UMFPACK.umfpack_numeric!(next; reuse_numeric = false)
-    ss.fact = next
-    return next
+    return maximum(real, workspace)
 end
 
-function _relative_sparse_residual!(ss::SparseLinearSolverState, x)
-    mul!(ss.residual_work, ss.bordered, x)
-    ss.residual_work .-= ss.rhs_input
-    return norm(ss.residual_work) / max(norm(ss.rhs_input), eps(Float64))
+function _sparse_residual!(residual, A::SparseMatrixCSC, x)
+    # Five-argument `mul!` computes A*x-b directly and uses SparseArrays' tuned
+    # CSC kernel. `residual` contains b on entry and is safe as the output because
+    # it does not alias either A or x.
+    return mul!(residual, A, x, one(eltype(residual)), -one(eltype(residual)))
 end
 
-function _check_sparse_residual!(ss::SparseLinearSolverState, x)
+function _klu_backward_error!(ss::SparseLinearSolverState, x, norm_b)
     tolerance = ss.residual_tolerance
     tolerance === nothing && return nothing
-    relative = _relative_sparse_residual!(ss, x)
-    if ss.backend == :umfpack
-        # The bordered FE systems can span many physical scales. UMFPACK's first
-        # backward-stable solve may therefore miss a strict *unscaled* residual
-        # target even though the factorization is sound. Correct the measured
-        # residual with the same numeric factors; separate input/output vectors
-        # are load-bearing for UMFPACK's ldiv! contract.
-        for _ in 1:3
+    # `residual_work` contains the original right-hand side on entry. The five-argument
+    # mul! forms A*x-b in the same vector, so the established KLU path pays for only one
+    # persistent verification vector. A second vector is created only if refinement is
+    # actually necessary.
+    _sparse_residual!(ss.residual_work, ss.bordered, x)
+    RT = typeof(ss.max_relative_residual)
+    norm_r = norm(ss.residual_work, Inf)
+    # Since ‖A‖∞‖x‖∞ + ‖b‖∞ ≥ ‖b‖∞, this inexpensive quantity is a rigorous
+    # upper bound for the requested normwise backward error. Stable solves pass here,
+    # avoiding a second sparse-matrix traversal and any additional workspace.
+    relative = norm_r / max(norm_b, floatmin(RT))
+    if relative > tolerance
+        isempty(ss.refinement_work) && resize!(ss.refinement_work, length(x))
+        copyto!(ss.refinement_work, ss.residual_work)
+        norm_A = _sparse_inf_norm!(ss.residual_work, ss.bordered)
+        relative = _backward_error(ss, x, norm_r, norm_b, norm_A)
+        if relative > tolerance && ss.max_refinement_steps > 0
+            # Reconstruct b = A*x-r in the persistent residual vector. The lazily
+            # allocated refinement vector holds r and then each correction RHS.
+            mul!(ss.residual_work, ss.bordered, x)
+            ss.residual_work .-= ss.refinement_work
+        end
+        for _ in 1:ss.max_refinement_steps
             relative <= tolerance && break
-            copyto!(ss.solve_scratch, ss.residual_work)
-            rmul!(ss.solve_scratch, -one(eltype(ss.solve_scratch)))
-            ldiv!(ss.residual_work, ss.fact, ss.solve_scratch)
-            x .+= ss.residual_work
+            rmul!(ss.refinement_work, -one(eltype(x)))
+            ldiv!(ss.fact, ss.refinement_work)
+            x .+= ss.refinement_work
             ss.refinement_count += 1
-            relative = _relative_sparse_residual!(ss, x)
+            mul!(ss.refinement_work, ss.bordered, x)
+            ss.refinement_work .-= ss.residual_work
+            norm_r = norm(ss.refinement_work, Inf)
+            relative = _backward_error(ss, x, norm_r, norm_b, norm_A)
         end
     end
     ss.max_relative_residual = max(ss.max_relative_residual, relative)
     relative <= tolerance || error(
-        "bordered cohomological solve residual $relative exceeds tolerance $tolerance")
+        "bordered cohomological backward error $relative exceeds tolerance $tolerance")
     return nothing
 end
 
@@ -193,40 +200,55 @@ KLU's `ldiv!` is genuinely in-place, so the KLU branch needs no intermediate buf
 `ss.solve_scratch` exists for Pardiso, whose solve requires distinct input and output
 arrays.
 """
-function _bordered_solve!(ss::SparseLinearSolverState, x::AbstractVector, s, factor_key)
-    isempty(ss.rhs_input) || copyto!(ss.rhs_input, x)
-    reuse = ss.fact !== nothing && isequal(ss.last_factor_key, factor_key)
-    if ss.backend == :pardiso
-        if ss.pardiso_matrix === nothing
-            # Configure and analyse once. The matrix handed back is whatever form
-            # Pardiso wants for the detected type; the pattern never changes after
-            # this, so the analysis stays valid for the whole solve.
-            ss.pardiso_matrix = _pardiso_prepare!(ss.pardiso, ss.bordered)
-        end
-        copyto!(ss.solve_scratch, x)
-        _pardiso_factorise_solve!(ss.pardiso, ss.pardiso_matrix, x, ss.solve_scratch)
-        ss.factorization_count += 1
-    elseif ss.backend == :umfpack
-        if !reuse
-            F = _refactorise_umfpack!(ss, ss.bordered)
-            issuccess(F) || _singular_bordered_system(s)
-            ss.factorization_count += 1
-            ss.last_factor_key = factor_key
-        end
-        ldiv!(x, ss.fact, ss.rhs_input)
-    elseif ss.backend == :klu
-        if !reuse
-            F = _refactorise_klu!(ss, ss.bordered)
-            issuccess(F) || _singular_bordered_system(s)
-            ss.factorization_count += 1
-            ss.last_factor_key = factor_key
-        end
-        ldiv!(ss.fact, x)
-    else
-        error("unsupported sparse cohomological backend $(ss.backend)")
+function _bordered_solve!(
+        ss::SparseLinearSolverState{T, <:KLUBackend{VERIFY}}, x::AbstractVector, s;
+        reuse_factor::Val{REUSE} = Val(false)) where {T,REUSE,VERIFY}
+    norm_b = zero(typeof(ss.max_relative_residual))
+    if VERIFY
+        copyto!(ss.residual_work, x)
+        norm_b = norm(x, Inf)
     end
-    ss.solve_count += 1
-    _check_sparse_residual!(ss, x)
+    if !REUSE || ss.fact === nothing
+        F = _refactorise_klu!(ss, ss.bordered)
+        issuccess(F) || _singular_bordered_system(s)
+    end
+    ldiv!(ss.fact, x)
+    VERIFY && _klu_backward_error!(ss, x, norm_b)
+    return x
+end
+
+function _bordered_solve!(
+        ss::SparseLinearSolverState{T, <:PardisoBackend{P,VERIFY}}, x::AbstractVector, s;
+        reuse_factor::Val{REUSE} = Val(false)) where {T,P,REUSE,VERIFY}
+    # Pardiso's public phase interface always performs a numeric factorisation before
+    # solving. Its one existing scratch vector preserves b and is reused for the
+    # backward-error residual; no second persistent RHS copy is introduced.
+    if ss.pardiso_matrix === nothing
+        ss.pardiso_matrix = _pardiso_prepare!(ss.backend.solver, ss.bordered)
+    end
+    copyto!(ss.solve_scratch, x)
+    norm_b = VERIFY ? norm(x, Inf) : zero(typeof(ss.max_relative_residual))
+    if REUSE
+        _pardiso_solve!(ss.backend.solver, ss.pardiso_matrix, x, ss.solve_scratch)
+    else
+        _pardiso_factorise_solve!(
+            ss.backend.solver, ss.pardiso_matrix, x, ss.solve_scratch)
+    end
+    if VERIFY
+        _sparse_residual!(ss.solve_scratch, ss.bordered, x)
+        RT = typeof(ss.max_relative_residual)
+        norm_r = norm(ss.solve_scratch, Inf)
+        relative = norm_r / max(norm_b, floatmin(RT))
+        if relative > ss.residual_tolerance
+            isempty(ss.refinement_work) && resize!(ss.refinement_work, length(x))
+            copyto!(ss.refinement_work, ss.solve_scratch)
+            norm_A = _sparse_inf_norm!(ss.solve_scratch, ss.bordered)
+            relative = _backward_error(ss, x, norm_r, norm_b, norm_A)
+        end
+        ss.max_relative_residual = max(ss.max_relative_residual, relative)
+        relative <= ss.residual_tolerance || error(
+            "bordered Pardiso backward error $relative exceeds tolerance $(ss.residual_tolerance)")
+    end
     return x
 end
 
@@ -277,6 +299,26 @@ end
 # Dense-path monomial solve
 # =============================================================================
 
+function _dense_backward_error(A, x, b)
+    RT = typeof(real(zero(eltype(x))))
+    norm_A = zero(RT)
+    norm_x = norm(x, Inf)
+    norm_b = norm(b, Inf)
+    norm_r = zero(RT)
+    @inbounds for row in axes(A, 1)
+        row_sum = zero(RT)
+        ax = zero(eltype(x))
+        for column in axes(A, 2)
+            value = A[row, column]
+            row_sum += abs(value)
+            ax += value * x[column]
+        end
+        norm_A = max(norm_A, row_sum)
+        norm_r = max(norm_r, abs(ax - b[row]))
+    end
+    return norm_r / max(norm_A * norm_x + norm_b, floatmin(RT))
+end
+
 """
 	_solve_monomial!(ctx, s, resonance, lower_order_couplings, external_dynamics)
 
@@ -289,13 +331,43 @@ function _solve_monomial!(
         s,
         resonance::SVector{ROM, Bool},
         lower_order_couplings,
-        external_dynamics
-) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM}
+        external_dynamics,
+        reuse_factor::Val{REUSE} = Val(false)
+) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM, REUSE}
     _assemble_bordered_system!(ctx, s, resonance, lower_order_couplings, external_dynamics)
     n_sys = FOM + ROM
     F = lu!(view(ctx.buffers.system_matrix, 1:n_sys, 1:n_sys), check = false)
     issuccess(F) || _singular_bordered_system(s)
     ldiv!(F, view(ctx.buffers.rhs, 1:n_sys))
+    tolerance = ctx.buffers.residual_tolerance
+    if tolerance !== nothing
+        solution = ctx.buffers.dense_solution
+        copyto!(solution, view(ctx.buffers.rhs, 1:n_sys))
+        relative = typemax(typeof(tolerance))
+        for refinement_step in 0:ctx.buffers.max_refinement_steps
+            # Dense LU overwrites its matrix. Reassembly recovers the exact bordered
+            # operator and right-hand side without retaining a second dense matrix.
+            _assemble_bordered_system!(
+                ctx, s, resonance, lower_order_couplings, external_dynamics)
+            A = view(ctx.buffers.system_matrix, 1:n_sys, 1:n_sys)
+            b = view(ctx.buffers.rhs, 1:n_sys)
+            relative = _dense_backward_error(A, solution, b)
+            relative <= tolerance && break
+            refinement_step == ctx.buffers.max_refinement_steps && break
+            isempty(ctx.buffers.dense_refinement) &&
+                resize!(ctx.buffers.dense_refinement, n_sys)
+            correction = ctx.buffers.dense_refinement
+            mul!(correction, A, solution)
+            @. correction = b - correction
+            F = lu!(A, check = false)
+            issuccess(F) || _singular_bordered_system(s)
+            ldiv!(F, correction)
+            solution .+= correction
+        end
+        relative <= tolerance || error(
+            "bordered dense backward error $relative exceeds tolerance $tolerance")
+        copyto!(view(ctx.buffers.rhs, 1:n_sys), solution)
+    end
     return
 end
 
@@ -319,8 +391,9 @@ function _solve_monomial!(
         s,
         resonance::SVector{ROM, Bool},
         lower_order_couplings,
-        external_dynamics
-) where {T, ORD, ORDP1, NVAR, FOM, LT, MT <: SparseMatrixCSC, ROM}
+        external_dynamics,
+        reuse_factor::Val{REUSE} = Val(false)
+) where {T, ORD, ORDP1, NVAR, FOM, LT, MT <: SparseMatrixCSC, ROM, REUSE}
     ss = ctx.sparse_solver::SparseLinearSolverState{T}
     M = ss.bordered
     Mnz = M.nzval
@@ -376,7 +449,7 @@ function _solve_monomial!(
     end
 
     # ── 5. One factorisation, one solve ───────────────────────────────────────
-    factor_key = (s, Tuple(resonance))
-    _bordered_solve!(ss, view(ctx.buffers.rhs, 1:n_sys), s, factor_key)
+    _bordered_solve!(
+        ss, view(ctx.buffers.rhs, 1:n_sys), s; reuse_factor)
     return
 end

@@ -121,6 +121,32 @@ body.docs-page .backdrop { opacity: 0.18; }
 }
 .docs-side li.sub a { padding-left: 28px; font-size: 13px; color: var(--ink-3); }
 .docs-side li.sub a.active { color: #fff; }
+.docs-side.tutorial-side .ver {
+  margin: 0 0 10px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.docs-side.tutorial-side .docs-install-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--jl-purple);
+  border-radius: 4px;
+  background: var(--jl-purple);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  transition: background .15s, border-color .15s;
+}
+.docs-side.tutorial-side .docs-install-btn:hover { background: #a566c2; border-color: #a566c2; color: #fff; }
+.docs-side.tutorial-side .docs-install-btn.active { box-shadow: inset 3px 0 0 rgba(255,255,255,0.72); }
+.docs-side.tutorial-side > .docs-install-btn { margin-bottom: 12px; }
+.docs-side.tutorial-side .tutorial-utility-links { margin-bottom: 28px; }
+.docs-side.tutorial-side .tutorial-nav-heading { margin-bottom: 10px; }
+.docs-side.tutorial-side .tutorial-list { margin-bottom: 0; }
 
 /* ===== Main content ===== */
 .docs-main {
