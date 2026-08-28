@@ -64,7 +64,6 @@ document.addEventListener('DOMContentLoaded', function () {
 </head>
 <body class="docs-page">
 
-<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
 
 <div class="site">
 
@@ -109,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <h2 id="setup">Setup</h2>
     <p>
       Activate the environment stored beside the notebook and load both packages.
-      <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl" target="_blank" rel="noopener"><code>build_model</code></a>
+      <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><code>build_model</code></a>
       is <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite</code></a>'s backend-independent interface, shared by every physics backend;
       <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>
       is <a href="../documentation.html"><code>MORFE</code></a>'s entry point to the reduction.
@@ -126,10 +125,10 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
         <p>
           Set the expansion order: <code>order = 3</code> for a quick run;
           <code>order = 9</code> to reproduce the reference.
-          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/mechanical_model.jl" target="_blank" rel="noopener"><code>mechanical_model</code></a>
+          <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><code>mechanical_model</code></a>
           reads the mesh, the elastic material properties,
           damping, and boundary information. Pass the finite-element and quadrature orders to
-          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/mechanical_model.jl" target="_blank" rel="noopener"><code>mechanical_model</code></a>
+          <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><code>mechanical_model</code></a>
           to override the defaults (<code>fe_order = 2</code>, <code>quad_order = fe_order + 1</code>).
         </p>
         <p>
@@ -150,7 +149,7 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
       <div class="body">
         <h3 id="step-build">Build a physics-independent model for MORFE</h3>
         <p>
-          <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl" target="_blank" rel="noopener"><code>build_model</code></a>
+          <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><code>build_model</code></a>
           converts the structural case into MORFE's physics-independent
           model and computes its spectral data. <code>master = [1]</code> selects the first
           conjugate vibration-mode pair. <code>meta</code> holds auxiliary backend information.
@@ -201,7 +200,7 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
         <h3 id="step-save">Save the ROM (optional)</h3>
         <p>
           The ROM is already available in memory as <code>(W, R)</code>. This optional cell writes
-          <code>W</code>, <code>R</code>, their coefficient table, and a summary to
+          <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>, <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a>, their coefficient table, and a summary to
           <code>results</code> using MORFE's common saver,
           <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl" target="_blank" rel="noopener"><code>save_rom</code></a>.
         </p>
@@ -253,9 +252,10 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
   </aside>
 
 </div>
+<footer id="site-footer" class="foot" data-base="../"></footer>
+<script src="../assets/footer.js"></script>
 </div>
 
-<script src="../assets/manifold-bg.js"></script>
 <script>
 (function () {
   const links = document.querySelectorAll('#toc-list a');

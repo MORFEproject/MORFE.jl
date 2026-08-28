@@ -9,8 +9,77 @@
   z-index: 1;
 }
 
-/* Suppress the manifold backdrop inside docs for readability */
-body.docs-page .backdrop { opacity: 0.18; }
+/* ===== Static package identity artwork =====
+   API-kind colours remain Julia blue/green/purple/red. Amber is reserved for the
+   package-level companion cue, while the mesh nodes reuse the Julia palette. */
+.core-manifold,
+.companion-mesh {
+  position: fixed;
+  z-index: 0;
+  top: 53px;
+  right: 0;
+  width: min(42vw, 680px);
+  height: calc(100vh - 53px);
+  pointer-events: none;
+  mask-image: linear-gradient(to left, rgba(0,0,0,.78), transparent 88%);
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,.78), transparent 88%);
+}
+.core-manifold {
+  /* Fine tuning: +x moves right, +y moves down, and size controls height. */
+  --manifold-x: 70px;
+  --manifold-y: 30px;
+  --manifold-size: 120%;
+  width: min(46vw, 760px);
+  background-image: url("manifold-accent.svg");
+  background-repeat: no-repeat;
+  background-size: auto var(--manifold-size);
+  background-position:
+    calc(100% + var(--manifold-x))
+    calc(50% + var(--manifold-y));
+  opacity: 0.64;
+  mask-image: linear-gradient(to left, rgba(0,0,0,.82), transparent 74%);
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,.82), transparent 74%);
+}
+.companion-mesh {
+  background: url("fem-mesh-accent.svg") top right / cover no-repeat;
+  opacity: 0.62;
+}
+.companion-button {
+  position: fixed;
+  z-index: 35;
+  top: calc(var(--nav-h, 60px) + 92px);
+  /* Sit comfortably inside the right documentation column without hugging
+     the viewport edge or intruding into the API content. */
+  right: 155px;
+  transform: translateX(50%);
+  padding: 11px 16px;
+  border: 1px solid #d4a056;
+  border-radius: 4px;
+  background: #d4a056;
+  box-shadow: 0 8px 28px rgba(0,0,0,.3);
+  color: #17120b;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.companion-button:hover {
+  color: #07070b;
+  border-color: #e2b86f;
+  background: #e2b86f;
+  transform: translateX(50%) translateY(-1px);
+}
+.companion-button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.package-switch .package-mark {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.package-switch .core-mark { background: var(--jl-purple); }
+.package-switch .companion-mark { background: #d4a056; }
 
 /* ===== Sidebar ===== */
 .docs-side {
@@ -196,6 +265,32 @@ body.docs-page .backdrop { opacity: 0.18; }
   max-width: 60ch;
   margin: 8px 0 28px;
 }
+.doc-search-status {
+  margin: -12px 0 20px;
+  font-family: var(--mono);
+  font-size: 11px !important;
+  letter-spacing: .06em;
+  color: var(--ink-3) !important;
+}
+.doc-search-results[hidden], .doc-search-status[hidden] { display: none; }
+.doc-search-results { min-width: 0; }
+.doc-search-results .doc:first-child { margin-top: 0; }
+.doc-search-results .doc.search-exact {
+  box-shadow: 0 0 0 1px rgba(212,160,86,.72), 0 10px 30px rgba(0,0,0,.18);
+}
+.doc-search-results .doc::after {
+  content: attr(data-doc-module);
+  position: absolute;
+  right: 18px;
+  bottom: 10px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: var(--ink-3);
+  opacity: .72;
+  pointer-events: none;
+}
+.doc-search-results .doc .doc-body { padding-bottom: 30px; }
 
 /* Code blocks within docs */
 .docs-main pre.code {
@@ -269,7 +364,14 @@ body.docs-page .backdrop { opacity: 0.18; }
   color: #d6d6df;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  text-align: left;
   gap: 10px;
+}
+.doc .doc-sig code {
+  display: block;
+  width: 100%;
+  text-align: left;
 }
 .doc .doc-sig .badge {
   font-size: 10px;
@@ -289,6 +391,17 @@ body.docs-page .backdrop { opacity: 0.18; }
 .doc .doc-body th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
 .doc .doc-body td.arg { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
 .doc .doc-body td.typ { font-family: var(--mono); color: var(--jl-purple); white-space: nowrap; }
+.doc-module-desc a.doc-ref,
+.doc-body a.doc-ref {
+  color: inherit;
+  border-bottom: 1px dashed rgba(149,88,178,.58);
+  transition: color .15s, border-color .15s;
+}
+.doc-module-desc a.doc-ref:hover,
+.doc-body a.doc-ref:hover {
+  color: #fff;
+  border-bottom-color: var(--jl-purple);
+}
 
 /* On this page */
 .docs-toc {
@@ -398,10 +511,16 @@ body.docs-page .backdrop { opacity: 0.18; }
 @media (max-width: 1240px) {
   .docs-shell { grid-template-columns: 260px minmax(0, 1fr); }
   .docs-toc { display: none; }
+  .companion-button { top: auto; bottom: 18px; right: 18px; transform: none; padding: 9px 13px; }
+  .companion-button:hover { transform: translateY(-1px); }
+  .core-manifold { display: none; }
+  .companion-mesh { width: 52vw; opacity: .3; }
 }
 @media (max-width: 900px) {
   .docs-shell { grid-template-columns: 1fr; }
   .docs-side { display: none; }
   .docs-main { padding: 32px 24px 80px; }
   .tut-grid { grid-template-columns: 1fr; }
+  .companion-button { bottom: 12px; right: 12px; }
+  .companion-mesh { width: 76vw; opacity: .24; }
 }

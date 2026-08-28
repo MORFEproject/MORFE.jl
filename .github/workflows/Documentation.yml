@@ -3,6 +3,9 @@ name: Documentation
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 1'
 
 # Permissions required for GitHub Pages artifact deployment.
 permissions:
@@ -21,6 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check out MORFEFerrite companion package
+        uses: actions/checkout@v4
+        with:
+          repository: MORFEproject/MORFEFerrite.jl
+          ref: main
+          path: MORFEFerrite.jl
+
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
@@ -30,13 +40,20 @@ jobs:
       - name: Install dependencies
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
-      - name: Generate code documentation
+      - name: Install companion documentation dependencies
+        run: julia --project=MORFEFerrite.jl -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
+
+      - name: Generate MORFE code documentation
         run: julia --project=. website/generate_documentation.jl
 
-      # Must follow the step above: the symbol map is scraped from the documentation.html
-      # it just wrote, so the links can never point at a stale anchor.  Needs no packages,
-      # hence plain `julia`.  Only the uploaded artifact is affected — nothing is committed,
-      # so the tutorials stay free of link markup in git.
+      - name: Generate static MORFE manifold artwork
+        run: julia website/generate_manifold_accent.jl
+
+      - name: Generate MORFEFerrite code documentation
+        run: julia --project=MORFEFerrite.jl website/generate_morfeferrite_documentation.jl
+
+      # Must follow both generators: the symbol map is scraped from the pages that will be
+      # shipped, so links cannot point at stale anchors. Needs no packages, hence plain Julia.
       - name: Link API mentions in tutorials
         run: julia website/link_tutorials.jl
 

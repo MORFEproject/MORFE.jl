@@ -1,38 +1,52 @@
 # website/generate_documentation.jl
-# Run from repo root:  julia --project website/generate_documentation.jl
-# Loads MORFE, extracts every documented symbol via Base.Docs,
-# writes website/documentation.html in the site's own style.
+# Core entry point:
+#   julia --project=. website/generate_documentation.jl
+#
+# Companion entry points set `MORFE_DOC_CONFIG` before including this file. The
+# extraction and renderer remain shared; wrappers provide package identity, modules,
+# output location and source-link configuration.
 
-using Pkg: Pkg
-Pkg.activate(joinpath(@__DIR__, ".."))
+using Markdown, Dates
 
-using MORFE, Markdown, Dates
+if !isdefined(Main, :MORFE_DOC_CONFIG)
+	@eval using MORFE
+	const MORFE_DOC_CONFIG = (
+		package_name = "MORFE.jl",
+		page_title = "Code Documentation — MORFE.jl",
+		output_name = "documentation.html",
+		repo_root = normpath(joinpath(@__DIR__, "..")),
+		github_repo = "https://github.com/MORFEproject/MORFE.jl",
+		github_base = "https://github.com/MORFEproject/MORFE.jl/blob/main",
+		companion = false,
+		modules = [
+			(MORFE.Multiindices, "Multiindices"),
+			(MORFE.Polynomials, "Polynomials"),
+			(MORFE.MultilinearMaps, "MultilinearMaps"),
+			(MORFE.ExternalSystems, "ExternalSystems"),
+			(MORFE.FullOrderModel, "FullOrderModel"),
+			(MORFE.SpectralDecomposition, "SpectralDecomposition"),
+			(MORFE.Realification, "Realification"),
+			(MORFE.Resonance, "Resonance"),
+			(MORFE.InvarianceEquation, "InvarianceEquation"),
+			(MORFE.MasterModeOrthogonality, "MasterModeOrthogonality"),
+			(MORFE.ParametrisationObjects, "ParametrisationObjects"),
+			(MORFE.MultilinearTerms, "MultilinearTerms"),
+			(MORFE.LowerOrderCouplings, "LowerOrderCouplings"),
+			(MORFE.CohomologicalEquations, "CohomologicalEquations"),
+			(MORFE.ParametrisationMethod, "ParametrisationMethod"),
+			(MORFE.FEMUtility, "FEMUtility"),
+			(MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
+			(MORFE.InvarianceError, "InvarianceError"),
+		],
+	)
+end
 
-const REPO_ROOT   = normpath(joinpath(@__DIR__, ".."))
-const GITHUB_BASE = "https://github.com/MORFEproject/MORFE.jl/blob/main"
+const DOC_CONFIG = MORFE_DOC_CONFIG
+const REPO_ROOT = DOC_CONFIG.repo_root
+const GITHUB_BASE = DOC_CONFIG.github_base
 
 # ── Module list (mirrors docs/make.jl) ────────────────────────────────────────
-const MODS = [
-	(MORFE.Multiindices, "Multiindices"),
-	(MORFE.Polynomials, "Polynomials"),
-	(MORFE.MultilinearMaps, "MultilinearMaps"),
-	(MORFE.ExternalSystems, "ExternalSystems"),
-	(MORFE.FullOrderModel, "FullOrderModel"),
-	(MORFE.SpectralDecomposition, "SpectralDecomposition"),
-	(MORFE.Realification, "Realification"),
-	(MORFE.Resonance, "Resonance"),
-	(MORFE.InvarianceEquation, "InvarianceEquation"),
-	(MORFE.MasterModeOrthogonality, "MasterModeOrthogonality"),
-	(MORFE.ParametrisationObjects, "ParametrisationObjects"),
-	(MORFE.MultilinearTerms, "MultilinearTerms"),
-	(MORFE.LowerOrderCouplings, "LowerOrderCouplings"),
-	(MORFE.CohomologicalEquations, "CohomologicalEquations"),
-	(MORFE.ParametrisationMethod, "ParametrisationMethod"),
-	(MORFE.FEMUtility, "FEMUtility"),
-	(MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
-	(MORFE.InvarianceError, "InvarianceError"),
-	# ParaviewExport moved to MORFEFerrite.jl (Ferrite/VTK export lives there now).
-]
+const MODS = DOC_CONFIG.modules
 
 # ── Extraction helpers ────────────────────────────────────────────────────────
 function has_own_doc(mod, sym)
@@ -247,7 +261,8 @@ function lookup_ref(target::AbstractString, modlabel::String, index)
 	# silently linking to a same-named symbol somewhere else.
 	if occursin('.', target)
 		parts   = rsplit(target, '.'; limit = 2)
-		modpart = String(parts[1])
+		# Accept both `Module.name` and fully-qualified `Package.Module.name`.
+		modpart = String(last(split(parts[1], '.')))
 		cands   = get(index, String(parts[2]), nothing)
 		cands === nothing && return nothing
 		for (lbl, anchor) in cands
@@ -276,9 +291,41 @@ function resolve_refs(html::String, modlabel::String, index, unresolved::Vector{
 		target = strip(String(mm[:target]))
 		isempty(target) && (target = ref_target_text(body))
 		anchor = lookup_ref(target, modlabel, index)
-		anchor === nothing || return "<a href=\"#$(anchor)\">$(body)</a>"
+		anchor === nothing || return "<a class=\"doc-ref\" href=\"#$(anchor)\">$(body)</a>"
 		push!(unresolved, String(target))
 		return String(body)
+	end)
+end
+
+# Julia's Markdown renderer emits ordinary backtick spans as `<code>…</code>`.
+# Link a span only when its leading identifier is a documented binding. Whole
+# `<pre>` blocks and existing links are protected by the first regex branch, so
+# examples, signatures and explicit Markdown links are never rewritten.
+const PROTECTED_OR_CODE_RE = r"(?<protected><pre\b[^>]*>.*?</pre>|<a\b[^>]*>.*?</a>)|(?<open><code(?:\s[^>]*)?>)(?<body>.*?)</code>"s
+
+function inline_code_target(body::AbstractString)
+	text = ref_target_text(body)
+	# Type parameters and calls are decoration around the documented binding:
+	# `MultiindexSet{N}` and `find_in_set(…)` both target their leading name.
+	cut = findfirst(c -> c == '{' || c == '(', text)
+	target = cut === nothing ? text : strip(text[begin:prevind(text, cut)])
+	# Restrict auto-linking to Julia-style identifiers (optionally qualified).
+	# This intentionally rejects expressions, values, types from prose, and code
+	# fragments even before the documentation index lookup below.
+	occursin(r"^@?[\p{L}_][\p{L}\p{N}_!?]*(?:\.@?[\p{L}_][\p{L}\p{N}_!?]*)*$", target) || return nothing
+	return target
+end
+
+function link_inline_code_refs(html::String, modlabel::String, index)
+	isempty(html) && return html
+	return replace(html, PROTECTED_OR_CODE_RE => function (matched)
+		m = match(PROTECTED_OR_CODE_RE, matched)
+		m[:protected] === nothing || return String(matched)
+		target = inline_code_target(m[:body])
+		target === nothing && return String(matched)
+		anchor = lookup_ref(target, modlabel, index)
+		anchor === nothing && return String(matched)
+		return "$(m[:open])<a class=\"doc-ref\" href=\"#$(anchor)\">$(m[:body])</a></code>"
 	end)
 end
 
@@ -289,9 +336,15 @@ function resolve_all_refs(mods::Vector{ModData})
 	for md in mods
 		entries = [Entry(
 			e.name, e.kind, e.signatures,
-			resolve_refs(e.doc_html, md.label, index, unresolved), e.source_url,
+			link_inline_code_refs(
+				resolve_refs(e.doc_html, md.label, index, unresolved),
+				md.label, index,
+			), e.source_url,
 		) for e in md.entries]
-		desc = resolve_refs(md.desc_html, md.label, index, unresolved)
+		desc = link_inline_code_refs(
+			resolve_refs(md.desc_html, md.label, index, unresolved),
+			md.label, index,
+		)
 		push!(resolved, ModData(md.label, desc, entries))
 	end
 	if isempty(unresolved)
@@ -307,7 +360,7 @@ badge(kind) = kind == "type" ? "badge t" : kind == "macro" ? "badge m" : kind ==
 
 function write_entry(io, modlabel, e::Entry)
 	anchor = "$(modlabel)-$(e.name)"
-	print(io, """<div class="doc doc-$(e.kind)" id="$(anchor)">\n""")
+	print(io, """<div class="doc doc-$(e.kind)" id="$(anchor)" data-doc-name="$(html_escape(e.name))" data-doc-module="$(html_escape(modlabel))">\n""")
 	print(io, """  <div class="doc-sig">\n""")
 	print(io, """    <span class="$(badge(e.kind))">$(e.kind)</span>\n""")
 	if isempty(e.signatures)
@@ -334,6 +387,34 @@ function write_page(mods::Vector{ModData}, outpath::String)
 	n_total = sum(length(md.entries) for md in mods)
 	n_mods = length(mods)
 	generated = Dates.format(Dates.now(), "d U yyyy")
+	companion = DOC_CONFIG.companion
+	current_page = DOC_CONFIG.output_name
+	body_class = companion ? "docs-page companion-docs-page" : "docs-page core-docs-page"
+	heading = companion ? "$(DOC_CONFIG.package_name) Code Documentation" : "Code Documentation"
+	sidebar_label = "$(DOC_CONFIG.package_name) · Code Documentation"
+	package_navigation = companion ? """
+  <h4>Core Package</h4>
+  <ul class="package-switch">
+	<li><a href="documentation.html"><span class="package-mark core-mark" aria-hidden="true"></span>MORFE.jl</a></li>
+  </ul>
+""" : """
+  <h4>Companion Packages</h4>
+  <ul class="package-switch">
+	<li><a href="morfeferrite-documentation.html"><span class="package-mark companion-mark" aria-hidden="true"></span>MORFEFerrite.jl</a></li>
+  </ul>
+"""
+	page_identity = companion ? """
+<div class="companion-mesh" aria-hidden="true"></div>
+<a class="companion-button" href="$(DOC_CONFIG.github_repo)" target="_blank" rel="noopener"
+   aria-label="$(DOC_CONFIG.package_name) companion package on GitHub">$(DOC_CONFIG.package_name)</a>
+""" : """
+<div class="core-manifold" aria-hidden="true"></div>
+"""
+	crumbs = companion ? """<a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Companion Packages</span><span class="sep">/</span><span>$(DOC_CONFIG.package_name)</span>""" :
+		"""<a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span>"""
+	footer_description = companion ?
+		"Ferrite.jl finite-element backends and high-level model-building interfaces for MORFE.jl." :
+		"Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia."
 
 	open(outpath, "w") do io
 		# ── head ──────────────────────────────────────────────────────────────
@@ -344,7 +425,7 @@ function write_page(mods::Vector{ModData}, outpath::String)
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Code Documentation — MORFE.jl</title>
+<title>$(DOC_CONFIG.page_title)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -368,7 +449,7 @@ html { scroll-padding-top: var(--nav-h, 60px); }
 .doc-module-desc pre { background: #07070b; border: 1px solid var(--hair); border-radius: 4px; padding: 10px 14px; font-size: 12px; overflow-x: auto; margin: 8px 0; }
 .doc-module-desc hr { border: 0; border-top: 1px solid var(--hair); margin: 16px 0; }
 .doc { margin: 24px 0; position: relative; }
-.doc .doc-sig { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.doc .doc-sig { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; justify-content: flex-start; text-align: left; }
 /* Per-kind colour tints */
 .doc.doc-function { background: rgba(64,99,216,0.05); border-color: rgba(64,99,216,0.18); }
 .doc.doc-function .doc-sig { background: rgba(64,99,216,0.12); }
@@ -383,7 +464,7 @@ html { scroll-padding-top: var(--nav-h, 60px); }
 .doc .doc-sig .badge.t { background: rgba(56,152,38,0.15); color: var(--jl-green); border: 1px solid rgba(56,152,38,0.3); }
 .doc .doc-sig .badge.m { background: rgba(149,88,178,0.15); color: var(--jl-purple); border: 1px solid rgba(149,88,178,0.3); }
 .doc .doc-sig .badge.c { background: rgba(203,60,51,0.15); color: var(--jl-red); border: 1px solid rgba(203,60,51,0.3); }
-.doc .doc-sig code { display: block; }
+.doc .doc-sig code { display: block; width: 100%; text-align: left; }
 .doc .doc-sig code a { color: inherit; text-decoration: none; border-bottom: 1px dashed rgba(255,255,255,0.25); transition: border-color 0.15s, color 0.15s; }
 .doc .doc-sig code a:hover { border-bottom-color: currentColor; }
 .doc-body p:last-child { margin-bottom: 0; }
@@ -419,9 +500,9 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 </head>
-<body class="docs-page">
+<body class="$(body_class)">
 
-<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
+$(page_identity)
 
 <div class="site">
 
@@ -431,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="docs-shell">
 
 <aside class="docs-side">
-  <div class="ver"><span><a href="documentation.html">Code Documentation</a></span></div>
+  <div class="ver"><span><a href="$(current_page)">$(sidebar_label)</a></span></div>
   <div class="search">
 	<span class="ic mono">⌕</span>
 	<input type="search" id="doc-search" placeholder="Filter…" autocomplete="off" />
@@ -448,18 +529,22 @@ document.addEventListener('DOMContentLoaded', function () {
 			io,
 			"""  </ul>
 
+$(package_navigation)
+
   <h4>Resources</h4>
   <ul>
 	<li><a href="index.html">Getting started</a></li>
 	<li><a href="tutorials/index.html">Demo scripts</a></li>
-	<li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li>
+	<li><a href="$(DOC_CONFIG.github_repo)" target="_blank" rel="noopener">GitHub</a></li>
   </ul>
 </aside>
 
 <main class="docs-main">
-  <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
-  <h1>Code Documentation</h1>
+  <div class="crumbs">$(crumbs)</div>
+  <h1>$(heading)</h1>
   <p class="lede">$(n_mods) modules · $(n_total) documented entries · generated $(generated)</p>
+  <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
+  <div id="doc-search-results" class="doc-search-results" hidden></div>
 
 """,
 		)
@@ -482,52 +567,120 @@ document.addEventListener('DOMContentLoaded', function () {
 </main>
 </div>
 
-<footer class="foot">
-  <div class="wrap">
-	<div class="foot-grid">
-	  <div>
-		<div class="nav-logo" style="margin-bottom:14px;"><span class="dot"></span> MORFE<span style="color:var(--ink-3)">.jl</span></div>
-		<p style="color:var(--ink-3);font-size:13px;max-width:36ch;">Model-Order Reduction for Finite Elements — direct parametrisation of invariant manifolds in Julia.</p>
-	  </div>
-	  <div><h4>Project</h4><ul><li><a href="features.html">Features</a></li><li><a href="tutorials/index.html">Tutorials</a></li><li><a href="documentation.html">Code Documentation</a></li></ul></div>
-	  <div><h4>Code</h4><ul><li><a href="https://github.com/MORFEproject/MORFE.jl" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/issues" target="_blank" rel="noopener">Issues</a></li><li><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li></ul></div>
-	  <div><h4>Cite</h4><ul><li><a href="publications.html">Publications</a></li><li style="color:var(--ink-3);font-size:12px;">Citation details will appear with first publication.</li></ul></div>
-	</div>
-	<div style="display:flex;justify-content:space-between;align-items:center;margin-top:48px;padding-top:24px;border-top:1px solid var(--hair);color:var(--ink-3);font-size:12px;">
-	  <div>© MORFE contributors · MIT license</div>
-	  <div class="mono">generated · $(generated) · julia 1.11</div>
-	</div>
-  </div>
-</footer>
+<footer id="site-footer" class="foot"
+  data-package="$(html_escape(DOC_CONFIG.package_name))"
+  data-repo="$(html_escape(DOC_CONFIG.github_repo))"
+  data-description="$(html_escape(footer_description))"></footer>
+<script src="assets/footer.js"></script>
 
 </div>
-<script src="assets/manifold-bg.js"></script>
 <script>
-// Live filter by text content
+// Ranked live search. Entries move into a temporary result list while searching and
+// return to their exact original positions when the query is cleared.
 (function () {
   var input = document.getElementById('doc-search');
-  if (!input) return;
-  var entries  = document.querySelectorAll('.doc[id]');
+  var results = document.getElementById('doc-search-results');
+  var status = document.getElementById('doc-search-status');
+  if (!input || !results || !status) return;
+  var entries = Array.prototype.slice.call(document.querySelectorAll('.doc[id]'));
   var headings = document.querySelectorAll('.doc-module-h[id]');
   var descMap  = {};
+  var searching = false;
+  var records = entries.map(function (entry, index) {
+    return { entry: entry, index: index, placeholder: null };
+  });
   document.querySelectorAll('.doc-module-desc[data-module]').forEach(function (d) {
 	descMap[d.getAttribute('data-module')] = d;
   });
+
+  function rank(entry, q) {
+	var name = (entry.getAttribute('data-doc-name') || '').toLowerCase();
+	var moduleName = (entry.getAttribute('data-doc-module') || '').toLowerCase();
+	var signature = entry.querySelector('.doc-sig');
+	var signatureText = signature ? signature.textContent.toLowerCase() : '';
+	if (name === q) return 0;
+	if (name.indexOf(q) === 0) return 1;
+	if (name.indexOf(q) >= 0) return 2;
+	if (moduleName === q || moduleName.indexOf(q) === 0) return 3;
+	if (signatureText.indexOf(q) >= 0) return 4;
+	if (entry.textContent.toLowerCase().indexOf(q) >= 0) return 5;
+	return Infinity;
+  }
+
+  function beginSearch() {
+	if (searching) return;
+	searching = true;
+	records.forEach(function (record) {
+	  record.placeholder = document.createComment('doc-search-position');
+	  record.entry.parentNode.insertBefore(record.placeholder, record.entry);
+	  results.appendChild(record.entry);
+	});
+	results.hidden = false;
+	status.hidden = false;
+	headings.forEach(function (h) {
+	  h.style.display = 'none';
+	  if (descMap[h.id]) descMap[h.id].style.display = 'none';
+	});
+  }
+
+  function endSearch() {
+	if (!searching) return;
+	records.forEach(function (record) {
+	  record.placeholder.parentNode.insertBefore(record.entry, record.placeholder);
+	  record.placeholder.remove();
+	  record.placeholder = null;
+	  record.entry.style.display = '';
+	  record.entry.classList.remove('search-exact');
+	});
+	searching = false;
+	results.hidden = true;
+	status.hidden = true;
+	status.textContent = '';
+	headings.forEach(function (h) {
+	  h.style.display = '';
+	  if (descMap[h.id]) descMap[h.id].style.display = '';
+	});
+  }
+
+  function revealFirstResult(ranked) {
+	var first = ranked.find(function (item) { return isFinite(item.rank); });
+	var target = first ? first.record.entry : status;
+	// Reordering changes the document above the current viewport. Browsers preserve the
+	// old scroll offset, which can leave the best result off-screen even though it is first
+	// in the DOM. Wait for layout, then pin the first result immediately below the site nav.
+	requestAnimationFrame(function () {
+	  var nav = document.querySelector('nav.nav');
+	  var navHeight = nav ? nav.getBoundingClientRect().height : 60;
+	  var top = target.getBoundingClientRect().top + window.scrollY - navHeight - 14;
+	  window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+	});
+  }
+
   input.addEventListener('input', function () {
 	var q = this.value.trim().toLowerCase();
-	entries.forEach(function (e) {
-	  e.style.display = !q || e.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+	if (!q) {
+	  endSearch();
+	  return;
+	}
+	beginSearch();
+	var ranked = records.map(function (record) {
+	  return { record: record, rank: rank(record.entry, q) };
+	}).sort(function (a, b) {
+	  return a.rank - b.rank || a.record.index - b.record.index;
 	});
-	headings.forEach(function (h) {
-	  var prefix = h.id + '-', visible = !q;
-	  if (!visible) {
-		entries.forEach(function (e) {
-		  if (e.id.indexOf(prefix) === 0 && e.style.display !== 'none') visible = true;
-		});
-	  }
-	  h.style.display = visible ? '' : 'none';
-	  if (descMap[h.id]) descMap[h.id].style.display = q ? 'none' : '';
+	var visible = 0;
+	var exact = 0;
+	ranked.forEach(function (item) {
+	  var matches = isFinite(item.rank);
+	  item.record.entry.style.display = matches ? '' : 'none';
+	  item.record.entry.classList.toggle('search-exact', item.rank === 0);
+	  results.appendChild(item.record.entry);
+	  if (matches) visible += 1;
+	  if (item.rank === 0) exact += 1;
 	});
+	status.textContent = visible + (visible === 1 ? ' result' : ' results') +
+	  (exact ? ' · exact name match first' : '');
+	revealFirstResult(ranked);
   });
 })();
 
@@ -625,5 +778,5 @@ end
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 mods    = resolve_all_refs(extract_all())
-outpath = joinpath(@__DIR__, "documentation.html")
+outpath = joinpath(@__DIR__, DOC_CONFIG.output_name)
 write_page(mods, outpath)

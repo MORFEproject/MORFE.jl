@@ -70,7 +70,6 @@ document.addEventListener('DOMContentLoaded', function () {
 </head>
 <body class="docs-page">
 
-<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
 
 <div class="site">
 
@@ -395,9 +394,10 @@ document.addEventListener('DOMContentLoaded', function () {
   </aside>
 
 </div>
+<footer id="site-footer" class="foot" data-base="../"></footer>
+<script src="../assets/footer.js"></script>
 </div>
 
-<script src="../assets/manifold-bg.js"></script>
 <script>
 (function () {
   const links = document.querySelectorAll('#toc-list a');

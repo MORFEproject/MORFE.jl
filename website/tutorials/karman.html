@@ -66,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function () {
 </head>
 <body class="docs-page">
 
-<div class="backdrop" aria-hidden="true"><canvas id="manifold-bg"></canvas></div>
 
 <div class="site">
 
@@ -194,7 +193,7 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
 (<span class="var">B₀</span>, <span class="var">B₁</span>) <span class="op">=</span> <span class="fn">assemble_linear_operators</span>(<span class="var">s₀_full</span>, <span class="var">fom</span>; <span class="var">Re0</span> <span class="op">=</span> <span class="var">Re₀</span>)</pre>
         <p>
           Both functions ship in <code>MORFEFerrite.FluidNavierStokes</code>
-          (<code>solve_steady_state</code>, <code>assemble_linear_operators</code> — plain Ferrite
+          (<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-solve_steady_state"><code>solve_steady_state</code></a>, <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-assemble_linear_operators"><code>assemble_linear_operators</code></a> — plain Ferrite
           assembly code) — but this part can be yours, in whatever FEM library you
           use. MORFE operates only on the sparse matrices $\mathbf B_0, \mathbf B_1$ once they exist.
         </p>
@@ -450,9 +449,10 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
   </aside>
 
 </div>
+<footer id="site-footer" class="foot" data-base="../"></footer>
+<script src="../assets/footer.js"></script>
 </div>
 
-<script src="../assets/manifold-bg.js"></script>
 <script>
 (function () {
   const links = document.querySelectorAll('#toc-list a');
