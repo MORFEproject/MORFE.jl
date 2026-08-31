@@ -135,6 +135,36 @@ end
         return ParametrisationOptions(; merge(defaults, (; kwargs...))...)
     end
 
+    @testset "solution storage ownership and recomputation" begin
+        mset = all_multiindices_up_to(2, 5; min_degree = 1)
+        rset = MORFE.Resonance.build_resonance_set(
+            sparse_model, mset, sd, resonance)
+        options = quiet(grouping = :off)
+        W_reference, R_reference = solve_cohomological_problem(
+            sparse_model, mset, sd, rset;
+            conjugate_permutation = nothing, options)
+
+        W_supplied = deepcopy(W_reference)
+        R_supplied = deepcopy(R_reference)
+        nonlinear_indices = findall(i -> sum(mset[i]) >= 2, eachindex(mset.exponents))
+        W_supplied.poly.coefficients[:, :, nonlinear_indices] .= 17 + 3im
+        R_supplied.poly.coefficients[:, nonlinear_indices] .= -11 + 5im
+        W_coefficients = W_supplied.poly.coefficients
+        R_coefficients = R_supplied.poly.coefficients
+
+        W_result, R_result = solve_cohomological_problem(
+            sparse_model, mset, sd, rset;
+            initial_solution = (W_supplied, R_supplied),
+            conjugate_permutation = nothing, options)
+
+        @test W_result === W_supplied
+        @test R_result === R_supplied
+        @test W_result.poly.coefficients === W_coefficients
+        @test R_result.poly.coefficients === R_coefficients
+        @test W_result.poly.coefficients == W_reference.poly.coefficients
+        @test R_result.poly.coefficients == R_reference.poly.coefficients
+    end
+
     @testset "restored KLU path and exact structural grouping" begin
         Wk, Rk = solve_with(quiet(grouping = :off))
         Wkg, Rkg = solve_with(quiet(grouping = :on))
@@ -202,6 +232,31 @@ end
             @test Wr.poly.coefficients == W0.poly.coefficients
             @test Rr.poly.coefficients == R0.poly.coefficients
 
+            W_supplied = deepcopy(W0)
+            R_supplied = deepcopy(R0)
+            checkpoint_mset = W0.poly.multiindex_set
+            checkpoint_rset = MORFE.Resonance.build_resonance_set(
+                sparse_model, checkpoint_mset, sd, resonance)
+            W_same, R_same = solve_cohomological_problem(
+                sparse_model, checkpoint_mset, sd, checkpoint_rset;
+                initial_solution = (W_supplied, R_supplied), options)
+            @test W_same === W_supplied
+            @test R_same === R_supplied
+            @test W_same.poly.coefficients == W0.poly.coefficients
+            @test R_same.poly.coefficients == R0.poly.coefficients
+
+            W_mismatch = deepcopy(W0)
+            W_mismatch.poly.coefficients[1] += 1
+            @test_throws ArgumentError solve_cohomological_problem(
+                sparse_model, checkpoint_mset, sd, checkpoint_rset;
+                initial_solution = (W_mismatch, deepcopy(R0)), options)
+
+            R_mismatch = deepcopy(R0)
+            R_mismatch.poly.coefficients[1] += 1
+            @test_throws ArgumentError solve_cohomological_problem(
+                sparse_model, checkpoint_mset, sd, checkpoint_rset;
+                initial_solution = (deepcopy(W0), R_mismatch), options)
+
             stale = quiet(grouping = :on,
                 checkpoint = CheckpointOptions(path;
                     problem_id = "stale-id", granularity = :factor_group))
@@ -224,6 +279,21 @@ end
             open(manifest_path, "w") do io
                 _CheckpointTOML.print(io, manifest; sorted = true)
             end
+            W_partial = deepcopy(W0)
+            R_partial = deepcopy(R0)
+            degree_five = findall(
+                i -> sum(checkpoint_mset[i]) == 5,
+                eachindex(checkpoint_mset.exponents))
+            W_partial.poly.coefficients[:, :, degree_five] .= 23 - 7im
+            R_partial.poly.coefficients[:, degree_five] .= -19 - 2im
+            W_completed, R_completed = solve_cohomological_problem(
+                sparse_model, checkpoint_mset, sd, checkpoint_rset;
+                initial_solution = (W_partial, R_partial), options)
+            @test W_completed === W_partial
+            @test R_completed === R_partial
+            @test relerr(W_completed.poly.coefficients, W0.poly.coefficients) <= 1e-12
+            @test relerr(R_completed.poly.coefficients, R0.poly.coefficients) <= 1e-12
+
             Wi, Ri = solve_with(options)
             @test relerr(Wi.poly.coefficients, W0.poly.coefficients) <= 1e-12
             @test relerr(Ri.poly.coefficients, R0.poly.coefficients) <= 1e-12

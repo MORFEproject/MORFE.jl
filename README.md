@@ -1,7 +1,7 @@
 # MORFE.jl — Model-Order Reduction for Finite Elements
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Project Status: Pre-Alpha](https://img.shields.io/badge/Project_Status-Pre--Alpha-FF9900)](https://opensource.org/licenses/MIT)
+[![Project Status: Alpha](https://img.shields.io/badge/Project_Status-Alpha-FF9900)](https://opensource.org/licenses/MIT)
 [![Julia 1.10+](https://img.shields.io/badge/Julia-1.10+-9558B2.svg)](https://julialang.org/downloads/)
 [![Docs](https://img.shields.io/badge/docs-morfeproject.github.io-blue)](https://morfeproject.github.io/MORFE.jl/documentation.html)
 [![Tests](https://github.com/MORFEproject/MORFE.jl/actions/workflows/tests.yml/badge.svg)](https://github.com/MORFEproject/MORFE.jl/actions/workflows/tests.yml)
@@ -20,7 +20,7 @@ $$\Downarrow \quad \text{DPIM, order } k \quad \Downarrow$$
 
 $$\dot{\mathbf{z}} = \mathbf{R}(\mathbf{z}, \mathbf{r}), \qquad \mathbf{u} = \mathbf{W}(\mathbf{z}, \mathbf{r}), \qquad n = 2 \sim 4 \ll N$$
 
-> **Pre-Alpha**: the API may still change between versions. The cohomological solver, eigenproblem
+> **Alpha**: the API may still change between versions. The cohomological solver, eigenproblem
 > pipeline and FEM backend interface are fully functional today.
 
 ---
