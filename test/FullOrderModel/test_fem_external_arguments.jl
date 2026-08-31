@@ -209,13 +209,16 @@ end
 
     result = zeros(ComplexF64, _FEM_FOM)
     compute_multilinear_terms!(result, model, quadratic_index, W, cache)
-    closures = ntuple(i -> MultilinearMap(
-        (r, x, y) -> (r .+= terms[i].scale * dot(conj(terms[i].w), x) *
-                             dot(conj(terms[i].w), y) .* terms[i].shape),
-        (2, 0); fully_asymmetric = false), 2)
+    closures = ntuple(
+        i -> MultilinearMap(
+            (r, x, y) -> (r .+= terms[i].scale * dot(conj(terms[i].w), x) *
+                                dot(conj(terms[i].w), y) .* terms[i].shape),
+            (2, 0); fully_asymmetric = false),
+        2)
     reference_model = NthOrderModel((K, K, K), closures)
     reference_cache = build_multilinear_terms_cache(reference_model, W)
     reference = zeros(ComplexF64, _FEM_FOM)
-    compute_multilinear_terms!(reference, reference_model, quadratic_index, W, reference_cache)
+    compute_multilinear_terms!(
+        reference, reference_model, quadratic_index, W, reference_cache)
     @test result ≈ reference atol=1e-12
 end

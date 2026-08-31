@@ -208,7 +208,6 @@ end
         end
     end
 
-
     @testset "degree checkpoints" begin
         mktempdir() do directory
             checkpoint = CheckpointOptions(joinpath(directory, "degree");
@@ -248,7 +247,8 @@ end
                     "solve_alloc_bytes", "monomial_total_time_s", "cumul_time_s"]
                 @test length(split(first(order), ',')) == 9
                 solved_rows = length(mono) - 1
-                solved_from_orders = sum(parse(Int, split(row, ',')[2]) for row in order[2:end])
+                solved_from_orders = sum(parse(Int, split(row, ',')[2])
+                for row in order[2:end])
                 @test solved_rows == solved_from_orders
                 @test solved_rows > 0
             end

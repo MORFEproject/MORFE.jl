@@ -2,13 +2,11 @@ using Plots
 
 @testset "invariance convergence plots" begin
     radii = 10.0 .^ range(-4, -1; length = 6)
-    results = [
-        (max_order = 3, radii = radii .* (1 + level),
-            radii_master = radii, force_errors = (1 + level) .* radii .^ 4,
-            state_errors = (2 + level) .* radii .^ 4,
-            r_magnitude = level == 0 ? 0.0 : 0.2)
-        for level in 0:1
-    ]
+    results = [(max_order = 3, radii = radii .* (1 + level),
+                   radii_master = radii, force_errors = (1 + level) .* radii .^ 4,
+                   state_errors = (2 + level) .* radii .^ 4,
+                   r_magnitude = level == 0 ? 0.0 : 0.2)
+               for level in 0:1]
 
     full = plot_invariance_convergence(results; x_axis = :full,
         show_state_errors = false, show_regression = true)
