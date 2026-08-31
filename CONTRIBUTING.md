@@ -28,8 +28,8 @@ Commit any formatting changes produced by the second command.
 ## Pull requests
 
 - Keep each pull request focused on one issue or cohesive improvement.
-- Add or update tests for changed behavior, and run the test suite locally when practical.
-- Update user-facing documentation, tutorials, or examples when the public behavior changes.
+- Add or update tests for changed behaviour, and run the test suite locally when practical.
+- Update user-facing documentation, tutorials, or examples when the public behaviour changes.
 - Explain the problem, approach, and validation in the pull-request description.
 
 ## Research and application collaborations

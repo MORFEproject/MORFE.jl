@@ -19,7 +19,7 @@
   resize();
 
   // Pointer & scroll state
-  let mx = 0.5, my = 0.4; // normalized 0..1
+  let mx = 0.5, my = 0.4; // normalised 0..1
   let tmx = 0.5, tmy = 0.4;
   let scrollY = 0;
   window.addEventListener('pointermove', (e) => {

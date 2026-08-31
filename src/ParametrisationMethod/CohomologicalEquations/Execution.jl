@@ -754,7 +754,7 @@ updates, progress output, or CSV writing. This diagnostic loop supports conjugat
 but deliberately does not use structural factor grouping or checkpoint callbacks.
 
 `benchmark_dir` is required and is created when necessary. `show_progress` has the same TTY
-behavior as in [`solve_cohomological_equations!`](@ref).
+behaviour as in [`solve_cohomological_equations!`](@ref).
 """
 function solve_cohomological_equations_benchmarked!(
         W::Parametrisation{ORD, NVAR, T},

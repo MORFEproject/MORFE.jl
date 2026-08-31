@@ -8,7 +8,7 @@ using MORFE.Multiindices: grlex_precede, num_multiindices_up_to, monomial_rank, 
 # ============================================================================
 
 """
-    is_grlex_sorted(set::MultiindexSet) -> Bool
+	is_grlex_sorted(set::MultiindexSet) -> Bool
 
 Check that the exponents of `set` are non‑decreasing in the Grlex order.
 """
@@ -27,7 +27,7 @@ function is_grlex_sorted(set::MultiindexSet)
 end
 
 """
-    random_exponent(nvars::Int, max_deg::Int) -> Vector{Int}
+	random_exponent(nvars::Int, max_deg::Int) -> Vector{Int}
 
 Generate a random exponent vector with total degree ≤ max_deg.
 """
@@ -549,7 +549,7 @@ end
 
     # Expect 4 factorisations
     @test length(facs) == 4
-    # Verify each factorization sums to exp and all factors belong to set
+    # Verify each factorisation sums to exp and all factors belong to set
     for f in facs
         @test length(f) == N
         s = zeros(Int, 2)

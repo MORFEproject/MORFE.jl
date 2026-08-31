@@ -1089,7 +1089,7 @@ SVKPullbackKernel&#123;DEG&#125;&#40;stress, ρ &#61; 0.0&#41;</code></pre>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_forcings&#40;forcing&#41; -&gt; Vector&#123;&lt;:HarmonicForcing&#125;</code></pre>
-<p>Normalize the public <code>forcing</code> forms—<code>nothing</code>, one <code><a class="doc-ref" href="#StructuralSVK-HarmonicForcing">HarmonicForcing</a></code>, or an abstract vector of them—to a vector. The autonomous case returns an empty vector.</p>
+<p>Normalise the public <code>forcing</code> forms—<code>nothing</code>, one <code><a class="doc-ref" href="#StructuralSVK-HarmonicForcing">HarmonicForcing</a></code>, or an abstract vector of them—to a vector. The autonomous case returns an empty vector.</p>
 </div>
   </div>
 </div>
@@ -2627,7 +2627,7 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 	  var nav = document.querySelector('nav.nav');
 	  var navHeight = nav ? nav.getBoundingClientRect().height : 60;
 	  var top = target.getBoundingClientRect().top + window.scrollY - navHeight - 14;
-	  window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+	  window.scrollTo({ top: Math.max(0, top), behaviour: 'auto' });
 	});
   }
 

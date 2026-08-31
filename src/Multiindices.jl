@@ -640,7 +640,7 @@ function indices_in_box_with_bounded_degree(
     return result
 end
 
-# ==================== Factorizations ====================
+# ==================== Factorisations ====================
 
 """
 	FactorisationEntry
