@@ -39,7 +39,8 @@ using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
 using ..CohomologicalEquations: solve_cohomological_problem,
                                 ParametrisationOptions,
                                 CheckpointOptions,
-                                checkpoint_fingerprint_data
+                                checkpoint_fingerprint_data,
+                                _replace_options
 
 # Re-exported wholesale so `ParametrisationMethod` stays the one namespace users (and
 # `ext/MORFEBifurcationKitExt.jl`, which reaches for

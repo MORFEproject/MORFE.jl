@@ -110,11 +110,13 @@ function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
 
     W_conj, R_conj = solve_cohomological_problem(
         model, _mset, _spectral, res_set;
-        conjugate_permutation = [2, 1, 4, 3], show_progress = false
+        conjugate_permutation = [2, 1, 4, 3],
+        options = ParametrisationOptions(show_progress = false)
     )
     W_noconj, R_noconj = solve_cohomological_problem(
         model, _mset, _spectral, res_set;
-        conjugate_permutation = nothing, show_progress = false
+        conjugate_permutation = nothing,
+        options = ParametrisationOptions(show_progress = false)
     )
 
     Wc1 = W_conj.poly.coefficients    # FOM × ORD × L

@@ -53,7 +53,6 @@ end
     @test !isdefined(_CE_DOCS, :CohomologicalCheckpoint)
 
     @test !isdefined(_CE_DOCS, :_translate_legacy_options)
-    @test !isdefined(_CE_DOCS, :_replace_options)
 
     generated_page = read(
         joinpath(@__DIR__, "..", "..", "website",

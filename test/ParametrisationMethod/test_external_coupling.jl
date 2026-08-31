@@ -114,7 +114,8 @@ function _ec_solve(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64})
         external_eigenvalues = ComplexF64[_EC_λ_ext...])
     return solve_cohomological_problem(
         model, _EC_mset, _EC_spectral, res_set;
-        conjugate_permutation = nothing, show_progress = false
+        conjugate_permutation = nothing,
+        options = ParametrisationOptions(show_progress = false)
     )
 end
 

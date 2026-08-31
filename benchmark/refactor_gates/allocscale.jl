@@ -31,11 +31,13 @@ for (n, order) in ((6, 3), (6, 7), (30, 5), (30, 7))
 
     function plain()
         solve_cohomological_problem(model, mset, sd, rset;
-            conjugate_permutation = nothing, show_progress = false)
+            conjugate_permutation = nothing,
+            options = ParametrisationOptions(show_progress = false))
     end
     function conj()
         solve_cohomological_problem(model, mset, sd, rset;
-            conjugate_permutation = [2, 1], show_progress = false)
+            conjugate_permutation = [2, 1],
+            options = ParametrisationOptions(show_progress = false))
     end
     plain()
     conj()

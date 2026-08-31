@@ -85,15 +85,16 @@ using MORFE.Resonance: ResonanceConfig
 
         # `parametrise` routes through it when a destination is named ...
         buf = IOBuffer()
-        parametrise(model, sdc, order; resonance = cnf, setup_io = buf,
-            show_progress = false)
+        parametrise(model, sdc, order; resonance = cnf,
+            options = ParametrisationOptions(setup_io = buf, show_progress = false))
         @test occursin("MORFE parametrisation", String(take!(buf)))
 
         # ... and stays silent when asked to, or when the destination is the default
         # `stderr` under test (never a TTY), which is what keeps existing logs unchanged.
         quiet = IOBuffer()
-        parametrise(model, sdc, order; resonance = cnf, setup_io = quiet,
-            verbose = false, show_progress = false)
+        parametrise(model, sdc, order; resonance = cnf,
+            options = ParametrisationOptions(
+                setup_io = quiet, verbose = false, show_progress = false))
         @test isempty(take!(quiet))
         # The gate: `stderr` follows the TTY rule the progress reporter uses; a named
         # destination is always written to.

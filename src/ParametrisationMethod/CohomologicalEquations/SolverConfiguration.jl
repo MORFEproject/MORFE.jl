@@ -188,3 +188,20 @@ function ParametrisationOptions(;
         Int(max_refinement_steps), validate_mset, checkpoint,
         show_progress, verbose, setup_io)
 end
+
+function _replace_options(options::ParametrisationOptions;
+        backend = options.backend,
+        grouping = options.grouping,
+        residual_check = options.residual_check,
+        residual_tolerance = options.residual_tolerance,
+        max_refinement_steps = options.max_refinement_steps,
+        validate_mset = options.validate_mset,
+        checkpoint = options.checkpoint,
+        show_progress = options.show_progress,
+        verbose = options.verbose,
+        setup_io = options.setup_io)
+    return ParametrisationOptions(;
+        backend, grouping, residual_check, residual_tolerance,
+        max_refinement_steps, validate_mset, checkpoint,
+        show_progress, verbose, setup_io)
+end

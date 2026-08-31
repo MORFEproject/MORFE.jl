@@ -63,7 +63,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
                 outer_targets = true, warn_outer = false))
 
         args = (mset, sd, rset)
-        kwargs = (; show_progress = false)
+        kwargs = (; options = ParametrisationOptions(show_progress = false))
         Wd, Rd = solve_cohomological_problem(dense_model, args...; kwargs...)
         Ws, Rs = solve_cohomological_problem(sparse_model, args...; kwargs...)
         return (; Wd, Rd, Ws, Rs, mset, rset, master_eigs)

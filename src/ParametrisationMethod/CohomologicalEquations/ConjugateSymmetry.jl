@@ -51,15 +51,11 @@ outer solve loop; their coefficients are filled by `fill_conjugate_monomial!`.
   not solve.  Covers both the linear monomials (already known from eigenvectors) and
   the secondary monomials obtained by conjugation, so the loop needs one test rather
   than two.
-- `primary_pairs::Vector{NTuple{2, Int}}` — `(source, conjugate)` position pairs
-  with `conjugate > source`, in ascending `source` order.  Ordering lets the solve
-  loop walk them with a single advancing pointer instead of searching.
 """
 struct ConjugateSymmetryData{CP}
     permutation::CP
     monomial_map::Vector{Int}
     skip_bits::BitVector                   # length L
-    primary_pairs::Vector{NTuple{2, Int}}  # (source_idx, conj_idx), conj_idx > source_idx
 end
 
 # =============================================================================
@@ -98,8 +94,7 @@ end
 Factory for `ConjugateSymmetryData`.
 
 - **Inactive** (first argument is `NoConjugatePermutation()`): wraps `linear_skip_set`
-  as `skip_bits` and returns a `ConjugateSymmetryData{NoConjugatePermutation}` with
-  empty `primary_pairs`.
+  as `skip_bits` and returns a `ConjugateSymmetryData{NoConjugatePermutation}`.
 - **Active** (first argument is an `SVector{NVAR,Int}` involution): builds the monomial
   conjugate map, identifies primary/secondary pairs, populates `skip_bits` for both
   linear monomials and secondary conjugate monomials, and returns a
@@ -111,7 +106,7 @@ function _build_conjugate_symmetry(::NoConjugatePermutation, linear_skip_set::Se
         skip_bits[i] = true
     end
     return ConjugateSymmetryData{NoConjugatePermutation}(
-        NoConjugatePermutation(), Int[], skip_bits, NTuple{2, Int}[])
+        NoConjugatePermutation(), Int[], skip_bits)
 end
 
 # Active path: perm must be a proper involution with no zero entries.
@@ -128,7 +123,6 @@ function _build_conjugate_symmetry(
     monomial_map = _build_monomial_map(mset, perm, mdict)
 
     skip_bits = falses(length(mset))
-    primary_pairs = NTuple{2, Int}[]
     for i in linear_skip_set
         skip_bits[i] = true
     end
@@ -137,14 +131,13 @@ function _build_conjugate_symmetry(
         j = monomial_map[i]
         if j > i
             skip_bits[j] = true
-            push!(primary_pairs, (i, j))
         end
         j ∈ (0, i) && continue           # no partner (j=0) or self-symmetric (j=i)
         @assert monomial_map[j] == i "conjugate map must be symmetric at i=$i"
         @assert !(j in linear_skip_set) "conjugate of a non-linear must not be linear"
     end
 
-    return ConjugateSymmetryData{SVector{NVAR, Int}}(perm, monomial_map, skip_bits, primary_pairs)
+    return ConjugateSymmetryData{SVector{NVAR, Int}}(perm, monomial_map, skip_bits)
 end
 
 # =============================================================================

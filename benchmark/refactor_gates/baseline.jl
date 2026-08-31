@@ -90,12 +90,14 @@ let ROM = 2, order = 7
     rset = build_resonance_set(model, mset, sd, CNF)
     record!("M1_dense_noconj",
         () -> solve_cohomological_problem(model, mset, sd, rset;
-            conjugate_permutation = nothing, show_progress = false))
+            conjugate_permutation = nothing,
+            options = ParametrisationOptions(show_progress = false)))
 
     # M2 — same model, conjugate-symmetry path active.
     record!("M2_dense_conj",
         () -> solve_cohomological_problem(model, mset, sd, rset;
-            conjugate_permutation = [2, 1], show_progress = false))
+            conjugate_permutation = [2, 1],
+            options = ParametrisationOptions(show_progress = false)))
 end
 
 # M3 — sparse solver path (KLU), larger chain.
@@ -107,7 +109,8 @@ let ROM = 2, order = 5, n = 30
     rset = build_resonance_set(model, mset, sd, CNF)
     record!("M3_sparse_chain30",
         () -> solve_cohomological_problem(model, mset, sd, rset;
-            conjugate_permutation = [2, 1], show_progress = false))
+            conjugate_permutation = [2, 1],
+            options = ParametrisationOptions(show_progress = false)))
 end
 
 # M4 — external system present (N_EXT = 2), conjugate permutation over ROM+N_EXT.
@@ -131,7 +134,8 @@ let ROM = 2, order = 5
     rset = build_resonance_set(model, mset, sd, CNF)
     record!("M4_external_conj",
         () -> solve_cohomological_problem(model, mset, sd, rset;
-            conjugate_permutation = [2, 1, 4, 3], show_progress = false))
+            conjugate_permutation = [2, 1, 4, 3],
+            options = ParametrisationOptions(show_progress = false)))
 end
 
 # M5 — ORD-mismatch path: ORD-3 augmented model fed by ORD-2 eigendata,
@@ -158,7 +162,8 @@ let ROM = 2, order = 5
         Array(MORFE.SpectralDecomposition.left_mode_blocks(sd)))
     record!("M5_ord3_mismatch",
         () -> solve_cohomological_problem(model, mset, sd, rset;
-            conjugate_permutation = [2, 1], show_progress = false))
+            conjugate_permutation = [2, 1],
+            options = ParametrisationOptions(show_progress = false)))
 end
 
 serialize(joinpath(OUTDIR, "summary.jls"), results)

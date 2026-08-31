@@ -67,7 +67,8 @@ let ROM = 2, order = 7
             master_modes_derivatives = mmd, left_modes_derivatives = lmd,
             conjugate_permutation = perm, show_progress = false)
         sdp = SpectralData(model, ep; master = findall(m), conjugate_permutation = perm)
-        Wb, Rb = solve_cohomological_problem(model, mset, sdp, rset; show_progress = false)
+        Wb, Rb = solve_cohomological_problem(model, mset, sdp, rset;
+            options = ParametrisationOptions(show_progress = false))
         check("ORD=2 $label  W bit-identical", Wa.poly.coefficients == Wb.poly.coefficients)
         check("ORD=2 $label  R bit-identical", Ra.poly.coefficients == Rb.poly.coefficients)
 
@@ -75,7 +76,8 @@ let ROM = 2, order = 7
             master_modes_derivatives = mmd, left_modes_derivatives = lmd,
             conjugate_permutation = perm, show_progress = false)
         gb = @allocated solve_cohomological_problem(
-            model, mset, sdp, rset; show_progress = false)
+            model, mset, sdp, rset;
+            options = ParametrisationOptions(show_progress = false))
         @printf("  %-52s %d vs %d bytes (%+d)\n", "ORD=2 $label  allocations", ga, gb,
             gb - ga)
         # The SpectralData path carries a small CONSTANT setup overhead, measured at
@@ -137,7 +139,8 @@ let ROM = 2, order = 5
     Wa, Ra = solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
         master_modes_derivatives = mmd, left_modes_derivatives = lmd,
         conjugate_permutation = [2, 1], show_progress = false)
-    Wb, Rb = solve_cohomological_problem(model, mset, sd, rset; show_progress = false)
+    Wb, Rb = solve_cohomological_problem(model, mset, sd, rset;
+        options = ParametrisationOptions(show_progress = false))
     check("ORD-mismatch W bit-identical", Wa.poly.coefficients == Wb.poly.coefficients)
     check("ORD-mismatch R bit-identical", Ra.poly.coefficients == Rb.poly.coefficients)
 end
@@ -175,7 +178,8 @@ let ROM = 2, order = 5
     Wa, Ra = solve_cohomological_problem(model, mset, λ, Ψ, ℓ, rset;
         master_modes_derivatives = mmd, left_modes_derivatives = lmd,
         conjugate_permutation = [2, 1, 4, 3], show_progress = false)
-    Wb, Rb = solve_cohomological_problem(model, mset, sd, rset; show_progress = false)
+    Wb, Rb = solve_cohomological_problem(model, mset, sd, rset;
+        options = ParametrisationOptions(show_progress = false))
     check("external  W bit-identical (perm derived, not literal)",
         Wa.poly.coefficients == Wb.poly.coefficients)
     check("external  R bit-identical", Ra.poly.coefficients == Rb.poly.coefficients)

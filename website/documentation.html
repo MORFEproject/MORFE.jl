@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">19 modules · 306 documented entries · generated 31 August 2026</p>
+  <p class="lede">19 modules · 305 documented entries · generated 31 August 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -5079,7 +5079,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_spectral_conjugate_permutation" data-doc-name="_spectral_conjugate_permutation" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L551" target="_blank" rel="noopener">_spectral_conjugate_permutation</a>(request, spectral::SpectralData, sys)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L546" target="_blank" rel="noopener">_spectral_conjugate_permutation</a>(request, spectral::SpectralData, sys)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_spectral_conjugate_permutation&#40;request, spectral, external_system&#41;</code></pre>
@@ -5095,17 +5095,6 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
   <div class="doc-body">
 <div class="markdown"><pre><code>_timed_solve_single_monomial&#33;&#40;W, R, idx, ctx, sym, model, ml_cache&#41;</code></pre>
 <p>Identical to <code><a class="doc-ref" href="#CohomologicalEquations-solve_single_monomial!">solve_single_monomial&#33;</a></code> but wraps <code><a class="doc-ref" href="#MultilinearTerms-compute_multilinear_terms!">compute_multilinear_terms&#33;</a></code> &#40;nonlinear RHS assembly&#41; and <code><a class="doc-ref" href="#CohomologicalEquations-_solve_monomial!">_solve_monomial&#33;</a></code> &#40;linear system solve&#41; with <code>@timed</code>, and returns a NamedTuple <code>&#40;rhs_time, rhs_bytes, solve_time, solve_bytes&#41;</code>.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="CohomologicalEquations-_translate_legacy_options" data-doc-name="_translate_legacy_options" data-doc-module="CohomologicalEquations">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverConfiguration.jl#L209" target="_blank" rel="noopener">_translate_legacy_options</a>(options::ParametrisationOptions, kwargs)</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>_translate_legacy_options&#40;options, kwargs&#41; -&gt; ParametrisationOptions</code></pre>
-<p>Translate the temporarily supported direct operational keywords into a new options value. Only <code>solver_config</code>, <code>checkpoint</code>, <code>validate_mset</code>, <code>show_progress</code>, <code>verbose</code>, and <code>setup_io</code> are accepted; <code>solver_config</code> itself must already be a <code><a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions">ParametrisationOptions</a></code>.</p>
 </div>
   </div>
 </div>
@@ -5210,7 +5199,7 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 <div class="doc doc-function" id="CohomologicalEquations-solve_cohomological_problem" data-doc-name="solve_cohomological_problem" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L202" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options, kwargs...) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalDriver.jl#L202" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_cohomological_problem&#40;
@@ -5255,7 +5244,6 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 <li><p><code>benchmark_dir</code> — <code>nothing</code> for the normal grouped/checkpoint-capable solve, or a directory in which <a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_equations_benchmarked!"><code>solve_cohomological_equations_benchmarked&#33;</code></a> writes timing CSV files. Benchmark mode uses its dedicated causal loop and therefore does not perform factor grouping or invoke checkpoint callbacks.</p>
 </li>
 </ul>
-<p>Deprecated operational keywords are accepted through <code>kwargs</code> for migration only. New code should place them in <code>options</code>; unknown keywords raise <code>UndefKeywordError</code>.</p>
 <h2>Returns</h2>
 <p><code>&#40;W, R&#41;</code> — the solved <a class="doc-ref" href="#ParametrisationObjects-Parametrisation"><code>Parametrisation</code></a> and <a class="doc-ref" href="#ParametrisationObjects-ReducedDynamics"><code>ReducedDynamics</code></a>.</p>
 </div>
@@ -5287,9 +5275,9 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 <div class="doc doc-function" id="ParametrisationMethod-build_multiindex_set" data-doc-name="build_multiindex_set" data-doc-module="ParametrisationMethod">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L71" target="_blank" rel="noopener">build_multiindex_set</a>(mset::MultiindexSet, ::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L71" target="_blank" rel="noopener">build_multiindex_set</a>(expansion_order::Integer, nvar::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L71" target="_blank" rel="noopener">build_multiindex_set</a>(x, ::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L70" target="_blank" rel="noopener">build_multiindex_set</a>(mset::MultiindexSet, ::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L70" target="_blank" rel="noopener">build_multiindex_set</a>(expansion_order::Integer, nvar::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L70" target="_blank" rel="noopener">build_multiindex_set</a>(x, ::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>build_multiindex_set&#40;expansion_order, nvar&#41; -&gt; MultiindexSet</code></pre>
@@ -5309,7 +5297,7 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 <div class="doc doc-function" id="ParametrisationMethod-parametrise" data-doc-name="parametrise" data-doc-module="ParametrisationMethod">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L200" target="_blank" rel="noopener">parametrise</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, spectral::SpectralData{ORD, ROM}, expansion_order; resonance, conjugate_permutation, options, kwargs...) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L199" target="_blank" rel="noopener">parametrise</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, spectral::SpectralData{ORD, ROM}, expansion_order; resonance, conjugate_permutation, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>parametrise&#40;model, spectral::SpectralData, expansion_order;
@@ -5360,7 +5348,7 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <div class="doc doc-function" id="ParametrisationMethod-print_setup" data-doc-name="print_setup" data-doc-module="ParametrisationMethod">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L146" target="_blank" rel="noopener">print_setup</a>(io::IO, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}, spectral::SpectralData{ORD, ROM}, mset::MultiindexSet{NVAR}, resonance) where {ORD, ORDP1, N_NL, N_EXT, T, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L145" target="_blank" rel="noopener">print_setup</a>(io::IO, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}, spectral::SpectralData{ORD, ROM}, mset::MultiindexSet{NVAR}, resonance) where {ORD, ORDP1, N_NL, N_EXT, T, MT, NVAR, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>print_setup&#40;io, model, spectral, mset, resonance&#41;</code></pre>

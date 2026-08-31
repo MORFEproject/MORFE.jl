@@ -113,6 +113,6 @@ using MORFE.Multiindices: MultiindexSet, find_in_set
         # The answer is meaningless by construction — we assert only that the escape
         # hatch reaches the solver instead of throwing.
         @test parametrise(model, sd, not_closed; resonance = cnf,
-            validate_mset = false) isa Tuple
+            options = ParametrisationOptions(validate_mset = false)) isa Tuple
     end
 end
