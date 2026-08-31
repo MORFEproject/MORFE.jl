@@ -29,7 +29,7 @@ function _initialise_waveform!(
             for k in 2:ORD_W
                 W.poly.coefficients[:, k, idx_er] .= view(
                     master_right_mode_derivatives, :, k -
-                                                 1, r)
+                                                      1, r)
             end
         end
         R.poly.coefficients[r, idx_er] = master_eigenvalues[r]

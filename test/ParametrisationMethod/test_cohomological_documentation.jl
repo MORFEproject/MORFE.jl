@@ -10,7 +10,7 @@ function _binding_doc_text(mod::Module, symbol::Symbol)
     multidoc = metadata[binding]
     return join(
         join(part for part in docstr.text if part isa AbstractString)
-        for docstr in values(multidoc.docs))
+    for docstr in values(multidoc.docs))
 end
 
 function _is_locally_defined_api(mod::Module, symbol::Symbol)
@@ -76,8 +76,9 @@ end
     @test_throws ArgumentError _CE_DOCS._translate_legacy_options(
         ParametrisationOptions(), (; solver_config = :klu))
 
-    generated_page = read(joinpath(@__DIR__, "..", "..", "website",
-        "documentation.html"), String)
+    generated_page = read(
+        joinpath(@__DIR__, "..", "..", "website",
+            "documentation.html"), String)
     @test !occursin("href=\"@ref\"", generated_page)
     @test !occursin("CohomologicalSolverConfig", generated_page)
     @test !occursin("CohomologicalCheckpoint", generated_page)
