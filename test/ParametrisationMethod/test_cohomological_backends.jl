@@ -1,6 +1,7 @@
 using Test
 using LinearAlgebra
 using SparseArrays
+using StaticArrays: SVector
 
 using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
@@ -26,9 +27,62 @@ end
     @test_throws ArgumentError ParametrisationOptions(backend = :umfpack)
     @test_throws ArgumentError ParametrisationOptions(backend = :unknown)
     @test_throws ArgumentError ParametrisationOptions(grouping = :approximate)
+    @test_throws ArgumentError ParametrisationOptions(residual_check = :relative)
     @test_throws ArgumentError ParametrisationOptions(residual_tolerance = 0.0)
+    @test_throws ArgumentError ParametrisationOptions(max_refinement_steps = -1)
     @test_throws ArgumentError CheckpointOptions(""; problem_id = "valid")
     @test_throws ArgumentError CheckpointOptions("state"; problem_id = "")
+
+    CE = MORFE.CohomologicalEquations
+    @test !CE._has_structural_factor_reuse(ComplexF64[1, 2])
+    @test CE._has_structural_factor_reuse(ComplexF64[1, 1])
+    @test CE._has_structural_factor_reuse(ComplexF64[0, 2])
+    @test CE._eigenvalue_representatives(ComplexF64[0, 3, 3]) == [0, 2, 2]
+
+    @testset "solve jobs use the final skip mask" begin
+        mset = all_multiindices_up_to(2, 3; min_degree = 1)
+        linear = Set(CE._linear_monomial_indices(mset))
+        inactive = CE._build_conjugate_symmetry(
+            NoConjugatePermutation(), linear, length(mset))
+        inactive_jobs = CE._build_solve_jobs(inactive)
+        @test all(job.conjugate_target == 0 for job in inactive_jobs)
+        @test all(!inactive.skip_bits[job.index] for job in inactive_jobs)
+        @test issorted(sum(mset[job.index]) for job in inactive_jobs)
+
+        dictionary = MORFE.Multiindices.build_exponent_index_map(mset)
+        active = CE._build_conjugate_symmetry(
+            SVector(2, 1), linear, mset, dictionary)
+        active_jobs = CE._build_solve_jobs(active)
+        paired = findfirst(job -> job.conjugate_target != 0, active_jobs)
+        @test paired !== nothing
+        pair = active_jobs[paired]
+        @test pair.conjugate_target > pair.index
+        @test active.skip_bits[pair.conjugate_target]
+
+        # Resume and external-direction setup mark additional entries after symmetry
+        # discovery. Rebuilding jobs must observe those final mutations.
+        active.skip_bits[pair.index] = true
+        rebuilt = CE._build_solve_jobs(active)
+        @test all(job.index != pair.index for job in rebuilt)
+        @test all(job.conjugate_target != pair.conjugate_target for job in rebuilt)
+        @test any(job.conjugate_target == 0 for job in rebuilt)
+        @test_throws ArgumentError CE._build_solve_plan(
+            nothing, nothing, nothing, :invalid, Val(1))
+    end
+
+    @testset "missing external-dynamics coefficient is rejected" begin
+        mset = MultiindexSet([
+            SVector(1, 0, 0), SVector(0, 1, 0), SVector(0, 0, 1)])
+        _, R = create_parametrisation_method_objects(mset, 2, 1, 1, 2, ComplexF64)
+        ext_set = all_multiindices_up_to(2, 2; min_degree = 1)
+        ext_coefficients = zeros(ComplexF64, 2, length(ext_set))
+        cross = findfirst(==(SVector(1, 1)), ext_set.exponents)
+        ext_coefficients[1, cross] = 1
+        ext_poly = DensePolynomial(ext_coefficients, ext_set)
+        @test_throws ArgumentError CE._embed_external_dynamics!(R, ext_poly, mset)
+        ext_coefficients[1, cross] = 0
+        @test CE._embed_external_dynamics!(R, ext_poly, mset) === nothing
+    end
 
     B0 = [2.0 -1.0; -1.0 2.0]
     B2 = Matrix{Float64}(I, 2, 2)
@@ -73,6 +127,19 @@ end
                 show_progress = false, verbose = false); model = dense_model)
         @test relerr(Wd.poly.coefficients, Wk.poly.coefficients) <= 1e-11
         @test relerr(Rd.poly.coefficients, Rk.poly.coefficients) <= 1e-11
+
+        # Impossibly strict verification deterministically reaches the dense and KLU
+        # failure paths; allowing one correction also exercises iterative refinement.
+        for steps in (0, 1)
+            strict_dense = ParametrisationOptions(
+                residual_check = :backward_error, residual_tolerance = 1e-30,
+                max_refinement_steps = steps, grouping = :off,
+                show_progress = false, verbose = false)
+            strict_klu = quiet(grouping = :off, residual_tolerance = 1e-30,
+                max_refinement_steps = steps)
+            @test_throws ErrorException solve_with(strict_dense; model = dense_model)
+            @test_throws ErrorException solve_with(strict_klu)
+        end
     end
 
     @testset "checksummed factor-group checkpoint and exact resume" begin
@@ -139,5 +206,55 @@ end
             end
             @test_throws ArgumentError solve_with(options)
         end
+    end
+
+
+    @testset "degree checkpoints" begin
+        mktempdir() do directory
+            checkpoint = CheckpointOptions(joinpath(directory, "degree");
+                problem_id = "degree-fixture", granularity = :degree)
+            Wd, Rd = solve_with(quiet(grouping = :off, checkpoint = checkpoint))
+            manifest = _CheckpointTOML.parsefile(joinpath(checkpoint.path, "manifest.toml"))
+            @test manifest["completed_degrees"] == collect(1:5)
+            @test length(manifest["chunks"]) == 5
+            Wr, Rr = solve_with(quiet(grouping = :off, checkpoint = checkpoint))
+            @test Wr.poly.coefficients == Wd.poly.coefficients
+            @test Rr.poly.coefficients == Rd.poly.coefficients
+        end
+    end
+
+    @testset "benchmarked overloads and CSVs" begin
+        mset = all_multiindices_up_to(2, 3; min_degree = 1)
+        rset = MORFE.Resonance.build_resonance_set(dense_model, mset, sd, resonance)
+        base_options = ParametrisationOptions(
+            grouping = :off, show_progress = false, verbose = false)
+
+        function check_benchmark(permutation)
+            ordinary = solve_cohomological_problem(
+                dense_model, mset, sd, rset;
+                conjugate_permutation = permutation, options = base_options)
+            mktempdir() do directory
+                measured = solve_cohomological_problem(
+                    dense_model, mset, sd, rset;
+                    conjugate_permutation = permutation,
+                    benchmark_dir = directory, options = base_options)
+                @test measured[1].poly.coefficients ≈ ordinary[1].poly.coefficients
+                @test measured[2].poly.coefficients ≈ ordinary[2].poly.coefficients
+
+                mono = readlines(joinpath(directory, "benchmark_per_monomial.csv"))
+                order = readlines(joinpath(directory, "benchmark_per_order.csv"))
+                @test split(first(mono), ',') == ["order", "monomial_idx", "exponents",
+                    "rhs_time_s", "rhs_alloc_bytes", "solve_time_s",
+                    "solve_alloc_bytes", "monomial_total_time_s", "cumul_time_s"]
+                @test length(split(first(order), ',')) == 9
+                solved_rows = length(mono) - 1
+                solved_from_orders = sum(parse(Int, split(row, ',')[2]) for row in order[2:end])
+                @test solved_rows == solved_from_orders
+                @test solved_rows > 0
+            end
+        end
+
+        check_benchmark(nothing)
+        check_benchmark([2, 1])
     end
 end

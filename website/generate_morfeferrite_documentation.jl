@@ -22,6 +22,9 @@ const MORFE_DOC_CONFIG = (
     modules = [
         (MORFEFerrite.Common, "Common"),
         (MORFEFerrite.Common.MeshIO, "MeshIO"),
+        (MORFEFerrite.Common.MeshIO.AbaqusToGmsh, "MeshIO.AbaqusToGmsh"),
+        (MORFEFerrite.Common.MeshIO.ComsolToGmsh, "MeshIO.ComsolToGmsh"),
+        (MORFEFerrite.Common.MeshIO.GmshToComsol, "MeshIO.GmshToComsol"),
         (MORFEFerrite.ParametricGeometry, "ParametricGeometry"),
         (MORFEFerrite.StructuralSVK, "StructuralSVK"),
         (MORFEFerrite.FluidNavierStokes, "FluidNavierStokes")

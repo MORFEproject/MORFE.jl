@@ -1,3 +1,5 @@
+# Durable checkpoint format, compatibility checks, restoration, and atomic commits.
+
 const _CHECKPOINT_SCHEMA = 2
 const _CHECKPOINT_MAGIC = UInt8[0x4d, 0x4f, 0x52, 0x46, 0x45, 0x43, 0x50, 0x32]
 

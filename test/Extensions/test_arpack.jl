@@ -23,7 +23,7 @@ end
     n = 18
     K = spdiagm(0 => collect(1.0:n))
     C = spdiagm(0 => fill(0.08, n))
-    M = sparse(I, n, n)
+    M = spdiagm(0 => ones(n))
     model = NthOrderModel((K, C, M))
     solver = ArpackEigensolver(2)
     λ, Y = eigensolve(model, solver)
@@ -38,7 +38,7 @@ end
 end
 
 @testset "structural modal damping" begin
-    M = sparse(I, 5, 5)
+    M = spdiagm(0 => ones(5))
     K = spdiagm(0 => [1.0, 4.0, 9.0, 16.0, 25.0])
     under = StructureModalDampingEigensolver(2, 0.02, 0.01)
     λu, Yu = eigensolve(M, K, under)

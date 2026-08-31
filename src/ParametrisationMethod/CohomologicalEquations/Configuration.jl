@@ -1,3 +1,5 @@
+# User-facing execution, validation, output, and checkpoint policy.
+
 """
 	CheckpointOptions(path; problem_id, resume = true, granularity = :factor_group)
 

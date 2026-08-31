@@ -1,5 +1,7 @@
 """Regression test for conjugate and no-conjugate solve equivalence."""
 
+module NoConjugateRegression
+
 using LinearAlgebra
 using StaticArrays
 using Test
@@ -16,7 +18,7 @@ const _max_degree = 3
 const _ζ = 0.01
 
 # Natural frequencies; first one is the master mode (conjugate pair λ₁, conj(λ₁))
-const _ω_nat = [1.0, 3.0, 5.0, 7.0]
+const _ω_nat = [1.0, 3.2, 5.3, 7.1]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Linear matrices  (second-order system: M ẍ + C ẋ + K x = f, M = I)
@@ -136,3 +138,5 @@ end
               result.R_noconj.poly.coefficients atol=1e-10
     end
 end
+
+end # module NoConjugateRegression

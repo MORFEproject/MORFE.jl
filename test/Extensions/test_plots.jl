@@ -6,7 +6,7 @@ using Plots
         (max_order = 3, radii = radii .* (1 + level),
             radii_master = radii, force_errors = (1 + level) .* radii .^ 4,
             state_errors = (2 + level) .* radii .^ 4,
-            r_magnitude = level == 0 ? 0.0 : 0.2),
+            r_magnitude = level == 0 ? 0.0 : 0.2)
         for level in 0:1
     ]
 

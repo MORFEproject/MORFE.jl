@@ -102,6 +102,10 @@ document.addEventListener('DOMContentLoaded', function () {
   <h4>Modules</h4>
   <ul>
     <li><a href="#Common">Common</a></li>
+    <li><a href="#MeshIO">MeshIO</a></li>
+    <li><a href="#MeshIO.AbaqusToGmsh">MeshIO.AbaqusToGmsh</a></li>
+    <li><a href="#MeshIO.ComsolToGmsh">MeshIO.ComsolToGmsh</a></li>
+    <li><a href="#MeshIO.GmshToComsol">MeshIO.GmshToComsol</a></li>
     <li><a href="#ParametricGeometry">ParametricGeometry</a></li>
     <li><a href="#StructuralSVK">StructuralSVK</a></li>
     <li><a href="#FluidNavierStokes">FluidNavierStokes</a></li>
@@ -124,14 +128,14 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Companion Packages</span><span class="sep">/</span><span>MORFEFerrite.jl</span></div>
   <h1>MORFEFerrite.jl Code Documentation</h1>
-  <p class="lede">4 modules · 157 documented entries · generated 28 August 2026</p>
+  <p class="lede">8 modules · 163 documented entries · generated 31 August 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
   <div id="Common" class="doc-module-h">Common</div>
   <div class="doc-module-desc" data-module="Common"><div class="markdown"><p><code>MORFEFerrite.Common</code> — shared Ferrite backend layer.</p>
 <ul>
-<li><p><code><a class="doc-ref" href="#Common-load_comsol_grid">load_comsol_grid</a></code> — COMSOL <code>.mphtxt</code> → Ferrite <code>Grid</code> &#40;quadratic prism cells&#41;.</p>
+<li><p><code><a class="doc-ref" href="#MeshIO">MeshIO</a></code> — COMSOL/Abaqus/Gmsh mesh loading and conversion.</p>
 </li>
 <li><p><code><a class="doc-ref" href="#Common-node_dof">node_dof</a></code>, <code><a class="doc-ref" href="#Common-free_dofs_at_nodes">free_dofs_at_nodes</a></code> — mesh node &#43; direction → DOF index.</p>
 </li>
@@ -146,8 +150,8 @@ document.addEventListener('DOMContentLoaded', function () {
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>AbstractAssembledModel</code></pre>
-<p>Supertype for every physics backend&#39;s assembled-model object — the thing that holds the FE spaces, the assembled operators and whatever else that physics needs, before any reduction is chosen.</p>
-<p>Each backend subtypes it and implements exactly one method of <a class="doc-ref" href="#Common-build_model"><code>build_model</code></a>. There is no wrapper &quot;case&quot; type: dispatch happens on the backend&#39;s own struct.</p>
+<p>Supertype for a physics backend&#39;s assembled full-order data: FE spaces, assembled operators, material data, and any backend-specific factories needed before a reduction is chosen.</p>
+<p>Each concrete subtype implements <a class="doc-ref" href="#Common-build_model"><code>build_model</code></a>. Dispatch is on the backend&#39;s assembled-model type; no additional wrapper &quot;case&quot; type is required.</p>
 </div>
   </div>
 </div>
@@ -161,32 +165,32 @@ document.addEventListener('DOMContentLoaded', function () {
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>build_model&#40;m::AbstractAssembledModel; kwargs...&#41; -&gt; &#40;; model, spectral, meta&#41;</code></pre>
-<p>Turn an assembled physics model into what a reduction consumes.</p>
+<p>Construct the full-order model and spectral data consumed by a reduction.</p>
 <p><strong>This is the single contract every MORFEFerrite physics module implements.</strong> The first two fields are exactly what <code>MORFE.parametrise</code> takes:</p>
 <pre><code class="language-julia">&#40;; model, spectral&#41; &#61; build_model&#40;case; master &#61; &#91;1&#93;, forcing &#61; …&#41;
 W, R &#61; parametrise&#40;model, spectral, expansion_order&#41;</code></pre>
-<p>Keyword arguments are the backend&#39;s own — which modes are master, what forcing to apply, how many eigenpairs to compute — because those are physics-specific. What is <em>not</em> backend-specific is the return type, and that is the point: everything downstream of <code><a class="doc-ref" href="#Common-build_model">build_model</a></code> is shared.</p>
+<p>Keyword arguments are backend-specific: they may select master modes, add forcing, configure diagnostics, or request/reuse an eigensolve. The return shape is shared, so everything downstream of <code><a class="doc-ref" href="#Common-build_model">build_model</a></code> can remain physics-independent.</p>
 <p>The return is a <code>NamedTuple</code>, not a positional tuple, so that a backend can grow what it reports without breaking callers who only want <code>model</code> and <code>spectral</code>.</p>
 <ul>
 <li><p><code>model</code>   — an <code>NthOrderModel</code></p>
 </li>
 <li><p><code>spectral</code> — a <code>SpectralData</code></p>
 </li>
-<li><p><code>meta</code>    — <strong>backend-private</strong>. Whatever that physics needs to report afterwards &#40;timings, the raw spectrum, forcing records, DOF maps&#41;. MORFE never sees it.</p>
+<li><p><code>meta</code>     — backend metadata such as timings, the raw spectrum, forcing records, or DOF maps. It is available to callers and reporting code but is not consumed by MORFE.</p>
 </li>
 </ul>
 <p>Implementations must:</p>
 <ul>
 <li><p>return an <code>NthOrderModel</code> whose <code>linear_terms</code> and nonlinear terms are complete, including any external system the forcing introduces — not &quot;mostly built, the caller adds forcing&quot;;</p>
 </li>
-<li><p>return a <code>SpectralData</code> reconciled against <strong>that</strong> model&#39;s order &#40;use <code>SpectralData&#40;model, spectrum; master &#61; …&#41;</code>, which slices when the orders match and extends only when the model&#39;s <code>ORD</code> is higher — do not hand-roll the extension&#41;;</p>
+<li><p>return a <code>SpectralData</code> reconciled against <strong>that</strong> model&#39;s order. Use <code>SpectralData&#40;model, spectrum; master &#61; …&#41;</code> so MORFE owns any order reconciliation;</p>
 </li>
 <li><p>apply conditioning tweaks &#40;mode scaling, unit changes&#41; to the <strong>raw arrays before</strong> constructing the bundle; <code>SpectralData</code> deliberately has no <code>scale</code> field, so such tweaks stay visible at the call site;</p>
 </li>
-<li><p>build any conjugate permutation with <code>full_conjugate_permutation&#40;master_block, sys&#41;</code>, never a literal.</p>
+<li><p>provide the spectrum&#39;s actual conjugate pairing to <code>SpectralData</code>; if a full reduced variable permutation is needed, extend the master pairing through the model&#39;s external system with <code>full_conjugate_permutation</code> rather than a fixed literal.</p>
 </li>
 </ul>
-<p>Implementations must <strong>not</strong> build a <code>MultiindexSet</code>, a <code>ResonanceSet</code> or a resonance policy, validate the monomial set, derive conjugate closure, warn about resonances, or solve anything. Those are <code>parametrise</code>&#39;s, chosen by the caller.</p>
+<p>Implementations must <strong>not</strong> build a <code>MultiindexSet</code>, a <code>ResonanceSet</code> or a resonance policy, validate the monomial set, derive conjugate closure, warn about resonances, or solve the cohomological equations. Those are <code>parametrise</code>&#39;s responsibilities and are chosen by the caller. A backend may solve its linear eigenproblem here, or reuse spectral data supplied by the caller.</p>
 </div>
   </div>
 </div>
@@ -199,18 +203,6 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order&#41;</code></pre>
 <div class="markdown"><pre><code>free_dofs_at_nodes&#40;dh, free_to_local, node_ids, directions&#41; -&gt; Vector&#123;Int&#125;</code></pre>
 <p>Free-DOF indices &#40;the row indices of <code>K</code>, <code>M</code> and of the parametrisation <code>W</code>&#41; for the given mesh nodes and directions. <code>free_to_local</code> is the map built by <a class="doc-ref" href="#StructuralSVK-mechanical_model"><code>mechanical_model</code></a> and available as <code>model.info.free_to_local</code>.</p>
 <p>Throws if a requested node/direction is constrained, since it then has no row.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="Common-load_comsol_grid" data-doc-name="load_comsol_grid" data-doc-module="Common">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/mesh_comsol.jl#L102" target="_blank" rel="noopener">load_comsol_grid</a>(mphtxt_path::AbstractString, dirichlet_entity_ids::Set{Int64}; scale)</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>load_comsol_grid&#40;path, dirichlet_entity_ids; scale &#61; 1.0&#41; -&gt; &#40;grid, constrained_nodes&#41;</code></pre>
-<p>Read a COMSOL <code>.mphtxt</code> file and return the Ferrite <code>Grid</code> &#40;P18 quadratic prism cells&#41; together with the <code>Set&#123;Int&#125;</code> of node indices lying on the Dirichlet boundaries. <code>dirichlet_entity_ids</code> is the set of COMSOL geometric entity IDs &#40;1-indexed, i.e. raw file ID &#43; 1&#41; whose surface elements define the clamped region.</p>
-<p><code>scale</code> multiplies every node coordinate on load — use it when the mesh and the material constants are in different unit systems &#40;e.g. <code>scale &#61; 1e-3</code> for a mesh drawn in millimetres against SI material data&#41;. Scaling the geometry here rather than afterwards keeps the DOF numbering and the entity sets untouched.</p>
 </div>
   </div>
 </div>
@@ -264,6 +256,125 @@ end</code></pre>
 <p>Print a run banner and timing table to <code>io</code>, and write <code>key: value</code> rows to <code>path</code>.</p>
 <p>The skeleton is shared: title, problem size, stage timings gathered by <a class="doc-ref" href="#Common-stage_timings"><code>stage_timings</code></a> from both <code>case.info</code> and the ROM <code>meta</code>, then whatever <a class="doc-ref" href="#Common-summary_entries"><code>summary_entries</code></a> the physics contributes, then <code>metadata</code> from the caller &#40;which wins over both — it is the most specific&#41;.</p>
 <p><code>append &#61; true</code> is the default because <code>MORFE.save_rom</code> writes this same file first, with the run&#39;s provenance &#40;julia version, commit, timestamp&#41;. Opening it with <code>&quot;w&quot;</code> here would silently discard that.</p>
+</div>
+  </div>
+</div>
+  <div id="MeshIO" class="doc-module-h">MeshIO</div>
+  <div class="doc-module-desc" data-module="MeshIO"><div class="markdown"><p><code>MORFEFerrite.Common.MeshIO</code> — mesh loading and conversion utilities.</p>
+<p>The subsystem owns direct COMSOL-to-Ferrite loading and conversions between COMSOL, Abaqus, and Gmsh mesh formats.</p>
+</div></div>
+<div class="doc doc-function" id="MeshIO-load_comsol_grid" data-doc-name="load_comsol_grid" data-doc-module="MeshIO">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/comsol_grid.jl#L102" target="_blank" rel="noopener">load_comsol_grid</a>(mphtxt_path::AbstractString, dirichlet_entity_ids::Set{Int64}; scale)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>load_comsol_grid&#40;path, dirichlet_entity_ids; scale &#61; 1.0&#41; -&gt; &#40;grid, constrained_nodes&#41;</code></pre>
+<p>Read a COMSOL <code>.mphtxt</code> file and return the Ferrite <code>Grid</code> &#40;P18 quadratic prism cells&#41; together with the <code>Set&#123;Int&#125;</code> of node indices lying on the Dirichlet boundaries. <code>dirichlet_entity_ids</code> is the set of COMSOL geometric entity IDs &#40;1-indexed, i.e. raw file ID &#43; 1&#41; whose surface elements define the clamped region.</p>
+<p><code>scale</code> multiplies every node coordinate on load — use it when the mesh and the material constants are in different unit systems &#40;e.g. <code>scale &#61; 1e-3</code> for a mesh drawn in millimetres against SI material data&#41;. Scaling the geometry here rather than afterwards keeps the DOF numbering and the entity sets untouched.</p>
+</div>
+  </div>
+</div>
+  <div id="MeshIO.AbaqusToGmsh" class="doc-module-h">MeshIO.AbaqusToGmsh</div>
+<div class="doc doc-function" id="MeshIO.AbaqusToGmsh-abaqus_to_gmsh" data-doc-name="abaqus_to_gmsh" data-doc-module="MeshIO.AbaqusToGmsh">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/AbaqusToGmsh.jl#L310" target="_blank" rel="noopener">abaqus_to_gmsh</a>(inp_file::String, gmsh_file::String)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>abaqus_to_gmsh&#40;inp_file::String, gmsh_file::String&#41;</code></pre>
+<p>Read an Abaqus <code>.inp</code> mesh and write a Gmsh <code>.msh</code> file.</p>
+<p>Supported element types: C3D4/10/10M, C3D8/8R/8I, C3D20/20R, C3D6, C3D15, S3/3R, S4/4R, S6, S8/8R, CPS3/4/4R/6/8, CPE3/4/4R/6/8, CAX3/4/4R/6/8/8R, B31, B32, T3D2, T3D3.</p>
+<p>Node IDs may be non-contiguous; they are remapped to a compact 1-based Gmsh tag space. Unknown element types are silently skipped.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="MeshIO.AbaqusToGmsh-abaqus_to_gmsh_linear" data-doc-name="abaqus_to_gmsh_linear" data-doc-module="MeshIO.AbaqusToGmsh">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/AbaqusToGmsh.jl#L327" target="_blank" rel="noopener">abaqus_to_gmsh_linear</a>(inp_file::String, gmsh_file::String)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>abaqus_to_gmsh_linear&#40;inp_file::String, gmsh_file::String&#41;</code></pre>
+<p>Like <code><a class="doc-ref" href="#MeshIO.AbaqusToGmsh-abaqus_to_gmsh">abaqus_to_gmsh</a></code> but downgrades quadratic elements to their linear &#40;corner-nodes-only&#41; counterparts before writing.</p>
+</div>
+  </div>
+</div>
+  <div id="MeshIO.ComsolToGmsh" class="doc-module-h">MeshIO.ComsolToGmsh</div>
+<div class="doc doc-function" id="MeshIO.ComsolToGmsh-_read_mesh" data-doc-name="_read_mesh" data-doc-module="MeshIO.ComsolToGmsh">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/ComsolToGmsh.jl#L66" target="_blank" rel="noopener">_read_mesh</a>(mesh_file::String)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_read_mesh&#40; mesh_file::String&#41;</code></pre>
+<p>Reads a Comsol .mphtxt file and extracts</p>
+<ul>
+<li><p><code>n2c</code>:   node coordinates</p>
+</li>
+<li><p><code>e2nT6</code>: node list of elements of type T6 &#40;triangle&#41;</p>
+</li>
+<li><p><code>e2qT6</code>: label of elements of type T6 &#40;triangle&#41;</p>
+</li>
+<li><p><code>e2nQ9</code>: node list of elements of type Q9 &#40;rectangle&#41;</p>
+</li>
+<li><p><code>e2qQ9</code>: label of elements of type Q9 &#40;rectangle&#41;</p>
+</li>
+<li><p><code>e2nT10</code>: node list of elements of type T10 &#40;triangle&#41;</p>
+</li>
+<li><p><code>e2qT10</code>: label of elements of type T10 &#40;triangle&#41;</p>
+</li>
+<li><p><code>e2nP18</code>: node list of elements of type P18 &#40;prism&#41;</p>
+</li>
+<li><p><code>e2qP18</code>: label of elements of type P18 &#40;prism&#41;</p>
+</li>
+<li><p><code>e2nH27</code>: node list of elements of type H27 &#40;hex&#41;</p>
+</li>
+<li><p><code>e2qH27</code>: label of elements of type H27 &#40;hex&#41;</p>
+</li>
+</ul>
+<p>Based on the mesh.jl file from Morfe2.0.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="MeshIO.ComsolToGmsh-comsol_to_gmsh" data-doc-name="comsol_to_gmsh" data-doc-module="MeshIO.ComsolToGmsh">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/ComsolToGmsh.jl#L256" target="_blank" rel="noopener">comsol_to_gmsh</a>(comsol_file::String, gmsh_file::String)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>comsol_to_gmsh&#40;comsol_file::String, gmsh_file::String&#41;</code></pre>
+<p>Reads <code>comsol_file</code> &#40;.mphtxt&#41; and returns a Gmsh &#40;.msh&#41; file. Warning: The Node Re-Ordering is done by hand comparing with the old comsol files from Morfe2.0.           So be aware that Comsol may have changed the structure or numbering of nodes.          Here is the permutation only implemented for T6, Q9 and P18</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="MeshIO.ComsolToGmsh-comsol_to_gmsh_linear" data-doc-name="comsol_to_gmsh_linear" data-doc-module="MeshIO.ComsolToGmsh">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/ComsolToGmsh.jl#L387" target="_blank" rel="noopener">comsol_to_gmsh_linear</a>(comsol_file::String, gmsh_file::String)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>comsol_to_gmsh_linear&#40;comsol_file::String, gmsh_file::String&#41;</code></pre>
+<p>Like <code><a class="doc-ref" href="#MeshIO.ComsolToGmsh-comsol_to_gmsh">comsol_to_gmsh</a></code> but downgrades quadratic elements to their linear counterparts before writing the Gmsh <code>.msh</code> file.</p>
+</div>
+  </div>
+</div>
+  <div id="MeshIO.GmshToComsol" class="doc-module-h">MeshIO.GmshToComsol</div>
+<div class="doc doc-function" id="MeshIO.GmshToComsol-gmsh_to_comsol" data-doc-name="gmsh_to_comsol" data-doc-module="MeshIO.GmshToComsol">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/GmshToComsol.jl#L22" target="_blank" rel="noopener">gmsh_to_comsol</a>(gmsh_file::String, comsol_file::String)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>gmsh_to_comsol&#40;gmsh_file::String, comsol_file::String&#41;</code></pre>
+<p>Reads <code>gmsh_file</code> &#40;.msh&#41; and writes a COMSOL &#40;.mphtxt&#41; mesh file. This is the inverse of <code><a class="doc-ref" href="#MeshIO.ComsolToGmsh-comsol_to_gmsh">comsol_to_gmsh</a></code>: it undoes the node-reordering permutations and converts 1-based Gmsh indexing back to 0-based COMSOL indexing.</p>
+<p>Assumptions:</p>
+<ul>
+<li><p>The .msh file was produced by <code><a class="doc-ref" href="#MeshIO.ComsolToGmsh-comsol_to_gmsh">comsol_to_gmsh</a></code> &#40;node tags 1:nn&#41;.</p>
+</li>
+<li><p>Element tags in the Gmsh file carry the COMSOL geometric-entity indices &#40;as written by <code><a class="doc-ref" href="#MeshIO.ComsolToGmsh-comsol_to_gmsh">comsol_to_gmsh</a></code>&#41;.</p>
+</li>
+</ul>
 </div>
   </div>
 </div>
@@ -779,7 +890,7 @@ dΩ  →  dΩ · &#40;1/det J&#40;θ&#41;&#41;^p            weak-form weighting<
 <div class="doc doc-function" id="ParametricGeometry-sweep_all!" data-doc-name="sweep_all!" data-doc-module="ParametricGeometry">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/driver.jl#L109" target="_blank" rel="noopener">sweep_all!</a>(out::Matrix{ComplexF64}, m::MORFEFerrite.ParametricGeometry.ParametricMap{DEG}, us::NTuple{DEG, var"#s135"} where var"#s135"&lt;:(AbstractVector)) where DEG</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/driver.jl#L109" target="_blank" rel="noopener">sweep_all!</a>(out::Matrix{ComplexF64}, m::MORFEFerrite.ParametricGeometry.ParametricMap{DEG}, us::NTuple{DEG, var"#s166"} where var"#s166"&lt;:(AbstractVector)) where DEG</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>sweep_all&#33;&#40;out, m::ParametricMap&#123;DEG&#125;, us::NTuple&#123;DEG&#125;&#41;</code></pre>
@@ -814,24 +925,26 @@ dΩ  →  dΩ · &#40;1/det J&#40;θ&#41;&#41;^p            weak-form weighting<
   </div>
 </div>
   <div id="StructuralSVK" class="doc-module-h">StructuralSVK</div>
-  <div class="doc-module-desc" data-module="StructuralSVK"><div class="markdown"><p><code>MORFEFerrite.StructuralSVK</code> — high-level &quot;mesh → ROM&quot; UI for St. Venant-Kirchhoff structural models with the Ferrite backend, autonomous or with near-resonant harmonic forcing.</p>
+  <div class="doc-module-desc" data-module="StructuralSVK"><div class="markdown"><p><code>MORFEFerrite.StructuralSVK</code> — Ferrite-backed St. Venant-Kirchhoff structural models for autonomous or harmonically forced invariant-manifold reductions.</p>
 <pre><code>using MORFE, MORFEFerrite
 const SVK &#61; MORFEFerrite.StructuralSVK
 beam &#61; SVK.mechanical_model&#40;mesh; material, damping, dirichlet, fe_order, quad_order&#41;
 
-&#40;; model, spectral, meta&#41; &#61; build_model&#40;beam; master &#61; &#91;1&#93;, expansion_order &#61; 9&#41;
-W, R &#61; parametrise&#40;model, spectral, 9;
+&#40;; model, spectral, meta&#41; &#61; build_model&#40;beam;
+    master &#61; &#91;1&#93;, expansion_order &#61; 9&#41;
+W, R &#61; MORFE.parametrise&#40;model, spectral, 9;
     resonance &#61; ResonanceConfig&#40;style &#61; :complex_normal_form, tol &#61; 0.05&#41;&#41;</code></pre>
-<p><strong>There is one <code>parametrise</code> and it is MORFE&#39;s.</strong> This module contributes <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> — the single contract every physics backend implements — and returns the same physics-independent <code>&#40;W, R&#41;</code> result as every other backend. The Ferrite SVK geometric nonlinearity factory is <code><a class="doc-ref" href="#StructuralSVK-svk_nonlinearity">svk_nonlinearity</a></code> and the linear stiffness/mass assembler is <code><a class="doc-ref" href="#StructuralSVK-svk_assemble_KM!">svk_assemble_KM&#33;</a></code> &#40;a concrete <code>MORFE.FEMMultilinearMap</code> backend&#41;.</p>
+<p>This module assembles the mechanical case, implements the shared <a class="doc-ref" href="#StructuralSVK-build_model"><code>build_model</code></a> contract, and provides spectral and resonance-inspection helpers. <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> returns the <code>MORFE.NthOrderModel</code> and <code>MORFE.SpectralData</code>; <code>MORFE.parametrise</code> performs the physics-independent reduction and returns <code>&#40;W, R&#41;</code>.</p>
+<p>The low-level Ferrite entry points are <a class="doc-ref" href="#StructuralSVK-svk_nonlinearity"><code>svk_nonlinearity</code></a>, which constructs a concrete <code>MORFE.FEMMultilinearMap&#123;2&#125;</code>, and <a class="doc-ref" href="#StructuralSVK-svk_assemble_KM!"><code>svk_assemble_KM&#33;</code></a>, which assembles the linear stiffness and mass matrices.</p>
 </div></div>
 <div class="doc doc-type" id="StructuralSVK-AnisotropicMaterial" data-doc-name="AnisotropicMaterial" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L111" target="_blank" rel="noopener">AnisotropicMaterial</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L124" target="_blank" rel="noopener">AnisotropicMaterial</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>AnisotropicMaterial&#40;D, ρ&#41;</code></pre>
-<p>St. Venant-Kirchhoff material with a general 6×6 Voigt stiffness <code>D</code> &#40;ordering <code>&#91;11, 22, 33, 23, 13, 12&#93;</code>, engineering shear strains&#41; and density <code>ρ</code>.</p>
+<p>St. Venant-Kirchhoff material with a general 6×6 Voigt stiffness <code>D</code>, converted to <code>SMatrix&#123;6,6,Float64&#125;</code>, and density <code>ρ</code>, converted to <code>Float64</code>. The ordering is <code>&#91;11, 22, 33, 23, 13, 12&#93;</code> and the strain vector uses engineering shear components <code>&#91;ε₁₁, ε₂₂, ε₃₃, 2ε₂₃, 2ε₁₃, 2ε₁₂&#93;</code>.</p>
 <p>Use <a class="doc-ref" href="#StructuralSVK-CubicCrystal"><code>CubicCrystal</code></a> for cubic crystals given by <code>c₁₁, c₁₂, c₄₄</code>.</p>
 </div>
   </div>
@@ -839,94 +952,74 @@ W, R &#61; parametrise&#40;model, spectral, 9;
 <div class="doc doc-type" id="StructuralSVK-AssembledMechanicalModel" data-doc-name="AssembledMechanicalModel" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L55" target="_blank" rel="noopener">AssembledMechanicalModel</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L60" target="_blank" rel="noopener">AssembledMechanicalModel</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>Assembled second-order mechanical model <code>M ü &#43; C u̇ &#43; K u &#61; f_nl&#40;u&#41; &#40;&#43; forcing&#41;</code>, restricted to free DOFs, with a lazy factory for the FEM nonlinear terms: <code>term_factory&#40;degree, max_cols&#41;</code> → <code>FEMMultilinearMap</code>.</p>
+<div class="markdown"><pre><code>AssembledMechanicalModel &lt;: AbstractAssembledModel</code></pre>
+<p>Assembled three-dimensional second-order model on the free DOFs. Its linear operators are <code>K</code>, <code>C</code>, and <code>M</code>; its FEM multilinear maps accumulate the negative quadratic and cubic internal forces, so MORFE&#39;s model form represents <code>M*ü &#43; C*u̇ &#43; K*u &#43; f_int,nl&#40;u&#41; &#61; f_ext</code>.</p>
+<p><code>term_factory&#40;degree, max_cols&#41;</code> lazily creates the degree-<code>2</code> or degree-<code>3</code> <code>MORFE.FEMMultilinearMap&#123;2&#125;</code> with storage for <code>max_cols</code> batched columns. <code>material</code>, <code>damping</code>, and <code>info</code> retain backend data used by eigensolvers, post-processing, and summaries.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-CubicCrystal" data-doc-name="CubicCrystal" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L168" target="_blank" rel="noopener">CubicCrystal</a>(; c11, c12, c44, ρ, rotation)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L184" target="_blank" rel="noopener">CubicCrystal</a>(; c11, c12, c44, ρ, rotation)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>CubicCrystal&#40;; c11, c12, c44, ρ, rotation &#61; I&#41; -&gt; AnisotropicMaterial</code></pre>
+<div class="markdown"><pre><code>CubicCrystal&#40;; c11, c12, c44, ρ, rotation &#61; nothing&#41; -&gt; AnisotropicMaterial</code></pre>
 <p>Cubic crystal &#40;silicon, germanium, …&#41; from its three independent constants, with the crystal optionally rotated into the lab frame by <code>rotation</code> &#40;a 3×3 matrix, or an angle in radians about the z axis&#41;.</p>
-<p>The isotropic limit is <code>c11 &#61; λ &#43; 2μ</code>, <code>c12 &#61; λ</code>, <code>c44 &#61; μ</code> — then this material reproduces <code><a class="doc-ref" href="#StructuralSVK-SVKMaterial">SVKMaterial&#40;λ, μ&#41;</a></code> exactly &#40;asserted by the test suite&#41;.</p>
+<p><code>rotation &#61; nothing</code> leaves the crystal axes unchanged; a scalar is interpreted as an angle in radians about the z axis, and a matrix is passed to <a class="doc-ref" href="#StructuralSVK-rotate_voigt"><code>rotate_voigt</code></a>.</p>
+<p>The isotropic limit is <code>c11 &#61; λ &#43; 2μ</code>, <code>c12 &#61; λ</code>, <code>c44 &#61; μ</code>; it reproduces the constitutive response of an <code><a class="doc-ref" href="#StructuralSVK-SVKMaterial">SVKMaterial</a></code> with those Lamé constants.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="StructuralSVK-FerriteGeometricNonlinearity" data-doc-name="FerriteGeometricNonlinearity" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L67" target="_blank" rel="noopener">FerriteGeometricNonlinearity</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L71" target="_blank" rel="noopener">FerriteGeometricNonlinearity</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>FerriteGeometricNonlinearity&#123;DEG, DH, CV&#125; &lt;: MORFE.FEMMultilinearMap&#123;2&#125;</code></pre>
-<p>FEM-backed multilinear term for St. Venant-Kirchhoff geometric nonlinearity.</p>
+<div class="markdown"><pre><code>FerriteGeometricNonlinearity&#123;DEG, DH, CV, S&#125; &lt;: MORFE.FEMMultilinearMap&#123;2&#125;</code></pre>
+<p>Three-dimensional FEM-backed multilinear term for the negative SVK geometric internal force.</p>
 <ul>
-<li><p><code>DEG &#61; 2</code> : quadratic g_quad term &#40;two displacement inputs&#41;</p>
+<li><p><code>DEG &#61; 2</code>: quadratic form with two displacement inputs.</p>
 </li>
-<li><p><code>DEG &#61; 3</code> : cubic   h_cube term &#40;three displacement inputs&#41;</p>
+<li><p><code>DEG &#61; 3</code>: cubic form with three displacement inputs.</p>
 </li>
 </ul>
-<p>Type parameter <code>ORD &#61; 2</code> means the multiindex lives in an NthOrderModel of order 2 &#40;second-order ODE&#41;. The term only uses position-derivative inputs &#40;multiindex &#61; &#40;DEG, 0&#41;&#41;.</p>
-<h1>Fields</h1>
-<ul>
-<li><p><code>dh</code>             — DofHandler</p>
-</li>
-<li><p><code>cv</code>             — CellValues &#40;quadrature &#43; interpolation&#41;</p>
-</li>
-<li><p><code>free_to_local</code>  — Dict: global DOF index → 1-based index in the free-DOF vector</p>
-</li>
-<li><p><code>n_free</code>         — number of free DOFs</p>
-</li>
-<li><p><code>λ</code>, <code>μ</code>         — Lamé constants</p>
-</li>
-<li><p><code>multiindex</code>     — NTuple&#123;2, Int&#125; &#61; &#40;DEG, 0&#41;</p>
-</li>
-<li><p><code>multiplicity_external</code> — 0 &#40;no external forcing&#41;</p>
-</li>
-<li><p><code>deg</code>            — DEG</p>
-</li>
-<li><p><code>∇W_qp</code>         — pre-allocated qp gradient buffer, Matrix&#123;Tensor&#123;2,3,ComplexF64&#125;&#125;&#40;DEG, n_qp&#41;</p>
-</li>
-<li><p><code>Fe</code>             — pre-allocated element residual, Vector&#123;ComplexF64&#125;&#40;ndofs<em>per</em>cell&#41;</p>
-</li>
-<li><p><code>u_e</code>            — pre-allocated element DOF vector, Vector&#123;ComplexF64&#125;&#40;ndofs<em>per</em>cell&#41;</p>
-</li>
-<li><p><code>u_e_re</code>         — real part of u<em>e, Vector&#123;Float64&#125;&#40;ndofs</em>per_cell&#41;</p>
-</li>
-<li><p><code>u_e_im</code>         — imaginary part of u<em>e, Vector&#123;Float64&#125;&#40;ndofs</em>per_cell&#41;</p>
-</li>
-</ul>
-</div><div class="markdown"><pre><code>FerriteGeometricNonlinearity&#123;DEG&#125;&#40;dh, cv, free_to_local, n_free, λ, μ&#41;</code></pre>
-<p>Construct with pre-allocated buffers sized from <code>cv</code>.</p>
+<p>The <code>MORFE.FEMMultilinearMap&#123;2&#125;</code> supertype places the term in a second-order model. It uses only position inputs, with <code>multiindex &#61;&#61; &#40;DEG, 0&#41;</code>, and has no external-state factors. <code>S</code> is the concrete isotropic or anisotropic stress law.</p>
+<p><code>dh</code>, <code>cv</code>, <code>free_to_local</code>, and <code>n_free</code> describe the constrained Ferrite discretisation. The remaining storage is reusable evaluation state: the quadrature-gradient buffer has size <code>&#40;max_unique_cols, getnquadpoints&#40;cv&#41;&#41;</code>, and the element vectors have <code>ndofs_per_cell&#40;dh&#41;</code> entries. A term instance is mutable through these buffers and is intended for one evaluation sweep at a time.</p>
+</div><div class="markdown"><pre><code>FerriteGeometricNonlinearity&#123;DEG&#125;&#40;dh, cv, free_to_local, n_free, λ, μ;
+                                   max_unique_cols &#61; DEG,
+                                   fully_asymmetric &#61; false&#41;
+FerriteGeometricNonlinearity&#123;DEG&#125;&#40;dh, cv, free_to_local, n_free, stress;
+                                   max_unique_cols &#61; DEG,
+                                   fully_asymmetric &#61; false&#41;</code></pre>
+<p>Construct a degree-<code>DEG</code> term from Lamé constants or an internal stress-law object. <code>free_to_local</code> maps global cell DOFs to the free state. Buffers are preallocated from <code>dh</code>, <code>cv</code>, and <code>max_unique_cols</code>; the latter must cover the largest column batch evaluated by MORFE. <code>fully_asymmetric</code> is stored with the same symmetry-policy meaning as on <code>MORFE.MultilinearMap</code>.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="StructuralSVK-HarmonicForcing" data-doc-name="HarmonicForcing" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L32" target="_blank" rel="noopener">HarmonicForcing</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L35" target="_blank" rel="noopener">HarmonicForcing</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>HarmonicForcing&#40;; mode, amplitude, Ω &#61; nothing&#41;</code></pre>
-<p>Harmonic load <code>f&#40;t&#41; &#61; amplitude · M·ϕ_mode · cos&#40;Ω t&#41;</code>: shaped like mode <code>mode</code>, oscillating at that same mode&#39;s natural frequency unless <code>Ω</code> is given.</p>
-<p><code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> accepts either one of these or a vector of them &#40;multi-harmonic excitation&#41;; each element adds its own pair of external states with eigenvalues ±iΩ, so <code>N_EXT &#61; 2 · length&#40;forcing&#41;</code>. <code>mode</code> need not be a <code>master</code> pair — it only supplies the load shape — but <code>parametrise</code> warns if Ω is near-resonant with a mode left off the manifold, which makes that direction&#39;s solve ill-conditioned however the load is shaped.</p>
+<p>Harmonic load specification for <code>f&#40;t&#41; &#61; amplitude · M*ϕ_mode · cos&#40;Ω*t&#41;</code>. <code>mode</code> is a positive physical mode-pair index used only for the load shape. If <code>Ω</code> is omitted, <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> uses <code>abs&#40;λ&#91;2mode-1&#93;&#41;</code> from the resolved spectrum.</p>
+<p><code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> accepts either one of these or a vector of them &#40;multi-harmonic excitation&#41;; each element adds its own pair of external states with eigenvalues ±iΩ, so <code>N_EXT &#61; 2 · length&#40;forcing&#41;</code>. <code>mode</code> need not be a <code>master</code> pair — it only supplies the load shape. MORFE&#39;s parametrisation may separately warn when a monomial frequency is near an eigenvalue left off the manifold, because that off-manifold solve is ill-conditioned independently of the forcing shape.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="StructuralSVK-RayleighDamping" data-doc-name="RayleighDamping" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L21" target="_blank" rel="noopener">RayleighDamping</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L23" target="_blank" rel="noopener">RayleighDamping</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>RayleighDamping&#40;; α, β&#41;</code></pre>
-<p>Rayleigh damping <code>C &#61; α M &#43; β K</code>.</p>
+<p>Rayleigh damping coefficients defining <code>C &#61; α M &#43; β K</code>. The constructor promotes <code>α</code> and <code>β</code> to a common numeric type.</p>
 </div>
   </div>
 </div>
@@ -937,11 +1030,10 @@ W, R &#61; parametrise&#40;model, spectral, 9;
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>RayleighEigensolver &lt;: AbstractEigensolver</code></pre>
-<p>Solves the undamped eigenproblem K ϕ &#61; ω² M ϕ and recovers the damped eigenvalues λ &#61; ω&#40;-ξ ± i√&#40;1-ξ²&#41;&#41; using Rayleigh damping ξ &#61; ½&#40;α/ω &#43; βω&#41;.</p>
-<p>The implementation is covered by the StructuralSVK eigensolver and reduction tests.</p>
-<p>The damping is carried as the model&#39;s own <a class="doc-ref" href="#StructuralSVK-RayleighDamping"><code>RayleighDamping</code></a> rather than a loose <code>&#40;α, β&#41;</code> pair. The solver&#39;s <code>ξ</code> and the model&#39;s <code>C &#61; αM &#43; βK</code> must describe the same structure; passing the object makes that one value instead of two that have to be kept in step by hand.</p>
+<p>Solves the undamped eigenproblem K ϕ &#61; ω² M ϕ and recovers the damped eigenvalues <code>λ &#61; -ξω ± iω√&#40;1-ξ²&#41;</code> using Rayleigh damping <code>ξ &#61; 0.5&#40;α/ω &#43; βω&#41;</code>. The complex square root also represents critically damped and overdamped modes.</p>
+<p>The damping is carried as the model&#39;s own <a class="doc-ref" href="#StructuralSVK-RayleighDamping"><code>RayleighDamping</code></a> rather than a loose <code>&#40;α, β&#41;</code> pair. The solver computes and stores right eigenvectors and eigenvalues during <code>eigensolve</code>; <code>eigensolve_left</code> then constructs the analytic left blocks for the symmetric second-order pencil.</p>
 </div><div class="markdown"><pre><code>RayleighEigensolver&#40;nev, damping::RayleighDamping&#41;</code></pre>
-<p>Solver for <code>nev</code> modes of a structure with this damping. Take <code>damping</code> from the assembled model &#40;<code>m.damping</code>&#41; so the spectrum matches the model&#39;s <code>C</code>.</p>
+<p>Construct a stateful solver for <code>nev</code> undamped physical modes. A solve returns <code>2nev</code> damped eigenvalues in adjacent conjugate pairs and caches the right eigenvectors needed by the left solve. Pass the assembled model&#39;s own <code>m.damping</code> so these eigenvalues remain consistent with <code>m.C &#61; αM &#43; βK</code>.</p>
 </div>
   </div>
 </div>
@@ -952,7 +1044,7 @@ W, R &#61; parametrise&#40;model, spectral, 9;
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>SVKMaterial&#40;; E, ν, ρ&#41;</code></pre>
-<p>St. Venant-Kirchhoff material: Young&#39;s modulus <code>E</code>, Poisson ratio <code>ν</code>, density <code>ρ</code>. Lamé constants <code>λ</code>, <code>μ</code> are derived. The SVK model generates quadratic and cubic nonlinearities in the displacement — nothing higher.</p>
+<p>St. Venant-Kirchhoff material: Young&#39;s modulus <code>E</code>, Poisson ratio <code>ν</code>, density <code>ρ</code>, and derived Lamé constants <code>λ &#61; Eν/&#40;&#40;1&#43;ν&#41;&#40;1-2ν&#41;&#41;</code>, <code>μ &#61; E/&#40;2&#40;1&#43;ν&#41;&#41;</code>. With the Green-Lagrange strain and this linear elastic stress law, the internal force has quadratic and cubic displacement terms and no higher-degree terms.</p>
 </div>
   </div>
 </div>
@@ -962,8 +1054,9 @@ W, R &#61; parametrise&#40;model, spectral, 9;
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/pullback_kernel.jl#L96" target="_blank" rel="noopener">SVKPullbackKernel</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>SVKPullbackKernel&#123;DEG, S&#125;&#40;stress, ρ&#41;</code></pre>
-<p>St. Venant-Kirchhoff physics over a parametric coordinate transform.</p>
+<div class="markdown"><pre><code>SVKPullbackKernel&#123;DEG&#125;&#40;material&#41;
+SVKPullbackKernel&#123;DEG&#125;&#40;stress, ρ &#61; 0.0&#41;</code></pre>
+<p>Three-dimensional St. Venant-Kirchhoff quadrature kernel over a parametric coordinate transform. The public constructor accepts an <code><a class="doc-ref" href="#StructuralSVK-SVKMaterial">SVKMaterial</a></code> or <code><a class="doc-ref" href="#StructuralSVK-AnisotropicMaterial">AnisotropicMaterial</a></code>; the lower-level constructor accepts the corresponding internal stress-law object and a density.</p>
 <ul>
 <li><p><code>DEG &#61; 2</code> — the quadratic elastic form <code>g&#40;u₁,u₂;θ&#41;</code></p>
 </li>
@@ -972,18 +1065,18 @@ W, R &#61; parametrise&#40;model, spectral, 9;
 <li><p><code>DEG &#61; 0</code> — the linear operators &#40;stiffness and mass&#41;</p>
 </li>
 </ul>
-<p><code>stress</code> is any <code>AbstractStress</code> — the same object the non-parametric backend uses, so an anisotropic or cubic-crystal material works parametrically with no further code. <code>ρ</code> is only read by the <code>DEG &#61; 0</code> kernel.</p>
+<p><code>DEG &#61; 2</code> and <code>DEG &#61; 3</code> use only the constitutive stress law. <code>DEG &#61; 0</code> also reads <code>ρ</code> to assemble the mass series, so its lower-level constructor must be given the material density. The kernel owns reusable quadrature scratch space and is intended for one assembly sweep at a time.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="StructuralSVK-VoigtStress" data-doc-name="VoigtStress" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L29" target="_blank" rel="noopener">VoigtStress</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L32" target="_blank" rel="noopener">VoigtStress</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>VoigtStress&#40;D&#41;</code></pre>
-<p>Fully anisotropic stress, <code>σ &#61; D : ε</code>, with <code>D</code> the 6×6 Voigt stiffness in the standard ordering <code>&#91;11, 22, 33, 23, 13, 12&#93;</code> &#40;engineering shear strains, i.e. the strain vector is <code>&#91;ε₁₁, ε₂₂, ε₃₃, 2ε₂₃, 2ε₁₃, 2ε₁₂&#93;</code>&#41;.</p>
+<p>Fully anisotropic stress, <code>σ &#61; D : ε</code>, with <code>D</code> the 6×6 Voigt stiffness in the ordering <code>&#91;11, 22, 33, 23, 13, 12&#93;</code>. The input strain tensor is converted to the engineering-shear vector <code>&#91;ε₁₁, ε₂₂, ε₃₃, 2ε₂₃, 2ε₁₃, 2ε₁₂&#93;</code>; the result is returned as a symmetric second Piola-Kirchhoff stress tensor.</p>
 </div>
   </div>
 </div>
@@ -996,32 +1089,34 @@ W, R &#61; parametrise&#40;model, spectral, 9;
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_forcings&#40;forcing&#41; -&gt; Vector&#123;&lt;:HarmonicForcing&#125;</code></pre>
-<p>Normalise the <code>forcing</code> keyword &#40;<code>nothing</code>, a single <code><a class="doc-ref" href="#StructuralSVK-HarmonicForcing">HarmonicForcing</a></code>, or a vector of them&#41; to a vector — empty when the problem is autonomous.</p>
+<p>Normalize the public <code>forcing</code> forms—<code>nothing</code>, one <code><a class="doc-ref" href="#StructuralSVK-HarmonicForcing">HarmonicForcing</a></code>, or an abstract vector of them—to a vector. The autonomous case returns an empty vector.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-assemble_KM!" data-doc-name="assemble_KM!" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L332" target="_blank" rel="noopener">assemble_KM!</a>(K, M, dh, cv, λ::Real, μ::Real, ρ::Real)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L332" target="_blank" rel="noopener">assemble_KM!</a>(K, M, dh, cv, stress::MORFEFerrite.StructuralSVK.AbstractStress, ρ::Float64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L343" target="_blank" rel="noopener">assemble_KM!</a>(K, M, dh, cv, λ::Real, μ::Real, ρ::Real)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/ferrite_assembly.jl#L343" target="_blank" rel="noopener">assemble_KM!</a>(K, M, dh, cv, stress::MORFEFerrite.StructuralSVK.AbstractStress, ρ::Float64)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>assemble_KM&#33;&#40;K, M, dh, cv, λ, μ, ρ&#41;</code></pre>
-<p>Assemble the global stiffness matrix <code>K</code> and mass matrix <code>M</code> into pre-allocated sparse matrices using standard Galerkin FEM.</p>
-<pre><code>K_rs &#61; ∫ ε&#40;φ_r&#41; ⊡ &#40;λ tr&#40;ε&#40;φ_s&#41;&#41; I &#43; 2μ ε&#40;φ_s&#41;&#41; dΩ
+<div class="markdown"><pre><code>assemble_KM&#33;&#40;K, M, dh, cv, λ, μ, ρ&#41;
+assemble_KM&#33;&#40;K, M, dh, cv, stress, ρ&#41;</code></pre>
+<p>Assemble the three-dimensional global stiffness matrix <code>K</code> and mass matrix <code>M</code> into preallocated sparse matrices using isotropic Lamé constants or an internal stress-law object. The matrices must have the sparsity pattern associated with <code>dh</code>; both are mutated and the function returns <code>nothing</code>.</p>
+<pre><code>K_rs &#61; ∫ ε&#40;φ_r&#41; ⊡ σ&#40;ε&#40;φ_s&#41;&#41; dΩ
 M_rs &#61; ∫ ρ φ_r · φ_s dΩ</code></pre>
+<p>For the Lamé overload, <code>σ&#40;ε&#41; &#61; λ tr&#40;ε&#41;I &#43; 2με</code>.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-base_operators" data-doc-name="base_operators" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/parametric_model.jl#L123" target="_blank" rel="noopener">base_operators</a>(m::MORFEFerrite.ParametricGeometry.AssembledParametricModel)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/parametric_model.jl#L131" target="_blank" rel="noopener">base_operators</a>(m::MORFEFerrite.ParametricGeometry.AssembledParametricModel)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>base_operators&#40;m::AssembledParametricModel&#41; -&gt; &#40;K, M&#41;</code></pre>
-<p>The θ⁰ stiffness and mass of a parametric SVK model — the base configuration&#39;s operators, which is what the eigenproblem is solved on.</p>
+<p>Return the <code>θ &#61; 0</code> stiffness and mass coefficient matrices of an assembled parametric SVK case. These are the base-configuration operators used to solve the eigenproblem supplied to <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code>.</p>
 </div>
   </div>
 </div>
@@ -1032,30 +1127,37 @@ M_rs &#61; ∫ ρ φ_r · φ_s dΩ</code></pre>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>build_model&#40;m::AssembledMechanicalModel; master &#61; &#91;1&#93;, forcing &#61; nothing,
-			nev &#61; ..., spectrum &#61; nothing&#41; -&gt; &#40;; model, spectral, meta&#41;</code></pre>
-<p>Assemble the full-order model and its spectral data — what <code>MORFE.parametrise&#40;model, spectral, expansion_order&#41;</code> consumes.</p>
-<p>This is StructuralSVK&#39;s implementation of the <a class="doc-ref" href="#StructuralSVK-build_model"><code>build_model</code></a> contract, and it is where every SVK-specific convention lives:</p>
+			nev &#61; ..., spectrum &#61; nothing, expansion_order &#61; nothing,
+			n_monomials &#61; nothing&#41; -&gt; &#40;; model, spectral, meta&#41;</code></pre>
+<p>Construct the full-order <code>MORFE.NthOrderModel</code> and <code>MORFE.SpectralData</code> consumed by <code>MORFE.parametrise</code>.</p>
+<p><code>master</code> is a nonempty, sorted vector of distinct positive <strong>physical mode-pair</strong> indices. The eigensolver returns adjacent conjugate eigenvalues, so pair <code>p</code> occupies spectrum entries <code>2p-1, 2p</code>; for example, <code>master &#61; &#91;1&#93;</code> gives <code>ROM &#61; 2</code> internal coordinates. Selected pairs may be non-leading and non-contiguous.</p>
+<p><code>forcing</code> accepts <code>nothing</code>, one <a class="doc-ref" href="#StructuralSVK-HarmonicForcing"><code>HarmonicForcing</code></a>, or a vector of them and represents</p>
+<pre><code>f&#40;t&#41; &#61; Σₖ aₖ M ϕ_&#123;pₖ&#125; cos&#40;Ωₖ t&#41;.</code></pre>
+<p>Forcing <code>k</code> appends external coordinates <code>ROM&#43;2k-1, ROM&#43;2k</code> with eigenvalues <code>&#43;iΩₖ, -iΩₖ</code>. If <code>Ωₖ</code> is omitted it is <code>abs&#40;spectrum.eigenvalues&#91;2pₖ-1&#93;&#41;</code>. The shape pair <code>pₖ</code> need not be a master pair.</p>
+<p>If <code><a class="doc-ref" href="#StructuralSVK-spectrum">spectrum</a></code> is omitted, <a class="doc-ref" href="#StructuralSVK-spectrum"><code>spectrum</code></a> is called with <code>nev</code>, where <code>nev</code> counts physical modes &#40;and the returned spectrum contains <code>2nev</code> conjugate eigenvalues&#41;. A supplied spectrum is reused without another eigensolve. In either case it must contain every master pair and every pair used as a forcing shape.</p>
+<p><code>expansion_order</code> and <code>n_monomials</code> size the batched-column cache owned by the FEM nonlinear terms; they do not construct or select MORFE&#39;s monomial set. For the standard total-degree set, <code>expansion_order &#61; p</code> reserves <code>binomial&#40;ROM &#43; N_EXT &#43; p, p&#41; - 1</code> columns. For a custom set, pass <code>n_monomials &#61; length&#40;mset&#41;</code>. <code>n_monomials</code> takes precedence if both are supplied; if neither is supplied, one column is reserved.</p>
+<p>The result contains:</p>
 <ul>
-<li><p><strong><code>master</code> lists physical mode PAIRS.</strong> Eigenvalues come in conjugate pairs, so physical mode <code>p</code> occupies spectrum entries <code>2p-1, 2p</code>; <code>master &#61; &#91;1&#93;</code> means <code>ROM &#61; 2</code>. The pairs need not be leading or contiguous.</p>
+<li><p><code>model</code>: the autonomous or forced <code>MORFE.NthOrderModel</code>;</p>
 </li>
-<li><p><strong><code>forcing</code></strong> takes one <a class="doc-ref" href="#StructuralSVK-HarmonicForcing"><code>HarmonicForcing</code></a> or a vector of them, giving <code>f&#40;t&#41; &#61; Σₖ aₖ · M·ϕ_&#123;pₖ&#125; · cos&#40;Ωₖ t&#41;</code>. Each appends its own conjugate pair of external states with eigenvalues <code>±iΩₖ</code>, so <code>N_EXT &#61; 2·length&#40;forcing&#41;</code>. A forcing whose shape mode is not a master pair is allowed — it only supplies the load shape.</p>
+<li><p><code>spectral</code>: spectral data restricted to <code>master</code>, with the spectrum-wide adjacent conjugate pairing and the external pairing supplied by the model&#39;s external system;</p>
 </li>
-<li><p><strong><code><a class="doc-ref" href="#StructuralSVK-spectrum">spectrum</a></code></strong> reuses an already-solved <a class="doc-ref" href="#StructuralSVK-spectrum"><code>spectrum</code></a> instead of solving again; <code>nev</code> sizes the solve when one is needed.</p>
+<li><p><code>meta</code>: backend reporting data, including the resolved forcings/frequencies, selected spectrum indices, external-state count, eigensolve time, and assembled-case metadata.</p>
 </li>
 </ul>
-<p>The conjugate permutation is derived rather than written out: the master block pairs adjacent modes, and the external block comes from the external system itself, so it stays correct for an odd <code>N_EXT</code> or a change of external coordinates.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-eigenfrequencies" data-doc-name="eigenfrequencies" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L19" target="_blank" rel="noopener">eigenfrequencies</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L25" target="_blank" rel="noopener">eigenfrequencies</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel; kwargs...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>eigenfrequencies&#40;m::AssembledMechanicalModel; nev &#61; 10, eigensolver &#61; nothing&#41;
 	-&gt; Vector&#123;ComplexF64&#125;</code></pre>
-<p>Damped eigenvalues of the assembled model, ordered in conjugate pairs: physical mode <code>p</code> occupies entries <code>2p-1, 2p</code>, so <code>abs&#40;λ&#91;2p-1&#93;&#41; / 2π</code> is its frequency in Hz. Use it to inspect the spectrum — and pick <code>master</code> — before committing to a parametrisation.</p>
+<p>Return the complex damped eigenvalues from <a class="doc-ref" href="#StructuralSVK-spectrum"><code>spectrum</code></a>. Physical mode <code>p</code> occupies adjacent conjugate entries <code>2p-1, 2p</code>. For an underdamped pair, <code>abs&#40;imag&#40;λ&#91;2p-1&#93;&#41;&#41;/&#40;2π&#41;</code> is its damped oscillation frequency in Hz; the undamped natural frequency <code>ω</code> used by the Rayleigh construction is distinct. For an underdamped or critically damped mode <code>abs&#40;λ&#41; &#61; ω</code>; this identity does not hold for each individual eigenvalue of an overdamped pair.</p>
+<p>Use the result to inspect the spectrum and choose <code>master</code> before parametrisation.</p>
 </div>
   </div>
 </div>
@@ -1068,16 +1170,19 @@ M_rs &#61; ∫ ρ φ_r · φ_s dΩ</code></pre>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>mechanical_model&#40;grid::Ferrite.Grid, constrained_nodes::Set&#123;Int&#125;;
-                 material, damping, fe_order &#61; 2, quad_order &#61; fe_order &#43; 1&#41;</code></pre>
-<p>Build an <code><a class="doc-ref" href="#StructuralSVK-AssembledMechanicalModel">AssembledMechanicalModel</a></code> from a Ferrite grid and a pre-computed set of constrained node indices &#40;all three displacement components clamped&#41;.</p>
-</div><div class="markdown"><pre><code>mechanical_model&#40;grid::Ferrite.Grid; material, damping, dirichlet,
+                 material, damping, fe_order &#61; 2, quad_order &#61; fe_order &#43; 1&#41;
+mechanical_model&#40;grid::Ferrite.Grid; material, damping, dirichlet,
                  fe_order &#61; 2, quad_order &#61; fe_order &#43; 1&#41;
-mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet, ...&#41;</code></pre>
-<p>Build an <code><a class="doc-ref" href="#StructuralSVK-AssembledMechanicalModel">AssembledMechanicalModel</a></code> &#40;K, M, C on free DOFs &#43; lazy SVK nonlinearity factory&#41; from a Ferrite grid or a mesh file.</p>
+mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet,
+                 scale &#61; 1.0, fe_order &#61; 2, quad_order &#61; fe_order &#43; 1&#41;</code></pre>
+<p>Assemble a three-dimensional <code><a class="doc-ref" href="#StructuralSVK-AssembledMechanicalModel">AssembledMechanicalModel</a></code> from a Ferrite grid or mesh file. The displacement interpolation is <code>Lagrange&#123;RefShape,fe_order&#125;&#40;&#41;^3</code>; the returned <code>K</code>, <code>M</code>, and <code>C &#61; αM &#43; βK</code> are restricted to free DOFs, while the model retains the Ferrite handlers needed to construct its quadratic and cubic SVK terms lazily.</p>
+<p><code>material</code> is an <a class="doc-ref" href="#StructuralSVK-SVKMaterial"><code>SVKMaterial</code></a> or <a class="doc-ref" href="#StructuralSVK-AnisotropicMaterial"><code>AnisotropicMaterial</code></a>, and <code>damping</code> is a <a class="doc-ref" href="#StructuralSVK-RayleighDamping"><code>RayleighDamping</code></a>. All three displacement components are fixed on the selected nodes or facets:</p>
 <ul>
-<li><p>Gmsh <code>.msh</code>: pass <code>dirichlet</code> as a <strong>String</strong> naming the clamped facetset.</p>
+<li><p>The <code>constrained_nodes</code> overload accepts an already computed set of node indices.</p>
 </li>
-<li><p>COMSOL <code>.mphtxt</code>: pass <code>dirichlet</code> as a <code>Set&#123;Int&#125;</code> of boundary entity IDs &#40;1-indexed, i.e. raw COMSOL ID &#43; 1&#41;.</p>
+<li><p>For a Ferrite grid or Gmsh <code>.msh</code> path, <code>dirichlet</code> is the name of a facet set.</p>
+</li>
+<li><p>For a COMSOL <code>.mphtxt</code> path, <code>dirichlet</code> is a <code>Set&#123;Int&#125;</code> of 1-based boundary entity IDs &#40;the raw COMSOL IDs plus one&#41;. <code>scale</code> rescales COMSOL node coordinates before assembly; it is ignored for Gmsh input.</p>
 </li>
 </ul>
 </div>
@@ -1090,34 +1195,36 @@ mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet, ..
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>parametric_model&#40;dh, cv, geometry; geometry_parameter_basis, material, damping,
-				 free &#61; …, base &#61; nothing&#41; -&gt; AssembledParametricModel</code></pre>
-<p>Expand an SVK structure over a parametric mesh coordinate transform.</p>
+				 free &#61; nothing, base &#61; nothing,
+				 inverse_determinant &#61; PowerSeriesInverseDet&#40;&#41;&#41;
+	-&gt; AssembledParametricModel</code></pre>
+<p>Assemble the parameter expansion of a three-dimensional SVK structure over a parametric mesh coordinate transform.</p>
 <p><code>geometry</code> is a provider returning <code>&#40;J₀, ∇ψ₁, …, ∇ψ_Nθ&#41;</code> per quadrature point, either analytically &#40;<code>geom&#40;x₀&#41;</code>&#41; or from an FE field &#40;<code>geom&#40;x₀, cell, cv, q&#41;</code>&#41;.</p>
-<p><code>geometry_parameter_basis</code> is either one <a class="doc-ref" href="#ParametricGeometry-GeometryParameterBasis"><code>GeometryParameterBasis</code></a> used for every form, or a <code>NamedTuple</code> <code>&#40;; linear, quadratic, cubic&#41;</code> when the forms have different exact polynomial degrees — the arch, for instance, has <code>K&#40;θ&#41;</code> of degree ≤ 2 but a cubic form of degree ≤ 4, and truncating them all at the largest is wasted work.</p>
-<p><code>damping</code> is a <a class="doc-ref" href="#StructuralSVK-RayleighDamping"><code>RayleighDamping</code></a>, not a loose <code>&#40;α, β&#41;</code> pair: the parametric damping series <code>C&#40;θ&#41; &#61; αM&#40;θ&#41; &#43; βK&#40;θ&#41;</code> and the model&#39;s own <code>C</code> must describe the same structure, and passing the object makes that one value rather than several kept in step by hand.</p>
-<p>The returned model is <code>ORD &#61; 3</code> — a parametric mass is a correction on the highest derivative, which only exists one order up, so the fourth linear block is zero.</p>
+<p><code>geometry_parameter_basis</code> is either one <a class="doc-ref" href="#ParametricGeometry-GeometryParameterBasis"><code>GeometryParameterBasis</code></a>, shared by every form, or a <code>NamedTuple</code> with a required <code>linear</code> entry and optional <code>quadratic</code> and <code>cubic</code> entries. A missing <code>quadratic</code> basis falls back to <code>linear</code>; a missing <code>cubic</code> basis falls back to <code>quadratic</code>, then <code>linear</code>. Separate bases avoid over-expanding low-degree forms—for example, an isochoric affine arch has stiffness degree at most two but cubic-form degree at most four.</p>
+<p><code>material</code> is an <a class="doc-ref" href="#StructuralSVK-SVKMaterial"><code>SVKMaterial</code></a> or <a class="doc-ref" href="#StructuralSVK-AnisotropicMaterial"><code>AnisotropicMaterial</code></a>. <code>damping</code> is a <a class="doc-ref" href="#StructuralSVK-RayleighDamping"><code>RayleighDamping</code></a> and defines the assembled series <code>C&#40;θ&#41; &#61; αM&#40;θ&#41; &#43; βK&#40;θ&#41;</code>. If <code>free</code> is omitted, every DOF in <code>dh</code> is retained; otherwise it supplies the global free-DOF indices. <code>base</code> is stored in the returned case for physics-side bookkeeping. <code>inverse_determinant</code> selects how the pullback cache constructs the series for <code>1/det&#40;J&#41;</code>.</p>
+<p>This function returns an assembled parametric case, not an <code>NthOrderModel</code>. Calling <a class="doc-ref" href="#StructuralSVK-build_model"><code>build_model</code></a> on it produces <code>ORD &#61; 3</code>: a parameter-dependent mass is a correction on the highest derivative of the original second-order system, so the augmented representation needs one additional, zero linear block.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-print_mode_table" data-doc-name="print_mode_table" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L32" target="_blank" rel="noopener">print_mode_table</a>(eigenvalues::AbstractVector; master, io)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L42" target="_blank" rel="noopener">print_mode_table</a>(eigenvalues::AbstractVector; master, io)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>print_mode_table&#40;eigenvalues; master &#61; Int&#91;&#93;, io &#61; stdout&#41;</code></pre>
-<p>Tabulate the physical modes behind <code>eigenvalues</code> &#40;one row per conjugate pair: decay rate, frequency in Hz and rad/s&#41;, marking the pairs listed in <code>master</code>.</p>
+<p>Tabulate adjacent conjugate pairs in <code>eigenvalues</code>, ignoring an unmatched final entry. Each row reports <code>real&#40;λ&#41;</code> as the decay rate and <code>imag&#40;λ&#41;</code> as the damped angular frequency, together with <code>imag&#40;λ&#41;/&#40;2π&#41;</code> in Hz. Pairs listed in <code>master</code> are marked. Output is written to <code>io</code> and the function returns <code>nothing</code>.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-print_resonances" data-doc-name="print_resonances" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/parametrise.jl#L50" target="_blank" rel="noopener">print_resonances</a>(mset, resonance_set, master_eigenvalues::Vector{ComplexF64}; io)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/parametrise.jl#L58" target="_blank" rel="noopener">print_resonances</a>(mset, resonance_set, master_eigenvalues::Vector{ComplexF64}; io)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>print_resonances&#40;mset, resonance_set, master_eigenvalues; io &#61; stdout&#41;</code></pre>
-<p>List, per reduced-dynamics target, the monomials flagged as resonant — the terms that survive in the reduced dynamics <code>R</code>.</p>
+<p>Print the monomials flagged as resonant for each inner target and any diagnostic outer targets. Inner targets are labelled with <code>master_eigenvalues</code>; because this function is not passed the outer eigenvalues, outer target labels use <code>0</code> as a placeholder. Inner resonances are the terms retained in the reduced dynamics <code>R</code>; outer flags diagnose off-manifold solves and do not add rows to <code>R</code>.</p>
 </div>
   </div>
 </div>
@@ -1132,19 +1239,20 @@ mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet, ..
 		   resonance_tol_rel &#61; nothing, mset &#61; nothing&#41;
 	-&gt; &#40;mset, resonance_set, master_eigenvalues&#41;</code></pre>
 <p>Build the monomial set and the complex-normal-form <code>ResonanceSet</code> that a <code>parametrise</code> call with the same arguments would use. Call it on the output of <a class="doc-ref" href="#StructuralSVK-eigenfrequencies"><code>eigenfrequencies</code></a> to preview — before paying for the cohomological solve — which monomials will be kept in the reduced dynamics.</p>
-<p><code>resonance_tol</code> is the absolute detuning threshold &#40;rad/s&#41;; <code>resonance_tol_rel</code>, when given, replaces it by the per-target relative threshold <code>resonance_tol_rel * |λⱼ|</code>.</p>
-<p><code>outer_eigenvalues</code> adds off-manifold resonance targets, populating the <code>outer_resonances</code> block of the returned set &#40;query it with <code>resonant_multiindices&#40;rset, ROM &#43; j&#41;</code>&#41;. Those flags are diagnostic: the cohomological solve reads only the inner block. It cannot be combined with <code>resonance_tol_rel</code> — see the assertion below.</p>
+<p><code>master</code> uses the same sorted physical-pair indexing as <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code>: pair <code>p</code> occupies <code>eigenvalues&#91;2p-1:2p&#93;</code>. <code>external_eigenvalues</code> appends prescribed external coordinates to the monomial variables. If <code>mset</code> is omitted, all monomials of total degree <code>1:order</code> in the internal and external variables are created; otherwise the supplied set is returned and <code>order</code> does not choose its contents.</p>
+<p><code>resonance_tol</code> is the absolute detuning threshold in the eigenvalues&#39; frequency units &#40;rad/s for structural spectra&#41;. When <code>resonance_tol_rel</code> is given, the inner target <code>λⱼ</code> instead uses <code>resonance_tol_rel * abs&#40;λⱼ&#41;</code>.</p>
+<p><code>outer_eigenvalues</code> adds off-manifold resonance targets, populating the <code>outer_resonances</code> block of the returned set &#40;query it with <code>resonant_multiindices&#40;rset, ROM &#43; j&#41;</code>&#41;. Those flags are diagnostic: the cohomological solve reads only the inner block. It cannot be combined with <code>resonance_tol_rel</code>, because MORFE shares one tolerance object between the inner and outer target blocks.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-rotate_voigt" data-doc-name="rotate_voigt" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L132" target="_blank" rel="noopener">rotate_voigt</a>(D::AbstractMatrix, Q::AbstractMatrix)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L147" target="_blank" rel="noopener">rotate_voigt</a>(D::AbstractMatrix, Q::AbstractMatrix)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>rotate_voigt&#40;D, Q&#41; -&gt; SMatrix&#123;6,6&#125;</code></pre>
-<p>Rotate a Voigt stiffness matrix by the orthogonal matrix <code>Q</code>.</p>
+<p>Rotate a Voigt stiffness matrix by a 3×3 matrix <code>Q</code>, expected to be orthogonal. Only its size is validated.</p>
 <p><code>Q</code> maps crystal axes to lab axes: if <code>D</code> is expressed in the crystal frame, the result is expressed in the lab frame &#40;pass <code>Q&#39;</code> for the opposite convention&#41;.</p>
 <p>Implemented by expanding <code>D</code> to the 4th-order stiffness <code>C_ijkl</code>, applying the tensor transformation <code>C&#39;_ijkl &#61; Q_ip Q_jq Q_kr Q_ls C_pqrs</code>, and contracting back — so no Bond-matrix convention &#40;and its factor-of-2 traps&#41; is involved.</p>
 </div>
@@ -1158,43 +1266,49 @@ mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet, ..
   <div class="doc-body">
 <div class="markdown"><pre><code>spectrum&#40;m::AssembledMechanicalModel; nev &#61; 10, eigensolver &#61; nothing&#41;
 	-&gt; Spectrum</code></pre>
-<p>Solve the model&#39;s eigenproblem. Pass the result to <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> as <code>spectrum &#61; …</code> to inspect the spectrum first without paying for a second solve — and so that inspecting it cannot perturb the ROM.</p>
+<p>Solve the assembled model&#39;s eigenproblem. <code>nev</code> requests physical modes; the default <code><a class="doc-ref" href="#StructuralSVK-RayleighEigensolver">RayleighEigensolver</a></code> returns <code>2nev</code> eigenvalues and eigenmodes in adjacent conjugate pairs. A supplied <code>eigensolver</code> is used as-is. In particular, callers supplying a different modal-damping solver are responsible for making its damping consistent with <code>m.C</code>.</p>
+<p>Pass the returned <code>MORFE.Spectrum</code> to <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> as <code>spectrum &#61; ...</code> to inspect or report it without paying for a second solve—and without letting a repeated iterative eigensolve choose a different basis in a clustered eigenspace.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-svk_assemble_KM!" data-doc-name="svk_assemble_KM!" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L48" target="_blank" rel="noopener">svk_assemble_KM!</a>(K, M, dh, cv, material::Union{MORFEFerrite.StructuralSVK.AnisotropicMaterial, SVKMaterial})</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L48" target="_blank" rel="noopener">svk_assemble_KM!</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L60" target="_blank" rel="noopener">svk_assemble_KM!</a>(K, M, dh, cv, material::Union{MORFEFerrite.StructuralSVK.AnisotropicMaterial, SVKMaterial})</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L60" target="_blank" rel="noopener">svk_assemble_KM!</a>(args...; kwargs...)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>svk_assemble_KM&#33;&#40;K, M, dh, cv, λ, μ, ρ&#41;</code></pre>
-<p>Assemble the linear stiffness <code>K</code> and mass <code>M</code> matrices with the Ferrite SVK backend.</p>
+<div class="markdown"><pre><code>svk_assemble_KM&#33;&#40;K, M, dh, cv, λ, μ, ρ&#41;
+svk_assemble_KM&#33;&#40;K, M, dh, cv, material&#41;</code></pre>
+<p>Assemble the three-dimensional linear stiffness <code>K</code> and mass <code>M</code> matrices in place with the Ferrite SVK backend. Supply either Lamé constants and density or an <code><a class="doc-ref" href="#StructuralSVK-SVKMaterial">SVKMaterial</a></code>/<code><a class="doc-ref" href="#StructuralSVK-AnisotropicMaterial">AnisotropicMaterial</a></code>. <code>K</code> and <code>M</code> must be preallocated with the sparsity pattern of <code>dh</code>; the function returns <code>nothing</code>.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-svk_nonlinearity" data-doc-name="svk_nonlinearity" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L38" target="_blank" rel="noopener">svk_nonlinearity</a>(degree::Integer, dh, cv, free_to_local, n_free, material::Union{MORFEFerrite.StructuralSVK.AnisotropicMaterial, SVKMaterial}; kwargs...)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L38" target="_blank" rel="noopener">svk_nonlinearity</a>(degree::Integer, args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L41" target="_blank" rel="noopener">svk_nonlinearity</a>(degree::Integer, dh, cv, free_to_local, n_free, material::Union{MORFEFerrite.StructuralSVK.AnisotropicMaterial, SVKMaterial}; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L41" target="_blank" rel="noopener">svk_nonlinearity</a>(degree::Integer, args...; kwargs...)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>svk_nonlinearity&#40;degree, dh, cv, free_to_local, n_free, λ, μ; max_unique_cols &#61; degree&#41;</code></pre>
-<p>Construct a Ferrite-backed St. Venant-Kirchhoff geometric nonlinearity term of the given polynomial <code>degree</code> &#40;2 &#61; quadratic, 3 &#61; cubic&#41; as a <code>MORFE.FEMMultilinearMap&#123;2&#125;</code>.</p>
+<div class="markdown"><pre><code>svk_nonlinearity&#40;degree, dh, cv, free_to_local, n_free, λ, μ;
+                 max_unique_cols &#61; degree, fully_asymmetric &#61; false&#41;
+svk_nonlinearity&#40;degree, dh, cv, free_to_local, n_free, material;
+                 max_unique_cols &#61; degree, fully_asymmetric &#61; false&#41;</code></pre>
+<p>Construct a Ferrite-backed St. Venant-Kirchhoff geometric nonlinearity term of the given polynomial <code>degree</code> &#40;<code>2</code> for the quadratic form, <code>3</code> for the cubic form&#41; as a <code>MORFE.FEMMultilinearMap&#123;2&#125;</code>. The constitutive law may be supplied as Lamé constants <code>λ</code>, <code>μ</code> or as an <code><a class="doc-ref" href="#StructuralSVK-SVKMaterial">SVKMaterial</a></code>/<code><a class="doc-ref" href="#StructuralSVK-AnisotropicMaterial">AnisotropicMaterial</a></code>.</p>
+<p><code>free_to_local</code> maps global Ferrite DOFs into the <code>n_free</code>-component state. The <code>max_unique_cols</code> cache must accommodate the column batches used by the reduction; <code>fully_asymmetric</code> is forwarded to MORFE&#39;s multilinear-term symmetry policy.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-voigt_stiffness" data-doc-name="voigt_stiffness" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L193" target="_blank" rel="noopener">voigt_stiffness</a>(m::MORFEFerrite.StructuralSVK.AnisotropicMaterial)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L193" target="_blank" rel="noopener">voigt_stiffness</a>(m::SVKMaterial)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L212" target="_blank" rel="noopener">voigt_stiffness</a>(m::MORFEFerrite.StructuralSVK.AnisotropicMaterial)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L212" target="_blank" rel="noopener">voigt_stiffness</a>(m::SVKMaterial)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>voigt_stiffness&#40;material&#41; -&gt; SMatrix&#123;6,6&#125;</code></pre>
-<p>Voigt stiffness of any supported material &#40;<code><a class="doc-ref" href="#StructuralSVK-SVKMaterial">SVKMaterial</a></code> returns its isotropic matrix&#41;, useful for inspection and for cross-checking anisotropic input.</p>
+<p>Return the <code>SMatrix&#123;6,6,Float64&#125;</code> Voigt stiffness of a supported material. <code><a class="doc-ref" href="#StructuralSVK-AnisotropicMaterial">AnisotropicMaterial</a></code> returns its stored matrix; <code><a class="doc-ref" href="#StructuralSVK-SVKMaterial">SVKMaterial</a></code> constructs the isotropic matrix from its Lamé constants. This is useful for inspection and for cross-checking anisotropic input.</p>
 </div>
   </div>
 </div>

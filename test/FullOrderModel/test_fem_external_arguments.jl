@@ -159,3 +159,63 @@ end
         @test norm(res_fem) > 1e-6
     end
 end #@testset "FEM terms with an external factor"
+
+struct _StubFEMInternalTerm <: MORFE.FEMMultilinearMap{2}
+    multiindex::NTuple{2, Int}
+    multiplicity_external::Int
+    deg::Int
+    fully_asymmetric::Union{Nothing, Bool}
+    w::Vector{ComplexF64}
+    shape::Vector{ComplexF64}
+    scale::ComplexF64
+    buffer::Matrix{ComplexF64}
+end
+
+MORFE.fem_elements(::_StubFEMInternalTerm) = 1:1
+MORFE.fem_n_qp(::_StubFEMInternalTerm) = 1
+MORFE.fem_ndofs_per_cell(::_StubFEMInternalTerm) = _FEM_FOM
+MORFE.fem_reinit!(_, ::_StubFEMInternalTerm) = nothing
+MORFE.fem_getdetJdV(_, _, ::_StubFEMInternalTerm) = 1.0
+MORFE.fem_qp_buffer(t::_StubFEMInternalTerm) = t.buffer
+function MORFE.scatter_qp!(values, W_global, _, t::_StubFEMInternalTerm)
+    values[1] = dot(conj(t.w), W_global)
+end
+MORFE.assemble_element!(accum, Fe, _, ::_StubFEMInternalTerm) = (accum .+= Fe)
+function MORFE.accumulate_qp!(Fe, values::Tuple{Any, Any}, mult, _, _, dΩ,
+        t::_StubFEMInternalTerm)
+    Fe .+= (mult * dΩ * t.scale * values[1] * values[2]) .* t.shape
+end
+
+@testset "global FEM cache merges two participating terms" begin
+    mset = all_multiindices_up_to(2, 2; min_degree = 1)
+    W, _ = create_parametrisation_method_objects(mset, 2, _FEM_FOM, 2, 0, ComplexF64)
+    W.poly.coefficients .= reshape(
+        ComplexF64[0.02i for i in eachindex(W.poly.coefficients)],
+        size(W.poly.coefficients))
+    make_term(scale, shape) = _StubFEMInternalTerm(
+        (2, 0), 0, 2, false, ComplexF64[1, -0.5, 0.25],
+        ComplexF64.(shape), ComplexF64(scale), zeros(ComplexF64, 4, 1))
+    terms = (make_term(1.0, [1, 0, -1]), make_term(-0.4, [0.5, 2, 0.25]))
+    K = zeros(ComplexF64, _FEM_FOM, _FEM_FOM)
+    model = NthOrderModel((K, K, K), terms)
+    cache = build_multilinear_terms_cache(model, W)
+
+    quadratic_index = findfirst(e -> sum(e) == 2, mset.exponents)
+    global_split = cache.global_fem_splits[quadratic_index]
+    @test global_split.driver_term_idx == 1
+    @test global_split.participating_term_indices == [1, 2]
+    @test length(global_split.global_unique_cols) <
+          sum(length(first(cache.fem_splits[quadratic_index][i]).unique_cols) for i in 1:2)
+
+    result = zeros(ComplexF64, _FEM_FOM)
+    compute_multilinear_terms!(result, model, quadratic_index, W, cache)
+    closures = ntuple(i -> MultilinearMap(
+        (r, x, y) -> (r .+= terms[i].scale * dot(conj(terms[i].w), x) *
+                             dot(conj(terms[i].w), y) .* terms[i].shape),
+        (2, 0); fully_asymmetric = false), 2)
+    reference_model = NthOrderModel((K, K, K), closures)
+    reference_cache = build_multilinear_terms_cache(reference_model, W)
+    reference = zeros(ComplexF64, _FEM_FOM)
+    compute_multilinear_terms!(reference, reference_model, quadratic_index, W, reference_cache)
+    @test result ≈ reference atol=1e-12
+end

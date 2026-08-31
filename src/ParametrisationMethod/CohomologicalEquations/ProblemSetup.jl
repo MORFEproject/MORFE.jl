@@ -1,3 +1,5 @@
+# End-to-end problem preparation: initialise W/R, build operators, and invoke execution.
+
 # =============================================================================
 # Private driver helpers
 # =============================================================================
@@ -54,7 +56,7 @@ hence only `j ≤ e` for the upper-triangular `Λ_ext` that the solver requires.
 When conjugate-symmetry is active, secondary external monomials are filled from their
 primaries via `fill_conjugate_monomial!` in the same pass rather than afterwards, so that
 `Φ_ext,k` is populated for every `k < e` regardless of how it was obtained.  This is safe
-because `primary_pairs` guarantees a secondary's source has the smaller index.
+because the conjugate map always marks the larger index as the secondary.
 
 All external linear monomials are marked in `sym.skip_bits` after this call so
 the main `solve_cohomological_equations!` loop does not overwrite them.
