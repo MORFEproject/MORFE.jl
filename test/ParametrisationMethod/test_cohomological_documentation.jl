@@ -52,29 +52,8 @@ end
     @test !isdefined(_CE_DOCS, :CohomologicalSolverConfig)
     @test !isdefined(_CE_DOCS, :CohomologicalCheckpoint)
 
-    checkpoint = CheckpointOptions("unused-documentation-test";
-        problem_id = "documentation-test")
-    solver_options = ParametrisationOptions(
-        backend = :klu,
-        grouping = :on,
-        residual_check = :backward_error,
-        residual_tolerance = 1e-9)
-    translated = _CE_DOCS._translate_legacy_options(
-        ParametrisationOptions(),
-        (; solver_config = solver_options, checkpoint,
-            validate_mset = false, show_progress = false,
-            verbose = false, setup_io = devnull))
-    @test translated.backend == :klu
-    @test translated.grouping == :on
-    @test translated.residual_check == :backward_error
-    @test translated.residual_tolerance == 1e-9
-    @test translated.checkpoint === checkpoint
-    @test !translated.validate_mset
-    @test !translated.show_progress
-    @test !translated.verbose
-    @test translated.setup_io === devnull
-    @test_throws ArgumentError _CE_DOCS._translate_legacy_options(
-        ParametrisationOptions(), (; solver_config = :klu))
+    @test !isdefined(_CE_DOCS, :_translate_legacy_options)
+    @test !isdefined(_CE_DOCS, :_replace_options)
 
     generated_page = read(joinpath(@__DIR__, "..", "..", "website",
         "documentation.html"), String)

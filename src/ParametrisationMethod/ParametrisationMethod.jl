@@ -39,9 +39,7 @@ using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
 using ..CohomologicalEquations: solve_cohomological_problem,
                                 ParametrisationOptions,
                                 CheckpointOptions,
-                                checkpoint_fingerprint_data,
-                                _translate_legacy_options,
-                                _replace_options
+                                checkpoint_fingerprint_data
 
 # Re-exported wholesale so `ParametrisationMethod` stays the one namespace users (and
 # `ext/MORFEBifurcationKitExt.jl`, which reaches for
@@ -270,10 +268,8 @@ function parametrise(
         expansion_order;
         resonance::Union{ResonanceConfig, ResonanceSet} = ResonanceConfig(),
         conjugate_permutation = :from_spectral,
-        options::ParametrisationOptions = ParametrisationOptions(),
-        kwargs...
+        options::ParametrisationOptions = ParametrisationOptions()
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}
-    options = _translate_legacy_options(options, kwargs)
     NVAR = ROM + N_EXT
 
     # Each step is a separate, independently dispatchable function.

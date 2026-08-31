@@ -268,9 +268,6 @@ linear-operator tuple is read from `model.linear_terms`.
   Benchmark mode uses its dedicated causal loop and therefore does not perform factor
   grouping or invoke checkpoint callbacks.
 
-Deprecated operational keywords are accepted through `kwargs` for migration only. New code
-should place them in `options`; unknown keywords raise `UndefKeywordError`.
-
 ## Returns
 
 `(W, R)` — the solved [`Parametrisation`](@ref) and [`ReducedDynamics`](@ref).
@@ -283,10 +280,8 @@ function solve_cohomological_problem(
         initial_solution::Union{Nothing, Tuple{Parametrisation, ReducedDynamics}} = nothing,
         conjugate_permutation = :from_spectral,
         benchmark_dir::Union{Nothing, AbstractString} = nothing,
-        options::ParametrisationOptions = ParametrisationOptions(),
-        kwargs...
+        options::ParametrisationOptions = ParametrisationOptions()
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
-    options = _translate_legacy_options(options, kwargs)
     checkpoint = options.checkpoint
     show_progress = options.show_progress
     initial_W, initial_R = isnothing(initial_solution) ? (nothing, nothing) :
