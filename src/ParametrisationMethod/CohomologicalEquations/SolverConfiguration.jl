@@ -220,7 +220,7 @@ function _translate_legacy_options(options::ParametrisationOptions, kwargs)
     if haskey(kwargs, :solver_config)
         old = kwargs[:solver_config]
         old isa ParametrisationOptions || throw(ArgumentError(
-            "deprecated solver_config must be constructed with CohomologicalSolverConfig"))
+            "deprecated solver_config must be a ParametrisationOptions object"))
         result = _replace_options(result;
             backend = old.backend,
             grouping = old.grouping,
@@ -239,28 +239,4 @@ function _translate_legacy_options(options::ParametrisationOptions, kwargs)
     haskey(kwargs, :setup_io) &&
         (result = _replace_options(result; setup_io = kwargs[:setup_io]))
     return result
-end
-
-# One compatibility release. These constructors forward into the single options
-# implementation; the deprecated keywords themselves are removed from `parametrise`.
-function CohomologicalSolverConfig(; backend::Symbol = :auto,
-        residual_tolerance::Union{Nothing, Real} = nothing,
-        group_superharmonics::Bool = false,
-        diagnostics_path = nothing)
-    Base.depwarn(
-        "CohomologicalSolverConfig is deprecated; use ParametrisationOptions", :CohomologicalSolverConfig)
-    isnothing(diagnostics_path) || Base.depwarn(
-        "diagnostics_path is no longer public; diagnostics belong to developer tooling", :CohomologicalSolverConfig)
-    return ParametrisationOptions(;
-        backend,
-        grouping = group_superharmonics ? :on : :off,
-        residual_check = isnothing(residual_tolerance) ? :off : :backward_error,
-        residual_tolerance)
-end
-
-function CohomologicalCheckpoint(path::AbstractString;
-        id::AbstractString, resume::Bool = true)
-    Base.depwarn(
-        "CohomologicalCheckpoint is deprecated; use CheckpointOptions", :CohomologicalCheckpoint)
-    return CheckpointOptions(path; problem_id = id, resume)
 end

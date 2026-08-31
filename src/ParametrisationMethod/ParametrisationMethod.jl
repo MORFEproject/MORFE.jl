@@ -40,8 +40,6 @@ using ..CohomologicalEquations: solve_cohomological_problem,
                                 ParametrisationOptions,
                                 CheckpointOptions,
                                 checkpoint_fingerprint_data,
-                                CohomologicalSolverConfig,
-                                CohomologicalCheckpoint,
                                 _translate_legacy_options,
                                 _replace_options
 
@@ -66,8 +64,7 @@ export Parametrisation,
        validate_multiindex_set,
        parametrise, build_multiindex_set, print_setup,
        ParametrisationOptions, CheckpointOptions,
-       checkpoint_fingerprint_data,
-       CohomologicalSolverConfig, CohomologicalCheckpoint
+       checkpoint_fingerprint_data
 
 # ==================== Expansion order → multiindex set ====================
 

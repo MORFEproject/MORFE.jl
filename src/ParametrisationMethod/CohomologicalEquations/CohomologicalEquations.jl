@@ -74,6 +74,8 @@ factorisation must re-pivot on every monomial.
 
 | Symbol | Description |
 |:-------|:------------|
+| [`ParametrisationOptions`](@ref)      | Solver, grouping, verification, validation and output policy |
+| [`CheckpointOptions`](@ref)           | Durable checkpoint and resume policy |
 | [`InvarianceOperators`](@ref)       | Precomputed invariance-equation operator coefficients |
 | [`OrthogonalityOperators`](@ref)    | Precomputed orthogonality-condition operator coefficients |
 | [`LowerOrderResources`](@ref)       | Lower-order coupling data and buffers |
@@ -82,7 +84,12 @@ factorisation must re-pivot on every monomial.
 | [`CohomologicalContext`](@ref)      | Composed struct bundling all precomputed operators and resources |
 | [`solve_single_monomial!`](@ref)    | Solve the cohomological system for one multi-index |
 | [`solve_cohomological_equations!`](@ref) | Solve for all multi-indices in causal order |
+| [`solve_cohomological_equations_benchmarked!`](@ref) | Instrumented solve that writes timing CSV files |
 | [`solve_cohomological_problem`](@ref)    | High-level driver: precompute everything and solve |
+
+Conjugate symmetry is represented by [`ConjugateSymmetryData`](@ref). Sparse backends
+share the extension interface described by [`_try_build_pardiso_solver`](@ref) and the
+four `_pardiso_*` phase hooks.
 """
 module CohomologicalEquations
 
@@ -140,11 +147,46 @@ using StaticArrays: SVector, MVector
 # solve and then releases everything on every call.
 const _PARDISO_INACTIVE = "Pardiso solver object present but MORFEPardisoExt not active — internal error."
 
+"""
+	_try_build_pardiso_solver() -> solver or nothing
+
+Extension hook implemented by `MORFEPardisoExt`. Return a configured Pardiso solver when
+the extension is active, or `nothing` in the core package so `:auto` can fall back to KLU.
+This is an extension interface, not an end-user solver-selection API.
+"""
 _try_build_pardiso_solver(::Vararg{Any}) = nothing
-_pardiso_prepare!(args...) = error(_PARDISO_INACTIVE)          # configure + phase 11, once
-_pardiso_factorise_solve!(args...) = error(_PARDISO_INACTIVE)  # phases 22 + 33, per monomial
-_pardiso_solve!(args...) = error(_PARDISO_INACTIVE)            # phase 33, reused factor group
-_pardiso_release!(args...) = nothing                           # phase -1, on finalisation
+
+"""
+	_pardiso_prepare!(solver, bordered) -> backend_matrix
+
+Extension hook for Pardiso configuration and symbolic analysis (phase 11). It is called
+once per sparse solver state and returns the matrix representation required by later phases.
+"""
+_pardiso_prepare!(args...) = error(_PARDISO_INACTIVE)
+
+"""
+	_pardiso_factorise_solve!(solver, matrix, solution, rhs) -> nothing
+
+Extension hook that performs Pardiso numeric factorisation and solve (phases 22 and 33)
+for the first monomial in an exact factor-reuse group.
+"""
+_pardiso_factorise_solve!(args...) = error(_PARDISO_INACTIVE)
+
+"""
+	_pardiso_solve!(solver, matrix, solution, rhs) -> nothing
+
+Extension hook that reuses the current Pardiso numeric factorisation (phase 33) for a
+subsequent monomial whose bordered matrix is exactly identical.
+"""
+_pardiso_solve!(args...) = error(_PARDISO_INACTIVE)
+
+"""
+	_pardiso_release!(solver, matrix) -> nothing
+
+Extension hook that releases Pardiso's external factorisation storage (phase -1). The core
+fallback is a no-op so finalisation remains safe when the extension is inactive.
+"""
+_pardiso_release!(args...) = nothing
 
 export _try_build_pardiso_solver, _pardiso_prepare!, _pardiso_factorise_solve!,
        _pardiso_solve!, _pardiso_release!
@@ -162,8 +204,6 @@ export CohomologicalContext,
        ParametrisationOptions,
        CheckpointOptions,
        checkpoint_fingerprint_data,
-       CohomologicalSolverConfig,
-       CohomologicalCheckpoint,
        InvarianceOperators,
        OrthogonalityOperators,
        LowerOrderResources,
@@ -207,10 +247,10 @@ struct _SimpleProgress
 end
 
 """
-	_make_progress(n_total, show_progress) -> _SimpleProgress
+	_make_progress(n_total, show_progress, max_nl_degree) -> _SimpleProgress
 
-Construct a `_SimpleProgress` tracker.  Disables output automatically when
-`stderr` is not a TTY (e.g. in CI or when piped).
+Construct a `_SimpleProgress` tracker. `max_nl_degree` controls the work-weighted
+percentage. Output is disabled automatically when `stderr` is not a TTY.
 """
 function _make_progress(n_total::Int, show_progress::Bool, max_nl_degree::Int)
     return _SimpleProgress(n_total, show_progress && stderr isa Base.TTY, max_nl_degree)
@@ -418,9 +458,22 @@ end
 
 """
 	solve_cohomological_equations!(W, R, ctx, model, ml_cache) -> nothing
+	solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
+		show_progress = true, grouping = :off, checkpoint_callback = nothing) -> nothing
 
 Solve the cohomological equations for **all** monomials in the multiindex set
-of `W` and `R`, processing them in *causal order* (ascending total degree).
+of `W` and `R`, processing them in causal order (ascending total degree).
+
+The overload without `sym` disables conjugate reconstruction. With
+[`ConjugateSymmetryData`](@ref), secondary monomials are skipped and filled from their
+solved primaries. `grouping` accepts `:off`, `:on`, or `:auto`: groups never cross a total
+degree and reuse a numeric factorisation only when the superharmonic and resonance mask
+make the bordered matrix exactly identical. `:auto` uses grouping only when it reduces the
+number of factorisations.
+
+When supplied, `checkpoint_callback(event, degree, indices)` receives `:group` after an
+independently committed solve group and `:degree` after every completed degree. The
+`indices` argument is populated for `:group` events and includes conjugate secondaries.
 """
 function solve_cohomological_equations!(
         W, R, ctx, model, ml_cache; show_progress::Bool = true,
@@ -431,6 +484,13 @@ function solve_cohomological_equations!(
         show_progress, grouping, checkpoint_callback)
 end
 
+"""
+	StructuralFactorKey{NVAR, ROM}
+
+Exact identity key for reusable bordered factorisations. `exponents` aggregates monomial
+powers by equal nonzero eigenvalue (zero-eigenvalue powers do not affect the
+superharmonic), while `resonance` preserves the border mask.
+"""
 struct StructuralFactorKey{NVAR, ROM}
     exponents::SVector{NVAR, Int}
     resonance::SVector{ROM, Bool}
@@ -473,6 +533,12 @@ function _structural_factor_key(multi::SVector{NVAR, Int},
     return StructuralFactorKey(SVector(exponents), resonance)
 end
 
+"""
+	_cohomological_groups(ctx, sym, mset, grouping, Val(ROM))
+
+Build causal, degree-local groups of monomial indices whose bordered matrices are exactly
+identical. Return `nothing` for `:off`, or for `:auto` when no factorisation is saved.
+"""
 function _cohomological_groups(ctx, sym, mset, grouping::Symbol, ::Val{ROM}) where {ROM}
     grouping == :off && return nothing
     grouping == :auto && !_has_structural_factor_reuse(ctx.lambda_diag) && return nothing
