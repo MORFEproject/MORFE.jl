@@ -40,11 +40,14 @@ jobs:
       - name: Install dependencies
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
+      - name: Install documentation dependencies
+        run: julia --project=website -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+
       - name: Install companion documentation dependencies
         run: julia --project=MORFEFerrite.jl -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
 
       - name: Generate MORFE code documentation
-        run: julia --project=. website/generate_documentation.jl
+        run: julia --project=website website/generate_documentation.jl
 
       - name: Generate static MORFE manifold artwork
         run: julia website/generate_manifold_accent.jl

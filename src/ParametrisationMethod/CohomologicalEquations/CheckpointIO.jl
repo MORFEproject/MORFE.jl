@@ -113,6 +113,23 @@ function _with_checkpoint_lock(f, root)
     end
 end
 
+"""
+    _normalize_manifest_lists!(manifest)
+
+TOML.jl types an empty array from a parsed file as `Vector{Union{}}` on Julia 1.10
+(older Base TOML.jl), whereas newer TOML.jl releases (Julia 1.12+) type it as
+`Vector{Any}`. A `Vector{Union{}}` can never accept a `push!`, since `Union{}` has no
+instances, so an empty `chunks` or `completed_degrees` array parsed back from disk
+would make the very first append fail depending solely on the Julia version in use.
+Call this right after every `TOML.parsefile` to make the manifest's list fields
+concrete and writable regardless of which TOML.jl version produced them.
+"""
+function _normalize_manifest_lists!(manifest)
+    manifest["chunks"] = Vector{Any}(get(manifest, "chunks", Any[]))
+    manifest["completed_degrees"] = Vector{Int}(get(manifest, "completed_degrees", Int[]))
+    return manifest
+end
+
 function _open_checkpoint(options::CheckpointOptions, fingerprint, metadata)
     root = options.path
     isfile(root) && throw(ArgumentError(
@@ -123,7 +140,7 @@ function _open_checkpoint(options::CheckpointOptions, fingerprint, metadata)
         throw(ArgumentError(
             "checkpoint $root already exists and resume=false; choose a new directory"))
     manifest = if isfile(path)
-        parsed = TOML.parsefile(path)
+        parsed = _normalize_manifest_lists!(TOML.parsefile(path))
         get(parsed, "schema_version", 0) == _CHECKPOINT_SCHEMA || throw(ArgumentError(
             "checkpoint $root uses an incompatible schema"))
         get(parsed, "fingerprint", "") == fingerprint || throw(ArgumentError(
@@ -166,7 +183,7 @@ function _write_chunk!(session::CheckpointSession, W, R, degree::Int, indices,
         filename = "degree_$(lpad(degree, 3, '0'))_$id_hash.bin"
         final_path = joinpath(root, "chunks", filename)
         temporary = final_path * ".tmp.$(getpid())"
-        w_slice = Array(view(W.poly.coefficients, :, :, ids))
+        w_slice = Array(view(W.poly.coefficients,:,:,ids))
         r_slice = Array(view(R.poly.coefficients, :, ids))
         checksum = ""
         try
@@ -189,14 +206,14 @@ function _write_chunk!(session::CheckpointSession, W, R, degree::Int, indices,
             "w_size" => collect(size(w_slice)),
             "r_size" => collect(size(r_slice))
         )
-        manifest = TOML.parsefile(_manifest_path(root))
+        manifest = _normalize_manifest_lists!(TOML.parsefile(_manifest_path(root)))
         manifest["fingerprint"] == session.fingerprint || throw(ArgumentError(
             "checkpoint fingerprint changed while writing"))
-        chunks = get!(manifest, "chunks", Any[])
+        chunks = manifest["chunks"]
         existing = findfirst(chunk -> chunk["file"] == filename, chunks)
         isnothing(existing) ? push!(chunks, entry) : (chunks[existing] = entry)
         if degree_complete
-            degrees = get!(manifest, "completed_degrees", Int[])
+            degrees = manifest["completed_degrees"]
             degree in degrees || push!(degrees, degree)
             sort!(degrees)
         end
@@ -216,10 +233,10 @@ end
 function _mark_degree_complete!(session::CheckpointSession, degree::Int)
     root = session.options.path
     _with_checkpoint_lock(root) do
-        manifest = TOML.parsefile(_manifest_path(root))
+        manifest = _normalize_manifest_lists!(TOML.parsefile(_manifest_path(root)))
         manifest["fingerprint"] == session.fingerprint || throw(ArgumentError(
             "checkpoint fingerprint changed while committing degree $degree"))
-        degrees = get!(manifest, "completed_degrees", Int[])
+        degrees = manifest["completed_degrees"]
         degree in degrees || push!(degrees, degree)
         sort!(degrees)
         _atomic_manifest(_manifest_path(root), manifest)
@@ -249,7 +266,7 @@ function _restore_checkpoint!(session::CheckpointSession, W, R;
             eof(io) || throw(ArgumentError("checkpoint chunk $path has trailing data"))
         end
         if verify_existing &&
-           (view(W.poly.coefficients, :, :, ids) != w_slice ||
+           (view(W.poly.coefficients,:,:,ids) != w_slice ||
             view(R.poly.coefficients, :, ids) != r_slice)
             throw(ArgumentError(
                 "initial_solution disagrees with committed checkpoint coefficients in $path"))

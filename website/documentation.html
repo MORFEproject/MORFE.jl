@@ -137,11 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-<<<<<<< Updated upstream
-  <p class="lede">19 modules · 281 documented entries · generated 31 August 2026</p>
-=======
-  <p class="lede">18 modules · 257 documented entries · generated 28 August 2026</p>
->>>>>>> Stashed changes
+  <p class="lede">19 modules · 284 documented entries · generated 31 August 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -769,7 +765,7 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
   <div class="doc-sig">
     <span class="badge f">function</span>
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L300" target="_blank" rel="noopener">zero</a>(::Type{DensePolynomial{T, NVAR, N, A} where {NVAR, N, A&lt;:AbstractArray{T, N}}}, mset::MultiindexSet) where T&lt;:Number</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L300" target="_blank" rel="noopener">zero</a>(::Type{DensePolynomial{T, NVAR, N, A} where {NVAR, N, A&lt;:AbstractArray{T, N}}}, cshape::NTuple{M, Int64}, mset::MultiindexSet) where {T&lt;:Number, M}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L300" target="_blank" rel="noopener">zero</a>(::Type{DensePolynomial{T, NVAR, N, A} where {NVAR, N, A&lt;:AbstractArray{T, N}}}, cshape::Tuple{Vararg{Int64, M}}, mset::MultiindexSet) where {T&lt;:Number, M}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>zero&#40;DensePolynomial&#123;T&#125;, mset&#41;              # scalar
@@ -4234,7 +4230,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-type" id="CohomologicalEquations-AbstractSparseBackend" data-doc-name="AbstractSparseBackend" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L156" target="_blank" rel="noopener">AbstractSparseBackend</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L157" target="_blank" rel="noopener">AbstractSparseBackend</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>SparseLinearSolverState&#123;T&#125;</code></pre>
@@ -4283,18 +4279,21 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </li>
 <li><p><code>granularity::Symbol &#61; :factor_group</code> — when data are committed:</p>
 <ul>
-<li><p><code>:factor_group</code> writes after every exact factor-reuse group &#40;a group may contain one monomial&#41;, giving finer restart points and more chunk files;</p>
-</li>
-<li><p><code>:degree</code> writes once after each completed total degree, giving fewer, larger chunks.</p>
+<li><p><code>:factor_group</code> writes after every exact factor-reuse group &#40;a group may contain one</p>
 </li>
 </ul>
+</li>
+</ul>
+<pre><code>monomial&#41;, giving finer restart points and more chunk files;</code></pre>
+<ul>
+<li><p><code>:degree</code> writes once after each completed total degree, giving fewer, larger chunks.</p>
 </li>
 </ul>
 <p>A checkpoint is accepted only when its fingerprint matches the model, spectral data, resonance set, multiindex set, conjugate permutation, and numerical solver policy. Models containing application-defined callable kernels must implement <a class="doc-ref" href="#CohomologicalEquations-checkpoint_fingerprint_data"><code>checkpoint_fingerprint_data</code></a> before they can be checkpointed.</p>
 <h1>Example</h1>
 <pre><code class="language-julia">checkpoint &#61; CheckpointOptions&#40;&quot;checkpoints/beam-order-9&quot;;
-    problem_id &#61; &quot;clamped-beam-v1&quot;,
-    granularity &#61; :degree&#41;
+	problem_id &#61; &quot;clamped-beam-v1&quot;,
+	granularity &#61; :degree&#41;
 
 options &#61; ParametrisationOptions&#40;checkpoint &#61; checkpoint&#41;
 W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
@@ -4477,26 +4476,26 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-ParametrisationOptions" data-doc-name="ParametrisationOptions" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverConfiguration.jl#L55" target="_blank" rel="noopener">ParametrisationOptions</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverConfiguration.jl#L56" target="_blank" rel="noopener">ParametrisationOptions</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>ParametrisationOptions&#40;;
-    backend &#61; :auto,
-    grouping &#61; :auto,
-    residual_check &#61; :off,
-    residual_tolerance &#61; nothing,
-    max_refinement_steps &#61; 3,
-    validate_mset &#61; true,
-    checkpoint &#61; nothing,
-    show_progress &#61; true,
-    verbose &#61; true,
-    setup_io &#61; stderr&#41;</code></pre>
-<p>Operational controls passed to <a class="doc-ref" href="#ParametrisationMethod-parametrise"><code>parametrise</code></a> through its <code>options</code> keyword:</p>
+	backend &#61; :auto,
+	grouping &#61; :auto,
+	residual_check &#61; :off,
+	residual_tolerance &#61; nothing,
+	max_refinement_steps &#61; 3,
+	validate_mset &#61; true,
+	checkpoint &#61; nothing,
+	show_progress &#61; true,
+	verbose &#61; true,
+	setup_io &#61; stderr&#41;</code></pre>
+<p>Example of operational controls passed to <a class="doc-ref" href="#ParametrisationMethod-parametrise"><code>parametrise</code></a> through its <code>options</code> keyword:</p>
 <pre><code class="language-julia">options &#61; ParametrisationOptions&#40;
-    backend &#61; :klu,
-    residual_check &#61; :backward_error,
-    residual_tolerance &#61; 1e-10,
-    show_progress &#61; false&#41;
+	backend &#61; :klu,
+	residual_check &#61; :backward_error,
+	residual_tolerance &#61; 1e-10,
+	show_progress &#61; false&#41;
 
 W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code></pre>
 <p>The fields below are constructor keywords of <code><a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions">ParametrisationOptions</a></code>; they are <strong>not</strong> direct keywords of <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>. Mathematical choices &#40;<code>resonance</code> and <code>conjugate_permutation</code>&#41; deliberately remain explicit keywords of <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>.</p>
@@ -4504,25 +4503,36 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <ul>
 <li><p><code>backend::Symbol &#61; :auto</code> — linear solver for the bordered cohomological systems:</p>
 <ul>
-<li><p><code>:auto</code> uses dense LU for dense full-order matrices; for sparse matrices it uses Pardiso when a Pardiso extension is active and otherwise KLU;</p>
-</li>
-<li><p><code>:klu</code> requires sparse full-order matrices and forces KLU;</p>
-</li>
-<li><p><code>:pardiso</code> requires sparse full-order matrices and an active Pardiso extension, otherwise construction of the solver fails.</p>
+<li><p><code>:auto</code> uses dense LU for dense full-order matrices; for sparse matrices it uses</p>
 </li>
 </ul>
 </li>
+</ul>
+<pre><code>Pardiso when a Pardiso extension is active and otherwise KLU;</code></pre>
+<ul>
+<li><p><code>:klu</code> requires sparse full-order matrices and forces KLU;</p>
+</li>
+<li><p><code>:pardiso</code> requires sparse full-order matrices and an active Pardiso extension,</p>
+</li>
+</ul>
+<pre><code>otherwise construction of the solver fails.</code></pre>
+<ul>
 <li><p><code>grouping::Symbol &#61; :auto</code> — exact reuse of a factorisation by monomials whose cohomological matrices are structurally identical:</p>
 <ul>
-<li><p><code>:auto</code> groups only when repeated or zero eigenvalues make reuse possible and grouping actually reduces the number of factorisations;</p>
+<li><p><code>:auto</code> groups only when repeated or zero eigenvalues make reuse possible and grouping</p>
 </li>
+</ul>
+</li>
+</ul>
+<pre><code>actually reduces the number of factorisations;</code></pre>
+<ul>
 <li><p><code>:on</code> always builds and processes the exact structural groups;</p>
 </li>
 <li><p><code>:off</code> solves directly in graded-lexicographic order without grouping.</p>
 </li>
 </ul>
 <p>Grouping is exact; it never clusters approximately equal eigenvalues.</p>
-</li>
+<ul>
 <li><p><code>residual_check::Symbol &#61; :off</code> — <code>:backward_error</code> verifies every bordered solve; <code>:off</code> skips this additional check.</p>
 </li>
 <li><p><code>residual_tolerance::Union&#123;Nothing, Real&#125; &#61; nothing</code> — positive backward-error limit. It is used only with <code>residual_check &#61; :backward_error</code>. <code>nothing</code> selects the scalar-type-aware default <code>sqrt&#40;eps&#40;real&#40;T&#41;&#41;&#41; / 100</code> &#40;approximately <code>1.49e-10</code> for <code>Float64</code>&#41;.</p>
@@ -4551,11 +4561,11 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <pre><code class="language-julia">options &#61; ParametrisationOptions&#40;show_progress &#61; false, verbose &#61; false&#41;</code></pre>
 <p>Verified sparse solve with automatic exact factor reuse:</p>
 <pre><code class="language-julia">options &#61; ParametrisationOptions&#40;
-    backend &#61; :auto,
-    grouping &#61; :auto,
-    residual_check &#61; :backward_error,
-    residual_tolerance &#61; 1e-10,
-    max_refinement_steps &#61; 3&#41;</code></pre>
+	backend &#61; :auto,
+	grouping &#61; :auto,
+	residual_check &#61; :backward_error,
+	residual_tolerance &#61; 1e-10,
+	max_refinement_steps &#61; 3&#41;</code></pre>
 <p>All symbolic options are validated when <code><a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions">ParametrisationOptions</a></code> is constructed, so a misspelling such as <code>backend &#61; :umfpack</code> or <code>grouping &#61; :approximate</code> fails immediately.</p>
 </div>
   </div>
@@ -4563,7 +4573,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-type" id="CohomologicalEquations-SparseLinearSolverState" data-doc-name="SparseLinearSolverState" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L229" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L230" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>SparseLinearSolverState&#123;T&#125;&#40;L_template, L_mappings, FOM, ROM&#41; -&gt; SparseLinearSolverState</code></pre>
@@ -4788,8 +4798,8 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_release_pardiso!" data-doc-name="_release_pardiso!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L270" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.PardisoBackend}) where T</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L270" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.KLUBackend}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L272" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.PardisoBackend}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverResources.jl#L272" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.KLUBackend}) where T</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_release_pardiso&#33;&#40;state&#41; -&gt; nothing</code></pre>
@@ -4894,9 +4904,9 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="doc doc-function" id="CohomologicalEquations-solve_cohomological_equations!" data-doc-name="solve_cohomological_equations!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L417" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress, grouping, checkpoint_callback)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L417" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping, checkpoint_callback) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L417" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping, checkpoint_callback) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L419" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress, grouping, checkpoint_callback)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L419" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping, checkpoint_callback) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L419" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping, checkpoint_callback) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_cohomological_equations&#33;&#40;W, R, ctx, model, ml_cache&#41; -&gt; nothing</code></pre>
