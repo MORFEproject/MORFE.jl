@@ -183,7 +183,7 @@ function _write_chunk!(session::CheckpointSession, W, R, degree::Int, indices,
         filename = "degree_$(lpad(degree, 3, '0'))_$id_hash.bin"
         final_path = joinpath(root, "chunks", filename)
         temporary = final_path * ".tmp.$(getpid())"
-        w_slice = Array(view(W.poly.coefficients,:,:,ids))
+        w_slice = Array(view(W.poly.coefficients, :, :, ids))
         r_slice = Array(view(R.poly.coefficients, :, ids))
         checksum = ""
         try
@@ -266,7 +266,7 @@ function _restore_checkpoint!(session::CheckpointSession, W, R;
             eof(io) || throw(ArgumentError("checkpoint chunk $path has trailing data"))
         end
         if verify_existing &&
-           (view(W.poly.coefficients,:,:,ids) != w_slice ||
+           (view(W.poly.coefficients, :, :, ids) != w_slice ||
             view(R.poly.coefficients, :, ids) != r_slice)
             throw(ArgumentError(
                 "initial_solution disagrees with committed checkpoint coefficients in $path"))
