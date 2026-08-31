@@ -21,7 +21,7 @@ provenance is visible at the call site (`ctx.orthogonality.J_coeffs`, not a bare
 | Parameter | Meaning |
 |:----------|:--------|
 | `T`       | Scalar type (typically `ComplexF64`) |
-| `ORD`     | Polynomial order of the full-order ODE |
+| `ORD`     | Differential-equation order of the full-order model |
 | `ORDP1`   | `ORD + 1` |
 | `NVAR`    | Total reduced variables: `ROM + N_EXT` |
 | `FOM`     | Full-order state dimension |
@@ -32,8 +32,11 @@ provenance is visible at the call site (`ctx.orthogonality.J_coeffs`, not a bare
 
 - `linear_terms::NTuple{ORDP1, MT}` — the `ORD+1` FOM matrices `B₀ … B_ORD` whose
   combination `L(s) = Σ_j s^j B_j` forms the `(1,1)` block of the bordered system.
-- `generalised_eigenmodes::Matrix{T}` — right eigenmode order-blocks, used to
-  initialise the linear monomials and to propagate higher derivative coefficients.
+- `generalised_eigenmodes::Matrix{T}` — `FOM × NVAR` matrix of generalised **right**
+  eigenmodes, formed by concatenating the master right eigenmodes and the solved external
+  right directions. It propagates higher derivative coefficients after the linear
+  monomials have been initialised. The left eigenmodes are represented separately through
+  `orthogonality` and are never stored in this field.
 - `lambda_diag::Vector{T}` — the `NVAR` reduced eigenvalues; the superharmonic of a
   monomial is `s = ⟨lambda_diag, α⟩`.
 - `invariance::InvarianceOperators{T}` — border-column coefficients; see
@@ -42,9 +45,9 @@ provenance is visible at the call site (`ctx.orthogonality.J_coeffs`, not a bare
   external coefficients; see [`OrthogonalityOperators`](@ref).
 - `resonance_set::ResonanceSet` — which master modes are resonant with which
   monomial, deciding per row whether the border is populated or masked out.
-- `linear_monomial_skip_set::Set{Int}` — positions of monomials already fixed
-  before the loop (linear ones from eigenvectors, external forcing directions), so
-  the driver skips rather than re-solves them.
+- `linear_monomial_skip_set::Set{Int}` — positions of master linear monomials fixed from
+  the eigenvectors before the loop. External linear directions are marked separately in
+  the active conjugate-symmetry skip mask after they are solved.
 - `lower_order::LowerOrderResources{NVAR, T}` — coupling buffers and multiindex
   look-up; see [`LowerOrderResources`](@ref).
 - `buffers::CohomologicalBuffers{T}` — assembly and solve scratch; see

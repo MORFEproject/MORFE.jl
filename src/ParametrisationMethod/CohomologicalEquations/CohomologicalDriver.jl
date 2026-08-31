@@ -3,13 +3,13 @@
 # =============================================================================
 
 """
-	_initialise_waveform!(W, R, master_modes, master_eigenvalues,
-						  master_modes_derivatives, unit_offset, model)
+    _initialise_waveform!(W, R, master_right_modes, master_eigenvalues,
+                          master_right_mode_derivatives, unit_offset, model)
 
 Initialise the linear-monomial coefficients of `W` and `R` from spectral data:
 
-- `W[:, 1, eᵣ] = master_modes[:, r]` and, for `ORD > 1`,
-  `W[:, k, eᵣ] = master_modes_derivatives[:, k-1, r]`.
+- `W[:, 1, eᵣ] = master_right_modes[:, r]` and, for `ORD > 1`,
+  `W[:, k, eᵣ] = master_right_mode_derivatives[:, k-1, r]`.
 - `R[r, eᵣ] = master_eigenvalues[r]`.
 
 Also embeds the external-system linear dynamics into the external rows of `R` via
@@ -17,18 +17,18 @@ Also embeds the external-system linear dynamics into the external rows of `R` vi
 """
 function _initialise_waveform!(
         W::Parametrisation, R::ReducedDynamics,
-        master_modes, master_eigenvalues,
-        master_modes_derivatives, unit_offset::Int, model
+        master_right_modes, master_eigenvalues,
+        master_right_mode_derivatives, unit_offset::Int, model
 )
     ROM = length(master_eigenvalues)
     ORD_W = size(W.poly.coefficients, 2)
     for r in 1:ROM
         idx_er = r + unit_offset
-        W.poly.coefficients[:, 1, idx_er] .= view(master_modes, :, r)
-        if master_modes_derivatives !== nothing
+        W.poly.coefficients[:, 1, idx_er] .= view(master_right_modes, :, r)
+        if master_right_mode_derivatives !== nothing
             for k in 2:ORD_W
                 W.poly.coefficients[:, k, idx_er] .= view(
-                    master_modes_derivatives, :, k -
+                    master_right_mode_derivatives, :, k -
                                                  1, r)
             end
         end
@@ -141,10 +141,12 @@ function _check_external_conjugate_block(
 end
 
 """
-	_make_sparse_solver(MT, linear_terms, FOM, ROM) -> Union{SparseLinearSolverState, Nothing}
+	_make_sparse_solver(MT, linear_terms, FOM, ROM,
+		options = ParametrisationOptions()) -> Union{SparseLinearSolverState, Nothing}
 
 Dispatch helper: returns a `SparseLinearSolverState` when `MT <: SparseMatrixCSC`
-(sparse path), or `nothing` for all other matrix types (dense path).
+(sparse path), or `nothing` for all other matrix types (dense path). An explicit sparse
+backend request is rejected for dense matrices; sparse backend selection follows `options`.
 """
 _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int) = nothing
 function _make_sparse_solver(
@@ -163,7 +165,7 @@ function _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int,
 end
 
 """
-	_build_context(linear_terms, generalised_eigenmodes, lambda_diag,
+	_build_context(linear_terms, generalised_right_eigenmodes, lambda_diag,
 				   inv_ops, orth_ops, resonance_set, linear_skip_set,
 				   lower_order, buffers, sparse_solver) -> CohomologicalContext
 
@@ -172,7 +174,7 @@ resources.  All type parameters are inferred from the arguments.
 """
 function _build_context(
         linear_terms::NTuple{ORDP1, MT},
-        generalised_eigenmodes::Matrix{T},
+        generalised_right_eigenmodes::Matrix{T},
         lambda_diag::Vector{T},
         inv_ops::InvarianceOperators{T},
         orth_ops::OrthogonalityOperators{T},
@@ -182,11 +184,11 @@ function _build_context(
         buffers::CohomologicalBuffers{T},
         sparse_solver
 ) where {ORDP1, MT, T, NVAR}
-    FOM = size(generalised_eigenmodes, 1)
+    FOM = size(generalised_right_eigenmodes, 1)
     ORD = ORDP1 - 1
     LT = eltype(MT)
     return CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}(
-        linear_terms, generalised_eigenmodes, lambda_diag,
+        linear_terms, generalised_right_eigenmodes, lambda_diag,
         inv_ops, orth_ops,
         resonance_set, linear_skip_set,
         lower_order, buffers, sparse_solver
@@ -202,18 +204,19 @@ end
 		model, mset, spectral::SpectralData, resonance_set;
 		initial_solution = nothing,
 		conjugate_permutation = :from_spectral,
+		benchmark_dir = nothing,
 		options = ParametrisationOptions()
 	) -> (W, R)
 
 High-level driver that assembles a [`CohomologicalContext`](@ref) from spectral data and
 solves the full set of cohomological equations.
 
-The spectral input is **one** object. It used to be five separately-maintained arrays
-(`master_eigenvalues`, `master_modes`, `left_eigenmodes`, `master_modes_derivatives`,
-`left_modes_derivatives`) that every call site sliced by hand and had to keep mutually
+The spectral input is **one** object. It replaces five separately maintained inputs: master
+eigenvalues, master right modes, master left modes, right-mode derivative blocks, and
+left-mode order blocks. Every former call site had to slice and keep those arrays mutually
 consistent — including the mirrored right/left block convention, where a swap is
-type-correct and compiles silently. [`SpectralData`](@ref)'s accessors own that convention
-now, and it is checked numerically by `check_biorthogonality`.
+type-correct and compiles silently. [`SpectralData`](@ref)'s explicitly named accessors own
+that convention now, and it is checked numerically by `check_biorthogonality`.
 
 The external dynamics enter through `model.external_system.first_order_dynamics`, which
 `_embed_external_dynamics!` copies into the external rows of `R`; the superharmonics `s`
@@ -231,9 +234,12 @@ linear-operator tuple is read from `model.linear_terms`.
    and initialise master-mode linear monomials.
 2. Build shared resources (buffers, lower-order coupling data, sparse solver state).
 3. Solve the linear cohomological equations for each external forcing direction via
-   a partial context in which the not-yet-solved external columns of
-   `generalised_right_eigenmodes` are set to zero.
-4. Build the full `generalised_right_eigenmodes` from the solved external directions.
+   a partial context in which the not-yet-solved external columns of the generalised
+   right-eigenmode matrix are set to zero.
+4. Build the full `generalised_right_eigenmodes` matrix by concatenating the master right
+   eigenmodes with the solved external right directions. This matrix is stored as
+   `CohomologicalContext.generalised_eigenmodes`; left eigenmodes enter only through the
+   orthogonality operators.
 5. Assemble the full context and call [`solve_cohomological_equations!`](@ref).
 
 ## Arguments
@@ -257,6 +263,13 @@ linear-operator tuple is read from `model.linear_terms`.
   verifies exactly that before returning one.
 - `options` — execution, validation, residual-verification, and checkpoint policy in a
   [`ParametrisationOptions`](@ref). Mathematical choices remain separate arguments.
+- `benchmark_dir` — `nothing` for the normal grouped/checkpoint-capable solve, or a directory
+  in which [`solve_cohomological_equations_benchmarked!`](@ref) writes timing CSV files.
+  Benchmark mode uses its dedicated causal loop and therefore does not perform factor
+  grouping or invoke checkpoint callbacks.
+
+Deprecated operational keywords are accepted through `kwargs` for migration only. New code
+should place them in `options`; unknown keywords raise `UndefKeywordError`.
 
 ## Returns
 
@@ -285,10 +298,10 @@ function solve_cohomological_problem(
     # block fields are `Union{Nothing, Array}` so that ORD == 1 is representable, and every
     # access to them is a type-unstable branch — harmless once, unacceptable in the loop.
     master_eigs = master_eigenvalues(spectral)
-    master_modes = right_modes(spectral)::Matrix{ComplexF64}
-    left_eigenmodes = left_modes(spectral)::Matrix{ComplexF64}
-    master_modes_derivatives = right_mode_derivatives(spectral)
-    left_modes_derivatives = left_mode_blocks(spectral)
+    master_right_modes = right_modes(spectral)::Matrix{ComplexF64}
+    master_left_modes = left_modes(spectral)::Matrix{ComplexF64}
+    master_right_mode_derivatives = right_mode_derivatives(spectral)
+    master_left_mode_blocks = left_mode_blocks(spectral)
     conj_perm = _spectral_conjugate_permutation(
         conjugate_permutation, spectral, model.external_system)
 
@@ -297,8 +310,8 @@ function solve_cohomological_problem(
     options.validate_mset && validate_multiindex_set(mset, NVAR, ROM;
         conjugate_permutation = conj_perm)
     _check_external_conjugate_block(conj_perm, model.external_system, ROM, NVAR)
-    FOM = size(master_modes, 1)
-    @assert size(master_modes, 2) == ROM "master_modes must have $ROM columns"
+    FOM = size(master_right_modes, 1)
+    @assert size(master_right_modes, 2) == ROM "master right modes must have $ROM columns"
     T = ComplexF64
 
     checkpoint_session = if isnothing(checkpoint)
@@ -329,13 +342,13 @@ function solve_cohomological_problem(
         W = initial_W
         R = initial_R
     else
-        @assert ORD == 1 || master_modes_derivatives !== nothing """
-            master_modes_derivatives must be provided for ORD > 1 systems.
+        @assert ORD == 1 || master_right_mode_derivatives !== nothing """
+            master right-mode derivatives must be provided for ORD > 1 systems.
             Supply a FOM × (ORD-1) × ROM array whose slice [:, k, r] = W^(k+1)[e_r].
             """
         W, R = create_parametrisation_method_objects(mset, ORD, FOM, ROM, N_EXT, T)
-        _initialise_waveform!(W, R, master_modes, master_eigs,
-            master_modes_derivatives, unit_offset, model)
+        _initialise_waveform!(W, R, master_right_modes, master_eigs,
+            master_right_mode_derivatives, unit_offset, model)
     end
     completed_indices = isnothing(checkpoint_session) ? nothing :
                         _restore_checkpoint!(checkpoint_session, W, R;
@@ -368,7 +381,8 @@ function solve_cohomological_problem(
             2. Each mode either comes in a complex conjugate pair with another mode, or is \
           	 self-paired  meaning it has a real eigenvalue and a real-valued mode shape.
             3. Eigenvalue conjugacy is necessary but NOT sufficient for paired modes; \
-          	 the eigenvectors must satisfy master_modes[:, perm[r]] = conj(master_modes[:, r]).
+               the right eigenvectors must satisfy \
+               master_right_modes[:, perm[r]] = conj(master_right_modes[:, r]).
             4. If external modes are present (N_EXT > 0): the same pairing rules apply \
           	 to the external eigenvalues, encoded in the NVAR-length permutation.
           Passing an incorrect permutation silently corrupts the parametrisation and reduced-dynamics.
@@ -395,7 +409,7 @@ function solve_cohomological_problem(
 
     # ── 3. Φ_ext-independent operators ───────────────────────────────────────
     orthogonality_J_coeffs = precompute_orthogonality_operator_coefficients(
-        linear_terms, left_eigenmodes, left_modes_derivatives
+        linear_terms, master_left_modes, master_left_mode_blocks
     )
     # Right master-mode order-blocks: the linear master monomials of W hold all
     # ORD derivative blocks (filled from the eigenvectors at initialisation).
@@ -403,7 +417,7 @@ function solve_cohomological_problem(
         ((unit_offset + 1):(unit_offset + ROM)))
     Λ_master = view(R.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
     invariance_C_coeffs, D_master_steps = precompute_master_column_polynomials(
-        linear_terms, master_modes, Λ_master
+        linear_terms, master_right_modes, Λ_master
     )
 
     # ── 4. Solve external linear monomials via partial contexts ──────────────
@@ -436,7 +450,7 @@ function solve_cohomological_problem(
                 end
             end
             return _build_context(
-                linear_terms, hcat(master_modes, external_directions), lambda_diag,
+                linear_terms, hcat(master_right_modes, external_directions), lambda_diag,
                 InvarianceOperators{T}(invariance_C_coeffs, partial_E_coeffs),
                 OrthogonalityOperators{T}(orthogonality_J_coeffs,
                     partial_orth_C_coeffs, partial_orth_E_coeffs),
@@ -481,7 +495,7 @@ function solve_cohomological_problem(
     for e in 1:N_EXT
         external_directions[:, e] .= W.poly.coefficients[:, 1, ROM + e + unit_offset]
     end
-    generalised_eigenmodes = hcat(master_modes, external_directions)
+    generalised_right_eigenmodes = hcat(master_right_modes, external_directions)
 
     invariance_E_coeffs = precompute_external_column_polynomials(
         linear_terms, external_directions, Λ, D_master_steps
@@ -493,7 +507,7 @@ function solve_cohomological_problem(
 
     # ── 6. Full context and main solve ────────────────────────────────────────
     ctx = _build_context(
-        linear_terms, generalised_eigenmodes, lambda_diag,
+        linear_terms, generalised_right_eigenmodes, lambda_diag,
         InvarianceOperators{T}(invariance_C_coeffs, invariance_E_coeffs),
         OrthogonalityOperators{T}(orthogonality_J_coeffs,
             orthogonality_C_coeffs, orthogonality_E_coeffs),
@@ -534,8 +548,13 @@ function solve_cohomological_problem(
     return W, R
 end
 
-# `:from_spectral` — take the bundle's master-block permutation and append the external
-# block derived from the external system. Anything else is used verbatim.
+"""
+	_spectral_conjugate_permutation(request, spectral, external_system)
+
+Resolve `:from_spectral` by taking the master permutation stored in `spectral` and, when
+present, appending the conjugate block derived from `external_system`. Explicit vectors and
+`nothing` pass through unchanged.
+"""
 function _spectral_conjugate_permutation(request, spectral::SpectralData, sys)
     request === :from_spectral || return request
     # `master_conjugate_permutation` is a field read — the restriction was settled when the

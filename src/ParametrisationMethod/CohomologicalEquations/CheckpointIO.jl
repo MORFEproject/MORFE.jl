@@ -1,6 +1,13 @@
 const _CHECKPOINT_SCHEMA = 2
 const _CHECKPOINT_MAGIC = UInt8[0x4d, 0x4f, 0x52, 0x46, 0x45, 0x43, 0x50, 0x32]
 
+"""
+	CheckpointSession
+
+Mutable state for one checkpoint directory: the validated [`CheckpointOptions`](@ref), the
+problem fingerprint, and the most recently committed manifest. The manifest is refreshed
+under the writer lock after every chunk or degree commit.
+"""
 mutable struct CheckpointSession
     options::CheckpointOptions
     fingerprint::String
@@ -68,6 +75,14 @@ function _fingerprint_value!(ctx, value)
     return nothing
 end
 
+"""
+	_problem_fingerprint(model, spectral, resonance_set, mset, conjugate_permutation,
+		options) -> String
+
+Return the SHA-256 identity of all mathematical inputs and numerical solver policy that
+affect checkpoint compatibility. Presentation and destination options are intentionally
+excluded. Opaque application callables must implement [`checkpoint_fingerprint_data`](@ref).
+"""
 function _problem_fingerprint(model, spectral, resonance_set, mset, conj_perm,
         options::ParametrisationOptions)
     ctx = SHA.SHA256_CTX()
@@ -97,6 +112,13 @@ function _atomic_manifest(path, manifest)
     return nothing
 end
 
+"""
+	_with_checkpoint_lock(f, root)
+
+Execute `f()` while owning the checkpoint directory's single-writer lock. A pre-existing
+lock is treated as an active writer and raises instead of risking concurrent manifest
+updates; the lock is released in a `finally` block.
+"""
 function _with_checkpoint_lock(f, root)
     lock = _lock_path(root)
     try
@@ -130,6 +152,13 @@ function _normalise_manifest_lists!(manifest)
     return manifest
 end
 
+"""
+	_open_checkpoint(options, fingerprint, metadata) -> CheckpointSession
+
+Create the directory-format checkpoint or validate an existing resumable manifest against
+its schema, problem identifier, fingerprint, and byte order. Existing checkpoints are
+never overwritten when `resume == false`.
+"""
 function _open_checkpoint(options::CheckpointOptions, fingerprint, metadata)
     root = options.path
     isfile(root) && throw(ArgumentError(
@@ -173,6 +202,14 @@ function _file_sha256(path)
     end
 end
 
+"""
+	_write_chunk!(session, W, R, degree, indices, sparse_solver;
+		degree_complete) -> nothing
+
+Atomically write a checksummed coefficient slice, then commit its manifest entry under the
+writer lock. When `degree_complete` is true, mark the degree complete in the same manifest
+update. Sparse solver diagnostics are included when available.
+"""
 function _write_chunk!(session::CheckpointSession, W, R, degree::Int, indices,
         sparse_solver; degree_complete::Bool)
     isempty(indices) && return nothing
@@ -230,6 +267,12 @@ function _write_chunk!(session::CheckpointSession, W, R, degree::Int, indices,
     end
 end
 
+"""
+	_mark_degree_complete!(session, degree) -> nothing
+
+Commit a degree-completion marker under the writer lock without writing another coefficient
+chunk. Used after all factor-group chunks for the degree are durable.
+"""
 function _mark_degree_complete!(session::CheckpointSession, degree::Int)
     root = session.options.path
     _with_checkpoint_lock(root) do
@@ -245,6 +288,13 @@ function _mark_degree_complete!(session::CheckpointSession, degree::Int)
     return nothing
 end
 
+"""
+	_restore_checkpoint!(session, W, R; verify_existing = false) -> BitSet
+
+Verify every recorded chunk's presence, checksum, header, shape, and payload boundary, then
+restore its coefficient slices into `W` and `R`. With `verify_existing`, reject any restored
+slice that disagrees with the caller-provided initial solution. Return restored indices.
+"""
 function _restore_checkpoint!(session::CheckpointSession, W, R;
         verify_existing::Bool = false)
     completed = BitSet()

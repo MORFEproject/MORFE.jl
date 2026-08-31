@@ -17,10 +17,10 @@ loop allocation-free.
 
 - `column_coeffs::Vector{Matrix{T}}` — one `FOM × ORD` matrix per master mode `r`,
   the coefficients of the border *column* `C_r(s)`.  Distinct in both shape and
-  role from [`OrthogonalityOperators`](@ref)`.corner_coeffs`, which fills the
+  role from [`OrthogonalityOperators`](@ref) `corner_coeffs`, which fills the
   `ROM × ROM` corner.
-- `E_coeffs::Vector{Matrix{T}}` — one `FOM × ORD` matrix per external forcing mode
-  `e`.  External amplitudes are known, so these never reach the matrix.
+- `E_coeffs::Vector{Matrix{T}}` — one `FOM × ORD` matrix per external variable or
+  direction `e`. External amplitudes are known, so these never reach the matrix.
 """
 struct InvarianceOperators{T}
     column_coeffs::Vector{Matrix{T}}   # length ROM,   each FOM × ORD
@@ -44,7 +44,7 @@ row at a given `s` costs one Horner pass and no allocation.
 - `corner_coeffs::Vector{Matrix{T}}` — one `(ORD-1) × ROM` matrix per master mode,
   evaluating to the `ROM × ROM` *corner* block `Ĉ(s)` that couples the orthogonality
   rows to the unknown reduced-dynamics coefficients.  See
-  [`InvarianceOperators`](@ref)`.column_coeffs` for the differently-shaped border
+  [`InvarianceOperators`](@ref) `column_coeffs` for the differently-shaped border
   columns.
 - `E_coeffs::Vector{Matrix{T}}` — one `(ORD-1) × N_EXT` matrix per master mode,
   contracting the known external amplitudes into the scalar right-hand side.

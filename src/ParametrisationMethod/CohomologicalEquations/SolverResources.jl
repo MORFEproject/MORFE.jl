@@ -64,7 +64,7 @@ end
 # =============================================================================
 
 """
-	CohomologicalBuffers{T}
+	CohomologicalBuffers{T, RT}
 
 Pre-allocated scratch buffers for the cohomological system assembly and solve.
 
@@ -92,6 +92,14 @@ The unused buffer is a `0×0` placeholder.
 - `external_rhs::Vector{T}` — length `FOM` scratch for `evaluate_external_rhs!`.
 - `ml_result::Vector{T}` — length `FOM`, receiving the nonlinear (multilinear-term)
   contribution from `compute_multilinear_terms!`.
+- `dense_solution::Vector{T}` — accepted solution retained while the dense matrix and
+  right-hand side are reassembled for backward-error checks; empty when verification is
+  disabled or on the sparse path.
+- `dense_refinement::Vector{T}` — lazily allocated dense correction vector used only after
+  a failed backward-error check.
+- `residual_tolerance::Union{Nothing, RT}` — active scalar-type-aware backward-error
+  threshold, or `nothing` when verification is disabled.
+- `max_refinement_steps::Int` — maximum dense iterative-refinement corrections.
 """
 struct CohomologicalBuffers{T, RT <: Real}
     system_matrix::Matrix{T}       # (FOM+ROM)²; dense path only
@@ -105,6 +113,13 @@ struct CohomologicalBuffers{T, RT <: Real}
     max_refinement_steps::Int
 end
 
+"""
+	_configured_residual_tolerance(T, options) -> tolerance or nothing
+
+Resolve the backward-error threshold in the real scalar type associated with `T`.
+Returns `nothing` when `options.residual_check == :off`; otherwise uses the explicit
+tolerance or the scalar-type-aware default.
+"""
 function _configured_residual_tolerance(::Type{T}, options::ParametrisationOptions) where {T}
     RT = typeof(real(zero(T)))
     options.residual_check == :off && return nothing
@@ -113,11 +128,12 @@ function _configured_residual_tolerance(::Type{T}, options::ParametrisationOptio
 end
 
 """
-	CohomologicalBuffers(T, MT, FOM, ROM) -> CohomologicalBuffers
+    CohomologicalBuffers(T, MT, FOM, ROM, options = ParametrisationOptions()) -> CohomologicalBuffers
 
 Allocate all buffers for a system of full-order dimension `FOM` and `ROM` master
 modes.  Dispatches on the FOM matrix type `MT`: `MT <: SparseMatrixCSC` selects the
-sparse layout, everything else the dense one.
+sparse layout, everything else the dense one. `options` controls backward-error workspace
+and the refinement limit.
 """
 function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int,
         options::ParametrisationOptions = ParametrisationOptions()) where {T, MT}
@@ -155,7 +171,36 @@ end
 # =============================================================================
 
 """
-	SparseLinearSolverState{T}
+	AbstractSparseBackend
+
+Internal dispatch root for sparse bordered solvers. [`KLUBackend`](@ref) is always
+available; [`PardisoBackend`](@ref) is constructed only when the extension is active.
+"""
+abstract type AbstractSparseBackend end
+
+"""
+	KLUBackend{VERIFY}
+
+Marker for the built-in KLU path. `VERIFY` selects backward-error verification at compile
+time so the default unchecked loop does not pay for residual bookkeeping.
+"""
+struct KLUBackend{VERIFY} <: AbstractSparseBackend end
+
+"""
+	PardisoBackend{P, VERIFY}
+
+Sparse backend state for an extension-provided Pardiso `solver`. `VERIFY` selects
+backward-error verification at compile time.
+"""
+struct PardisoBackend{P, VERIFY} <: AbstractSparseBackend
+    solver::P
+end
+
+_backend_name(::KLUBackend) = :klu
+_backend_name(::PardisoBackend) = :pardiso
+
+"""
+	SparseLinearSolverState{T, B, RT}
 
 Sparse-path resources for the constant-size bordered cohomological system (see the
 [`CohomologicalEquations`](@ref) module docstring for the system itself).
@@ -170,11 +215,11 @@ valid throughout, and is the reason the border is masked rather than compacted.
 intermediates `L[j](s)` to accumulate the lower-order RHS); the resulting `L(s)` is
 then block-copied into the `(1,1)` block of `bordered`, column by column.
 
-Solver priority: Pardiso when the extension is loaded, otherwise KLU via
-`klu`/`klu_factor!` — the latter reusing the cached symbolic analysis while redoing
-the numeric factorisation *with* partial pivoting on every monomial, which is what
-varying `s` requires.  Note `klu_factor!`, not the exported `klu!`: that one is
-`klu_refactor` and freezes the pivot sequence.
+Backend selection follows [`ParametrisationOptions`](@ref): `:klu` forces KLU, `:pardiso`
+requires the extension, and `:auto` prefers an available Pardiso implementation before
+falling back to KLU. KLU reuses cached symbolic analysis while redoing numeric
+factorisation with partial pivoting whenever the bordered matrix changes. Note
+`klu_factor!`, not the exported `klu!`: the latter freezes the pivot sequence.
 
 # Fields
 
@@ -191,25 +236,20 @@ varying `s` requires.  Note `klu_factor!`, not the exported `klu!`: that one is
 - `solve_scratch::Vector{T}` — length `FOM+ROM` RHS copy for Pardiso, whose solve
   needs distinct input and output vectors.  Empty on the KLU path, where `ldiv!` is
   genuinely in-place.
-- `pardiso::Any` — an `AbstractPardisoSolver` when the extension is loaded,
-  otherwise `nothing`.  Untyped because the type only exists with the weak
-  dependency present.
 - `pardiso_matrix::Any` — the matrix handed to Pardiso's analysis phase; `nothing`
   until `_pardiso_prepare!` has run.
-- `fact::Any` — the cached factorisation; `nothing` until the first successful one.
+- `fact::Any` — cached KLU factorisation; `nothing` until the first successful one.
+- `backend::B` — selected [`KLUBackend`](@ref) or [`PardisoBackend`](@ref).
+- `residual_tolerance::Union{Nothing, RT}` — active backward-error threshold.
+- `max_refinement_steps::Int` — maximum KLU refinement corrections.
+- `residual_work::Vector{T}` — persistent KLU residual/norm workspace.
+- `refinement_work::Vector{T}` — lazily allocated correction workspace.
+- `max_relative_residual::RT` — largest accepted backward error observed so far.
+- `refinement_count::Int` — total KLU refinement corrections performed.
 
 `mutable` is load-bearing, not incidental: the Pardiso branch attaches a finaliser to
 release C-side memory, and Julia refuses to finalise an immutable object.
 """
-abstract type AbstractSparseBackend end
-struct KLUBackend{VERIFY} <: AbstractSparseBackend end
-struct PardisoBackend{P, VERIFY} <: AbstractSparseBackend
-    solver::P
-end
-
-_backend_name(::KLUBackend) = :klu
-_backend_name(::PardisoBackend) = :pardiso
-
 mutable struct SparseLinearSolverState{T, B <: AbstractSparseBackend, RT <: Real}
     bordered::SparseMatrixCSC{T}         # (FOM+ROM)²; constant pattern
     L_template::SparseMatrixCSC{T}       # FOM²; workspace for L(s)
@@ -228,11 +268,11 @@ mutable struct SparseLinearSolverState{T, B <: AbstractSparseBackend, RT <: Real
 end
 
 """
-	SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM) -> SparseLinearSolverState
+    SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM;
+        options = ParametrisationOptions()) -> SparseLinearSolverState
 
-Initialise the sparse solver state: build the constant-pattern bordered template
-around `L_template` and probe for Pardiso (MKL first, then open-source), falling
-back to KLU.
+Initialise the sparse solver state and constant-pattern bordered template. Backend
+selection, residual verification, and refinement storage follow `options`.
 """
 function SparseLinearSolverState{T}(
         L_template::SparseMatrixCSC{T},

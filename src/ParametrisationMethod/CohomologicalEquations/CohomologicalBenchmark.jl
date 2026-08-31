@@ -5,8 +5,9 @@
 #   benchmark_per_monomial.csv — one row per solved monomial
 #   benchmark_per_order.csv   — one aggregate row per polynomial degree
 #
-# Both files are written atomically at the end of the solve loop (all rows
-# buffered in IOBuffers to avoid per-row file-system overhead).
+# Both files are buffered in `IOBuffer`s and written at the end of the solve loop to
+# avoid per-row file-system overhead. Existing files are overwritten; the writes are
+# not transactional.
 # =============================================================================
 
 """
@@ -142,10 +143,23 @@ end
 
 """
 	solve_cohomological_equations_benchmarked!(W, R, ctx, sym, model, ml_cache;
-											   benchmark_dir, show_progress) -> nothing
+		benchmark_dir, show_progress = true) -> nothing
 
-Like `solve_cohomological_equations!` but records per-monomial and per-order
-timing and writes two CSV files to `benchmark_dir` on completion.
+Run the causal cohomological solve while timing nonlinear right-hand-side assembly and the
+bordered linear solve separately. On successful completion it overwrites two files:
+
+- `benchmark_per_monomial.csv` contains order, monomial index and exponents, time and
+  allocations for each measured phase, monomial total, and cumulative measured time.
+- `benchmark_per_order.csv` aggregates those quantities by polynomial degree and records
+  live GC bytes when each order is flushed.
+
+Rows are buffered in memory and written only after the solve completes. The measured time
+does not include lower-order coupling assembly, coefficient unpacking, higher-derivative
+updates, progress output, or CSV writing. This diagnostic loop supports conjugate filling
+but deliberately does not use structural factor grouping or checkpoint callbacks.
+
+`benchmark_dir` is required and is created when necessary. `show_progress` has the same TTY
+behavior as in [`solve_cohomological_equations!`](@ref).
 """
 function solve_cohomological_equations_benchmarked!(
         W::Parametrisation{ORD, NVAR, T},

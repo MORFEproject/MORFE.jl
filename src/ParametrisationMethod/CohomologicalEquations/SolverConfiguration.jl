@@ -206,6 +206,13 @@ function _replace_options(options::ParametrisationOptions;
         show_progress, verbose, setup_io)
 end
 
+"""
+	_translate_legacy_options(options, kwargs) -> ParametrisationOptions
+
+Translate the temporarily supported direct operational keywords into a new options value.
+Only `solver_config`, `checkpoint`, `validate_mset`, `show_progress`, `verbose`, and
+`setup_io` are accepted; `solver_config` itself must already be a `ParametrisationOptions`.
+"""
 function _translate_legacy_options(options::ParametrisationOptions, kwargs)
     isempty(kwargs) && return options
     allowed = (:solver_config, :checkpoint, :validate_mset,

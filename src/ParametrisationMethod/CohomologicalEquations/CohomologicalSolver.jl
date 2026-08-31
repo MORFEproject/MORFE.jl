@@ -36,7 +36,7 @@
 # =============================================================================
 
 """
-	_refactorise!(ss, A) -> KLU factorisation of `A`
+	_refactorise_klu!(ss, A) -> KLU factorisation of `A`
 
 Factorise the bordered matrix for the current monomial, reusing the symbolic analysis
 cached in `ss.fact`.
@@ -116,6 +116,13 @@ function _sparse_residual!(residual, A::SparseMatrixCSC, x)
     return mul!(residual, A, x, one(eltype(residual)), -one(eltype(residual)))
 end
 
+"""
+	_klu_backward_error!(state, solution, norm_b) -> nothing
+
+Check the normwise backward error of a KLU solution and, when necessary, perform up to
+`state.max_refinement_steps` correction solves using the existing factorisation. Updates
+the diagnostic maximum and refinement count, and throws if the tolerance is still missed.
+"""
 function _klu_backward_error!(ss::SparseLinearSolverState, x, norm_b)
     tolerance = ss.residual_tolerance
     tolerance === nothing && return nothing
@@ -164,26 +171,23 @@ end
 
 Throw an informative error for a singular bordered cohomological matrix.
 
-Bordering regularises `L(s)` only along the *master* directions.  When `s` sits on a
-**non-master** eigenvalue of the full-order model — an outer resonance — `L(s)` is
-singular in a direction the border does not span, and the bordered matrix is singular
-too.  That is a property of the reduction, not of the solve: the invariant manifold is
-not normally hyperbolic at that monomial and the master set is too small.  Enlarging
-the master set to include the offending mode is the fix.
-
-`ResonanceSet.outer_resonances` records exactly these monomials at construction time.
+The most important expected cause is an outer resonance: `s` lies on a non-master
+eigenvalue, so the master border does not span the null direction of `L(s)`. Depending on
+how the model and resonance data were assembled, rank-deficient operators, an insufficient
+border, or numerical failure can produce the same factorisation result. Inspect
+`ResonanceSet.outer_resonances` first, then verify the model and border ranks before
+concluding that the master set must be enlarged.
 """
 function _singular_bordered_system(s)
     error("""
       Singular bordered cohomological system at superharmonic s = $s.
 
-      The border regularises L(s) only along master directions, so this means s lies on
-      a non-master eigenvalue of the full-order model — an outer resonance.  The
-      reduction itself is ill-posed at this monomial, not just the linear solve.
+      A likely cause is an outer resonance: s lies on a non-master eigenvalue and the
+      master border does not span the null direction of L(s). Rank-deficient model
+      operators, an insufficient border, or numerical failure can cause the same result.
 
-      Enlarge the master set to include the resonant mode (check the `outer_resonances`
-      field of the ResonanceSet, which flags these monomials), or lower the order so the
-      offending monomial is not reached.""")
+      Check `ResonanceSet.outer_resonances` and the model/border ranks. If this is an outer
+      resonance, enlarge the master set or lower the expansion order.""")
 end
 
 """
@@ -193,7 +197,7 @@ Solve `bordered * y = x` for `y`, overwriting `x` with the solution, and dispatc
 to Pardiso when available and to the cached KLU factorisation otherwise.
 
 Both branches reuse a symbolic analysis computed once: KLU through
-[`_refactorise!`](@ref), Pardiso through its phase split (`_pardiso_prepare!` once,
+[`_refactorise_klu!`](@ref), Pardiso through its phase split (`_pardiso_prepare!` once,
 then numeric-factorise + solve per monomial).
 
 KLU's `ldiv!` is genuinely in-place, so the KLU branch needs no intermediate buffer.
@@ -299,6 +303,13 @@ end
 # Dense-path monomial solve
 # =============================================================================
 
+"""
+	_dense_backward_error(A, x, b) -> Real
+
+Compute `norm(A*x-b, Inf) / (norm(A, Inf)*norm(x, Inf) + norm(b, Inf))` without
+allocating a residual vector. The denominator is floored at the real scalar type's
+smallest positive normal value.
+"""
 function _dense_backward_error(A, x, b)
     RT = typeof(real(zero(eltype(x))))
     norm_A = zero(RT)
@@ -375,8 +386,9 @@ end
 	_solve_monomial!(ctx, s, resonance, lower_order_couplings, external_dynamics)
 
 **Sparse path** (dispatched when `MT <: SparseMatrixCSC`). Writes the bordered matrix
-into the constant-pattern template held by `ctx.sparse_solver` and solves it with a
-single factorisation.
+into the constant-pattern template held by `ctx.sparse_solver` and solves it with at most
+one new numeric factorisation. When `reuse_factor == Val(true)`, the existing factorisation
+is reused because the caller has established exact matrix identity.
 
 The `(1,1)` block is evaluated by the untouched `build_sparse_L_and_rhs!` Horner pass
 on its own workspace — it needs the transient intermediates `L[j](s)` to accumulate
