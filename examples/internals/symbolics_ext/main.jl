@@ -32,8 +32,8 @@ u, du, ddu = collect(u), collect(du), collect(ddu)
 k, g, c = 1.0, 6.0, 0.1
 
 exprs = [
-	ddu[1] + c*du[1] - c*du[2] + (1 + k)*u[1] - k*u[2] + g*u[1]^3,
-	ddu[2] - c*du[1] + 2*c*du[2] - k*u[1] + (1 + k)*u[2],
+    ddu[1] + c*du[1] - c*du[2] + (1 + k)*u[1] - k*u[2] + g*u[1]^3,
+    ddu[2] - c*du[1] + 2*c*du[2] - k*u[1] + (1 + k)*u[2]
 ]
 
 groups = (u, du, ddu)   # ascending order: (u, u̇, ü)
@@ -54,13 +54,13 @@ k, g, c = 1.0, 6.0, 0.1
 Ω = 1.3
 
 exprs = [
-	ddu[1] + c*du[1] - c*du[2] + (1 + k)*u[1] - k*u[2] + g*u[1]^3 - r[1] - r[2],
-	ddu[2] - c*du[1] + 2*c*du[2] - k*u[1] + (1 + k)*u[2],
+    ddu[1] + c*du[1] - c*du[2] + (1 + k)*u[1] - k*u[2] + g*u[1]^3 - r[1] - r[2],
+    ddu[2] - c*du[1] + 2*c*du[2] - k*u[1] + (1 + k)*u[2]
 ]
 
 ext_exprs = [
-	im * Ω * r[1],
-	-im * Ω * r[2],
+    im * Ω * r[1],
+    -im * Ω * r[2]
 ]
 
 ext_var = collect(r)
@@ -91,8 +91,8 @@ r = collect(r)
 Ω1, Ω2 = 1.0, sqrt(2)   # incommensurate
 
 ext_exprs = [
-	im*Ω1*r[1], -im*Ω1*r[2],
-	im*Ω2*r[3], -im*Ω2*r[4],
+    im*Ω1*r[1], -im*Ω1*r[2],
+    im*Ω2*r[3], -im*Ω2*r[4]
 ]
 quasi = externalsystem_from_symbolics(ext_exprs, r)   # same object as ExternalSystem((im*Ω1,-im*Ω1,im*Ω2,-im*Ω2))
 
@@ -107,10 +107,10 @@ quasi = externalsystem_from_symbolics(ext_exprs, r)   # same object as ExternalS
 r = collect(r)
 
 ext_exprs = [
-	Ω*r[3],
-	-0.03*Ω*r[1] + 4*Ω*r[4],
-	-Ω*r[1],
-	-4*Ω*r[2] + 0.12*Ω*r[3],
+    Ω*r[3],
+    -0.03*Ω*r[1] + 4*Ω*r[4],
+    -Ω*r[1],
+    -4*Ω*r[2] + 0.12*Ω*r[3]
 ]
 multiharmonic = externalsystem_from_symbolics(ext_exprs, r)   # same object as ExternalSystem(linear_polynomial(A))
 
@@ -137,9 +137,9 @@ C = sqrt(β*(ρ-1))
 r = [X, Y, Z]
 
 ext_exprs = [
-	σ*(Y-X),
-	X - Y - Z*(X+C),
-	C*(X+Y) + X*Y - β*Z,
+    σ*(Y-X),
+    X - Y - Z*(X+C),
+    C*(X+Y) + X*Y - β*Z
 ]
 lorenz = externalsystem_from_symbolics(ext_exprs, r)
 
@@ -204,13 +204,13 @@ forcing(r) = real(r[1] + r[2])                 # = 2 cos(Ωt)
 c, k = 0.2, 1.0   # a plain, lightly damped SDOF oscillator
 
 function combined_rhs!(dstate, state, p, t)
-	u, du = state[1], state[2]
-	r = @view state[3:end]
-	dr = @view dstate[3:end]
-	ext_rhs!(dr, r, p, t)
+    u, du = state[1], state[2]
+    r = @view state[3:end]
+    dr = @view dstate[3:end]
+    ext_rhs!(dr, r, p, t)
 
-	dstate[1] = du
-	dstate[2] = -c*du - k*u + forcing(r)
+    dstate[1] = du
+    dstate[2] = -c*du - k*u + forcing(r)
 end
 
 state0 = vcat(0.0+0im, 0.0+0im, r0)   # u(0)=0, u̇(0)=0, r(0) from the active block
