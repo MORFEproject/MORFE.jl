@@ -192,6 +192,13 @@ function ParametrisationOptions(;
         show_progress, verbose, setup_io)
 end
 
+"""
+	_replace_options(options; overrides...) -> ParametrisationOptions
+
+Return a validated copy of `options`, replacing only the supplied keyword fields. This is
+the internal equivalent of an immutable record update and preserves the concrete `setup_io`
+type when no replacement is requested.
+"""
 function _replace_options(options::ParametrisationOptions;
         backend = options.backend,
         grouping = options.grouping,

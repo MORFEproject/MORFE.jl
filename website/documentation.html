@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">18 modules · 305 documented entries · generated 31 August 2026</p>
+  <p class="lede">18 modules · 354 documented entries · generated 31 August 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -4221,16 +4221,19 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <p>Non-resonant master modes stay in the system as trivial equations rather than being compacted away.  That is what keeps the size — and on the sparse path the sparsity pattern — independent of <code>α</code>, so a single symbolic factorisation serves every monomial.  It costs nothing in accuracy: permuting the unknowns as <code>&#91;W; R_res; R_non&#93;</code> makes the matrix block triangular with an exactly decoupled <code>τI</code> block, and each trivial row is a singleton in both its row and its column.  External forcing modes are <em>known</em> and appear only on the right-hand side.</p>
 <h2>Why the system is bordered rather than reduced</h2>
 <p>The border is not an optimisation but a conditioning requirement.  Inner resonance is flagged by <code>|λ_r − s| &lt; tol</code>, and <code>det L&#40;λ_r&#41; &#61; 0</code> for every master eigenvalue, so &quot;monomial <code>α</code> is resonant&quot; means precisely &quot;<code>L&#40;s_α&#41;</code> is numerically singular&quot; — and a border is present only on exactly those monomials.  Eliminating <code>L&#40;s&#41;</code> first, by forming <code>L&#40;s&#41;⁻¹·RHS</code> and <code>L&#40;s&#41;⁻¹C&#40;s&#41;</code>, would therefore apply an inverse that does not usefully exist, with backward error growing like <code>κ&#40;L&#40;s_α&#41;&#41; → ∞</code>.</p>
-<p>Factorising the bordered matrix as a whole keeps the backward error at <code>κ</code> of the <em>bordered</em> matrix, which stays bounded because the border spans the near-null directions of <code>L&#40;s&#41;</code> &#40;Keller&#39;s bordering lemma&#41;.  This is why the linear algebra  in <code>CohomologicalSolver.jl</code> never inverts <code>L&#40;s&#41;</code> alone, and why its numeric  factorisation must re-pivot on every monomial.</p>
+<p>Factorising the bordered matrix as a whole keeps the backward error at <code>κ</code> of the <em>bordered</em> matrix, which stays bounded because the border spans the near-null directions of <code>L&#40;s&#41;</code> &#40;Keller&#39;s bordering lemma&#41;.  This is why the linear algebra  below never inverts <code>L&#40;s&#41;</code> alone, and why its numeric factorisation must re-pivot on every monomial.</p>
 <hr />
 <h1>Module contents</h1>
 <table><tr><th align="left">Symbol</th><th align="left">Description</th></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions"><code>ParametrisationOptions</code></a></td><td align="left">Solver, grouping, verification, validation and output policy</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-CheckpointOptions"><code>CheckpointOptions</code></a></td><td align="left">Durable checkpoint and resume policy</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-InvarianceOperators"><code>InvarianceOperators</code></a></td><td align="left">Precomputed invariance-equation operator coefficients</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-OrthogonalityOperators"><code>OrthogonalityOperators</code></a></td><td align="left">Precomputed orthogonality-condition operator coefficients</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-LowerOrderResources"><code>LowerOrderResources</code></a></td><td align="left">Lower-order coupling data and buffers</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-CohomologicalBuffers"><code>CohomologicalBuffers</code></a></td><td align="left">Pre-allocated system-assembly scratch buffers</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-SparseLinearSolverState"><code>SparseLinearSolverState</code></a></td><td align="left">Sparse-path bordered template, index maps and solver handles</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-CohomologicalContext"><code>CohomologicalContext</code></a></td><td align="left">Composed struct bundling all precomputed operators and resources</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-solve_single_monomial!"><code>solve_single_monomial&#33;</code></a></td><td align="left">Solve the cohomological system for one multi-index</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_equations!"><code>solve_cohomological_equations&#33;</code></a></td><td align="left">Solve for all multi-indices in causal order</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_equations_benchmarked!"><code>solve_cohomological_equations_benchmarked&#33;</code></a></td><td align="left">Instrumented solve that writes timing CSV files</td></tr><tr><td align="left"><a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a></td><td align="left">High-level driver: precompute everything and solve</td></tr></table>
+<h1>Source layout</h1>
+<p>The module is deliberately organised by responsibility:</p>
+<table><tr><th align="left">File</th><th align="left">Responsibility</th></tr><tr><td align="left"><code>CohomologicalEquations.jl</code></td><td align="left">Mathematical assembly and solution of the bordered cohomological equations; module façade</td></tr><tr><td align="left"><code>Configuration.jl</code></td><td align="left">User-facing solver and checkpoint options</td></tr><tr><td align="left"><code>SolveState.jl</code></td><td align="left">Precomputed operators, reusable buffers, backend state, and the solve context</td></tr><tr><td align="left"><code>Execution.jl</code></td><td align="left">Causal job planning, exact factor grouping, progress/checkpoint observers, and benchmark reporting</td></tr><tr><td align="left"><code>ProblemSetup.jl</code></td><td align="left">End-to-end problem preparation and external-direction initialisation</td></tr><tr><td align="left"><code>Checkpointing.jl</code></td><td align="left">Checkpoint format, validation, restoration, and atomic writes</td></tr><tr><td align="left"><code>Symmetry.jl</code></td><td align="left">Conjugate-symmetry discovery bookkeeping and coefficient reconstruction</td></tr></table>
 <p>Conjugate symmetry is represented by <a class="doc-ref" href="#CohomologicalEquations-ConjugateSymmetryData"><code>ConjugateSymmetryData</code></a>. Sparse backends share the extension interface described by <a class="doc-ref" href="#CohomologicalEquations-_try_build_pardiso_solver"><code>_try_build_pardiso_solver</code></a> and the four <code>_pardiso_*</code> phase hooks.</p>
 </div></div>
 <div class="doc doc-type" id="CohomologicalEquations-AbstractSparseBackend" data-doc-name="AbstractSparseBackend" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L230" target="_blank" rel="noopener">AbstractSparseBackend</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L232" target="_blank" rel="noopener">AbstractSparseBackend</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>AbstractSparseBackend</code></pre>
@@ -4241,7 +4244,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-type" id="CohomologicalEquations-CheckpointOptions" data-doc-name="CheckpointOptions" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Configuration.jl#L1" target="_blank" rel="noopener">CheckpointOptions</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Configuration.jl#L3" target="_blank" rel="noopener">CheckpointOptions</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>CheckpointOptions&#40;path; problem_id, resume &#61; true, granularity &#61; :factor_group&#41;</code></pre>
@@ -4280,18 +4283,27 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-CheckpointSession" data-doc-name="CheckpointSession" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L4" target="_blank" rel="noopener">CheckpointSession</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L6" target="_blank" rel="noopener">CheckpointSession</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>CheckpointSession</code></pre>
 <p>Mutable state for one checkpoint directory: the validated <a class="doc-ref" href="#CohomologicalEquations-CheckpointOptions"><code>CheckpointOptions</code></a>, the problem fingerprint, and the most recently committed manifest. The manifest is refreshed under the writer lock after every chunk or degree commit.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>options::CheckpointOptions</code> — checkpoint path, resume policy, problem identifier, and commit granularity for this session.</p>
+</li>
+<li><p><code>fingerprint::String</code> — SHA-256 identity of the mathematical problem and numerical policy against which every resumed manifest is checked.</p>
+</li>
+<li><p><code>manifest::Dict&#123;String, Any&#125;</code> — in-memory copy of the last atomically committed manifest.</p>
+</li>
+</ul>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="CohomologicalEquations-CohomologicalBuffers" data-doc-name="CohomologicalBuffers" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L123" target="_blank" rel="noopener">CohomologicalBuffers</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L125" target="_blank" rel="noopener">CohomologicalBuffers</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>CohomologicalBuffers&#123;T, RT&#125;</code></pre>
@@ -4333,7 +4345,7 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-CohomologicalContext" data-doc-name="CohomologicalContext" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L391" target="_blank" rel="noopener">CohomologicalContext</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L398" target="_blank" rel="noopener">CohomologicalContext</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>CohomologicalContext&#123;T, ORD, ORDP1, NVAR, FOM, LT, MT&#125;</code></pre>
@@ -4393,7 +4405,7 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-InvarianceOperators" data-doc-name="InvarianceOperators" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L5" target="_blank" rel="noopener">InvarianceOperators</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L7" target="_blank" rel="noopener">InvarianceOperators</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>InvarianceOperators&#123;T&#125;</code></pre>
@@ -4412,7 +4424,7 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-KLUBackend" data-doc-name="KLUBackend" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L238" target="_blank" rel="noopener">KLUBackend</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L240" target="_blank" rel="noopener">KLUBackend</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>KLUBackend&#123;VERIFY&#125;</code></pre>
@@ -4423,7 +4435,7 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-LowerOrderResources" data-doc-name="LowerOrderResources" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L62" target="_blank" rel="noopener">LowerOrderResources</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L64" target="_blank" rel="noopener">LowerOrderResources</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>LowerOrderResources&#123;NVAR, T&#125;</code></pre>
@@ -4460,7 +4472,7 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-OrthogonalityOperators" data-doc-name="OrthogonalityOperators" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L30" target="_blank" rel="noopener">OrthogonalityOperators</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L32" target="_blank" rel="noopener">OrthogonalityOperators</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>OrthogonalityOperators&#123;T&#125;</code></pre>
@@ -4481,7 +4493,7 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="CohomologicalEquations-ParametrisationOptions" data-doc-name="ParametrisationOptions" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Configuration.jl#L56" target="_blank" rel="noopener">ParametrisationOptions</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Configuration.jl#L58" target="_blank" rel="noopener">ParametrisationOptions</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>ParametrisationOptions&#40;;
@@ -4536,7 +4548,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <li><p><code>:off</code> solves directly in graded-lexicographic order without grouping.</p>
 </li>
 </ul>
-<p>Grouping is exact; it never clusters approximately equal eigenvalues.</p>
+<p>Grouping is exact; it never clusters approximately equal eigenvalues. Each group uses   its first monomial&#39;s superharmonic consistently for every member.</p>
 <ul>
 <li><p><code>residual_check::Symbol &#61; :off</code> — <code>:backward_error</code> verifies every bordered solve; <code>:off</code> skips this additional check.</p>
 </li>
@@ -4578,7 +4590,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-type" id="CohomologicalEquations-PardisoBackend" data-doc-name="PardisoBackend" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L246" target="_blank" rel="noopener">PardisoBackend</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L248" target="_blank" rel="noopener">PardisoBackend</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>PardisoBackend&#123;P, VERIFY&#125;</code></pre>
@@ -4589,7 +4601,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-type" id="CohomologicalEquations-SparseLinearSolverState" data-doc-name="SparseLinearSolverState" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L259" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L266" target="_blank" rel="noopener">SparseLinearSolverState</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>SparseLinearSolverState&#123;T, B, RT&#125;</code></pre>
@@ -4638,47 +4650,223 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-type" id="CohomologicalEquations-StructuralFactorKey" data-doc-name="StructuralFactorKey" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L24" target="_blank" rel="noopener">StructuralFactorKey</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L68" target="_blank" rel="noopener">StructuralFactorKey</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>Exact identity key for reusable bordered factorisations.</p>
+<div class="markdown"><pre><code>StructuralFactorKey&#123;NVAR, ROM&#125;</code></pre>
+<p>Exact mathematical identity of a bordered matrix for factor-reuse grouping.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>exponents::SVector&#123;NVAR, Int&#125;</code> — monomial powers accumulated by equal nonzero eigenvalue; powers belonging to zero eigenvalues do not affect the superharmonic.</p>
+</li>
+<li><p><code>resonance::SVector&#123;ROM, Bool&#125;</code> — complete master-mode border mask.</p>
+</li>
+</ul>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_AbstractSolveObserver" data-doc-name="_AbstractSolveObserver" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L238" target="_blank" rel="noopener">_AbstractSolveObserver</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_AbstractSolveObserver</code></pre>
+<p>Internal lifecycle interface notified after jobs, factor groups, completed degrees, and the complete plan. Concrete observers keep progress, checkpointing, and benchmarking out of the numerical executor.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_AbstractSolvePlan" data-doc-name="_AbstractSolvePlan" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L21" target="_blank" rel="noopener">_AbstractSolvePlan</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Internal dispatch root for direct and exact-factor-grouped solve plans.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_BenchmarkInstrumentation" data-doc-name="_BenchmarkInstrumentation" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L546" target="_blank" rel="noopener">_BenchmarkInstrumentation</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_BenchmarkInstrumentation</code></pre>
+<p>Instrumentation marker that times nonlinear right-hand-side assembly and the bordered solve while leaving preparation and coefficient finalisation outside the measurements.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_BenchmarkSolveObserver" data-doc-name="_BenchmarkSolveObserver" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L669" target="_blank" rel="noopener">_BenchmarkSolveObserver</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_BenchmarkSolveObserver&#123;M&#125;</code></pre>
+<p>Accumulate per-monomial and per-degree benchmark rows in memory and write them after a successful solve.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>mset::M</code> — multiindex set used to render monomial exponents.</p>
+</li>
+<li><p><code>monomial_io::IOBuffer</code> — buffered per-monomial CSV rows.</p>
+</li>
+<li><p><code>order_io::IOBuffer</code> — buffered per-degree CSV rows.</p>
+</li>
+<li><p><code>benchmark_dir::String</code> — destination directory for both CSV files.</p>
+</li>
+<li><p><code>cumulative_time::Float64</code> — cumulative measured RHS and solve time.</p>
+</li>
+<li><p><code>current_order::Int</code> — degree of the most recently measured job.</p>
+</li>
+<li><p><code>order_accumulator::_OrderAccum</code> — reusable totals for the current degree.</p>
+</li>
+</ul>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_CheckpointSolveObserver" data-doc-name="_CheckpointSolveObserver" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L282" target="_blank" rel="noopener">_CheckpointSolveObserver</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_CheckpointSolveObserver&#123;S, W, R, M, SS&#125;</code></pre>
+<p>Commit coefficient chunks and degree markers at lifecycle boundaries.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>session::S</code> — active <a class="doc-ref" href="#CohomologicalEquations-CheckpointSession"><code>CheckpointSession</code></a>.</p>
+</li>
+<li><p><code>W::W</code> — parametrisation whose completed coefficient slices are persisted.</p>
+</li>
+<li><p><code>R::R</code> — reduced dynamics persisted alongside <code>W</code>.</p>
+</li>
+<li><p><code>mset::M</code> — multiindex set used to collect all indices in degree-granularity mode.</p>
+</li>
+<li><p><code>sparse_solver::SS</code> — sparse solver diagnostics, or <code>nothing</code> on the dense path.</p>
+</li>
+</ul>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_CompositeSolveObserver" data-doc-name="_CompositeSolveObserver" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L251" target="_blank" rel="noopener">_CompositeSolveObserver</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_CompositeSolveObserver&#123;A, B&#125;</code></pre>
+<p>Forward every lifecycle event to two observers in order.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>first::A</code> — observer notified first.</p>
+</li>
+<li><p><code>second::B</code> — observer notified after <code>first</code> completes.</p>
+</li>
+</ul>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="CohomologicalEquations-_DirectSolvePlan" data-doc-name="_DirectSolvePlan" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L13" target="_blank" rel="noopener">_DirectSolvePlan</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L24" target="_blank" rel="noopener">_DirectSolvePlan</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>Causal jobs executed as independent singleton factorisation groups.</p>
+<div class="markdown"><pre><code>_DirectSolvePlan</code></pre>
+<p>Causal jobs executed as independent singleton factorisation groups.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>jobs::Vector&#123;_SolveJob&#125;</code> — solve jobs in graded-lexicographic causal order.</p>
+</li>
+</ul>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="CohomologicalEquations-_GroupedSolvePlan" data-doc-name="_GroupedSolvePlan" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L18" target="_blank" rel="noopener">_GroupedSolvePlan</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L53" target="_blank" rel="noopener">_GroupedSolvePlan</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>Degree-local groups whose jobs share an exactly identical bordered matrix.</p>
+<div class="markdown"><pre><code>_GroupedSolvePlan&#123;T&#125;</code></pre>
+<p>Degree-local groups whose jobs share exactly identical bordered matrices.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>groups::Vector&#123;_SolveGroup&#123;T&#125;&#125;</code> — ordered factor-reuse groups, never spanning degrees.</p>
+</li>
+<li><p><code>n_jobs::Int</code> — total primary solves across all groups, used for progress reporting.</p>
+</li>
+</ul>
 </div>
   </div>
 </div>
 <div class="doc doc-type" id="CohomologicalEquations-_NoMonomialInstrumentation" data-doc-name="_NoMonomialInstrumentation" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L811" target="_blank" rel="noopener">_NoMonomialInstrumentation</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L844" target="_blank" rel="noopener">_NoMonomialInstrumentation</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Internal marker selecting the allocation-free, uninstrumented solve path.</p>
 </div>
   </div>
 </div>
+<div class="doc doc-type" id="CohomologicalEquations-_NoSolveObserver" data-doc-name="_NoSolveObserver" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L247" target="_blank" rel="noopener">_NoSolveObserver</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>No-op solve observer used when no optional lifecycle action is requested.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_OrderAccum" data-doc-name="_OrderAccum" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L597" target="_blank" rel="noopener">_OrderAccum</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_OrderAccum</code></pre>
+<p>Mutable per-degree benchmark totals, reset and reused between polynomial orders.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>n_solved::Int</code> — primary monomials measured in the current degree.</p>
+</li>
+<li><p><code>rhs_time::Float64</code> — cumulative nonlinear right-hand-side assembly time.</p>
+</li>
+<li><p><code>rhs_bytes::Int</code> — cumulative allocations during right-hand-side assembly.</p>
+</li>
+<li><p><code>solve_time::Float64</code> — cumulative bordered-solve time.</p>
+</li>
+<li><p><code>solve_bytes::Int</code> — cumulative allocations during bordered solves.</p>
+</li>
+</ul>
+</div>
+  </div>
+</div>
+<div class="doc doc-type" id="CohomologicalEquations-_ProgressSolveObserver" data-doc-name="_ProgressSolveObserver" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L267" target="_blank" rel="noopener">_ProgressSolveObserver</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_ProgressSolveObserver</code></pre>
+<p>Track completed primary jobs and update the terminal progress indicator.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>progress::_SimpleProgress</code> — configured terminal progress state.</p>
+</li>
+<li><p><code>n_done::Int</code> — number of primary jobs reported so far.</p>
+</li>
+</ul>
+</div>
+  </div>
+</div>
 <div class="doc doc-type" id="CohomologicalEquations-_SimpleProgress" data-doc-name="_SimpleProgress" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L224" target="_blank" rel="noopener">_SimpleProgress</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L238" target="_blank" rel="noopener">_SimpleProgress</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_SimpleProgress</code></pre>
@@ -4695,20 +4883,46 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-type" id="CohomologicalEquations-_SolveGroup" data-doc-name="_SolveGroup" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L37" target="_blank" rel="noopener">_SolveGroup</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_SolveGroup&#123;T&#125;</code></pre>
+<p>Jobs sharing one canonical superharmonic and exactly the same bordered matrix.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>superharmonic::T</code> — common value of <code>s &#61; dot&#40;alpha, lambda_diag&#41;</code> used to assemble and factor the first job.</p>
+</li>
+<li><p><code>jobs::Vector&#123;_SolveJob&#125;</code> — jobs that reuse that numeric factorisation in causal order.</p>
+</li>
+</ul>
+</div>
+  </div>
+</div>
 <div class="doc doc-type" id="CohomologicalEquations-_SolveJob" data-doc-name="_SolveJob" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L5" target="_blank" rel="noopener">_SolveJob</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>One primary monomial solve and its optional conjugate reconstruction target.</p>
+<div class="markdown"><pre><code>_SolveJob</code></pre>
+<p>One primary monomial solve and its optional conjugate reconstruction.</p>
+<h1>Fields</h1>
+<ul>
+<li><p><code>index::Int</code> — multiindex-set position solved by the cohomological system.</p>
+</li>
+<li><p><code>conjugate_target::Int</code> — secondary position filled by conjugation afterwards, or <code>0</code> when no reconstruction is required.</p>
+</li>
+</ul>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="CohomologicalEquations-_assemble_bordered_system!" data-doc-name="_assemble_bordered_system!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L685" target="_blank" rel="noopener">_assemble_bordered_system!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L718" target="_blank" rel="noopener">_assemble_bordered_system!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_assemble_bordered_system&#33;&#40;ctx, s, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
@@ -4723,11 +4937,57 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_assemble_nonlinear_rhs!" data-doc-name="_assemble_nonlinear_rhs!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L848" target="_blank" rel="noopener">_assemble_nonlinear_rhs!</a>(::MORFE.CohomologicalEquations._NoMonomialInstrumentation, ctx, model, idx, W, ml_cache)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L848" target="_blank" rel="noopener">_assemble_nonlinear_rhs!</a>(::MORFE.CohomologicalEquations._BenchmarkInstrumentation, ctx, model, idx, W, ml_cache)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_assemble_nonlinear_rhs&#33;&#40;instrumentation, ctx, model, idx, W, ml_cache&#41;</code></pre>
+<p>Instrumentation hook for nonlinear right-hand-side assembly. The production method returns <code>nothing</code>; benchmark instrumentation returns the corresponding <code>@timed</code> result.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_atomic_manifest" data-doc-name="_atomic_manifest" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L131" target="_blank" rel="noopener">_atomic_manifest</a>(path, manifest)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_atomic_manifest&#40;path, manifest&#41; -&gt; nothing</code></pre>
+<p>Write a TOML manifest to a process-specific temporary file and atomically replace <code>path</code> only after the complete document has been flushed.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_backend_name" data-doc-name="_backend_name" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L258" target="_blank" rel="noopener">_backend_name</a>(::MORFE.CohomologicalEquations.KLUBackend)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L258" target="_blank" rel="noopener">_backend_name</a>(::MORFE.CohomologicalEquations.PardisoBackend)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_backend_name&#40;backend&#41; -&gt; Symbol</code></pre>
+<p>Return the stable diagnostic name of a sparse backend &#40;<code>:klu</code> or <code>:pardiso</code>&#41;.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_backward_error" data-doc-name="_backward_error" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L533" target="_blank" rel="noopener">_backward_error</a>(ss::SparseLinearSolverState, x, norm_r, norm_b, norm_A)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_backward_error&#40;state, x, norm_r, norm_b, norm_A&#41; -&gt; Real</code></pre>
+<p>Return the normwise backward error <code>norm_r / &#40;norm_A * norm&#40;x, Inf&#41; &#43; norm_b&#41;</code>, guarded against a zero denominator in the state&#39;s real scalar type.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_bordered_solve!" data-doc-name="_bordered_solve!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L615" target="_blank" rel="noopener">_bordered_solve!</a>(ss::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.KLUBackend{VERIFY}}, x::AbstractVector, s; reuse_factor) where {T, VERIFY}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L615" target="_blank" rel="noopener">_bordered_solve!</a>(ss::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.PardisoBackend{P, VERIFY}}, x::AbstractVector, s; reuse_factor) where {T, P, VERIFY}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L648" target="_blank" rel="noopener">_bordered_solve!</a>(ss::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.KLUBackend{VERIFY}}, x::AbstractVector, s; reuse_factor) where {T, VERIFY}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L648" target="_blank" rel="noopener">_bordered_solve!</a>(ss::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.PardisoBackend{P, VERIFY}}, x::AbstractVector, s; reuse_factor) where {T, P, VERIFY}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_bordered_solve&#33;&#40;ss, x, s&#41; -&gt; x</code></pre>
@@ -4758,7 +5018,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_build_context" data-doc-name="_build_context" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L167" target="_blank" rel="noopener">_build_context</a>(linear_terms::NTuple{ORDP1, MT}, generalised_right_eigenmodes::Matrix{T}, lambda_diag::Vector{T}, inv_ops::InvarianceOperators{T}, orth_ops::OrthogonalityOperators{T}, resonance_set::ResonanceSet, linear_skip_set::Set{Int64}, lower_order::LowerOrderResources{NVAR, T}, buffers::CohomologicalBuffers{T}, sparse_solver) where {ORDP1, MT, T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L169" target="_blank" rel="noopener">_build_context</a>(linear_terms::NTuple{ORDP1, MT}, generalised_right_eigenmodes::Matrix{T}, lambda_diag::Vector{T}, inv_ops::InvarianceOperators{T}, orth_ops::OrthogonalityOperators{T}, resonance_set::ResonanceSet, linear_skip_set::Set{Int64}, lower_order::LowerOrderResources{NVAR, T}, buffers::CohomologicalBuffers{T}, sparse_solver) where {ORDP1, MT, T, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_build_context&#40;linear_terms, generalised_right_eigenmodes, lambda_diag,
@@ -4782,7 +5042,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_build_solve_jobs" data-doc-name="_build_solve_jobs" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L73" target="_blank" rel="noopener">_build_solve_jobs</a>(sym::ConjugateSymmetryData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L156" target="_blank" rel="noopener">_build_solve_jobs</a>(sym::ConjugateSymmetryData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_build_solve_jobs&#40;sym&#41; -&gt; Vector&#123;_SolveJob&#125;</code></pre>
@@ -4793,7 +5053,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_build_solve_plan" data-doc-name="_build_solve_plan" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L121" target="_blank" rel="noopener">_build_solve_plan</a>(ctx, sym, mset, grouping::Symbol, ::Val{ROM}) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L213" target="_blank" rel="noopener">_build_solve_plan</a>(ctx, sym, mset, grouping::Symbol, ::Val{ROM}) where ROM</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_build_solve_plan&#40;ctx, sym, mset, grouping, Val&#40;ROM&#41;&#41; -&gt; _AbstractSolvePlan</code></pre>
@@ -4804,7 +5064,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_check_external_conjugate_block" data-doc-name="_check_external_conjugate_block" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L96" target="_blank" rel="noopener">_check_external_conjugate_block</a>(conjugate_permutation, sys, ROM::Int64, NVAR::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L98" target="_blank" rel="noopener">_check_external_conjugate_block</a>(conjugate_permutation, sys, ROM::Int64, NVAR::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_check_external_conjugate_block&#40;conjugate_permutation, sys, ROM, NVAR&#41;</code></pre>
@@ -4814,10 +5074,47 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_completed_degrees" data-doc-name="_completed_degrees" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L369" target="_blank" rel="noopener">_completed_degrees</a>(session::MORFE.CohomologicalEquations.CheckpointSession)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_completed_degrees&#40;session&#41; -&gt; Vector&#123;Int&#125;</code></pre>
+<p>Return the polynomial degrees recorded as completely committed in <code>session.manifest</code>. The returned vector is converted to <code>Int</code> for consistency across TOML implementations.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_completed_indices" data-doc-name="_completed_indices" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L369" target="_blank" rel="noopener">_completed_indices</a>(job::MORFE.CohomologicalEquations._SolveJob)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L369" target="_blank" rel="noopener">_completed_indices</a>(group::Vector{MORFE.CohomologicalEquations._SolveJob})</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_completed_indices&#40;job_or_group&#41; -&gt; Vector&#123;Int&#125;</code></pre>
+<p>Return the sorted, unique coefficient positions made final by a job or factor group, including reconstructed conjugate secondaries.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_compose_observers" data-doc-name="_compose_observers" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L303" target="_blank" rel="noopener">_compose_observers</a>(a::MORFE.CohomologicalEquations._NoSolveObserver, b::MORFE.CohomologicalEquations._NoSolveObserver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L303" target="_blank" rel="noopener">_compose_observers</a>(a::MORFE.CohomologicalEquations._NoSolveObserver, b::MORFE.CohomologicalEquations._AbstractSolveObserver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L303" target="_blank" rel="noopener">_compose_observers</a>(a::MORFE.CohomologicalEquations._AbstractSolveObserver, b::MORFE.CohomologicalEquations._NoSolveObserver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L303" target="_blank" rel="noopener">_compose_observers</a>(a::MORFE.CohomologicalEquations._AbstractSolveObserver, b::MORFE.CohomologicalEquations._AbstractSolveObserver)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_compose_observers&#40;a, b&#41; -&gt; _AbstractSolveObserver</code></pre>
+<p>Elide no-op observers and otherwise return a composite that preserves notification order.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_configured_residual_tolerance" data-doc-name="_configured_residual_tolerance" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L173" target="_blank" rel="noopener">_configured_residual_tolerance</a>(::Type{T}, options::ParametrisationOptions) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L175" target="_blank" rel="noopener">_configured_residual_tolerance</a>(::Type{T}, options::ParametrisationOptions) where T</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_configured_residual_tolerance&#40;T, options&#41; -&gt; tolerance or nothing</code></pre>
@@ -4828,7 +5125,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_dense_backward_error" data-doc-name="_dense_backward_error" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L728" target="_blank" rel="noopener">_dense_backward_error</a>(A, x, b)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L761" target="_blank" rel="noopener">_dense_backward_error</a>(A, x, b)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_dense_backward_error&#40;A, x, b&#41; -&gt; Real</code></pre>
@@ -4836,10 +5133,32 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_digest_text!" data-doc-name="_digest_text!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L37" target="_blank" rel="noopener">_digest_text!</a>(ctx, value)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_digest_text&#33;&#40;ctx, value&#41; -&gt; nothing</code></pre>
+<p>Append a textual fingerprint token and a zero-byte separator to the SHA context. The separator prevents adjacent values from producing ambiguous concatenations.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_eigenvalue_representatives" data-doc-name="_eigenvalue_representatives" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L88" target="_blank" rel="noopener">_eigenvalue_representatives</a>(lambda_diag)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_eigenvalue_representatives&#40;lambda_diag&#41; -&gt; Vector&#123;Int&#125;</code></pre>
+<p>Assign equal nonzero eigenvalues the same representative index and assign zero eigenvalues the sentinel <code>0</code>. The result defines the exact exponent aggregation used by factor keys.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_embed_external_dynamics!" data-doc-name="_embed_external_dynamics!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L287" target="_blank" rel="noopener">_embed_external_dynamics!</a>(R::ReducedDynamics{ROM, NVAR, T}, ext_poly::DensePolynomial{T, N_EXT, 2, A} where A&lt;:AbstractMatrix{T}, mset::MultiindexSet{NVAR}) where {ROM, NVAR, T, N_EXT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L301" target="_blank" rel="noopener">_embed_external_dynamics!</a>(R::ReducedDynamics{ROM, NVAR, T}, ext_poly::DensePolynomial{T, N_EXT, 2, A} where A&lt;:AbstractMatrix{T}, mset::MultiindexSet{NVAR}) where {ROM, NVAR, T, N_EXT}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_embed_external_dynamics&#33;&#40;R, ext_poly, mset&#41;</code></pre>
@@ -4848,10 +5167,128 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_execute_job!" data-doc-name="_execute_job!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L428" target="_blank" rel="noopener">_execute_job!</a>(instrumentation, observer, W, R, job, degree, ctx, sym, model, ml_cache, reuse_factor::Val)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L428" target="_blank" rel="noopener">_execute_job!</a>(instrumentation, observer, W, R, job, degree, ctx, sym, model, ml_cache, reuse_factor::Val, superharmonic)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_execute_job&#33;&#40;instrumentation, observer, W, R, job, degree, ctx, sym, model,
+	ml_cache, reuse_factor, superharmonic &#61; nothing&#41; -&gt; nothing</code></pre>
+<p>Run one canonical monomial pipeline, reconstruct its optional conjugate, and notify the observer only after both coefficient positions are final.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_execute_solve_plan!" data-doc-name="_execute_solve_plan!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L444" target="_blank" rel="noopener">_execute_solve_plan!</a>(plan::MORFE.CohomologicalEquations._DirectSolvePlan, instrumentation, observer, W, R, ctx, sym, model, ml_cache)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L444" target="_blank" rel="noopener">_execute_solve_plan!</a>(plan::MORFE.CohomologicalEquations._GroupedSolvePlan, instrumentation, observer, W, R, ctx, sym, model, ml_cache)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_execute_solve_plan&#33;&#40;plan, instrumentation, observer, W, R, ctx, sym, model,
+	ml_cache&#41; -&gt; nothing</code></pre>
+<p>Execute a direct or grouped plan in causal degree order. The grouped overload factorises the first job in each group and passes <code>Val&#40;true&#41;</code> only to later jobs with a provably identical bordered matrix.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_file_sha256" data-doc-name="_file_sha256" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L231" target="_blank" rel="noopener">_file_sha256</a>(path)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_file_sha256&#40;path&#41; -&gt; String</code></pre>
+<p>Return the lowercase SHA-256 digest of a checkpoint chunk without loading the complete file into memory.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_fill_job_conjugate!" data-doc-name="_fill_job_conjugate!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L415" target="_blank" rel="noopener">_fill_job_conjugate!</a>(W, R, job, ::ConjugateSymmetryData{NoConjugatePermutation})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L415" target="_blank" rel="noopener">_fill_job_conjugate!</a>(W, R, job, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector})</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_fill_job_conjugate&#33;&#40;W, R, job, sym&#41; -&gt; nothing</code></pre>
+<p>Reconstruct a job&#39;s conjugate secondary after its primary coefficients are final. This is a compile-time no-op when conjugate symmetry is disabled.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_finalise_monomial!" data-doc-name="_finalise_monomial!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L883" target="_blank" rel="noopener">_finalise_monomial!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT} where LT, s, resonance::StaticArraysCore.SVector{ROM, Bool}, external_dynamics, lower_order_couplings) where {ORD, NVAR, T, ROM, FOM, ORDP1}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_finalise_monomial&#33;&#40;W, R, idx, ctx, s, resonance, external_dynamics,
+	lower_order_couplings&#41; -&gt; nothing</code></pre>
+<p>Unpack the bordered solution into the primary coefficients of <code>W</code> and the resonant rows of <code>R</code>, write exact zeros to non-resonant master rows, and propagate the higher derivative coefficients using the generalised right eigenmodes.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_fingerprint_value!" data-doc-name="_fingerprint_value!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L49" target="_blank" rel="noopener">_fingerprint_value!</a>(ctx, value)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_fingerprint_value&#33;&#40;ctx, value&#41; -&gt; nothing</code></pre>
+<p>Recursively append a deterministic, type-aware representation of <code>value</code> to a SHA context. Arrays include their shape, dictionaries are traversed in sorted-key order, and opaque callables must provide <a class="doc-ref" href="#CohomologicalEquations-checkpoint_fingerprint_data"><code>checkpoint_fingerprint_data</code></a>.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_finish_observer!" data-doc-name="_finish_observer!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L333" target="_blank" rel="noopener">_finish_observer!</a>(::MORFE.CohomologicalEquations._NoSolveObserver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L333" target="_blank" rel="noopener">_finish_observer!</a>(observer::MORFE.CohomologicalEquations._ProgressSolveObserver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L333" target="_blank" rel="noopener">_finish_observer!</a>(observer::MORFE.CohomologicalEquations._CompositeSolveObserver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L333" target="_blank" rel="noopener">_finish_observer!</a>(::MORFE.CohomologicalEquations._CheckpointSolveObserver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L333" target="_blank" rel="noopener">_finish_observer!</a>(observer::MORFE.CohomologicalEquations._BenchmarkSolveObserver)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Finish a solve observer after the complete plan has executed successfully.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_flush_order_row!" data-doc-name="_flush_order_row!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L644" target="_blank" rel="noopener">_flush_order_row!</a>(order_io::IO, order::Int64, a::MORFE.CohomologicalEquations._OrderAccum, cumul_time::Float64)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Append one completed degree&#39;s aggregate benchmark row to <code>order_io</code>.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_group_solve_jobs" data-doc-name="_group_solve_jobs" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L173" target="_blank" rel="noopener">_group_solve_jobs</a>(ctx, mset, jobs::Vector{MORFE.CohomologicalEquations._SolveJob}, ::Val{ROM}) where ROM</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_group_solve_jobs&#40;ctx, mset, jobs, Val&#40;ROM&#41;&#41; -&gt; Vector&#123;_SolveGroup&#125;</code></pre>
+<p>Partition causal jobs into degree-local groups with equal <a class="doc-ref" href="#CohomologicalEquations-StructuralFactorKey"><code>StructuralFactorKey</code></a>. Group order follows the first occurrence of each key, and job order is preserved within a group.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_has_structural_factor_reuse" data-doc-name="_has_structural_factor_reuse" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L111" target="_blank" rel="noopener">_has_structural_factor_reuse</a>(lambda_diag)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_has_structural_factor_reuse&#40;lambda_diag&#41; -&gt; Bool</code></pre>
+<p>Return whether zero or repeated eigenvalues make two distinct monomials capable of sharing an identical superharmonic expression and numeric factorisation.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_initialise_waveform!" data-doc-name="_initialise_waveform!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L5" target="_blank" rel="noopener">_initialise_waveform!</a>(W::Parametrisation, R::ReducedDynamics, master_right_modes, master_eigenvalues, master_right_mode_derivatives, unit_offset::Int64, model)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L7" target="_blank" rel="noopener">_initialise_waveform!</a>(W::Parametrisation, R::ReducedDynamics, master_right_modes, master_eigenvalues, master_right_mode_derivatives, unit_offset::Int64, model)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_initialise_waveform&#33;&#40;W, R, master_right_modes, master_eigenvalues,
@@ -4867,10 +5304,22 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_job_target" data-doc-name="_job_target" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L144" target="_blank" rel="noopener">_job_target</a>(::ConjugateSymmetryData{NoConjugatePermutation}, ::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L144" target="_blank" rel="noopener">_job_target</a>(sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, index::Int64)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_job_target&#40;sym, index&#41; -&gt; Int</code></pre>
+<p>Return the larger conjugate-secondary position reconstructed after solving <code>index</code>, or <code>0</code> when symmetry is inactive, the monomial is self-conjugate, or no partner is present.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_klu_backward_error!" data-doc-name="_klu_backward_error!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L541" target="_blank" rel="noopener">_klu_backward_error!</a>(ss::SparseLinearSolverState, x, norm_b)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L574" target="_blank" rel="noopener">_klu_backward_error!</a>(ss::SparseLinearSolverState, x, norm_b)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_klu_backward_error&#33;&#40;state, solution, norm_b&#41; -&gt; nothing</code></pre>
@@ -4881,7 +5330,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_linear_monomial_indices" data-doc-name="_linear_monomial_indices" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L332" target="_blank" rel="noopener">_linear_monomial_indices</a>(mset::MultiindexSet{NVAR}) where NVAR</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L346" target="_blank" rel="noopener">_linear_monomial_indices</a>(mset::MultiindexSet{NVAR}) where NVAR</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_linear_monomial_indices&#40;mset&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -4889,10 +5338,20 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_lock_path" data-doc-name="_lock_path" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L128" target="_blank" rel="noopener">_lock_path</a>(root)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Return the single-writer lock-directory path for a checkpoint.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_make_progress" data-doc-name="_make_progress" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L246" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L260" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_make_progress&#40;n_total, show_progress, max_nl_degree&#41; -&gt; _SimpleProgress</code></pre>
@@ -4903,10 +5362,10 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_make_sparse_solver" data-doc-name="_make_sparse_solver" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L143" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:SparseArrays.SparseMatrixCSC}, linear_terms, FOM::Int64, ROM::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L143" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:AbstractMatrix}, ::Any, ::Int64, ::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L143" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:SparseArrays.SparseMatrixCSC}, linear_terms, FOM::Int64, ROM::Int64, options::ParametrisationOptions)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L143" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:AbstractMatrix}, ::Any, ::Int64, ::Int64, options::ParametrisationOptions)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L145" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:SparseArrays.SparseMatrixCSC}, linear_terms, FOM::Int64, ROM::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L145" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:AbstractMatrix}, ::Any, ::Int64, ::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L145" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:SparseArrays.SparseMatrixCSC}, linear_terms, FOM::Int64, ROM::Int64, options::ParametrisationOptions)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L145" target="_blank" rel="noopener">_make_sparse_solver</a>(::Type{&lt;:AbstractMatrix}, ::Any, ::Int64, ::Int64, options::ParametrisationOptions)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_make_sparse_solver&#40;MT, linear_terms, FOM, ROM,
@@ -4915,10 +5374,20 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_manifest_path" data-doc-name="_manifest_path" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L125" target="_blank" rel="noopener">_manifest_path</a>(root)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Return the manifest path inside a checkpoint directory.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_mark_degree_complete!" data-doc-name="_mark_degree_complete!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L270" target="_blank" rel="noopener">_mark_degree_complete!</a>(session::MORFE.CohomologicalEquations.CheckpointSession, degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L308" target="_blank" rel="noopener">_mark_degree_complete!</a>(session::MORFE.CohomologicalEquations.CheckpointSession, degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_mark_degree_complete&#33;&#40;session, degree&#41; -&gt; nothing</code></pre>
@@ -4926,10 +5395,22 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_monomial_metrics" data-doc-name="_monomial_metrics" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L875" target="_blank" rel="noopener">_monomial_metrics</a>(::MORFE.CohomologicalEquations._NoMonomialInstrumentation, ::Nothing, ::Nothing)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L875" target="_blank" rel="noopener">_monomial_metrics</a>(::MORFE.CohomologicalEquations._BenchmarkInstrumentation, rhs_result, solve_result)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_monomial_metrics&#40;instrumentation, rhs_result, solve_result&#41;</code></pre>
+<p>Convert instrumentation-specific phase results into the metrics delivered to solve observers. The production path returns <code>nothing</code>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_normalise_manifest_lists!" data-doc-name="_normalise_manifest_lists!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L138" target="_blank" rel="noopener">_normalise_manifest_lists!</a>(manifest)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L170" target="_blank" rel="noopener">_normalise_manifest_lists!</a>(manifest)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_normalise_manifest_lists&#33;&#40;manifest&#41;</code></pre>
@@ -4937,10 +5418,56 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_on_degree_complete!" data-doc-name="_on_degree_complete!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L330" target="_blank" rel="noopener">_on_degree_complete!</a>(::MORFE.CohomologicalEquations._NoSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L330" target="_blank" rel="noopener">_on_degree_complete!</a>(::MORFE.CohomologicalEquations._ProgressSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L330" target="_blank" rel="noopener">_on_degree_complete!</a>(observer::MORFE.CohomologicalEquations._CompositeSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L330" target="_blank" rel="noopener">_on_degree_complete!</a>(observer::MORFE.CohomologicalEquations._CheckpointSolveObserver, degree)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L330" target="_blank" rel="noopener">_on_degree_complete!</a>(observer::MORFE.CohomologicalEquations._BenchmarkSolveObserver, degree)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Notify a solve observer after every job in one polynomial degree is complete.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_on_group_complete!" data-doc-name="_on_group_complete!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L327" target="_blank" rel="noopener">_on_group_complete!</a>(::MORFE.CohomologicalEquations._NoSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L327" target="_blank" rel="noopener">_on_group_complete!</a>(::MORFE.CohomologicalEquations._ProgressSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L327" target="_blank" rel="noopener">_on_group_complete!</a>(observer::MORFE.CohomologicalEquations._CompositeSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L327" target="_blank" rel="noopener">_on_group_complete!</a>(observer::MORFE.CohomologicalEquations._CheckpointSolveObserver, degree, group)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L327" target="_blank" rel="noopener">_on_group_complete!</a>(::MORFE.CohomologicalEquations._BenchmarkSolveObserver, args...)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Notify a solve observer after one factor group has been fully committed in memory.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_on_job_complete!" data-doc-name="_on_job_complete!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L315" target="_blank" rel="noopener">_on_job_complete!</a>(::MORFE.CohomologicalEquations._NoSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L315" target="_blank" rel="noopener">_on_job_complete!</a>(observer::MORFE.CohomologicalEquations._ProgressSolveObserver, job, degree, metrics)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L315" target="_blank" rel="noopener">_on_job_complete!</a>(observer::MORFE.CohomologicalEquations._CompositeSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L315" target="_blank" rel="noopener">_on_job_complete!</a>(::MORFE.CohomologicalEquations._CheckpointSolveObserver, args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L315" target="_blank" rel="noopener">_on_job_complete!</a>(observer::MORFE.CohomologicalEquations._BenchmarkSolveObserver, job, degree, metrics)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_on_job_complete&#33;&#40;observer, job, degree, metrics&#41;
+_on_group_complete&#33;&#40;observer, degree, group&#41;
+_on_degree_complete&#33;&#40;observer, degree&#41;
+_finish_observer&#33;&#40;observer&#41;</code></pre>
+<p>Lifecycle hooks implemented by solve observers. Every execution path emits job events in causal order, one group event after its coefficients &#40;including conjugate secondaries&#41; are final, degree events only after all groups in that degree, and one final event.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_open_checkpoint" data-doc-name="_open_checkpoint" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L155" target="_blank" rel="noopener">_open_checkpoint</a>(options::CheckpointOptions, fingerprint, metadata)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L187" target="_blank" rel="noopener">_open_checkpoint</a>(options::CheckpointOptions, fingerprint, metadata)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_open_checkpoint&#40;options, fingerprint, metadata&#41; -&gt; CheckpointSession</code></pre>
@@ -4951,7 +5478,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_pardiso_factorise_solve!" data-doc-name="_pardiso_factorise_solve!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L167" target="_blank" rel="noopener">_pardiso_factorise_solve!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L181" target="_blank" rel="noopener">_pardiso_factorise_solve!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_pardiso_factorise_solve&#33;&#40;solver, matrix, solution, rhs&#41; -&gt; nothing</code></pre>
@@ -4962,7 +5489,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_pardiso_prepare!" data-doc-name="_pardiso_prepare!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L159" target="_blank" rel="noopener">_pardiso_prepare!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L173" target="_blank" rel="noopener">_pardiso_prepare!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_pardiso_prepare&#33;&#40;solver, bordered&#41; -&gt; backend_matrix</code></pre>
@@ -4973,7 +5500,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_pardiso_release!" data-doc-name="_pardiso_release!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L183" target="_blank" rel="noopener">_pardiso_release!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L197" target="_blank" rel="noopener">_pardiso_release!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_pardiso_release&#33;&#40;solver, matrix&#41; -&gt; nothing</code></pre>
@@ -4984,7 +5511,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_pardiso_solve!" data-doc-name="_pardiso_solve!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L175" target="_blank" rel="noopener">_pardiso_solve!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L189" target="_blank" rel="noopener">_pardiso_solve!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_pardiso_solve&#33;&#40;solver, matrix, solution, rhs&#41; -&gt; nothing</code></pre>
@@ -4995,7 +5522,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_problem_fingerprint" data-doc-name="_problem_fingerprint" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L78" target="_blank" rel="noopener">_problem_fingerprint</a>(model, spectral, resonance_set, mset, conj_perm, options::ParametrisationOptions)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L101" target="_blank" rel="noopener">_problem_fingerprint</a>(model, spectral, resonance_set, mset, conj_perm, options::ParametrisationOptions)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_problem_fingerprint&#40;model, spectral, resonance_set, mset, conjugate_permutation,
@@ -5007,7 +5534,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_progress_done!" data-doc-name="_progress_done!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L271" target="_blank" rel="noopener">_progress_done!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L285" target="_blank" rel="noopener">_progress_done!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_progress_done&#33;&#40;p, n_done&#41;</code></pre>
@@ -5018,7 +5545,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_progress_tick!" data-doc-name="_progress_tick!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L256" target="_blank" rel="noopener">_progress_tick!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64, degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L270" target="_blank" rel="noopener">_progress_tick!</a>(p::MORFE.CohomologicalEquations._SimpleProgress, n_done::Int64, degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_progress_tick&#33;&#40;p, n_done, degree&#41;</code></pre>
@@ -5026,10 +5553,20 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_refactorise!" data-doc-name="_refactorise!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L530" target="_blank" rel="noopener">_refactorise!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Backward-compatible internal alias for <a class="doc-ref" href="#CohomologicalEquations-_refactorise_klu!"><code>_refactorise_klu&#33;</code></a>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_refactorise_klu!" data-doc-name="_refactorise_klu!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L460" target="_blank" rel="noopener">_refactorise_klu!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L475" target="_blank" rel="noopener">_refactorise_klu!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_refactorise_klu&#33;&#40;ss, A&#41; -&gt; KLU factorisation of &#96;A&#96;</code></pre>
@@ -5047,8 +5584,8 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_release_pardiso!" data-doc-name="_release_pardiso!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L369" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.KLUBackend}) where T</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/State.jl#L369" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.PardisoBackend}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L376" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.KLUBackend}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolveState.jl#L376" target="_blank" rel="noopener">_release_pardiso!</a>(state::SparseLinearSolverState{T, &lt;:MORFE.CohomologicalEquations.PardisoBackend}) where T</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_release_pardiso&#33;&#40;state&#41; -&gt; nothing</code></pre>
@@ -5056,10 +5593,31 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_replace_options" data-doc-name="_replace_options" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Configuration.jl#L195" target="_blank" rel="noopener">_replace_options</a>(options::ParametrisationOptions; backend, grouping, residual_check, residual_tolerance, max_refinement_steps, validate_mset, checkpoint, show_progress, verbose, setup_io)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_replace_options&#40;options; overrides...&#41; -&gt; ParametrisationOptions</code></pre>
+<p>Return a validated copy of <code>options</code>, replacing only the supplied keyword fields. This is the internal equivalent of an immutable record update and preserves the concrete <code>setup_io</code> type when no replacement is requested.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_reset!" data-doc-name="_reset!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L620" target="_blank" rel="noopener">_reset!</a>(a::MORFE.CohomologicalEquations._OrderAccum)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Reset every per-degree benchmark accumulator field in place.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_resonance_vector" data-doc-name="_resonance_vector" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L350" target="_blank" rel="noopener">_resonance_vector</a>(resonance_set::ResonanceSet, monomial_idx::Int64, ::Val{ROM}) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L364" target="_blank" rel="noopener">_resonance_vector</a>(resonance_set::ResonanceSet, monomial_idx::Int64, ::Val{ROM}) where ROM</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_resonance_vector&#40;resonance_set, monomial_idx, ::Val&#123;ROM&#125;&#41; -&gt; SVector&#123;ROM, Bool&#125;</code></pre>
@@ -5070,7 +5628,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_restore_checkpoint!" data-doc-name="_restore_checkpoint!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L291" target="_blank" rel="noopener">_restore_checkpoint!</a>(session::MORFE.CohomologicalEquations.CheckpointSession, W, R; verify_existing)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L329" target="_blank" rel="noopener">_restore_checkpoint!</a>(session::MORFE.CohomologicalEquations.CheckpointSession, W, R; verify_existing)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_restore_checkpoint&#33;&#40;session, W, R; verify_existing &#61; false&#41; -&gt; BitSet</code></pre>
@@ -5081,20 +5639,22 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_run_single_monomial!" data-doc-name="_run_single_monomial!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L859" target="_blank" rel="noopener">_run_single_monomial!</a>(instrumentation, W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L859" target="_blank" rel="noopener">_run_single_monomial!</a>(instrumentation, W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache, reuse_factor::Val{REUSE}) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT, REUSE}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L919" target="_blank" rel="noopener">_run_single_monomial!</a>(instrumentation, W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L919" target="_blank" rel="noopener">_run_single_monomial!</a>(instrumentation, W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache, reuse_factor::Val{REUSE}) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT, REUSE}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L919" target="_blank" rel="noopener">_run_single_monomial!</a>(instrumentation, W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, idx::Int64, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, ::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache, reuse_factor::Val{REUSE}, superharmonic) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT, REUSE}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_run_single_monomial&#33;&#40;instrumentation, W, R, idx, ctx, sym, model, ml_cache,
-	reuse_factor&#41; -&gt; metrics</code></pre>
+	reuse_factor, superharmonic &#61; nothing&#41; -&gt; metrics</code></pre>
 <p>Canonical per-monomial pipeline shared by production and benchmark execution. Only nonlinear-right-hand-side assembly and the bordered solve are instrumentation hooks; preparation and coefficient finalisation stay outside benchmark timings.</p>
+<p>Grouped execution supplies one canonical <code>superharmonic</code> for the entire structural factor group. Direct and public single-monomial execution leave it as <code>nothing</code> and compute the value from the monomial itself.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="CohomologicalEquations-_singular_bordered_system" data-doc-name="_singular_bordered_system" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L591" target="_blank" rel="noopener">_singular_bordered_system</a>(s)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L624" target="_blank" rel="noopener">_singular_bordered_system</a>(s)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_singular_bordered_system&#40;s&#41;</code></pre>
@@ -5103,17 +5663,40 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_solve_cohomological_equations!" data-doc-name="_solve_cohomological_equations!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L497" target="_blank" rel="noopener">_solve_cohomological_equations!</a>(W, R, ctx, sym, model, ml_cache; show_progress, grouping, observer, instrumentation)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache; ...&#41; -&gt; nothing</code></pre>
+<p>Internal execution boundary that specialises the optional observer and instrumentation before entering the typed solve loop.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_solve_cohomological_equations_typed!" data-doc-name="_solve_cohomological_equations_typed!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L511" target="_blank" rel="noopener">_solve_cohomological_equations_typed!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx, sym, model, ml_cache, observer, instrumentation, show_progress, grouping) where {ORD, NVAR, T, ROM}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_solve_cohomological_equations_typed&#33;&#40;W, R, ctx, sym, model, ml_cache,
+	observer, instrumentation, show_progress, grouping&#41; -&gt; nothing</code></pre>
+<p>Build the solve plan, compose progress with the requested observer, and execute the plan. This method exists as the type-stable target of the public scheduling overloads.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_solve_external_directions!" data-doc-name="_solve_external_directions!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L43" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int64, ROM::Int64, unit_offset::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L43" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, N_EXT::Int64, ROM::Int64, unit_offset::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L45" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int64, ROM::Int64, unit_offset::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L45" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, N_EXT::Int64, ROM::Int64, unit_offset::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_solve_external_directions&#33;&#40;W, R, partial_ctx_for, model, ml_cache, sym, N_EXT, ROM, unit_offset&#41;</code></pre>
 <p>Solve the <code>N_EXT</code> external forcing directions in increasing variable order.</p>
 <p><code>partial_ctx_for&#40;e&#41;</code> returns the <em>partial</em> context for external direction <code>e</code>: one in which the external generalised eigenvectors <code>Φ_ext</code> are known only for the directions already solved, and zero from <code>e</code> onwards.  Solving in order is what makes that possible — column <code>e</code> of the external column-polynomial recurrences reads only <code>Φ_ext,j</code> with <code>Λ_ext&#91;j, e&#93; ≠ 0</code>, hence only <code>j ≤ e</code> for the upper-triangular <code>Λ_ext</code> that the solver requires.</p>
-<p>When conjugate-symmetry is active, secondary external monomials are filled from their primaries via <code><a class="doc-ref" href="#CohomologicalEquations-fill_conjugate_monomial!">fill_conjugate_monomial&#33;</a></code> in the same pass rather than afterwards, so that <code>Φ_ext,k</code> is populated for every <code>k &lt; e</code> regardless of how it was obtained.  This is safe because <code>primary_pairs</code> guarantees a secondary&#39;s source has the smaller index.</p>
+<p>When conjugate-symmetry is active, secondary external monomials are filled from their primaries via <code><a class="doc-ref" href="#CohomologicalEquations-fill_conjugate_monomial!">fill_conjugate_monomial&#33;</a></code> in the same pass rather than afterwards, so that <code>Φ_ext,k</code> is populated for every <code>k &lt; e</code> regardless of how it was obtained.  This is safe because the conjugate map always marks the larger index as the secondary.</p>
 <p>All external linear monomials are marked in <code>sym.skip_bits</code> after this call so the main <code><a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_equations!">solve_cohomological_equations&#33;</a></code> loop does not overwrite them.</p>
 </div>
   </div>
@@ -5121,10 +5704,10 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_solve_monomial!" data-doc-name="_solve_monomial!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L755" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC, ROM}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L755" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L755" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics, reuse_factor::Val{REUSE}) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC, ROM, REUSE}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L755" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics, reuse_factor::Val{REUSE}) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM, REUSE}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L788" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L788" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L788" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics, reuse_factor::Val{REUSE}) where {T, ORD, ORDP1, NVAR, FOM, LT, MT&lt;:SparseMatrixCSC, ROM, REUSE}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L788" target="_blank" rel="noopener">_solve_monomial!</a>(ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, s, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings, external_dynamics, reuse_factor::Val{REUSE}) where {T, ORD, ORDP1, NVAR, FOM, LT, MT, ROM, REUSE}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_solve_monomial&#33;&#40;ctx, s, resonance, lower_order_couplings, external_dynamics&#41;</code></pre>
@@ -5136,10 +5719,45 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_solve_prepared_system!" data-doc-name="_solve_prepared_system!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L860" target="_blank" rel="noopener">_solve_prepared_system!</a>(::MORFE.CohomologicalEquations._NoMonomialInstrumentation, ctx, s, resonance, lower_order_couplings, external_dynamics, reuse_factor::Val)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L860" target="_blank" rel="noopener">_solve_prepared_system!</a>(::MORFE.CohomologicalEquations._BenchmarkInstrumentation, ctx, s, resonance, lower_order_couplings, external_dynamics, reuse_factor::Val)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_solve_prepared_system&#33;&#40;instrumentation, ctx, s, resonance,
+	lower_order_couplings, external_dynamics, reuse_factor&#41;</code></pre>
+<p>Instrumentation hook for the bordered solve after all monomial-dependent inputs have been prepared. <code>reuse_factor</code> may be true only for an exactly identical grouped matrix.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_sparse_inf_norm!" data-doc-name="_sparse_inf_norm!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L545" target="_blank" rel="noopener">_sparse_inf_norm!</a>(workspace, A::SparseArrays.SparseMatrixCSC)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_sparse_inf_norm&#33;&#40;workspace, A&#41; -&gt; Real</code></pre>
+<p>Compute <code>norm&#40;A, Inf&#41;</code> for a CSC matrix using <code>workspace</code> for row sums and without allocating a dense intermediate.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_sparse_residual!" data-doc-name="_sparse_residual!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L561" target="_blank" rel="noopener">_sparse_residual!</a>(residual, A::SparseArrays.SparseMatrixCSC, x)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_sparse_residual&#33;&#40;residual, A, x&#41; -&gt; residual</code></pre>
+<p>Overwrite a vector containing <code>b</code> with <code>A*x - b</code> using SparseArrays&#39; five-argument <code>mul&#33;</code> kernel. <code>residual</code> must not alias <code>A</code> or <code>x</code>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_spectral_conjugate_permutation" data-doc-name="_spectral_conjugate_permutation" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L531" target="_blank" rel="noopener">_spectral_conjugate_permutation</a>(request, spectral::SpectralData, sys)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L537" target="_blank" rel="noopener">_spectral_conjugate_permutation</a>(request, spectral::SpectralData, sys)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_spectral_conjugate_permutation&#40;request, spectral, external_system&#41;</code></pre>
@@ -5147,10 +5765,42 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_structural_factor_key" data-doc-name="_structural_factor_key" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L127" target="_blank" rel="noopener">_structural_factor_key</a>(multi::StaticArraysCore.SVector{NVAR, Int64}, resonance::StaticArraysCore.SVector{ROM, Bool}, representatives) where {NVAR, ROM}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_structural_factor_key&#40;multi, resonance, representatives&#41; -&gt; StructuralFactorKey</code></pre>
+<p>Build the exact factor-reuse key from aggregated monomial powers and the full resonance mask. Equality of these keys implies equality of the bordered matrix, not merely closeness of the floating-point superharmonics.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_superharmonic" data-doc-name="_superharmonic" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L84" target="_blank" rel="noopener">_superharmonic</a>(multi, lambda_diag)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Return the monomial superharmonic <code>sum&#40;alpha&#91;i&#93; * lambda_diag&#91;i&#93;&#41;</code>.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_timed_solve_single_monomial!" data-doc-name="_timed_solve_single_monomial!" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L576" target="_blank" rel="noopener">_timed_solve_single_monomial!</a>(W, R, idx, ctx, sym, model, ml_cache)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_timed_solve_single_monomial&#33;&#40;W, R, idx, ctx, sym, model, ml_cache&#41; -&gt; metrics</code></pre>
+<p>Run the shared single-monomial pipeline with benchmark instrumentation and return its right-hand-side and solve timing/allocation metrics.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_try_build_pardiso_solver" data-doc-name="_try_build_pardiso_solver" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L150" target="_blank" rel="noopener">_try_build_pardiso_solver</a>(...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L164" target="_blank" rel="noopener">_try_build_pardiso_solver</a>(...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_try_build_pardiso_solver&#40;&#41; -&gt; solver or nothing</code></pre>
@@ -5161,7 +5811,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-_with_checkpoint_lock" data-doc-name="_with_checkpoint_lock" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L115" target="_blank" rel="noopener">_with_checkpoint_lock</a>(f, root)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L147" target="_blank" rel="noopener">_with_checkpoint_lock</a>(f, root)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_with_checkpoint_lock&#40;f, root&#41;</code></pre>
@@ -5169,10 +5819,31 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="CohomologicalEquations-_write_benchmark_csvs" data-doc-name="_write_benchmark_csvs" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L653" target="_blank" rel="noopener">_write_benchmark_csvs</a>(mono_io::IOBuffer, order_io::IOBuffer, benchmark_dir::AbstractString)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_write_benchmark_csvs&#40;monomial_io, order_io, benchmark_dir&#41; -&gt; nothing</code></pre>
+<p>Create <code>benchmark_dir</code> and write both completed in-memory CSV buffers to their stable filenames.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="CohomologicalEquations-_write_benchmark_headers" data-doc-name="_write_benchmark_headers" data-doc-module="CohomologicalEquations">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L634" target="_blank" rel="noopener">_write_benchmark_headers</a>(mono_io::IO, order_io::IO)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><p>Write the fixed per-monomial and per-degree benchmark CSV headers.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="CohomologicalEquations-_write_chunk!" data-doc-name="_write_chunk!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L205" target="_blank" rel="noopener">_write_chunk!</a>(session::MORFE.CohomologicalEquations.CheckpointSession, W, R, degree::Int64, indices, sparse_solver; degree_complete)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L243" target="_blank" rel="noopener">_write_chunk!</a>(session::MORFE.CohomologicalEquations.CheckpointSession, W, R, degree::Int64, indices, sparse_solver; degree_complete)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_write_chunk&#33;&#40;session, W, R, degree, indices, sparse_solver;
@@ -5184,7 +5855,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="CohomologicalEquations-checkpoint_fingerprint_data" data-doc-name="checkpoint_fingerprint_data" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L17" target="_blank" rel="noopener">checkpoint_fingerprint_data</a>(::Any)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Checkpointing.jl#L27" target="_blank" rel="noopener">checkpoint_fingerprint_data</a>(::Any)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>checkpoint_fingerprint_data&#40;callable&#41;</code></pre>
@@ -5210,23 +5881,23 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="doc doc-function" id="CohomologicalEquations-solve_cohomological_equations!" data-doc-name="solve_cohomological_equations!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L367" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress, grouping)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L367" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L367" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L381" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress, grouping)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L381" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{NoConjugatePermutation}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L381" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_cohomological_equations&#33;&#40;W, R, ctx, model, ml_cache&#41; -&gt; nothing
 solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 	show_progress &#61; true, grouping &#61; :off&#41; -&gt; nothing</code></pre>
 <p>Solve the cohomological equations for <strong>all</strong> monomials in the multiindex set of <code>W</code> and <code>R</code>, processing them in causal order &#40;ascending total degree&#41;.</p>
-<p>The overload without <code>sym</code> disables conjugate reconstruction. With <a class="doc-ref" href="#CohomologicalEquations-ConjugateSymmetryData"><code>ConjugateSymmetryData</code></a>, secondary monomials are skipped and filled from their solved primaries. <code>grouping</code> accepts <code>:off</code>, <code>:on</code>, or <code>:auto</code>: groups never cross a total degree and reuse a numeric factorisation only when the superharmonic and resonance mask make the bordered matrix exactly identical. <code>:auto</code> uses grouping only when it reduces the number of factorisations. Checkpoint persistence is installed internally by <a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a>, rather than exposed as a callback on this low-level entry point.</p>
+<p>The overload without <code>sym</code> disables conjugate reconstruction. With <a class="doc-ref" href="#CohomologicalEquations-ConjugateSymmetryData"><code>ConjugateSymmetryData</code></a>, secondary monomials are skipped and filled from their solved primaries. <code>grouping</code> accepts <code>:off</code>, <code>:on</code>, or <code>:auto</code>: groups never cross a total degree. Structurally equal groups use their first job&#39;s superharmonic for every member, so the common resonance mask makes the bordered matrix exactly identical and its numeric factorisation reusable. <code>:auto</code> uses grouping only when it reduces the number of factorisations. Checkpoint persistence is installed internally by <a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a>, rather than exposed as a callback on this low-level entry point.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="CohomologicalEquations-solve_cohomological_equations_benchmarked!" data-doc-name="solve_cohomological_equations_benchmarked!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L493" target="_blank" rel="noopener">solve_cohomological_equations_benchmarked!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Execution.jl#L739" target="_blank" rel="noopener">solve_cohomological_equations_benchmarked!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_cohomological_equations_benchmarked&#33;&#40;W, R, ctx, sym, model, ml_cache;
@@ -5246,7 +5917,7 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 <div class="doc doc-function" id="CohomologicalEquations-solve_cohomological_problem" data-doc-name="solve_cohomological_problem" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/Problem.jl#L202" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/ProblemSetup.jl#L204" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_cohomological_problem&#40;
@@ -5288,7 +5959,7 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 </li>
 <li><p><code>options</code> — execution, validation, residual-verification, and checkpoint policy in a <a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions"><code>ParametrisationOptions</code></a>. Mathematical choices remain separate arguments.</p>
 </li>
-<li><p><code>benchmark_dir</code> — <code>nothing</code> for the normal grouped/checkpoint-capable solve, or a directory in which <a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_equations_benchmarked!"><code>solve_cohomological_equations_benchmarked&#33;</code></a> writes timing CSV files. Benchmark mode uses its dedicated causal loop and therefore does not perform factor grouping or invoke checkpoint callbacks.</p>
+<li><p><code>benchmark_dir</code> — <code>nothing</code> for the normal grouped/checkpoint-capable solve, or a directory in which <a class="doc-ref" href="#CohomologicalEquations-solve_cohomological_equations_benchmarked!"><code>solve_cohomological_equations_benchmarked&#33;</code></a> writes timing CSV files. Benchmark mode uses the shared direct execution plan and therefore does not perform factor grouping. It cannot be combined with checkpointing because benchmark timings do not form resumable checkpoint commits.</p>
 </li>
 </ul>
 <h2>Returns</h2>
@@ -5299,10 +5970,10 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache;
 <div class="doc doc-function" id="CohomologicalEquations-solve_single_monomial!" data-doc-name="solve_single_monomial!" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L908" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, model, ml_cache)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L908" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, sym, model, ml_cache, reuse_factor::Bool)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L908" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, sym, model, ml_cache)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L908" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, sym, model, ml_cache, reuse_factor::Val)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L974" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, model, ml_cache)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L974" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, sym, model, ml_cache, reuse_factor::Bool)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L974" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, sym, model, ml_cache)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L974" target="_blank" rel="noopener">solve_single_monomial!</a>(W, R, idx::Int64, ctx, sym, model, ml_cache, reuse_factor::Val)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_single_monomial&#33;&#40;W, R, idx, ctx, model, ml_cache&#41; -&gt; nothing</code></pre>

@@ -527,15 +527,27 @@ function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     return F
 end
 
-# Backward-compatible internal name retained for the established KLU regression tests.
+"""Backward-compatible internal alias for [`_refactorise_klu!`](@ref)."""
 _refactorise!(ss::SparseLinearSolverState, A::SparseMatrixCSC) = _refactorise_klu!(ss, A)
 
+"""
+	_backward_error(state, x, norm_r, norm_b, norm_A) -> Real
+
+Return the normwise backward error `norm_r / (norm_A * norm(x, Inf) + norm_b)`, guarded
+against a zero denominator in the state's real scalar type.
+"""
 function _backward_error(ss::SparseLinearSolverState, x, norm_r, norm_b, norm_A)
     RT = typeof(ss.max_relative_residual)
     denominator = norm_A * norm(x, Inf) + norm_b
     return norm_r / max(denominator, floatmin(RT))
 end
 
+"""
+	_sparse_inf_norm!(workspace, A) -> Real
+
+Compute `norm(A, Inf)` for a CSC matrix using `workspace` for row sums and without
+allocating a dense intermediate.
+"""
 function _sparse_inf_norm!(workspace, A::SparseMatrixCSC)
     fill!(workspace, zero(eltype(workspace)))
     @inbounds for column in axes(A, 2)
@@ -546,6 +558,12 @@ function _sparse_inf_norm!(workspace, A::SparseMatrixCSC)
     return maximum(real, workspace)
 end
 
+"""
+	_sparse_residual!(residual, A, x) -> residual
+
+Overwrite a vector containing `b` with `A*x - b` using SparseArrays' five-argument
+`mul!` kernel. `residual` must not alias `A` or `x`.
+"""
 function _sparse_residual!(residual, A::SparseMatrixCSC, x)
     # Five-argument `mul!` computes A*x-b directly and uses SparseArrays' tuned
     # CSC kernel. `residual` contains b on entry and is safe as the output because
@@ -827,12 +845,25 @@ end
 struct _NoMonomialInstrumentation end
 const _NO_MONOMIAL_INSTRUMENTATION = _NoMonomialInstrumentation()
 
+"""
+	_assemble_nonlinear_rhs!(instrumentation, ctx, model, idx, W, ml_cache)
+
+Instrumentation hook for nonlinear right-hand-side assembly. The production method
+returns `nothing`; benchmark instrumentation returns the corresponding `@timed` result.
+"""
 function _assemble_nonlinear_rhs!(::_NoMonomialInstrumentation,
         ctx, model, idx, W, ml_cache)
     compute_multilinear_terms!(ctx.buffers.ml_result, model, idx, W, ml_cache)
     return nothing
 end
 
+"""
+	_solve_prepared_system!(instrumentation, ctx, s, resonance,
+		lower_order_couplings, external_dynamics, reuse_factor)
+
+Instrumentation hook for the bordered solve after all monomial-dependent inputs have been
+prepared. `reuse_factor` may be true only for an exactly identical grouped matrix.
+"""
 function _solve_prepared_system!(::_NoMonomialInstrumentation,
         ctx, s, resonance, lower_order_couplings, external_dynamics,
         reuse_factor::Val)
@@ -841,8 +872,22 @@ function _solve_prepared_system!(::_NoMonomialInstrumentation,
     return nothing
 end
 
+"""
+	_monomial_metrics(instrumentation, rhs_result, solve_result)
+
+Convert instrumentation-specific phase results into the metrics delivered to solve
+observers. The production path returns `nothing`.
+"""
 _monomial_metrics(::_NoMonomialInstrumentation, ::Nothing, ::Nothing) = nothing
 
+"""
+	_finalise_monomial!(W, R, idx, ctx, s, resonance, external_dynamics,
+		lower_order_couplings) -> nothing
+
+Unpack the bordered solution into the primary coefficients of `W` and the resonant rows of
+`R`, write exact zeros to non-resonant master rows, and propagate the higher derivative
+coefficients using the generalised right eigenmodes.
+"""
 function _finalise_monomial!(
         W::Parametrisation{ORD, NVAR, T},
         R::ReducedDynamics{ROM, NVAR, T},

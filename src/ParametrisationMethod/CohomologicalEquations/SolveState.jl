@@ -255,6 +255,11 @@ struct PardisoBackend{P, VERIFY} <: AbstractSparseBackend
     solver::P
 end
 
+"""
+	_backend_name(backend) -> Symbol
+
+Return the stable diagnostic name of a sparse backend (`:klu` or `:pardiso`).
+"""
 _backend_name(::KLUBackend) = :klu
 _backend_name(::PardisoBackend) = :pardiso
 

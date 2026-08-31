@@ -20,23 +20,68 @@ function _is_locally_defined_api(mod::Module, symbol::Symbol)
 end
 
 @testset "Cohomological documentation contracts" begin
-    local_exports = filter(
-        symbol -> _is_locally_defined_api(_CE_DOCS, symbol),
-        names(_CE_DOCS; all = false))
+    local_definitions = filter(
+        symbol -> !startswith(string(symbol), "#") &&
+                  _is_locally_defined_api(_CE_DOCS, symbol),
+        names(_CE_DOCS; all = true))
     # `Base.Docs.undocumented_names` is unavailable on the supported Julia 1.10
-    # lower bound, so inspect the binding metadata directly.
+    # lower bound and checks exports only, so inspect every locally defined function and
+    # type through the binding metadata directly.
     undocumented = Set(filter(
         symbol -> isempty(_binding_doc_text(_CE_DOCS, symbol)),
-        local_exports))
+        local_definitions))
     @test isempty(undocumented)
 
-    for type_name in (:CohomologicalBuffers, :CohomologicalContext,
-        :SparseLinearSolverState)
+    documented_state_types = (
+        :CheckpointOptions,
+        :CheckpointSession,
+        :ParametrisationOptions,
+        :InvarianceOperators,
+        :OrthogonalityOperators,
+        :LowerOrderResources,
+        :CohomologicalBuffers,
+        :PardisoBackend,
+        :SparseLinearSolverState,
+        :CohomologicalContext,
+        :ConjugateSymmetryData,
+        :_SimpleProgress,
+        :_SolveJob,
+        :_DirectSolvePlan,
+        :_SolveGroup,
+        :_GroupedSolvePlan,
+        :StructuralFactorKey,
+        :_CompositeSolveObserver,
+        :_ProgressSolveObserver,
+        :_CheckpointSolveObserver,
+        :_OrderAccum,
+        :_BenchmarkSolveObserver
+    )
+    for type_name in documented_state_types
         type_doc = _binding_doc_text(_CE_DOCS, type_name)
         @test !isempty(type_doc)
         for field in fieldnames(Base.unwrap_unionall(getfield(_CE_DOCS, type_name)))
             @test occursin("`$(field)", type_doc)
         end
+    end
+
+    key_internal_contracts = (
+        :_replace_options,
+        :_fingerprint_value!,
+        :_atomic_manifest,
+        :_completed_degrees,
+        :_group_solve_jobs,
+        :_compose_observers,
+        :_execute_solve_plan!,
+        :_solve_cohomological_equations!,
+        :_solve_cohomological_equations_typed!,
+        :_assemble_nonlinear_rhs!,
+        :_solve_prepared_system!,
+        :_monomial_metrics,
+        :_finalise_monomial!,
+        :_timed_solve_single_monomial!
+    )
+    for function_name in key_internal_contracts
+        @test !isempty(_binding_doc_text(_CE_DOCS, function_name))
     end
 
     backend_doc = _binding_doc_text(_CE_DOCS, :AbstractSparseBackend)
@@ -60,6 +105,22 @@ end
         joinpath(@__DIR__, "..", "..", "website",
             "documentation.html"), String)
     @test !occursin("href=\"@ref\"", generated_page)
-    @test !occursin("CohomologicalSolverConfig", generated_page)
-    @test !occursin("CohomologicalCheckpoint", generated_page)
+    for removed_name in (
+        "_translate_legacy_options",
+        "CohomologicalSolverConfig",
+        "CohomologicalCheckpoint",
+        "primary_pairs"
+    )
+        @test !occursin(removed_name, generated_page)
+    end
+
+    repo_root = normpath(joinpath(@__DIR__, "..", ".."))
+    source_link_pattern = r"""href="https://github\.com/MORFEproject/MORFE\.jl/blob/main/([^"#]+)#L\d+"""
+    source_paths = Set(
+        normpath(joinpath(repo_root, match.captures[1]))
+    for match in eachmatch(source_link_pattern, generated_page))
+    @test !isempty(source_paths)
+    for source_path in source_paths
+        @test isfile(source_path)
+    end
 end

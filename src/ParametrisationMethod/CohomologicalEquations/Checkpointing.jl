@@ -9,6 +9,14 @@ const _CHECKPOINT_MAGIC = UInt8[0x4d, 0x4f, 0x52, 0x46, 0x45, 0x43, 0x50, 0x32]
 Mutable state for one checkpoint directory: the validated [`CheckpointOptions`](@ref), the
 problem fingerprint, and the most recently committed manifest. The manifest is refreshed
 under the writer lock after every chunk or degree commit.
+
+# Fields
+
+- `options::CheckpointOptions` — checkpoint path, resume policy, problem identifier, and
+  commit granularity for this session.
+- `fingerprint::String` — SHA-256 identity of the mathematical problem and numerical
+  policy against which every resumed manifest is checked.
+- `manifest::Dict{String, Any}` — in-memory copy of the last atomically committed manifest.
 """
 mutable struct CheckpointSession
     options::CheckpointOptions
@@ -26,12 +34,25 @@ than treating a caller label or a source location as mathematical identity.
 """
 checkpoint_fingerprint_data(::Any) = nothing
 
+"""
+	_digest_text!(ctx, value) -> nothing
+
+Append a textual fingerprint token and a zero-byte separator to the SHA context. The
+separator prevents adjacent values from producing ambiguous concatenations.
+"""
 function _digest_text!(ctx, value)
     SHA.update!(ctx, codeunits(string(value)))
     SHA.update!(ctx, UInt8[0])
     return nothing
 end
 
+"""
+	_fingerprint_value!(ctx, value) -> nothing
+
+Recursively append a deterministic, type-aware representation of `value` to a SHA context.
+Arrays include their shape, dictionaries are traversed in sorted-key order, and opaque
+callables must provide [`checkpoint_fingerprint_data`](@ref).
+"""
 function _fingerprint_value!(ctx, value)
     _digest_text!(ctx, typeof(value))
     if value === nothing || value isa Number || value isa Symbol ||
@@ -101,9 +122,18 @@ function _problem_fingerprint(model, spectral, resonance_set, mset, conj_perm,
     return bytes2hex(SHA.digest!(ctx))
 end
 
+"""Return the manifest path inside a checkpoint directory."""
 _manifest_path(root) = joinpath(root, "manifest.toml")
+
+"""Return the single-writer lock-directory path for a checkpoint."""
 _lock_path(root) = joinpath(root, ".writer-lock")
 
+"""
+	_atomic_manifest(path, manifest) -> nothing
+
+Write a TOML manifest to a process-specific temporary file and atomically replace `path`
+only after the complete document has been flushed.
+"""
 function _atomic_manifest(path, manifest)
     temporary = path * ".tmp.$(getpid())"
     open(temporary, "w") do io
@@ -198,6 +228,12 @@ function _open_checkpoint(options::CheckpointOptions, fingerprint, metadata)
     return CheckpointSession(options, fingerprint, manifest)
 end
 
+"""
+	_file_sha256(path) -> String
+
+Return the lowercase SHA-256 digest of a checkpoint chunk without loading the complete
+file into memory.
+"""
 function _file_sha256(path)
     open(path, "r") do io
         return bytes2hex(SHA.sha256(io))
@@ -330,6 +366,12 @@ function _restore_checkpoint!(session::CheckpointSession, W, R;
     return completed
 end
 
+"""
+	_completed_degrees(session) -> Vector{Int}
+
+Return the polynomial degrees recorded as completely committed in `session.manifest`.
+The returned vector is converted to `Int` for consistency across TOML implementations.
+"""
 function _completed_degrees(session::CheckpointSession)
     Int.(get(session.manifest, "completed_degrees", Int[]))
 end
