@@ -118,7 +118,7 @@
         bullets: [
           'MIT licensed, open-source on GitHub',
           '<code>FEMMultilinearMap</code> interface extensible to any Julia FEM library',
-          'KLU / SuiteSparse sparse solvers auto-selected'
+          'KLU / UMFPACK / Pardiso sparse solvers'
         ],
         link: { href: 'https://github.com/MORFEproject/MORFE.jl', label: 'GitHub →' }
       }

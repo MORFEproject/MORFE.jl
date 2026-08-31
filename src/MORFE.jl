@@ -10,13 +10,16 @@ include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
 include("ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl")
 include("ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl")
-# Coefficient containers + the mset contract. Must precede CohomologicalEquations,
-# which imports them; ParametrisationMethod (which owns `parametrise`) follows the
-# solver instead, because it *calls* it.
+# Coefficient containers and the multiindex-set contract precede the three focused
+# solver modules. ParametrisationMethod, which owns `parametrise`, follows the workflow
+# module because it delegates the coefficient solve to that module.
 include("ParametrisationMethod/ParametrisationObjects.jl")
 include("ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.jl")
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
+include("ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl")
 include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl")
+include("ParametrisationMethod/ParametrisationSolver/ParametrisationSolver.jl")
+include("ParametrisationMethod/CohomologicalEquations/Compatibility.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")

@@ -85,3 +85,28 @@ jobs:
 
       - name: Run prerelease tests
         run: julia --project=. -e 'using Pkg; Pkg.test()'
+
+  windows-sparse:
+    if: github.event_name != 'schedule'
+    runs-on: windows-latest
+    name: Windows sparse cohomological solvers
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+
+      - name: Cache packages
+        uses: julia-actions/cache@v2
+
+      - name: Install dependencies
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Run parametrisation tests
+        env:
+          GROUP: parametrisation_method
+        run: julia --project=. -e 'using Pkg; Pkg.test()'

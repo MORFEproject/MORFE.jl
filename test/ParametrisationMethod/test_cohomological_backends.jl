@@ -24,7 +24,7 @@ end
     @test defaults.grouping == :auto
     @test defaults.residual_check == :off
     @test defaults.residual_tolerance === nothing
-    @test_throws ArgumentError ParametrisationOptions(backend = :umfpack)
+    @test ParametrisationOptions(backend = :umfpack).backend == :umfpack
     @test_throws ArgumentError ParametrisationOptions(backend = :unknown)
     @test_throws ArgumentError ParametrisationOptions(grouping = :approximate)
     @test_throws ArgumentError ParametrisationOptions(residual_check = :relative)
@@ -183,14 +183,34 @@ end
               Rlegacy.poly.coefficients
 
         @test_throws ArgumentError solve_with(quiet(); model = dense_model)
+        @test_throws ArgumentError solve_with(
+            quiet(backend = :umfpack); model = dense_model)
         Wd, Rd = solve_with(
             ParametrisationOptions(
                 show_progress = false, verbose = false); model = dense_model)
         @test relerr(Wd.poly.coefficients, Wk.poly.coefficients) <= 1e-11
         @test relerr(Rd.poly.coefficients, Rk.poly.coefficients) <= 1e-11
 
-        # Impossibly strict verification deterministically reaches the dense and KLU
-        # failure paths; allowing one correction also exercises iterative refinement.
+        Wu, Ru = solve_with(quiet(backend = :umfpack, grouping = :off))
+        Wug, Rug = solve_with(quiet(backend = :umfpack, grouping = :on))
+        Wua, Rua = solve_with(quiet(backend = :umfpack, grouping = :auto))
+        @test relerr(Wu.poly.coefficients, Wd.poly.coefficients) <= 1e-11
+        @test relerr(Ru.poly.coefficients, Rd.poly.coefficients) <= 1e-11
+        @test relerr(Wug.poly.coefficients, Wu.poly.coefficients) <= 1e-12
+        @test relerr(Rug.poly.coefficients, Ru.poly.coefficients) <= 1e-12
+        @test Wua.poly.coefficients == Wu.poly.coefficients
+        @test Rua.poly.coefficients == Ru.poly.coefficients
+
+        for backend in (:klu, :umfpack), _ in 1:5
+
+            Wrepeat, Rrepeat = solve_with(quiet(backend = backend, grouping = :on))
+            Wreference, Rreference = backend == :klu ? (Wkg, Rkg) : (Wug, Rug)
+            @test Wrepeat.poly.coefficients == Wreference.poly.coefficients
+            @test Rrepeat.poly.coefficients == Rreference.poly.coefficients
+        end
+
+        # Impossibly strict verification deterministically reaches the dense, KLU and
+        # UMFPACK failure paths; allowing one correction also exercises refinement.
         for steps in (0, 1)
             strict_dense = ParametrisationOptions(
                 residual_check = :backward_error, residual_tolerance = 1e-30,
@@ -198,8 +218,25 @@ end
                 show_progress = false, verbose = false)
             strict_klu = quiet(grouping = :off, residual_tolerance = 1e-30,
                 max_refinement_steps = steps)
-            @test_throws ErrorException solve_with(strict_dense; model = dense_model)
-            @test_throws ErrorException solve_with(strict_klu)
+            strict_umfpack = quiet(backend = :umfpack, grouping = :off,
+                residual_tolerance = 1e-30, max_refinement_steps = steps)
+            @test_throws CE._BorderedSolveFailure solve_with(strict_dense; model = dense_model)
+            @test_throws CE._BorderedSolveFailure solve_with(strict_klu)
+            @test_throws CE._BorderedSolveFailure solve_with(strict_umfpack)
+        end
+    end
+
+    @testset "UMFPACK checkpoint diagnostics" begin
+        mktempdir() do directory
+            checkpoint = CheckpointOptions(joinpath(directory, "umfpack");
+                problem_id = "umfpack-fixture", granularity = :degree)
+            options = quiet(backend = :umfpack, grouping = :off, checkpoint = checkpoint)
+            W, R = solve_with(options)
+            @test all(isfinite, W.poly.coefficients)
+            @test all(isfinite, R.poly.coefficients)
+            manifest = _CheckpointTOML.parsefile(joinpath(checkpoint.path, "manifest.toml"))
+            @test manifest["diagnostics"]["backend"] == "umfpack"
+            @test manifest["completed_degrees"] == collect(1:5)
         end
     end
 

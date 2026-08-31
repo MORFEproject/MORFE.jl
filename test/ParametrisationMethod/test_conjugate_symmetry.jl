@@ -1,5 +1,6 @@
 using Test
 using LinearAlgebra
+using SparseArrays
 using StaticArrays
 
 using MORFE.Multiindices: all_multiindices_up_to
@@ -103,6 +104,16 @@ W_expl, R_expl = solve_cohomological_problem(
     _model, _mset, _spectral, _resonance_set; conjugate_permutation = _conj_perm
 )
 
+_sparse_model = NthOrderModel(map(sparse, (B0, B1, B2)), (term_cubic,))
+_umfpack_options = ParametrisationOptions(
+    backend = :umfpack, show_progress = false, verbose = false)
+W_umfpack_nosym, R_umfpack_nosym = solve_cohomological_problem(
+    _sparse_model, _mset, _spectral, _resonance_set;
+    conjugate_permutation = nothing, options = _umfpack_options)
+W_umfpack_expl, R_umfpack_expl = solve_cohomological_problem(
+    _sparse_model, _mset, _spectral, _resonance_set;
+    conjugate_permutation = _conj_perm, options = _umfpack_options)
+
 # =============================================================================
 @testset "ConjugateSymmetry" begin
     @testset "W-symmetry: W[P·γ] = conj(W[γ])" begin
@@ -134,5 +145,9 @@ W_expl, R_expl = solve_cohomological_problem(
     @testset "Parity: explicit perm ≈ no-sym" begin
         @test W_expl.poly.coefficients ≈ W_nosym.poly.coefficients rtol=1e-8
         @test R_expl.poly.coefficients ≈ R_nosym.poly.coefficients rtol=1e-8
+        @test W_umfpack_expl.poly.coefficients≈W_expl.poly.coefficients rtol=1e-10
+        @test R_umfpack_expl.poly.coefficients≈R_expl.poly.coefficients rtol=1e-10
+        @test W_umfpack_nosym.poly.coefficients≈W_nosym.poly.coefficients rtol=1e-10
+        @test R_umfpack_nosym.poly.coefficients≈R_nosym.poly.coefficients rtol=1e-10
     end
 end

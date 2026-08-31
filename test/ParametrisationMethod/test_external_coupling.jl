@@ -18,6 +18,7 @@ uncoupled fast path, so this pins the coupled path against a known-good referenc
 
 using Test
 using LinearAlgebra
+using SparseArrays
 using StaticArrays
 using MORFE
 
@@ -98,24 +99,28 @@ end
 Build the model whose external dynamics are `A` and whose forcing shape matrix is `F`.
 The nonlinear term is a plain quadratic so the reduction is not trivial.
 """
-function _ec_make_model(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64})
+function _ec_make_model(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64};
+        sparse_linear::Bool = false)
     # `F` stays complex: the reference model's forcing is `F * T` with complex `T`, and
     # taking a real part would break the very equivalence under test.
     term_quad = MultilinearMap((res, x, y) -> (res .+= x .* y), (2, 0))
     term_forcing = MultilinearMap((res, r) -> (res .+= F * r), (0, 0), 1)
     ext_sys = ExternalSystem(_ec_linear_external_polynomial(A))
-    return NthOrderModel((_EC_K, _EC_C, _EC_M), (term_quad, term_forcing), ext_sys)
+    linear_terms = sparse_linear ? map(sparse, (_EC_K, _EC_C, _EC_M)) :
+                   (_EC_K, _EC_C, _EC_M)
+    return NthOrderModel(linear_terms, (term_quad, term_forcing), ext_sys)
 end
 
-function _ec_solve(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64})
-    model = _ec_make_model(A, F)
+function _ec_solve(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64};
+        backend::Symbol = :auto)
+    model = _ec_make_model(A, F; sparse_linear = backend != :auto)
     res_set = resonance_set_from_complex_normal_form_style(
         _EC_mset, Vector{ComplexF64}(_EC_master_eigenvalues), 0.1;
         external_eigenvalues = ComplexF64[_EC_λ_ext...])
     return solve_cohomological_problem(
         model, _EC_mset, _EC_spectral, res_set;
         conjugate_permutation = nothing,
-        options = ParametrisationOptions(show_progress = false)
+        options = ParametrisationOptions(; backend, show_progress = false)
     )
 end
 
@@ -142,6 +147,15 @@ end
 
     W_coupled, R_coupled = _ec_solve(A_coupled, _EC_F)
     W_diag, R_diag = _ec_solve(A_diag, _EC_F * T)
+    W_coupled_umfpack, R_coupled_umfpack = _ec_solve(
+        A_coupled, _EC_F; backend = :umfpack)
+    W_diag_umfpack, R_diag_umfpack = _ec_solve(
+        A_diag, _EC_F * T; backend = :umfpack)
+
+    @test W_coupled_umfpack.poly.coefficients≈W_coupled.poly.coefficients rtol=1e-10
+    @test R_coupled_umfpack.poly.coefficients≈R_coupled.poly.coefficients rtol=1e-10
+    @test W_diag_umfpack.poly.coefficients≈W_diag.poly.coefficients rtol=1e-10
+    @test R_diag_umfpack.poly.coefficients≈R_diag.poly.coefficients rtol=1e-10
 
     Φ_coupled = _ec_external_blocks(W_coupled)
     Φ_diag = _ec_external_blocks(W_diag)

@@ -90,6 +90,8 @@ direct keywords of `parametrise`. Mathematical choices (`resonance` and
   - `:auto` uses dense LU for dense full-order matrices; for sparse matrices it uses
 	Pardiso when a Pardiso extension is active and otherwise KLU;
   - `:klu` requires sparse full-order matrices and forces KLU;
+  - `:umfpack` requires sparse full-order matrices and forces Julia's built-in
+	SuiteSparse UMFPACK solver;
   - `:pardiso` requires sparse full-order matrices and an active Pardiso extension,
 	otherwise construction of the solver fails.
 - `grouping::Symbol = :auto` — exact reuse of a factorisation by monomials whose
@@ -107,8 +109,8 @@ direct keywords of `parametrise`. Mathematical choices (`resonance` and
   scalar-type-aware default `sqrt(eps(real(T))) / 100` (approximately `1.49e-10` for
   `Float64`).
 - `max_refinement_steps::Integer = 3` — maximum number of iterative-refinement
-  corrections after a failed backward-error check on the dense and KLU paths. Must be
-  non-negative. A solve still throws if it remains outside the tolerance.
+  corrections after a failed backward-error check on the dense, KLU and UMFPACK paths.
+  Must be non-negative. A solve still throws if it remains outside the tolerance.
 
 # Validation and restart options
 
@@ -149,7 +151,8 @@ options = ParametrisationOptions(
 ```
 
 All symbolic options are validated when `ParametrisationOptions` is constructed, so a
-misspelling such as `backend = :umfpack` or `grouping = :approximate` fails immediately.
+misspelling such as `backend = :suitesparse` or `grouping = :approximate` fails
+immediately.
 """
 struct ParametrisationOptions{IOType <: IO}
     backend::Symbol
@@ -175,8 +178,8 @@ function ParametrisationOptions(;
         show_progress::Bool = true,
         verbose::Bool = true,
         setup_io::IO = stderr)
-    backend in (:auto, :klu, :pardiso) || throw(ArgumentError(
-        "backend must be :auto, :klu, or :pardiso; UMFPACK is not a shared MORFE backend"))
+    backend in (:auto, :klu, :umfpack, :pardiso) || throw(ArgumentError(
+        "backend must be :auto, :klu, :umfpack, or :pardiso"))
     grouping in (:auto, :off, :on) || throw(ArgumentError(
         "grouping must be :auto, :off, or :on"))
     residual_check in (:backward_error, :off) || throw(ArgumentError(

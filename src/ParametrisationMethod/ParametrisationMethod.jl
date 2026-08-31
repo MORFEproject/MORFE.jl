@@ -2,10 +2,9 @@
 Module `ParametrisationMethod` — the user-facing entry point to the DPIM
 parametrisation.
 
-Owns [`parametrise`](@ref), the high-level driver that turns a full-order model plus
-spectral data into a solved invariant manifold `(W, R)`, and the individual pipeline
-steps it is built from — each a separate function so that a new policy is a new method
-rather than a new branch:
+Owns [`parametrise`](@ref), the public entry point that turns a full-order model plus
+spectral data into a solved invariant manifold `(W, R)`. It coordinates the following
+separate functions, so a new policy is a new method rather than a new branch:
 
 | Step | Function | Dispatches on |
 |------|----------|---------------|
@@ -19,11 +18,11 @@ single namespace users need.
 
 ## Load order
 
-This module is included **after** `CohomologicalEquations`, because `parametrise` calls
-`solve_cohomological_problem`.  That is why the containers live in a separate module:
-`CohomologicalEquations` needs *them*, and they must therefore load first.  Previously
-this ordering was worked around by defining `parametrise`'s method in a bare,
-module-less `parametrise_entry.jl` included at `MORFE` top level; that file is gone.
+This module is included after `ParametrisationSolver`, whose documented workflow owns
+`solve_cohomological_problem`. The mathematical `CohomologicalEquations` module and the
+numerical `BorderedLinearSolvers` module therefore remain independent of this user-facing
+entry point. Checkpointing, symmetry, scheduling, progress, and benchmarking do not live
+in this module.
 """
 module ParametrisationMethod
 
@@ -36,11 +35,11 @@ using ..FullOrderModel: NthOrderModel, _term_label
 using ..SpectralDecomposition: SpectralData, master_eigenvalues,
                                master_conjugate_permutation
 using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
-using ..CohomologicalEquations: solve_cohomological_problem,
-                                ParametrisationOptions,
-                                CheckpointOptions,
-                                checkpoint_fingerprint_data,
-                                _replace_options
+using ..ParametrisationSolver: solve_cohomological_problem,
+                               ParametrisationOptions,
+                               CheckpointOptions,
+                               checkpoint_fingerprint_data,
+                               _replace_options
 
 # Re-exported wholesale so `ParametrisationMethod` stays the one namespace users (and
 # `ext/MORFEBifurcationKitExt.jl`, which reaches for
@@ -256,8 +255,10 @@ W, R = parametrise(model, spectral, 7;
     options = options)
 ```
 
-Thus use `parametrise(...; options = ParametrisationOptions(backend = :klu))`, **not**
-`parametrise(...; backend = :klu)`.
+Thus use `parametrise(...; options = ParametrisationOptions(backend = :umfpack))`, **not**
+`parametrise(...; backend = :umfpack)`. The available explicit sparse backends are KLU,
+UMFPACK, and Pardiso; see [`ParametrisationOptions`](@ref) for availability and automatic
+selection rules.
 
 ## Returns
 

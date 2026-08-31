@@ -2,8 +2,9 @@ using Test
 
 @testset "Cohomological UK English contract" begin
     repo_root = normpath(joinpath(@__DIR__, "..", ".."))
-    source_root = joinpath(
-        repo_root, "src", "ParametrisationMethod", "CohomologicalEquations")
+    source_roots = [joinpath(repo_root, "src", "ParametrisationMethod", directory)
+                    for directory in (
+        "BorderedLinearSolvers", "CohomologicalEquations", "ParametrisationSolver")]
     test_root = joinpath(repo_root, "test", "ParametrisationMethod")
 
     spellings = Dict(
@@ -31,10 +32,15 @@ using Test
         "serialize" => "serialise"
     )
 
-    paths = vcat(
-        filter(path -> endswith(path, ".jl"), readdir(source_root; join = true)),
-        filter(path -> endswith(path, ".jl"), readdir(test_root; join = true))
-    )
+    source_paths = String[]
+    for source_root in source_roots
+        for (directory, _, files) in walkdir(source_root)
+            append!(source_paths,
+                joinpath(directory, file) for file in files if endswith(file, ".jl"))
+        end
+    end
+    paths = vcat(source_paths,
+        filter(path -> endswith(path, ".jl"), readdir(test_root; join = true)))
     scanner_path = normpath(@__FILE__)
     violations = String[]
     for path in paths

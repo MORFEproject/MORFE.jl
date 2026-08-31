@@ -54,14 +54,14 @@ misconfigured solver return plausible-looking numbers.
 module MORFEPardisoExt
 
 using MORFE
-using MORFE.CohomologicalEquations: _try_build_pardiso_solver, _pardiso_prepare!,
-                                    _pardiso_factorise_solve!, _pardiso_solve!,
-                                    _pardiso_release!
+using MORFE.BorderedLinearSolvers: _try_build_pardiso_solver, _pardiso_prepare!,
+                                   _pardiso_factorise_solve!, _pardiso_solve!,
+                                   _pardiso_release!
 using Pardiso
 using SparseArrays
 using LinearAlgebra: norm
 
-function MORFE.CohomologicalEquations._try_build_pardiso_solver()
+function MORFE.BorderedLinearSolvers._try_build_pardiso_solver()
     ps = nothing
     try
         ps = MKLPardisoSolver()
@@ -93,7 +93,7 @@ Configure the solver for `A` and run the analysis phase once. Returns the matrix
 whatever form the chosen type requires; the caller holds it and passes it back to
 every subsequent `_pardiso_factorise_solve!`.
 """
-function MORFE.CohomologicalEquations._pardiso_prepare!(ps, A::SparseMatrixCSC)
+function MORFE.BorderedLinearSolvers._pardiso_prepare!(ps, A::SparseMatrixCSC)
     # Unconditionally unsymmetric — see the module docstring. This is not a claim
     # about A; it is the only complex type that leaves pivoting unrestricted, which
     # the bordered solve requires at every resonant monomial. Pardiso still applies
@@ -122,7 +122,7 @@ The first call additionally checks its own answer. This path is unreachable from
 so a silently misconfigured solver — the wrong matrix type, a transpose-flag
 mismatch — would otherwise surface as a quietly wrong ROM rather than an error.
 """
-function MORFE.CohomologicalEquations._pardiso_factorise_solve!(
+function MORFE.BorderedLinearSolvers._pardiso_factorise_solve!(
         ps, A_pardiso, x::AbstractVector, b::AbstractVector)
     Pardiso.set_phase!(ps, Pardiso.NUM_FACT)
     Pardiso.pardiso(ps, A_pardiso, eltype(b)[])
@@ -145,7 +145,7 @@ function MORFE.CohomologicalEquations._pardiso_factorise_solve!(
     return x
 end
 
-function MORFE.CohomologicalEquations._pardiso_solve!(
+function MORFE.BorderedLinearSolvers._pardiso_solve!(
         ps, A_pardiso, x::AbstractVector, b::AbstractVector)
     Pardiso.set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
     Pardiso.pardiso(ps, x, A_pardiso, b)
@@ -159,7 +159,7 @@ Release Pardiso's internal memory. Called from a finaliser on the solver state:
 Pardiso allocates C-side, outside the GC's view, so without this every solve leaks a
 factorisation.
 """
-function MORFE.CohomologicalEquations._pardiso_release!(ps, A_pardiso)
+function MORFE.BorderedLinearSolvers._pardiso_release!(ps, A_pardiso)
     A_pardiso === nothing && return nothing
     Pardiso.set_phase!(ps, Pardiso.RELEASE_ALL)
     Pardiso.pardiso(ps, A_pardiso, eltype(A_pardiso)[])

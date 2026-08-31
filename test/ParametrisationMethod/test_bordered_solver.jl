@@ -66,7 +66,15 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         kwargs = (; options = ParametrisationOptions(show_progress = false))
         Wd, Rd = solve_cohomological_problem(dense_model, args...; kwargs...)
         Ws, Rs = solve_cohomological_problem(sparse_model, args...; kwargs...)
-        return (; Wd, Rd, Ws, Rs, mset, rset, master_eigs)
+        umfpack_options = ParametrisationOptions(
+            backend = :umfpack, show_progress = false)
+        Wu, Ru = solve_cohomological_problem(
+            sparse_model, args...; options = umfpack_options)
+        @test norm(Wu.poly.coefficients - Wd.poly.coefficients) /
+              max(norm(Wu.poly.coefficients), norm(Wd.poly.coefficients), eps()) <= 1e-9
+        @test norm(Ru.poly.coefficients - Rd.poly.coefficients) /
+              max(norm(Ru.poly.coefficients), norm(Rd.poly.coefficients), eps()) <= 1e-9
+        return (; Wd, Rd, Ws, Rs, Wu, Ru, mset, rset, master_eigs)
     end
 
     relerr(a, b) = norm(a .- b) / max(norm(a), norm(b), eps())
@@ -185,8 +193,15 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
             catch e
                 e
             end
-            @test err isa ErrorException
-            @test occursin("outer resonance", err.msg)
+            @test err isa MORFE.CohomologicalEquations._BorderedSolveFailure
+            @test err.category == :outer_resonance
+            @test !isempty(err.outer_resonance_targets)
+            message = sprint(showerror, err)
+            @test occursin("outer resonance", message)
+            @test occursin("selected backend: dense", message)
+            @test occursin("multiindex:", message)
+            @test occursin("superharmonic:", message)
+            @test occursin("inner resonance mask:", message)
         end
     end
 
@@ -339,5 +354,86 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         @test !(x_first ≈ x_second)                                    # it saw the change
         @test norm(ss.bordered * x_second - b) / norm(b) ≤ 1e-8        # solved the new matrix
         @test norm(A_first * x_first - b) / norm(b) ≤ 1e-8             # and the old one
+    end
+
+    @testset "failed SuiteSparse caches are discarded" begin
+        CE = MORFE.CohomologicalEquations
+        mset = MultiindexSet([SVector(2)])
+        unflagged = MORFE.Resonance.empty_resonance_set(mset, 1)
+        flagged = MORFE.Resonance.empty_resonance_set(mset, 1, 1)
+        MORFE.Resonance.set_resonance!(flagged, 2, 1, true)
+        resonance = SVector(false)
+
+        function make_state(backend)
+            template = spdiagm(0 => ones(ComplexF64, 2))
+            mappings = [collect(eachindex(template.nzval))]
+            options = ParametrisationOptions(
+                backend = backend, residual_check = :off, show_progress = false)
+            return CE.SparseLinearSolverState{ComplexF64}(
+                template, mappings, 2, 1; options)
+        end
+        function set_diagonal!(state, values)
+            fill!(state.bordered.nzval, 0)
+            for index in eachindex(values)
+                state.bordered[index, index] = values[index]
+            end
+            return state.bordered
+        end
+
+        @test CE._backend_name(make_state(:auto).backend) == :klu
+
+        for backend in (:klu, :umfpack)
+            state = make_state(backend)
+            set_diagonal!(state, ComplexF64[2, 3, 1])
+            factor = backend == :klu ? CE._refactorise_klu!(state, state.bordered) :
+                     CE._refactorise_umfpack!(state, state.bordered)
+            @test issuccess(factor)
+            @test state.fact === factor
+            if backend == :umfpack
+                @test @inferred(CE._cached_umfpack_factor(
+                    state, state.bordered)) === factor
+            end
+
+            set_diagonal!(state, ComplexF64[0, 3, 1])
+            failure = try
+                CE._bordered_solve!(state, ones(ComplexF64, 3), 0.5 + 0.2im,
+                    1, mset[1], resonance, unflagged)
+                nothing
+            catch error
+                error
+            end
+            @test failure isa CE._BorderedSolveFailure
+            @test failure.category == :factorisation
+            @test failure.backend == backend
+            @test failure.index == 1
+            @test failure.multiindex == mset[1]
+            @test failure.inner_resonance_mask == resonance
+            @test failure.recovery_attempted
+            @test isempty(failure.outer_resonance_targets)
+            @test state.fact === nothing
+            message = sprint(showerror, failure)
+            @test occursin("not by itself proof", message)
+            @test occursin("fresh retry", message)
+
+            set_diagonal!(state, ComplexF64[4, 5, 1])
+            recovered = backend == :klu ? CE._refactorise_klu!(state, state.bordered) :
+                        CE._refactorise_umfpack!(state, state.bordered)
+            @test issuccess(recovered)
+            @test state.fact === recovered
+        end
+
+        outer_state = make_state(:umfpack)
+        set_diagonal!(outer_state, ComplexF64[0, 3, 1])
+        outer_failure = try
+            CE._bordered_solve!(outer_state, ones(ComplexF64, 3), 0.5 + 0.2im,
+                1, mset[1], resonance, flagged)
+            nothing
+        catch error
+            error
+        end
+        @test outer_failure isa CE._BorderedSolveFailure
+        @test outer_failure.category == :outer_resonance
+        @test outer_failure.outer_resonance_targets == [1]
+        @test occursin("likely cause", sprint(showerror, outer_failure))
     end
 end
