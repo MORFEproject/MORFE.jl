@@ -21,6 +21,9 @@ jobs:
   format:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,19 +39,25 @@ jobs:
       - name: Install formatter
         run: julia --project=.github/format -e 'using Pkg; Pkg.instantiate()'
 
-      # `format` returns true when nothing needed changing, so this doubles as the
-      # gate: a non-zero exit here means the tree is unformatted, and the diff below
-      # shows the contributor exactly what to apply.
-      - name: Check formatting
+      # On push, auto-commit whatever the formatter changes.
+      # On pull_request, "Fail if unformatted" below turns any diff into a failing check.
+      - name: Format
         run: |
           julia --project=.github/format -e '
             using JuliaFormatter
-            ok = format(["src", "ext", "test", "examples"]; verbose = true)
-            if !ok
-                @warn "Files were reformatted. Review and commit the changes."
-                exit(1)
-            end'
+            ok = format(["src", "ext", "test", "examples"]; verbose = true)'
 
+      - name: Commit changes
+        if: github.event_name == 'push'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Apply JuliaFormatter"
+
+      - name: Fail if unformatted
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --exit-code || (echo "::error::Files are not formatted. Run the formatter locally and push the changes." && exit 1)
+      
       - name: Show required changes
         if: failure()
         run: git diff
