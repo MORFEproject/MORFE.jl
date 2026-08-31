@@ -20,8 +20,11 @@ function _is_locally_defined_api(mod::Module, symbol::Symbol)
 end
 
 @testset "Cohomological documentation contracts" begin
+    # Julia 1.10 exposes these language-generated module bindings as local definitions.
+    language_generated_bindings = Set((:eval, :include))
     local_definitions = filter(
         symbol -> !startswith(string(symbol), "#") &&
+                  symbol ∉ language_generated_bindings &&
                   _is_locally_defined_api(_CE_DOCS, symbol),
         names(_CE_DOCS; all = true))
     # `Base.Docs.undocumented_names` is unavailable on the supported Julia 1.10
