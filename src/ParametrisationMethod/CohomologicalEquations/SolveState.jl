@@ -198,16 +198,16 @@ function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int,
         options::ParametrisationOptions = ParametrisationOptions()) where {T, MT}
     nsys = FOM + ROM
     RT = typeof(real(zero(T)))
+    residual_tolerance = _configured_residual_tolerance(T, options)
     return CohomologicalBuffers{T, RT}(
         Matrix{T}(undef, nsys, nsys),
         Matrix{T}(undef, 0, 0),
         Vector{T}(undef, nsys),
         zeros(T, FOM),
         zeros(T, FOM),
-        _configured_residual_tolerance(T, options) === nothing ? T[] :
-        Vector{T}(undef, nsys),
+        residual_tolerance === nothing ? T[] : Vector{T}(undef, nsys),
         T[],
-        _configured_residual_tolerance(T, options),
+        residual_tolerance,
         options.max_refinement_steps
     )
 end

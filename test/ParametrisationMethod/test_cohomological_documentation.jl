@@ -69,6 +69,12 @@ end
         :_fingerprint_value!,
         :_atomic_manifest,
         :_completed_degrees,
+        :_prepare_solution_storage,
+        :_restore_solution_checkpoint!,
+        :_prepare_shared_resources,
+        :_prepare_master_operators,
+        :_prepare_external_directions!,
+        :_build_complete_context,
         :_group_solve_jobs,
         :_compose_observers,
         :_execute_solve_plan!,
@@ -78,7 +84,7 @@ end
         :_solve_prepared_system!,
         :_monomial_metrics,
         :_finalise_monomial!,
-        :_timed_solve_single_monomial!
+        :_cached_klu_factor
     )
     for function_name in key_internal_contracts
         @test !isempty(_binding_doc_text(_CE_DOCS, function_name))
@@ -93,6 +99,11 @@ end
     @test occursin("generalised **right**", context_doc)
     @test occursin("master right eigenmodes", context_doc)
     @test occursin("left eigenmodes are represented separately", context_doc)
+
+    problem_doc = _binding_doc_text(_CE_DOCS, :solve_cohomological_problem)
+    @test occursin("storage reuse", problem_doc)
+    @test occursin("not implicit", problem_doc)
+    @test occursin("checkpoint-committed", problem_doc)
 
     @test !isdefined(MORFE, :CohomologicalSolverConfig)
     @test !isdefined(MORFE, :CohomologicalCheckpoint)

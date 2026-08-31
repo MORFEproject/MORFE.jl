@@ -151,7 +151,7 @@ using TOML
 # `klu_refactor`, which reuses the pivot sequence from the first factorisation;
 # `klu_factor!` re-pivots while reusing the cached symbolic analysis, which is what a
 # value-varying `s` requires. See `_refactorise!`.
-using KLU: klu, klu_factor!
+using KLU: KLUFactorization, klu, klu_factor!
 using StaticArrays: SVector, MVector
 
 # Extension hooks: overridden by ext/MORFEPardisoExt.jl when Pardiso is loaded.
@@ -230,136 +230,6 @@ export CohomologicalContext,
        solve_cohomological_equations_benchmarked!,
        solve_single_monomial!,
        solve_cohomological_problem
-
-# ==============================================================================
-# Progress indicator (stderr, \r-based, no external dependencies)
-# ==============================================================================
-
-"""
-	_SimpleProgress
-
-Lightweight progress state for the `\r`-based terminal progress indicator.
-
-# Fields
-
-- `n_total::Int` — number of monomials that will actually be solved, which is fewer
-  than the multiindex-set size whenever linear or conjugate-secondary monomials are
-  skipped.  The reported fraction is against this, not against the set size.
-- `enabled::Bool` — `false` when `stderr` is not a TTY, so CI logs stay clean
-  without every call site having to test for it.
-- `max_nl_degree::Int` — highest nonlinearity degree in the model.  Work per
-  monomial grows with degree, so the fraction is raised to this power to make the
-  displayed percentage track elapsed time rather than monomial count.
-"""
-struct _SimpleProgress
-    n_total::Int
-    enabled::Bool
-    max_nl_degree::Int
-end
-
-"""
-	_make_progress(n_total, show_progress, max_nl_degree) -> _SimpleProgress
-
-Construct a `_SimpleProgress` tracker. `max_nl_degree` controls the work-weighted
-percentage. Output is disabled automatically when `stderr` is not a TTY.
-"""
-function _make_progress(n_total::Int, show_progress::Bool, max_nl_degree::Int)
-    return _SimpleProgress(n_total, show_progress && stderr isa Base.TTY, max_nl_degree)
-end
-
-"""
-	_progress_tick!(p, n_done, degree)
-
-Print an in-place `\r`-overwritten progress line to `stderr` showing the
-current polynomial degree and the fraction of monomials solved.
-No-op when `p.enabled == false`.
-"""
-function _progress_tick!(p::_SimpleProgress, n_done::Int, degree::Int)
-    p.enabled || return
-    percentage = round(100.0 * (n_done / p.n_total)^p.max_nl_degree; digits = 2)
-    print(stderr,
-        "\rSolving: order $degree \t Monomials: $n_done/$(p.n_total) \t Progress: $percentage%   "
-    )
-end
-
-"""
-	_progress_done!(p, n_done)
-
-Print the final "Solved N monomials." completion line to `stderr` and clear
-any trailing characters from the last `_progress_tick!` call.
-No-op when `p.enabled == false`.
-"""
-function _progress_done!(p::_SimpleProgress, n_done::Int)
-    p.enabled || return
-    println(stderr, "\rSolved $n_done monomials." * " "^50)
-end
-
-# ==============================================================================
-# Utility helpers (public — used by solve_single_monomial! and the driver)
-# ==============================================================================
-
-"""
-	_embed_external_dynamics!(R, ext_poly, mset)
-
-Copy coefficients from the `N_EXT`-variable external polynomial `ext_poly` into
-the last `N_EXT` rows of `R`'s coefficient matrix, embedding them into the full
-`NVAR = ROM + N_EXT` multiindex set `mset`.  No-op when `N_EXT == 0`.
-
-Throws an `ArgumentError` when a *non-zero* external coefficient has no home in `mset`.
-Silently skipping it — as this did previously — drops part of the external dynamics
-without trace.  That is a live risk for a re-based external system: a change of external
-coordinates turns `r₁²` into `r₁², r₁r₂, r₂²`, and a per-parameter box `mset` (as built by
-`all_multiindices_in_box`) need not contain the cross terms even though it is downward
-closed.  A monomial whose coefficient is exactly zero is skipped, since dropping it changes
-nothing.
-"""
-function _embed_external_dynamics!(
-        R::ReducedDynamics{ROM, NVAR, T},
-        ext_poly::DensePolynomial{T, N_EXT, 2},
-        mset::MultiindexSet{NVAR}
-) where {ROM, NVAR, T, N_EXT}
-    N_EXT > 0 || return nothing
-    mdict = build_exponent_index_map(mset)
-    ext_coeffs = ext_poly.coefficients
-    for (j, α_ext) in enumerate(ext_poly.multiindex_set.exponents)
-        α_full = SVector{NVAR, Int}(ntuple(i -> i <= ROM ? 0 : α_ext[i - ROM], Val(NVAR)))
-        idx_full = get(mdict, α_full, nothing)
-        if idx_full === nothing
-            nz = [(e, ext_coeffs[e, j]) for e in 1:N_EXT if !iszero(ext_coeffs[e, j])]
-            isempty(nz) && continue
-            throw(ArgumentError("""
-                External dynamics carry the monomial r^$(Tuple(α_ext)) with non-zero \
-                coefficients $(nz) (as (row, value)), but the multiindex set has no entry \
-                for the corresponding full exponent $(Tuple(α_full)).
-                That term would be dropped without trace.  Enlarge `mset` to contain it — \
-                a re-based external system can generate additional cross monomials.
-                """))
-        end
-        for e in 1:N_EXT
-            coeff = T(ext_coeffs[e, j])
-            iszero(coeff) || (R.poly.coefficients[ROM + e, idx_full] = coeff)
-        end
-    end
-    return nothing
-end
-
-"""
-	_linear_monomial_indices(mset) -> Vector{Int}
-
-Return the positions in `mset` of all unit-vector monomials `eᵣ` for `r = 1 … NVAR`
-(i.e., the linear monomials).  Used to identify which entries of `W` and `R` are
-initialised from eigenvectors rather than solved.
-"""
-function _linear_monomial_indices(mset::MultiindexSet{NVAR}) where {NVAR}
-    indices = Int[]
-    n_search = min(NVAR + 1, length(mset))
-    for r in 1:NVAR
-        e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
-        idx = findfirst(==(e_r), view(mset.exponents, 1:n_search))
-        idx !== nothing && push!(indices, idx)
-    end
-    return indices
-end
 
 """
 	_resonance_vector(resonance_set, monomial_idx, ::Val{ROM}) -> SVector{ROM, Bool}
@@ -473,6 +343,18 @@ end
 # =============================================================================
 
 """
+	_cached_klu_factor(state, matrix) -> KLUFactorization
+
+Return the cached KLU factorisation with value and index types derived from the active
+sparse matrix. Call only after the first successful factorisation has populated `fact`.
+"""
+function _cached_klu_factor(
+        ss::SparseLinearSolverState{T}, ::SparseMatrixCSC{T, Ti}
+) where {T, Ti}
+    return ss.fact::KLUFactorization{T, Ti}
+end
+
+"""
 	_refactorise_klu!(ss, A) -> KLU factorisation of `A`
 
 Factorise the bordered matrix for the current monomial, reusing the symbolic analysis
@@ -509,8 +391,7 @@ exception (`check = false`, `allowsingular = true`) so that all monomials — in
 the first — surface it through the same path.
 """
 function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
-    F = ss.fact
-    if F === nothing
+    if ss.fact === nothing
         # `check = false` so that a singular *first* monomial surfaces through the
         # caller's `issuccess` test like every later one, rather than throwing from a
         # different code path. `allowsingular` keeps KLU from halting inside the
@@ -523,6 +404,7 @@ function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
         issuccess(F) && (ss.fact = F)
         return F
     end
+    F = _cached_klu_factor(ss, A)
     klu_factor!(F; check = false, allowsingular = true)
     return F
 end
@@ -606,7 +488,8 @@ function _klu_backward_error!(ss::SparseLinearSolverState, x, norm_b)
         for _ in 1:ss.max_refinement_steps
             relative <= tolerance && break
             rmul!(ss.refinement_work, -one(eltype(x)))
-            ldiv!(ss.fact, ss.refinement_work)
+            factorisation = _cached_klu_factor(ss, ss.bordered)
+            ldiv!(factorisation, ss.refinement_work)
             x .+= ss.refinement_work
             ss.refinement_count += 1
             mul!(ss.refinement_work, ss.bordered, x)
@@ -667,11 +550,14 @@ function _bordered_solve!(
         copyto!(ss.residual_work, x)
         norm_b = norm(x, Inf)
     end
-    if !REUSE || ss.fact === nothing
+    factorisation = if !REUSE || ss.fact === nothing
         F = _refactorise_klu!(ss, ss.bordered)
         issuccess(F) || _singular_bordered_system(s)
+        F
+    else
+        _cached_klu_factor(ss, ss.bordered)
     end
-    ldiv!(ss.fact, x)
+    ldiv!(factorisation, x)
     VERIFY && _klu_backward_error!(ss, x, norm_b)
     return x
 end
@@ -917,7 +803,7 @@ function _finalise_monomial!(
 end
 
 """
-	_run_single_monomial!(instrumentation, W, R, idx, ctx, sym, model, ml_cache,
+	_run_single_monomial!(instrumentation, W, R, idx, ctx, model, ml_cache,
 		reuse_factor, superharmonic = nothing) -> metrics
 
 Canonical per-monomial pipeline shared by production and benchmark execution. Only
@@ -934,7 +820,6 @@ function _run_single_monomial!(
         R::ReducedDynamics{ROM, NVAR, T},
         idx::Int,
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-        ::ConjugateSymmetryData,
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache,
         reuse_factor::Val{REUSE} = Val(false),
@@ -966,18 +851,15 @@ function _run_single_monomial!(
     return _monomial_metrics(instrumentation, rhs_metrics, solve_metrics)
 end
 
-# Singleton used by the public no-symmetry overload. `skip_bits` is never indexed by
-# the single-monomial pipeline, so a zero-length vector is sufficient.
-const _NO_SYM = ConjugateSymmetryData{NoConjugatePermutation}(
-    NoConjugatePermutation(), Int[], BitVector())
-
 """
 	solve_single_monomial!(W, R, idx, ctx, model, ml_cache) -> nothing
 
 Solve the cohomological equations for one multiindex-set position, updating `W` and `R`.
 """
 function solve_single_monomial!(W, R, idx::Int, ctx, model, ml_cache)
-    return solve_single_monomial!(W, R, idx, ctx, _NO_SYM, model, ml_cache)
+    _run_single_monomial!(_NO_MONOMIAL_INSTRUMENTATION,
+        W, R, idx, ctx, model, ml_cache, Val(false))
+    return nothing
 end
 
 function solve_single_monomial!(W, R, idx::Int, ctx, sym, model, ml_cache,
@@ -990,7 +872,7 @@ end
 function solve_single_monomial!(W, R, idx::Int, ctx, sym, model, ml_cache,
         reuse_factor::Val = Val(false))
     _run_single_monomial!(_NO_MONOMIAL_INSTRUMENTATION,
-        W, R, idx, ctx, sym, model, ml_cache, reuse_factor)
+        W, R, idx, ctx, model, ml_cache, reuse_factor)
     return nothing
 end
 

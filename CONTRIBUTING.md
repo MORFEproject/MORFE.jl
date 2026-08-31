@@ -4,7 +4,7 @@ MORFE.jl welcomes contributions to the solver, tests, examples, tutorials, docum
 
 ## Start with an issue
 
-Before beginning substantial work, search the [issue tracker](https://github.com/MORFEproject/MORFE.jl/issues). Open an issue to report a bug, propose a feature, discuss an example or benchmark, or describe a research/application collaboration. This lets the team agree on scope and avoids duplicated effort.
+Before beginning substantial work, search the [Issues](https://github.com/MORFEproject/MORFE.jl/issues). Open an issue to report a bug, propose a feature, discuss an example or benchmark, or describe a research/application collaboration. This lets the team agree on scope and avoids duplicated effort.
 
 ## Set up a development checkout
 

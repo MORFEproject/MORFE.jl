@@ -442,9 +442,9 @@ function write_page(mods::Vector{ModData}, outpath::String)
 		"""
 	<h4>Companion Packages</h4>
 	<ul class="package-switch">
-  	<li><a href="morfeferrite-documentation.html"><span class="package-mark companion-mark" aria-hidden="true"></span>MORFEFerrite.jl</a></li>
+	<li><a href="morfeferrite-documentation.html"><span class="package-mark companion-mark" aria-hidden="true"></span>MORFEFerrite.jl</a></li>
 	</ul>
-  """
+	"""
 	page_identity = companion ?
 					"""
 <div class="companion-mesh" aria-hidden="true"></div>

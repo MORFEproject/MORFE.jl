@@ -32,7 +32,7 @@
         '<div><h4>Code</h4><ul>' +
           '<li><a href="' + repo + '" target="_blank" rel="noopener">GitHub</a></li>' +
           '<li><a href="' + repo + '/releases" target="_blank" rel="noopener">Releases</a></li>' +
-          '<li><a href="' + repo + '/issues" target="_blank" rel="noopener">Issue tracker</a></li>' +
+          '<li><a href="' + repo + '/issues" target="_blank" rel="noopener">Issues</a></li>' +
           '<li><a href="' + repo + '/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>' +
         '</ul></div>' +
       '</div>' +

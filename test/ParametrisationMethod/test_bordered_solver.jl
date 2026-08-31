@@ -321,6 +321,8 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         F = MORFE.CohomologicalEquations._refactorise!(ss, ss.bordered)
         @test issuccess(F)
         @test F.nzval === ss.bordered.nzval
+        @test @inferred(MORFE.CohomologicalEquations._cached_klu_factor(
+            ss, ss.bordered)) === F
 
         # Behavioural form of the same invariant, independent of *why* it might break:
         # refilling the template at a new s must change what a refactorisation sees.
