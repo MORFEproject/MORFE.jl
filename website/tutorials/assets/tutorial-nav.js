@@ -7,6 +7,7 @@
     { href: 'structural_svk.html', label: 'From a mesh to a ROM' },
     { href: 'karman.html', label: 'Kármán vortex street' },
     { href: 'full_order_model.html', label: 'Building a full-order model' },
+    { href: 'symbolics_ext.html', label: 'Symbolic definition of a full-order model' },
     { href: 'multiindex_sets.html', label: 'Monomials and multiindices' }
   ];
 
