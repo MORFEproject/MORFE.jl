@@ -389,9 +389,10 @@ of `W` and `R`, processing them in causal order (ascending total degree).
 The overload without `sym` disables conjugate reconstruction. With
 [`ConjugateSymmetryData`](@ref), secondary monomials are skipped and filled from their
 solved primaries. `grouping` accepts `:off`, `:on`, or `:auto`: groups never cross a total
-degree and reuse a numeric factorisation only when the superharmonic and resonance mask
-make the bordered matrix exactly identical. `:auto` uses grouping only when it reduces the
-number of factorisations. Checkpoint persistence is installed internally by
+degree. Structurally equal groups use their first job's superharmonic for every member, so
+the common resonance mask makes the bordered matrix exactly identical and its numeric
+factorisation reusable. `:auto` uses grouping only when it reduces the number of
+factorisations. Checkpoint persistence is installed internally by
 [`solve_cohomological_problem`](@ref), rather than exposed as a callback on this low-level
 entry point.
 """
@@ -872,11 +873,15 @@ end
 
 """
 	_run_single_monomial!(instrumentation, W, R, idx, ctx, sym, model, ml_cache,
-		reuse_factor) -> metrics
+		reuse_factor, superharmonic = nothing) -> metrics
 
 Canonical per-monomial pipeline shared by production and benchmark execution. Only
 nonlinear-right-hand-side assembly and the bordered solve are instrumentation hooks;
 preparation and coefficient finalisation stay outside benchmark timings.
+
+Grouped execution supplies one canonical `superharmonic` for the entire structural
+factor group. Direct and public single-monomial execution leave it as `nothing` and
+compute the value from the monomial itself.
 """
 function _run_single_monomial!(
         instrumentation,
@@ -887,10 +892,12 @@ function _run_single_monomial!(
         ::ConjugateSymmetryData,
         model::NthOrderModel,
         ml_cache::MultilinearTermsCache,
-        reuse_factor::Val{REUSE} = Val(false)
+        reuse_factor::Val{REUSE} = Val(false),
+        superharmonic = nothing
 ) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT, REUSE}
     multi = multiindex_set(W)[idx]
-    s = sum(multi[i] * ctx.lambda_diag[i] for i in 1:NVAR)
+    s = isnothing(superharmonic) ? _superharmonic(multi, ctx.lambda_diag) :
+        superharmonic
     resonance = _resonance_vector(ctx.resonance_set, idx, Val(ROM))
 
     for buffer in ctx.lower_order.buffer

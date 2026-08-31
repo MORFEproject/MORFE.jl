@@ -41,8 +41,8 @@ jobs:
         if: matrix.julia-version == '1'
         run: julia --project=. -e 'using Pkg; Pkg.test(coverage = true)'
 
-      # `ext/` is included deliberately, even though the suite loads only Symbolics and so
-      # leaves five of the six extensions unexecuted: hiding them would flatter the number.
+      # `ext/` is included deliberately. Arpack, Plots, and Symbolics are exercised;
+      # the platform-sensitive Pardiso and heavyweight BifurcationKit paths remain visible.
       - name: Process coverage
         if: matrix.julia-version == '1'
         uses: julia-actions/julia-processcoverage@v1

@@ -15,17 +15,26 @@ struct _DirectSolvePlan <: _AbstractSolvePlan
     jobs::Vector{_SolveJob}
 end
 
+"""Jobs sharing one canonical superharmonic and exactly identical bordered matrix."""
+struct _SolveGroup{T}
+    superharmonic::T
+    jobs::Vector{_SolveJob}
+end
+
 """Degree-local groups whose jobs share an exactly identical bordered matrix."""
-struct _GroupedSolvePlan <: _AbstractSolvePlan
-    groups::Vector{Vector{_SolveJob}}
+struct _GroupedSolvePlan{T} <: _AbstractSolvePlan
+    groups::Vector{_SolveGroup{T}}
     n_jobs::Int
 end
 
-"""Exact identity key for reusable bordered factorisations."""
+"""Mathematical superharmonic structure and resonance identity for factor reuse."""
 struct StructuralFactorKey{NVAR, ROM}
     exponents::SVector{NVAR, Int}
     resonance::SVector{ROM, Bool}
 end
+
+@inline _superharmonic(multi, lambda_diag) =
+    sum(multi[i] * lambda_diag[i] for i in eachindex(lambda_diag))
 
 function _eigenvalue_representatives(lambda_diag)
     representatives = collect(eachindex(lambda_diag))
@@ -89,15 +98,16 @@ end
 
 function _group_solve_jobs(ctx, mset, jobs::Vector{_SolveJob}, ::Val{ROM}) where {ROM}
     representatives = _eigenvalue_representatives(ctx.lambda_diag)
+    T = eltype(ctx.lambda_diag)
     NVAR = length(ctx.lambda_diag)
     Key = StructuralFactorKey{NVAR, ROM}
-    ordered_groups = Vector{Vector{_SolveJob}}()
+    ordered_groups = Vector{_SolveGroup{T}}()
 
     first_job = firstindex(jobs)
     while first_job <= lastindex(jobs)
         degree = sum(mset[jobs[first_job].index])
         keys = Key[]
-        groups = Dict{Key, Vector{_SolveJob}}()
+        groups = Dict{Key, _SolveGroup{T}}()
         next_job = first_job
         while next_job <= lastindex(jobs) &&
               sum(mset[jobs[next_job].index]) == degree
@@ -106,10 +116,11 @@ function _group_solve_jobs(ctx, mset, jobs::Vector{_SolveJob}, ::Val{ROM}) where
             key = _structural_factor_key(
                 mset[job.index], resonance, representatives)
             if !haskey(groups, key)
-                groups[key] = _SolveJob[]
+                groups[key] = _SolveGroup(
+                    _superharmonic(mset[job.index], ctx.lambda_diag), _SolveJob[])
                 push!(keys, key)
             end
-            push!(groups[key], job)
+            push!(groups[key].jobs, job)
             next_job += 1
         end
         append!(ordered_groups, (groups[key] for key in keys))
@@ -259,9 +270,9 @@ function _fill_job_conjugate!(W, R, job, sym::ConjugateSymmetryData{<:SVector})
 end
 
 function _execute_job!(instrumentation, observer, W, R, job, degree,
-        ctx, sym, model, ml_cache, reuse_factor::Val)
+        ctx, sym, model, ml_cache, reuse_factor::Val, superharmonic = nothing)
     metrics = _run_single_monomial!(instrumentation,
-        W, R, job.index, ctx, sym, model, ml_cache, reuse_factor)
+        W, R, job.index, ctx, sym, model, ml_cache, reuse_factor, superharmonic)
     _fill_job_conjugate!(W, R, job, sym)
     _on_job_complete!(observer, job, degree, metrics)
     return nothing
@@ -291,21 +302,21 @@ function _execute_solve_plan!(plan::_GroupedSolvePlan, instrumentation, observer
     mset = multiindex_set(W)
     current_degree = 0
     for group in plan.groups
-        degree = sum(mset[first(group).index])
+        degree = sum(mset[first(group.jobs).index])
         if current_degree != 0 && degree != current_degree
             _on_degree_complete!(observer, current_degree)
         end
         current_degree = degree
-        for (position, job) in enumerate(group)
+        for (position, job) in enumerate(group.jobs)
             if position == 1
                 _execute_job!(instrumentation, observer, W, R, job, degree,
-                    ctx, sym, model, ml_cache, Val(false))
+                    ctx, sym, model, ml_cache, Val(false), group.superharmonic)
             else
                 _execute_job!(instrumentation, observer, W, R, job, degree,
-                    ctx, sym, model, ml_cache, Val(true))
+                    ctx, sym, model, ml_cache, Val(true), group.superharmonic)
             end
         end
-        _on_group_complete!(observer, degree, group)
+        _on_group_complete!(observer, degree, group.jobs)
     end
     current_degree == 0 || _on_degree_complete!(observer, current_degree)
     _finish_observer!(observer)

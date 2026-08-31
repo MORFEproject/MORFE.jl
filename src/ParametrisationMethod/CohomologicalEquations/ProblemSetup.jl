@@ -267,8 +267,9 @@ linear-operator tuple is read from `model.linear_terms`.
   [`ParametrisationOptions`](@ref). Mathematical choices remain separate arguments.
 - `benchmark_dir` — `nothing` for the normal grouped/checkpoint-capable solve, or a directory
   in which [`solve_cohomological_equations_benchmarked!`](@ref) writes timing CSV files.
-  Benchmark mode uses its dedicated causal loop and therefore does not perform factor
-  grouping or invoke checkpoint callbacks.
+  Benchmark mode uses the shared direct execution plan and therefore does not perform
+  factor grouping. It cannot be combined with checkpointing because benchmark timings do
+  not form resumable checkpoint commits.
 
 ## Returns
 
@@ -285,6 +286,9 @@ function solve_cohomological_problem(
         options::ParametrisationOptions = ParametrisationOptions()
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     checkpoint = options.checkpoint
+    benchmark_dir !== nothing && checkpoint !== nothing && throw(ArgumentError(
+        "benchmark_dir cannot be combined with checkpointing; benchmark execution " *
+        "does not create resumable checkpoint commits"))
     show_progress = options.show_progress
     initial_W, initial_R = isnothing(initial_solution) ? (nothing, nothing) :
                            initial_solution
@@ -526,7 +530,6 @@ function solve_cohomological_problem(
             observer)
     end
 
-    completed_degree = maximum(sum, mset.exponents)
     return W, R
 end
 

@@ -37,7 +37,39 @@ end
     @test !CE._has_structural_factor_reuse(ComplexF64[1, 2])
     @test CE._has_structural_factor_reuse(ComplexF64[1, 1])
     @test CE._has_structural_factor_reuse(ComplexF64[0, 2])
-    @test CE._eigenvalue_representatives(ComplexF64[0, 3, 3]) == [0, 2, 2]
+
+    # Mathematically equal superharmonics need not be bit-equal when equal-eigenvalue
+    # contributions are distributed differently. Structural grouping deliberately
+    # chooses the first job's value as the canonical superharmonic for the whole group.
+    repeated = ComplexF64[-0.7021951987576804 - 0.07258186804586991im,
+        -0.7021951987576804 - 0.07258186804586991im]
+    resonance_mask = SVector(false)
+    representatives = CE._eigenvalue_representatives(repeated)
+    key_split = CE._structural_factor_key(
+        SVector(12, 14), resonance_mask, representatives)
+    key_combined = CE._structural_factor_key(
+        SVector(26, 0), resonance_mask, representatives)
+    split_superharmonic = CE._superharmonic(SVector(12, 14), repeated)
+    combined_superharmonic = CE._superharmonic(SVector(26, 0), repeated)
+    @test isequal(key_split, key_combined)
+    @test split_superharmonic != combined_superharmonic
+    canonical_group = CE._SolveGroup(
+        split_superharmonic, [CE._SolveJob(1, 0), CE._SolveJob(2, 0)])
+    @test canonical_group.superharmonic == split_superharmonic
+    @test length(canonical_group.jobs) == 2
+
+    rounding_mset = MultiindexSet([SVector(12, 14), SVector(26, 0)])
+    rounding_resonances = MORFE.Resonance.empty_resonance_set(rounding_mset, 1)
+    rounding_context = (
+        lambda_diag = repeated, resonance_set = rounding_resonances)
+    rounding_groups = CE._group_solve_jobs(rounding_context, rounding_mset,
+        [CE._SolveJob(1, 0), CE._SolveJob(2, 0)], Val(1))
+    @test length(rounding_groups) == 1
+    scheduled_first_superharmonic =
+        CE._superharmonic(rounding_mset[1], repeated)
+    @test rounding_groups[1].superharmonic == scheduled_first_superharmonic
+    @test rounding_groups[1].jobs ==
+          [CE._SolveJob(1, 0), CE._SolveJob(2, 0)]
 
     @testset "solve jobs use the final skip mask" begin
         mset = all_multiindices_up_to(2, 3; min_degree = 1)
@@ -256,5 +288,18 @@ end
 
         check_benchmark(nothing)
         check_benchmark([2, 1])
+
+        mktempdir() do directory
+            checkpoint = CheckpointOptions(joinpath(directory, "checkpoint");
+                problem_id = "benchmark-conflict")
+            conflicting = ParametrisationOptions(
+                checkpoint = checkpoint, grouping = :off,
+                show_progress = false, verbose = false)
+            @test_throws ArgumentError solve_cohomological_problem(
+                dense_model, mset, sd, rset;
+                benchmark_dir = joinpath(directory, "benchmark"),
+                options = conflicting)
+            @test !ispath(checkpoint.path)
+        end
     end
 end

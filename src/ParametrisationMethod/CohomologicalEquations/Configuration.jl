@@ -98,7 +98,8 @@ direct keywords of `parametrise`. Mathematical choices (`resonance` and
 	actually reduces the number of factorisations;
   - `:on` always builds and processes the exact structural groups;
   - `:off` solves directly in graded-lexicographic order without grouping.
-  Grouping is exact; it never clusters approximately equal eigenvalues.
+  Grouping is exact; it never clusters approximately equal eigenvalues. Each group uses
+  its first monomial's superharmonic consistently for every member.
 - `residual_check::Symbol = :off` — `:backward_error` verifies every bordered solve;
   `:off` skips this additional check.
 - `residual_tolerance::Union{Nothing, Real} = nothing` — positive backward-error limit.
