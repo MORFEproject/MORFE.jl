@@ -515,28 +515,13 @@ function solve_cohomological_problem(
         solve_cohomological_equations_benchmarked!(W, R, ctx, sym, model, ml_cache;
             benchmark_dir, show_progress)
     else
-        checkpoint_callback = checkpoint_session === nothing ? nothing :
-                              (event, degree, indices) -> begin
-            if event == :group && checkpoint.granularity == :factor_group
-                _write_chunk!(checkpoint_session, W, R, degree, indices, sparse_solver;
-                    degree_complete = false)
-            elseif event == :degree
-                if checkpoint.granularity == :degree
-                    degree_indices = [idx
-                                      for idx in eachindex(mset.exponents)
-                                      if sum(mset[idx]) == degree]
-                    _write_chunk!(checkpoint_session, W, R, degree,
-                        degree_indices, sparse_solver; degree_complete = true)
-                else
-                    _mark_degree_complete!(checkpoint_session, degree)
-                end
-                completed_degree = degree
-            end
-        end
-        solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
+        observer = checkpoint_session === nothing ? _NO_SOLVE_OBSERVER :
+                   _CheckpointSolveObserver(
+            checkpoint_session, W, R, mset, sparse_solver)
+        _solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
             show_progress,
             grouping = options.grouping,
-            checkpoint_callback)
+            observer)
     end
 
     completed_degree = maximum(sum, mset.exponents)
