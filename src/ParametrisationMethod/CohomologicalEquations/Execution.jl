@@ -169,8 +169,9 @@ end
 _compose_observers(a::_NoSolveObserver, b::_NoSolveObserver) = _NO_SOLVE_OBSERVER
 _compose_observers(a::_NoSolveObserver, b::_AbstractSolveObserver) = b
 _compose_observers(a::_AbstractSolveObserver, b::_NoSolveObserver) = a
-_compose_observers(a::_AbstractSolveObserver, b::_AbstractSolveObserver) =
+function _compose_observers(a::_AbstractSolveObserver, b::_AbstractSolveObserver)
     _CompositeSolveObserver(a, b)
+end
 
 _on_job_complete!(::_NoSolveObserver, args...) = nothing
 _on_group_complete!(::_NoSolveObserver, args...) = nothing
@@ -210,9 +211,11 @@ function _finish_observer!(observer::_ProgressSolveObserver)
     return nothing
 end
 
-_completed_indices(job::_SolveJob) = job.conjugate_target == 0 ?
-                                    [job.index] :
-                                    sort!([job.index, job.conjugate_target])
+function _completed_indices(job::_SolveJob)
+    job.conjugate_target == 0 ?
+    [job.index] :
+    sort!([job.index, job.conjugate_target])
+end
 function _completed_indices(group::Vector{_SolveJob})
     indices = Int[]
     sizehint!(indices, 2 * length(group))
@@ -232,7 +235,8 @@ function _on_group_complete!(observer::_CheckpointSolveObserver, degree, group)
 end
 function _on_degree_complete!(observer::_CheckpointSolveObserver, degree)
     if observer.session.options.granularity == :degree
-        indices = [index for index in eachindex(observer.mset.exponents)
+        indices = [index
+                   for index in eachindex(observer.mset.exponents)
                    if sum(observer.mset[index]) == degree]
         _write_chunk!(observer.session, observer.W, observer.R, degree,
             indices, observer.sparse_solver; degree_complete = true)

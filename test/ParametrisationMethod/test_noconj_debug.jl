@@ -129,7 +129,7 @@ end
 # ─────────────────────────────────────────────────────────────────────────────
 @testset "conjugate/no-conjugate equivalence" begin
     for force in (ComplexF64[1.0, 0.0, 0.0, 0.0],
-            ComplexF64[1.0 + 0.3im, 0.0, 0.0, 0.0])
+        ComplexF64[1.0 + 0.3im, 0.0, 0.0, 0.0])
         result = compare_paths(force)
         @test result.n_diverge == 0
         @test result.W_conj.poly.coefficients ≈
