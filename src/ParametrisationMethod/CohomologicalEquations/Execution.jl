@@ -33,8 +33,8 @@ struct StructuralFactorKey{NVAR, ROM}
     resonance::SVector{ROM, Bool}
 end
 
-@inline _superharmonic(multi, lambda_diag) =
-    sum(multi[i] * lambda_diag[i] for i in eachindex(lambda_diag))
+@inline _superharmonic(multi, lambda_diag) = sum(multi[i] * lambda_diag[i]
+for i in eachindex(lambda_diag))
 
 function _eigenvalue_representatives(lambda_diag)
     representatives = collect(eachindex(lambda_diag))

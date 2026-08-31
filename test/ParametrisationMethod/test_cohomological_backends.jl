@@ -65,8 +65,7 @@ end
     rounding_groups = CE._group_solve_jobs(rounding_context, rounding_mset,
         [CE._SolveJob(1, 0), CE._SolveJob(2, 0)], Val(1))
     @test length(rounding_groups) == 1
-    scheduled_first_superharmonic =
-        CE._superharmonic(rounding_mset[1], repeated)
+    scheduled_first_superharmonic = CE._superharmonic(rounding_mset[1], repeated)
     @test rounding_groups[1].superharmonic == scheduled_first_superharmonic
     @test rounding_groups[1].jobs ==
           [CE._SolveJob(1, 0), CE._SolveJob(2, 0)]

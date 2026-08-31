@@ -286,9 +286,10 @@ function solve_cohomological_problem(
         options::ParametrisationOptions = ParametrisationOptions()
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     checkpoint = options.checkpoint
-    benchmark_dir !== nothing && checkpoint !== nothing && throw(ArgumentError(
-        "benchmark_dir cannot be combined with checkpointing; benchmark execution " *
-        "does not create resumable checkpoint commits"))
+    benchmark_dir !== nothing && checkpoint !== nothing &&
+        throw(ArgumentError(
+            "benchmark_dir cannot be combined with checkpointing; benchmark execution " *
+            "does not create resumable checkpoint commits"))
     show_progress = options.show_progress
     initial_W, initial_R = isnothing(initial_solution) ? (nothing, nothing) :
                            initial_solution
