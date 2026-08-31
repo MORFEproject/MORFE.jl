@@ -1,17 +1,8 @@
-"""
-Debug script: compare NoConjugatePermutation vs conjugate_permutation paths
-for a small analytical second-order system with N_EXT = 2.
-
-Run with:
-    julia --project test/ParametrisationMethod/test_noconj_debug.jl
-
-or interactively:
-    include("test/ParametrisationMethod/test_noconj_debug.jl")
-"""
+"""Regression test for conjugate and no-conjugate solve equivalence."""
 
 using LinearAlgebra
 using StaticArrays
-using Printf
+using Test
 using MORFE
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -99,12 +90,7 @@ end
 # ─────────────────────────────────────────────────────────────────────────────
 # Run and compare both solve paths, printing every diverging monomial
 # ─────────────────────────────────────────────────────────────────────────────
-function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
-    println("\n", "─"^72)
-    println(case_label)
-    @printf "  f_vec = %s\n" repr(f_vec)
-    println("─"^72)
-
+function compare_paths(f_vec::AbstractVector{ComplexF64})
     model = _make_model(f_vec)
     res_set = _make_resonance()
 
@@ -124,7 +110,6 @@ function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
     Rc1 = R_conj.poly.coefficients    # NVAR × L
     Rc2 = R_noconj.poly.coefficients
 
-    first_bad = nothing
     n_diverge = 0
 
     for (l, α) in enumerate(_mset.exponents)
@@ -133,46 +118,21 @@ function compare_paths(case_label::String, f_vec::AbstractVector{ComplexF64})
         (dW > 1e-10 || dR > 1e-10) || continue
 
         n_diverge += 1
-        first_bad === nothing && (first_bad = (l, α, dW, dR))
-
-        n_diverge <= 6 || continue   # limit terminal output
-        @printf "  [l=%3d] α=%-22s deg=%d  ΔW=%.2e  ΔR=%.2e\n" l repr(Tuple(α)) sum(α) dW dR
-
-        if n_diverge <= 3
-            for j in axes(Wc1, 2)
-                norm(Wc1[:, j, l] - Wc2[:, j, l]) > 1e-14 || continue
-                @printf "          W_conj [:,j=%d]  = %s\n" j repr(round.(Wc1[:, j, l]; sigdigits = 6))
-                @printf "          W_noconj[:,j=%d]  = %s\n" j repr(round.(Wc2[:, j, l]; sigdigits = 6))
-            end
-            @printf "          R_conj   = %s\n" repr(round.(Rc1[:, l]; sigdigits = 6))
-            @printf "          R_noconj = %s\n" repr(round.(Rc2[:, l]; sigdigits = 6))
-        end
     end
-
-    if first_bad === nothing
-        println("  ✓ PASS: both paths agree to 1e-10 on all $(length(_mset)) monomials.")
-    else
-        l, α, dW, dR = first_bad
-        println()
-        @printf "  ✗ FAIL: first divergence at l=%d  α=%s  degree=%d\n" l repr(Tuple(α)) sum(α)
-        @printf "  Total diverging monomials: %d / %d\n" n_diverge length(_mset)
-    end
+    return (; W_conj, R_conj, W_noconj, R_noconj, n_diverge)
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
-println("MORFE.jl — NoConjugatePermutation vs conjugate_permutation debug")
-@printf "System: FOM=%d, ROM=%d, N_EXT=%d, max_degree=%d\n" _FOM _ROM _N_EXT _max_degree
-@printf "λ₁ = %s,  Ω_force = %.6f\n" repr(_λ₁) _Ω_force
-@printf "%d monomials in multiindex set\n" length(_mset)
-
-# Case A: real f_vec — physically the demo-like scenario (StructureModalDampingEigensolver)
-# Both paths should agree because mode shapes and f_vec are both real.
-compare_paths("Case A — real f_vec (demo-like)", ComplexF64[1.0, 0.0, 0.0, 0.0])
-
-# Case B: complex f_vec input, coerced to real(f_vec) inside _make_model.
-# Models a general eigensolver where mode shapes may be complex.
-# With real(f_vec) applied before building the forcing term, both paths must agree.
-compare_paths("Case B — complex input coerced to real(f_vec) (correct)", ComplexF64[
-    1.0 + 0.3im, 0.0, 0.0, 0.0])
+@testset "conjugate/no-conjugate equivalence" begin
+    for force in (ComplexF64[1.0, 0.0, 0.0, 0.0],
+            ComplexF64[1.0 + 0.3im, 0.0, 0.0, 0.0])
+        result = compare_paths(force)
+        @test result.n_diverge == 0
+        @test result.W_conj.poly.coefficients ≈
+              result.W_noconj.poly.coefficients atol=1e-10
+        @test result.R_conj.poly.coefficients ≈
+              result.R_noconj.poly.coefficients atol=1e-10
+    end
+end

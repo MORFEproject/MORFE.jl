@@ -33,20 +33,29 @@ jobs:
       - name: Install dependencies
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
-      - name: Run tests
+      - name: Run tests on Julia 1.10
+        if: matrix.julia-version == '1.10'
+        run: julia --project=. -e 'using Pkg; Pkg.test()'
+
+      - name: Run tests with coverage on current stable
+        if: matrix.julia-version == '1'
         run: julia --project=. -e 'using Pkg; Pkg.test(coverage = true)'
 
       # `ext/` is included deliberately, even though the suite loads only Symbolics and so
       # leaves five of the six extensions unexecuted: hiding them would flatter the number.
       - name: Process coverage
+        if: matrix.julia-version == '1'
         uses: julia-actions/julia-processcoverage@v1
         with:
           directories: src,ext
 
       # Soft-fails while CODECOV_TOKEN is unset, so a missing secret never turns the suite red.
       - name: Upload coverage to Codecov
+        if: matrix.julia-version == '1'
         uses: codecov/codecov-action@v5
         with:
           files: lcov.info
+          flags: morfe
+          name: MORFE
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false

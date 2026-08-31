@@ -15,6 +15,7 @@ should_run(group) = GROUP == "all" || GROUP == group
             include("FullOrderModel/test_full_order_model.jl")
             include("FullOrderModel/test_external_system.jl")
             include("FullOrderModel/test_multilinear_maps.jl")
+            include("FullOrderModel/test_multilinear_reference.jl")
             include("FullOrderModel/test_fem_external_arguments.jl")
         end
     end
@@ -33,6 +34,7 @@ should_run(group) = GROUP == "all" || GROUP == group
             @testset "Parametrise" begin
                 include("ParametrisationMethod/test_parametrise_contract.jl")
                 include("ParametrisationMethod/test_parametrise_unified.jl")
+                include("ParametrisationMethod/test_parametrise_entry.jl")
             end
             include("ParametrisationMethod/test_bordered_solver.jl")
             include("ParametrisationMethod/test_cohomological_backends.jl")
@@ -41,6 +43,7 @@ should_run(group) = GROUP == "all" || GROUP == group
                 include("ParametrisationMethod/benchmark_default_solver.jl")
             end
             include("ParametrisationMethod/test_external_coupling.jl")
+            include("ParametrisationMethod/test_noconj_debug.jl")
         end
     end
     if should_run("rom_io")
@@ -70,14 +73,15 @@ should_run(group) = GROUP == "all" || GROUP == group
             end
         end
     end
-    if should_run("end_to_end")
-        @testset "EndToEnd" begin
-            #
-        end
-    end
     if should_run("extensions")
         @testset "MORFESymbolicsExt" begin
             include("Extensions/test_morfe_symbolics.jl")
+        end
+        @testset "MORFEArpackExt" begin
+            include("Extensions/test_arpack.jl")
+        end
+        @testset "MORFEPlotsExt" begin
+            include("Extensions/test_plots.jl")
         end
     end
 end

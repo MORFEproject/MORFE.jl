@@ -21,6 +21,7 @@ const MORFE_DOC_CONFIG = (
     companion = true,
     modules = [
         (MORFEFerrite.Common, "Common"),
+        (MORFEFerrite.Common.MeshIO, "MeshIO"),
         (MORFEFerrite.ParametricGeometry, "ParametricGeometry"),
         (MORFEFerrite.StructuralSVK, "StructuralSVK"),
         (MORFEFerrite.FluidNavierStokes, "FluidNavierStokes")

@@ -37,7 +37,6 @@ if !isdefined(Main, :MORFE_DOC_CONFIG)
             (MORFE.LowerOrderCouplings, "LowerOrderCouplings"),
             (MORFE.CohomologicalEquations, "CohomologicalEquations"),
             (MORFE.ParametrisationMethod, "ParametrisationMethod"),
-            (MORFE.FEMUtility, "FEMUtility"),
             (MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
             (MORFE.InvarianceError, "InvarianceError"),
             (SymbolicsExt, "SymbolicsExtension")

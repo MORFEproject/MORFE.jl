@@ -18,7 +18,6 @@ include("ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.j
 include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
-include("FEMUtility.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
 include("Export/RomIO.jl")
@@ -41,7 +40,6 @@ using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
 using .CohomologicalEquations
 using .ParametrisationMethod
-using .FEMUtility
 using .BifurcationKitInterface
 using .InvarianceError
 using .RomIO
@@ -112,11 +110,6 @@ export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
        external_conjugate_permutation, full_conjugate_permutation
 export solve_cohomological_equations!, solve_cohomological_equations_benchmarked!,
        solve_single_monomial!, solve_cohomological_problem
-
-# FEMUtility
-export abaqus_to_gmsh, abaqus_to_gmsh_linear,
-       comsol_to_gmsh, comsol_to_gmsh_linear,
-       gmsh_to_comsol
 
 # BifurcationKit interface
 export make_bk_problem
