@@ -29,10 +29,14 @@ for (n, order) in ((6, 3), (6, 7), (30, 5), (30, 7))
         ResonanceConfig(style = :complex_normal_form, tol = 0.05,
             outer_targets = true, warn_outer = false))
 
-    plain() = solve_cohomological_problem(model, mset, sd, rset;
-        conjugate_permutation = nothing, show_progress = false)
-    conj() = solve_cohomological_problem(model, mset, sd, rset;
-        conjugate_permutation = [2, 1], show_progress = false)
+    function plain()
+        solve_cohomological_problem(model, mset, sd, rset;
+            conjugate_permutation = nothing, show_progress = false)
+    end
+    function conj()
+        solve_cohomological_problem(model, mset, sd, rset;
+            conjugate_permutation = [2, 1], show_progress = false)
+    end
     plain()
     conj()
     a = @allocated plain()

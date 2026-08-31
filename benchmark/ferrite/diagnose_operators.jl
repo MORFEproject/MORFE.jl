@@ -37,11 +37,11 @@ include(joinpath(@__DIR__, "../Ferrite/ferrite_assembly.jl"))
 const _msh = joinpath(@__DIR__, "beam_h27.msh")
 isfile(_msh) || error("Mesh not found: run generate_beam_mesh.jl first.")
 println("Loading mesh …")
-grid   = togrid(_msh)
-ip     = Lagrange{RefHexahedron, 2}()^3
+grid = togrid(_msh)
+ip = Lagrange{RefHexahedron, 2}()^3
 geo_ip = Lagrange{RefHexahedron, 2}()
-qr     = QuadratureRule{RefHexahedron}(3)
-cv     = CellValues(qr, ip, geo_ip)
+qr = QuadratureRule{RefHexahedron}(3)
+cv = CellValues(qr, ip, geo_ip)
 dh = DofHandler(grid);
 add!(dh, :u, ip);
 close!(dh)
@@ -52,11 +52,11 @@ update!(ch, 0.0)
 
 E = 160e3;
 ν = 0.22;
-ρ      = 2.32e-3
+ρ = 2.32e-3
 λ_lame = (E*ν) / ((1+ν)*(1-2ν))
 μ_lame = E / (2(1+ν))
-α_ray  = 0.5369754008568333/500.0
-β_ray  = 0.0
+α_ray = 0.5369754008568333/500.0
+β_ray = 0.0
 
 K_full = allocate_matrix(dh);
 M_full = allocate_matrix(dh)
@@ -74,7 +74,8 @@ println("Free DOFs: ", n_free)
 println("\nSolving eigenproblem …")
 solver_eig = StructureModalDampingEigensolver(4, α_ray, β_ray)
 eigenproblem = spectrum(K, M, solver_eig; sorter! = (args...) -> nothing)
-(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
+(eigenvalues, Y, X) = (
+    eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 
 λ1 = eigenvalues[1];
 λ2 = eigenvalues[2]
@@ -116,7 +117,7 @@ println("‖morfe‖/‖legacy‖ = ", norm(C_r_morfe) / norm(C_r_legacy))
 println("\nFirst entries of C_r_morfe  (re): ", real.(C_r_morfe[1:4]))
 println("First entries of C_r_legacy (re): ", real.(C_r_legacy[1:4]))
 println("Component ratios [morfe/legacy]:   ",
-	[C_r_morfe[i]/C_r_legacy[i] for i in 1:4])
+    [C_r_morfe[i]/C_r_legacy[i] for i in 1:4])
 
 # ---------------------------------------------------------------------------
 # 4. Schur complement denominators
@@ -125,11 +126,11 @@ println("\nComputing L(σ) factorisation (dense) …")
 L_mat = Matrix(K + σ*C + σ^2*M)   # FOM×FOM dynamic stiffness
 L_fac = lu(L_mat)
 
-C_prime_morfe  = L_fac \ Vector(complex.(C_r_morfe))
+C_prime_morfe = L_fac \ Vector(complex.(C_r_morfe))
 C_prime_legacy = L_fac \ Vector(complex.(C_r_legacy))
 
 # S = J_r^T * C_prime - Ĉ  (Ĉ = 1 for both)
-S_morfe  = dot(J_r_morfe, C_prime_morfe) - 1.0
+S_morfe = dot(J_r_morfe, C_prime_morfe) - 1.0
 S_legacy = dot(C_r_legacy, C_prime_legacy) - 1.0   # J_r = C_r in both cases
 
 println("\nSchur denominator  S_morfe  = ", S_morfe)
@@ -149,10 +150,10 @@ println("R_morfe/R_legacy = [J_morfe · L⁻¹f / J_legacy · L⁻¹f] × [S_leg
 test_rhs = randn(ComplexF64, n_free)
 W_prime_test = L_fac \ test_rhs
 
-num_morfe  = dot(J_r_morfe, W_prime_test)
+num_morfe = dot(J_r_morfe, W_prime_test)
 num_legacy = dot(C_r_legacy, W_prime_test)
 
-R_ratio_num   = num_morfe / num_legacy
+R_ratio_num = num_morfe / num_legacy
 R_ratio_denom = S_legacy / S_morfe
 R_ratio_total = R_ratio_num * R_ratio_denom
 

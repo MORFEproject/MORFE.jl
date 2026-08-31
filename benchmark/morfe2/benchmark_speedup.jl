@@ -57,7 +57,7 @@ include(info_file)
 
 mesh_file = joinpath(@__DIR__, "beam.mphtxt")
 mesh = read_mesh(mesh_file, domains_list, materials_list, materials_dict,
-	boundaries_list, constrained_dof, bc_vals)
+    boundaries_list, constrained_dof, bc_vals)
 
 U = Field(mesh, Morfe_2_0.dim)
 
@@ -77,12 +77,12 @@ Morfe_2_0.assembler_MK!(mesh, U, K, M)
 C = info.α * M + info.β * K
 
 function quadratic!(res, Ψ₁, Ψ₂)
-	Morfe_2_0.assembly_G!(res, Ψ₁, Ψ₂, mesh, U)
+    Morfe_2_0.assembly_G!(res, Ψ₁, Ψ₂, mesh, U)
 end
 quadratic_term = MultilinearMap(quadratic!, (2, 0))
 
 function cubic!(res, Ψ₁, Ψ₂, Ψ₃)
-	Morfe_2_0.assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh, U)
+    Morfe_2_0.assembly_H!(res, Ψ₁, Ψ₂, Ψ₃, mesh, U)
 end
 cubic_term = MultilinearMap(cubic!, (3, 0))
 
@@ -92,103 +92,104 @@ println("\nFOM = $FOM")
 
 # Spectrum
 mutable struct Mechanical_Problem_Solver <: AbstractEigensolver
-	right_eig_result::Union{Nothing, Matrix}
-	eigenvalues::Union{Nothing, Vector}
-	nev::Int64
-	α::Float64
-	β::Float64
+    right_eig_result::Union{Nothing, Matrix}
+    eigenvalues::Union{Nothing, Vector}
+    nev::Int64
+    α::Float64
+    β::Float64
 end
 function mass_normalization!(ϕ, M, neig)
-	for i in 1:neig
-		c = transpose(ϕ[:, i]) * M * ϕ[:, i]
-		for j in 1:(M.m)
-			ϕ[j, i] /= sqrt(c)
-		end
-	end
+    for i in 1:neig
+        c = transpose(ϕ[:, i]) * M * ϕ[:, i]
+        for j in 1:(M.m)
+            ϕ[j, i] /= sqrt(c)
+        end
+    end
 end
 function MORFE.SpectralDecomposition.eigensolve(model::NthOrderModel, solver::Mechanical_Problem_Solver)
-	K = model.linear_terms[1]
-	M = model.linear_terms[3]
-	nev = solver.nev
-	# Shift-invert via KrylovKit Lanczos: factor K once, then iterate K⁻¹M.
-	# KrylovKit finds the nev largest eigenvalues of K⁻¹M = the nev smallest ω².
-	FK = factorize(K)
-	x0 = ones(size(K, 1))
-	vals_inv, vecs,
-	_ = eigsolve(x -> FK \ (M * x), x0, nev, :LR;
-		krylovdim = max(3*nev+1, 30),
-		maxiter = 500,
-		tol = 1e-10,
-		issymmetric = true)
-	ω2 = real.(1 ./ vals_inv[1:nev])
-	idx = sortperm(ω2)
-	ω2 = ω2[idx]
-	ϕ = real.(hcat(vecs[idx]...))
-	mass_normalization!(ϕ, M, nev)
-	ω = sqrt.(ω2)
-	λ = zeros(ComplexF64, nev * 2)
-	for i in 1:nev
-		ξ = 0.5 * (solver.α / ω[i] + solver.β * ω[i])
-		λ[2i-1] = ω[i] * (-ξ + sqrt(Complex(1 - ξ^2)) * im)
-		λ[2i] = ω[i] * (-ξ - sqrt(Complex(1 - ξ^2)) * im)
-	end
-	eigenvectors = Matrix{ComplexF64}(undef, FOM * 2, nev * 2)
-	for i in 1:nev
-		eigenvectors[1:FOM, 2i-1] .= ϕ[:, i]
-		eigenvectors[1:FOM, 2i] .= ϕ[:, i]
-		eigenvectors[(FOM+1):end, 2i-1] .= λ[2i-1] * ϕ[:, i]
-		eigenvectors[(FOM+1):end, 2i] .= λ[2i] * ϕ[:, i]
-	end
-	solver.right_eig_result = eigenvectors
-	solver.eigenvalues = λ
-	return λ, eigenvectors
+    K = model.linear_terms[1]
+    M = model.linear_terms[3]
+    nev = solver.nev
+    # Shift-invert via KrylovKit Lanczos: factor K once, then iterate K⁻¹M.
+    # KrylovKit finds the nev largest eigenvalues of K⁻¹M = the nev smallest ω².
+    FK = factorize(K)
+    x0 = ones(size(K, 1))
+    vals_inv, vecs,
+    _ = eigsolve(x -> FK \ (M * x), x0, nev, :LR;
+        krylovdim = max(3*nev+1, 30),
+        maxiter = 500,
+        tol = 1e-10,
+        issymmetric = true)
+    ω2 = real.(1 ./ vals_inv[1:nev])
+    idx = sortperm(ω2)
+    ω2 = ω2[idx]
+    ϕ = real.(hcat(vecs[idx]...))
+    mass_normalization!(ϕ, M, nev)
+    ω = sqrt.(ω2)
+    λ = zeros(ComplexF64, nev * 2)
+    for i in 1:nev
+        ξ = 0.5 * (solver.α / ω[i] + solver.β * ω[i])
+        λ[2i - 1] = ω[i] * (-ξ + sqrt(Complex(1 - ξ^2)) * im)
+        λ[2i] = ω[i] * (-ξ - sqrt(Complex(1 - ξ^2)) * im)
+    end
+    eigenvectors = Matrix{ComplexF64}(undef, FOM * 2, nev * 2)
+    for i in 1:nev
+        eigenvectors[1:FOM, 2i - 1] .= ϕ[:, i]
+        eigenvectors[1:FOM, 2i] .= ϕ[:, i]
+        eigenvectors[(FOM + 1):end, 2i - 1] .= λ[2i - 1] * ϕ[:, i]
+        eigenvectors[(FOM + 1):end, 2i] .= λ[2i] * ϕ[:, i]
+    end
+    solver.right_eig_result = eigenvectors
+    solver.eigenvalues = λ
+    return λ, eigenvectors
 end
 function MORFE.SpectralDecomposition.eigensolve_left(model::NthOrderModel,
-	solver::Mechanical_Problem_Solver)
-	@assert solver.right_eig_result !== nothing
-	left_eigenvectors = similar(solver.right_eig_result)
-	for i in 1:Int(0.5*size(left_eigenvectors, 2))
-		left_eigenvectors[(FOM+1):end, 2i-1] = solver.right_eig_result[1:FOM, 2i]
-		left_eigenvectors[(FOM+1):end, 2i] = solver.right_eig_result[1:FOM, 2i-1]
-	end
-	for (i, λ) in enumerate(solver.eigenvalues)
-		left_eigenvectors[1:FOM, i] = -(1 / conj(λ)) * model.linear_terms[1]' *
-									  left_eigenvectors[(FOM+1):end, i]
-	end
-	return solver.eigenvalues, left_eigenvectors
+        solver::Mechanical_Problem_Solver)
+    @assert solver.right_eig_result !== nothing
+    left_eigenvectors = similar(solver.right_eig_result)
+    for i in 1:Int(0.5 * size(left_eigenvectors, 2))
+        left_eigenvectors[(FOM + 1):end, 2i - 1] = solver.right_eig_result[1:FOM, 2i]
+        left_eigenvectors[(FOM + 1):end, 2i] = solver.right_eig_result[1:FOM, 2i - 1]
+    end
+    for (i, λ) in enumerate(solver.eigenvalues)
+        left_eigenvectors[1:FOM, i] = -(1 / conj(λ)) * model.linear_terms[1]' *
+                                      left_eigenvectors[(FOM + 1):end, i]
+    end
+    return solver.eigenvalues, left_eigenvectors
 end
 
 # nev = number of natural frequencies; each gives one complex-conjugate eigenvalue pair.
 # ROM=2 master modes come from the first natural frequency, so nev=1 is sufficient.
 nev_needed = 1
 eigenproblem = spectrum(
-	model, solver = Mechanical_Problem_Solver(nothing, nothing, nev_needed, info.α, info.β),
-	sorter! = (args...) -> nothing,
-	normalizer! = (args...) -> nothing,
+    model, solver = Mechanical_Problem_Solver(nothing, nothing, nev_needed, info.α, info.β),
+    sorter! = (args...) -> nothing,
+    normalizer! = (args...) -> nothing
 )
-(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
+(eigenvalues, Y, X) = (
+    eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 
 ROM = 2;
 N_EXT = 0;
 NVAR = ROM + N_EXT
 master_eigenvalues = SVector{ROM, ComplexF64}(eigenvalues[1:ROM])
 master_modes = Y[1:FOM, 1:ROM]
-left_eigenmodes = Y[(FOM+1):end, 1:ROM]
+left_eigenmodes = Y[(FOM + 1):end, 1:ROM]
 ORD_model = length(model.linear_terms) - 1
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
-	for k in 1:(ORD_model-1)
-		master_modes_derivatives[:, k, r] .= Y[(k*FOM+1):((k+1)*FOM), r]
-	end
+    for k in 1:(ORD_model - 1)
+        master_modes_derivatives[:, k, r] .= Y[(k * FOM + 1):((k + 1) * FOM), r]
+    end
 end
 
-outer_eigenvalues = eigenvalues[(ROM+1):end]
+outer_eigenvalues = eigenvalues[(ROM + 1):end]
 max_degree = 3
 mset = all_multiindices_up_to(NVAR, max_degree; min_degree = 1)
 println("Multiindex set: degree ≤ $max_degree in $NVAR variables → $(length(mset)) monomials")
 
 resonance_set = resonance_set_from_complex_normal_form_style(
-	mset, Vector{ComplexF64}(master_eigenvalues), 0.05)
+    mset, Vector{ComplexF64}(master_eigenvalues), 0.05)
 
 # ===========================================================================
 # A. Full-solve benchmark
@@ -201,17 +202,17 @@ println("─"^70)
 # Warm-up (forces JIT compilation)
 W,
 left_modes_derivatives = left_eigenmode_orders_from_slice(
-	model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
+    model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
 spectral = SpectralData(; eigenvalues = master_eigenvalues,
-	right_modes = master_modes, right_derivatives = master_modes_derivatives,
-	left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+    right_modes = master_modes, right_derivatives = master_modes_derivatives,
+    left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 R = solve_cohomological_problem(model, mset, spectral, resonance_set)
 println("Warm-up done.  FOM = $FOM, monomials = $(length(mset))")
 println()
 
 # Benchmark the equation solve in isolation (skip setup / eigenproblem)
 t_full = @benchmark solve_cohomological_problem(
-	$model, $mset, $spectral, $resonance_set) seconds=10 samples=5
+    $model, $mset, $spectral, $resonance_set) seconds=10 samples=5
 
 println("  solve_cohomological_problem:")
 show(stdout, MIME"text/plain"(), t_full)
@@ -234,12 +235,12 @@ A_buf = rand(ComplexF64, n_big, n_big)    # pre-existing buffer
 println("\n  OPT-1+2  —  copy + lu!  vs  view + lu!(check=false)")
 
 t_copy_lu = @benchmark begin
-	A_sys=$A_buf[1:($n_sub), 1:($n_sub)]    # range-index → allocates
-	lu!(A_sys)
+    A_sys=$A_buf[1:($n_sub), 1:($n_sub)]    # range-index → allocates
+    lu!(A_sys)
 end seconds=5 samples=20
 
 t_view_lu = @benchmark begin
-	lu!(view($A_buf, 1:($n_sub), 1:($n_sub)), check = false)   # zero-allocation
+    lu!(view($A_buf, 1:($n_sub), 1:($n_sub)), check = false)   # zero-allocation
 end seconds=5 samples=20
 
 println("    [OLD] copy + lu!:")
@@ -262,13 +263,13 @@ sys_buf = Matrix{ComplexF64}(undef, n_big, n_big)
 src_M = rand(ComplexF64, n_sub, n_sub)
 
 t_alloc_copy = @benchmark begin
-	M_tmp=Matrix{ComplexF64}(undef, $n_sub, $n_sub)
-	copyto!(M_tmp, $src_M)
-	$sys_buf[1:($n_sub), 1:($n_sub)].=M_tmp
+    M_tmp=Matrix{ComplexF64}(undef, $n_sub, $n_sub)
+    copyto!(M_tmp, $src_M)
+    $sys_buf[1:($n_sub), 1:($n_sub)].=M_tmp
 end seconds=5 samples=20
 
 t_inplace = @benchmark begin
-	copyto!(view($sys_buf, 1:($n_sub), 1:($n_sub)), $src_M)
+    copyto!(view($sys_buf, 1:($n_sub), 1:($n_sub)), $src_M)
 end seconds=5 samples=20
 
 println("    [OLD] alloc Matrix + copyto! + stacking .=:")
@@ -285,12 +286,12 @@ println("    Speedup OPT-3: $(round(ratio_opt3, digits=2))×")
 println("\n  OPT-4  —  per-monomial zeros/similar  vs  preallocated reuse")
 
 t_zeros_alloc = @benchmark begin
-	result=zeros(ComplexF64, $FOM)
-	scratch=similar(result)
-	temp=similar(result)
-	fill!(result, zero(ComplexF64))   # simulate compute_multilinear_terms work
-	fill!(scratch, zero(ComplexF64))
-	fill!(temp, zero(ComplexF64))
+    result=zeros(ComplexF64, $FOM)
+    scratch=similar(result)
+    temp=similar(result)
+    fill!(result, zero(ComplexF64))   # simulate compute_multilinear_terms work
+    fill!(scratch, zero(ComplexF64))
+    fill!(temp, zero(ComplexF64))
 end seconds=5 samples=20
 
 result_buf = zeros(ComplexF64, FOM)
@@ -298,9 +299,9 @@ scratch_buf = zeros(ComplexF64, FOM)
 temp_buf = zeros(ComplexF64, FOM)
 
 t_prealloced = @benchmark begin
-	fill!($result_buf, zero(ComplexF64))
-	fill!($scratch_buf, zero(ComplexF64))
-	fill!($temp_buf, zero(ComplexF64))
+    fill!($result_buf, zero(ComplexF64))
+    fill!($scratch_buf, zero(ComplexF64))
+    fill!($temp_buf, zero(ComplexF64))
 end seconds=5 samples=20
 
 println("    [OLD] zeros + similar × 2 per monomial:")
@@ -327,13 +328,13 @@ using MORFE.CohomologicalEquations: CohomologicalContext, solve_single_monomial!
 using MORFE.Multiindices: build_exponent_index_map, indices_in_box_with_bounded_degree
 using MORFE.MultilinearTerms: build_multilinear_terms_cache
 using MORFE.InvarianceEquation: precompute_column_polynomials,
-	precompute_master_column_polynomials,
-	precompute_external_column_polynomials
+                                precompute_master_column_polynomials,
+                                precompute_external_column_polynomials
 using MORFE.MasterModeOrthogonality: precompute_orthogonality_operator_coefficients,
-	precompute_orthogonality_column_polynomials
+                                     precompute_orthogonality_column_polynomials
 using MORFE.Resonance: ResonanceSet
 using MORFE.ParametrisationMethod: create_parametrisation_method_objects,
-	multiindex_set
+                                   multiindex_set
 
 W2, R2 = solve_cohomological_problem(model, mset, spectral, resonance_set)
 
@@ -341,71 +342,71 @@ W2, R2 = solve_cohomological_problem(model, mset, spectral, resonance_set)
 # In a 2-variable degree-3 mset, degree-2 monomials are at indices 3..5.
 test_idx = findfirst(idx -> sum(mset[idx]) == 2, 1:length(mset))
 if test_idx !== nothing
-	# Rebuild context (same as solve_cohomological_problem does internally)
-	L = length(mset)
-	LT = eltype(model.linear_terms[1])
-	ORD = length(model.linear_terms) - 1
-	ORDP1 = ORD + 1
-	linear_terms = model.linear_terms
-	zero_vec = SVector{NVAR, Int}(ntuple(_ -> 0, Val(NVAR)))
-	has_zero = length(mset) >= 1 && mset.exponents[1] == zero_vec
-	unit_offset = has_zero ? 1 : 0
-	Λ_master = view(R2.poly.coefficients, 1:ROM, (unit_offset+1):(unit_offset+ROM))
-	lambda_diag = [R2.poly.coefficients[i, i+unit_offset] for i in 1:NVAR]
-	invariance_C_coeffs,
-	D_steps = precompute_master_column_polynomials(
-		linear_terms, master_modes, Λ_master)
-	Λ_full = view(R2.poly.coefficients, 1:NVAR, (unit_offset+1):(unit_offset+NVAR))
-	invariance_E_coeffs = precompute_external_column_polynomials(
-		linear_terms, zeros(ComplexF64, FOM, N_EXT), Λ_full, D_steps)
-	J_coeffs = precompute_orthogonality_operator_coefficients(
-		linear_terms, left_eigenmodes, master_eigenvalues)
-	generalised_eig = hcat(master_modes, zeros(ComplexF64, FOM, N_EXT))
-	orth_C_coeffs,
-	orth_E_coeffs = precompute_orthogonality_column_polynomials(
-		J_coeffs, generalised_eig, Λ_full)
-	skip_set = Set(begin
-		indices = Int[]
-		n_search = min(NVAR + 1, L)
-		for r in 1:NVAR
-			e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
-			idx = findfirst(==(e_r), view(mset.exponents, 1:n_search))
-			idx !== nothing && push!(indices, idx)
-		end
-		indices
-	end)
-	multiindex_dict = build_exponent_index_map(mset)
-	lower_order_buffer = [zeros(ComplexF64, FOM) for _ in 1:ORD]
-	sys_matrix = Matrix{ComplexF64}(undef, FOM + ROM, FOM + ROM)
-	rhs_b = Vector{ComplexF64}(undef, FOM + ROM)
-	ext_rhs_b = zeros(ComplexF64, FOM)
-	ml_res_b = zeros(ComplexF64, FOM)
-	cand_idx = Vector{Vector{Int}}(undef, L)
-	for i in 1:L
-		multi_i = mset[i]
-		tdeg = sum(multi_i)
-		cand_idx[i] = tdeg < 2 ? Int[] :
-					  indices_in_box_with_bounded_degree(mset, collect(multi_i), 2, tdeg)
-	end
-	ctx_check = CohomologicalContext{ComplexF64, ORD, ORDP1, NVAR, FOM, LT}(
-		linear_terms, generalised_eig, lambda_diag,
-		invariance_C_coeffs, invariance_E_coeffs,
-		J_coeffs, orth_C_coeffs, orth_E_coeffs,
-		resonance_set, skip_set,
-		multiindex_dict, lower_order_buffer, cand_idx,
-		sys_matrix, rhs_b, ext_rhs_b, ml_res_b,
-	)
-	ml_cache_check = build_multilinear_terms_cache(model, W2)
+    # Rebuild context (same as solve_cohomological_problem does internally)
+    L = length(mset)
+    LT = eltype(model.linear_terms[1])
+    ORD = length(model.linear_terms) - 1
+    ORDP1 = ORD + 1
+    linear_terms = model.linear_terms
+    zero_vec = SVector{NVAR, Int}(ntuple(_ -> 0, Val(NVAR)))
+    has_zero = length(mset) >= 1 && mset.exponents[1] == zero_vec
+    unit_offset = has_zero ? 1 : 0
+    Λ_master = view(R2.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
+    lambda_diag = [R2.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
+    invariance_C_coeffs,
+    D_steps = precompute_master_column_polynomials(
+        linear_terms, master_modes, Λ_master)
+    Λ_full = view(R2.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
+    invariance_E_coeffs = precompute_external_column_polynomials(
+        linear_terms, zeros(ComplexF64, FOM, N_EXT), Λ_full, D_steps)
+    J_coeffs = precompute_orthogonality_operator_coefficients(
+        linear_terms, left_eigenmodes, master_eigenvalues)
+    generalised_eig = hcat(master_modes, zeros(ComplexF64, FOM, N_EXT))
+    orth_C_coeffs,
+    orth_E_coeffs = precompute_orthogonality_column_polynomials(
+        J_coeffs, generalised_eig, Λ_full)
+    skip_set = Set(begin
+        indices = Int[]
+        n_search = min(NVAR + 1, L)
+        for r in 1:NVAR
+            e_r = SVector{NVAR, Int}(ntuple(i -> i == r ? 1 : 0, Val(NVAR)))
+            idx = findfirst(==(e_r), view(mset.exponents, 1:n_search))
+            idx !== nothing && push!(indices, idx)
+        end
+        indices
+    end)
+    multiindex_dict = build_exponent_index_map(mset)
+    lower_order_buffer = [zeros(ComplexF64, FOM) for _ in 1:ORD]
+    sys_matrix = Matrix{ComplexF64}(undef, FOM + ROM, FOM + ROM)
+    rhs_b = Vector{ComplexF64}(undef, FOM + ROM)
+    ext_rhs_b = zeros(ComplexF64, FOM)
+    ml_res_b = zeros(ComplexF64, FOM)
+    cand_idx = Vector{Vector{Int}}(undef, L)
+    for i in 1:L
+        multi_i = mset[i]
+        tdeg = sum(multi_i)
+        cand_idx[i] = tdeg < 2 ? Int[] :
+                      indices_in_box_with_bounded_degree(mset, collect(multi_i), 2, tdeg)
+    end
+    ctx_check = CohomologicalContext{ComplexF64, ORD, ORDP1, NVAR, FOM, LT}(
+        linear_terms, generalised_eig, lambda_diag,
+        invariance_C_coeffs, invariance_E_coeffs,
+        J_coeffs, orth_C_coeffs, orth_E_coeffs,
+        resonance_set, skip_set,
+        multiindex_dict, lower_order_buffer, cand_idx,
+        sys_matrix, rhs_b, ext_rhs_b, ml_res_b
+    )
+    ml_cache_check = build_multilinear_terms_cache(model, W2)
 
-	allocs = @allocated solve_single_monomial!(
-		W2, R2, test_idx, ctx_check, model, ml_cache_check)
-	println("\n  @allocated solve_single_monomial! (non-resonant, degree-2 monomial)")
-	println("  = $allocs bytes")
-	if allocs <= 1024
-		println("  ✓  Hot path is effectively allocation-free (only the LU struct, ≤ 1 KiB)")
-	else
-		println("  ✗  Unexpected allocation — investigate further")
-	end
+    allocs = @allocated solve_single_monomial!(
+        W2, R2, test_idx, ctx_check, model, ml_cache_check)
+    println("\n  @allocated solve_single_monomial! (non-resonant, degree-2 monomial)")
+    println("  = $allocs bytes")
+    if allocs <= 1024
+        println("  ✓  Hot path is effectively allocation-free (only the LU struct, ≤ 1 KiB)")
+    else
+        println("  ✗  Unexpected allocation — investigate further")
+    end
 end
 
 println("\n", "="^70)

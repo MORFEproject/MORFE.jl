@@ -9,7 +9,8 @@ struct CheckpointOptions
             resume::Bool = true,
             granularity::Symbol = :factor_group)
         isempty(path) && throw(ArgumentError("checkpoint path must not be empty"))
-        isempty(problem_id) && throw(ArgumentError("checkpoint problem_id must not be empty"))
+        isempty(problem_id) &&
+            throw(ArgumentError("checkpoint problem_id must not be empty"))
         granularity in (:degree, :factor_group) || throw(ArgumentError(
             "checkpoint granularity must be :degree or :factor_group"))
         new(String(path), String(problem_id), resume, granularity)
@@ -53,8 +54,9 @@ function ParametrisationOptions(;
         "grouping must be :auto, :off, or :on"))
     residual_check in (:backward_error, :off) || throw(ArgumentError(
         "residual_check must be :backward_error or :off"))
-    isnothing(residual_tolerance) || residual_tolerance > 0 || throw(ArgumentError(
-        "residual_tolerance must be positive or nothing"))
+    isnothing(residual_tolerance) || residual_tolerance > 0 ||
+        throw(ArgumentError(
+            "residual_tolerance must be positive or nothing"))
     max_refinement_steps >= 0 || throw(ArgumentError(
         "max_refinement_steps must be non-negative"))
     return ParametrisationOptions(

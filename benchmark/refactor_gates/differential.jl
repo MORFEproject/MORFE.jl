@@ -8,16 +8,18 @@ using MORFE
 using LinearAlgebra, SparseArrays, StaticArrays, Printf
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
-                           select_master_modes_by_sorting,
-                           left_eigenmode_orders_from_slice
+                                   select_master_modes_by_sorting,
+                                   left_eigenmode_orders_from_slice
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.Resonance: build_resonance_set
 using MORFE.SpectralDecomposition: SpectralData, check_biorthogonality,
-                               right_modes, left_modes,
-                               right_mode_derivatives, left_mode_blocks
+                                   right_modes, left_modes,
+                                   right_mode_derivatives, left_mode_blocks
 
-cubic(nd) = MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3),
-    ntuple(i -> i == 1 ? 3 : 0, nd))
+function cubic(nd)
+    MultilinearMap((res, x1, x2, x3) -> (@. res += -1.0 * x1 * x2 * x3),
+        ntuple(i -> i == 1 ? 3 : 0, nd))
+end
 
 fails = 0
 function check(name, cond)
@@ -31,8 +33,8 @@ println(repeat("-", 72))
 
 # ── Case 1: ORD = 2, matched orders, with and without conjugate symmetry ─────
 let ROM = 2, order = 7
-    B0 = [2.0 -1.0; -1.0 2.0];
-    B2 = [1.0 0.0; 0.0 1.0];
+    B0 = [2.0 -1.0; -1.0 2.0]
+    B2 = [1.0 0.0; 0.0 1.0]
     B1 = 0.001 * B2
     model = NthOrderModel((B0, B1, B2), (cubic(2),))
     ep = spectrum(model; solver = DefaultEigensolver())
@@ -54,7 +56,8 @@ let ROM = 2, order = 7
     check("ORD=2 left physical slice", left_modes(sd) == ℓ)
     check("ORD=2 right derivative blocks", right_mode_derivatives(sd) == mmd)
     check("ORD=2 left order blocks", left_mode_blocks(sd) == lmd)
-    check("ORD=2 master eigenvalues", MORFE.SpectralDecomposition.master_eigenvalues(sd) == λ)
+    check("ORD=2 master eigenvalues", MORFE.SpectralDecomposition.master_eigenvalues(sd) ==
+                                      λ)
 
     G = check_biorthogonality(sd, model)
     check("ORD=2 biorthogonality G ≈ I", isapprox(G, I; atol = 1e-10))
@@ -96,8 +99,8 @@ end
 
 # ── Case 2: ORD-mismatch — ORD-3 augmented model fed by ORD-2 eigendata ──────
 let ROM = 2, order = 5
-    B0 = [2.0 -1.0; -1.0 2.0];
-    B2 = [1.0 0.0; 0.0 1.0];
+    B0 = [2.0 -1.0; -1.0 2.0]
+    B2 = [1.0 0.0; 0.0 1.0]
     B1 = 0.001 * B2
     Z = zeros(size(B0))
     eig_model = NthOrderModel((B0, B1, B2), (cubic(2),))
@@ -141,8 +144,8 @@ end
 
 # ── Case 3: external system, conjugate permutation assembled from the model ──
 let ROM = 2, order = 5
-    B0 = [2.0 -1.0; -1.0 2.0];
-    B2 = [1.0 0.0; 0.0 1.0];
+    B0 = [2.0 -1.0; -1.0 2.0]
+    B2 = [1.0 0.0; 0.0 1.0]
     B1 = 0.001 * B2
     ep_model = NthOrderModel((B0, B1, B2), (cubic(2),))
     ep = spectrum(ep_model; solver = DefaultEigensolver())
@@ -156,13 +159,15 @@ let ROM = 2, order = 5
 
     Ω = 1.3
     fvec = [1.0, 0.5]
-    force = MultilinearMap((res, r) -> begin
+    force = MultilinearMap(
+        (res, r) -> begin
             @inbounds for j in 1:2
                 iszero(r[j]) || (res .+= r[j] .* fvec)
             end
             res
         end, (0, 0), 1)
-    model = NthOrderModel((B0, B1, B2), (cubic(2), force), ExternalSystem((im * Ω, -im * Ω)))
+    model = NthOrderModel((B0, B1, B2), (cubic(2), force), ExternalSystem((
+        im * Ω, -im * Ω)))
     mset = all_multiindices_up_to(ROM + 2, order; min_degree = 1)
     rset = build_resonance_set(model, :complex_normal_form, mset, ep, 0.05, nothing)
 

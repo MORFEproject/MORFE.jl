@@ -276,7 +276,8 @@ function solve_cohomological_problem(
     options = _translate_legacy_options(options, kwargs)
     checkpoint = options.checkpoint
     show_progress = options.show_progress
-    initial_W, initial_R = isnothing(initial_solution) ? (nothing, nothing) : initial_solution
+    initial_W, initial_R = isnothing(initial_solution) ? (nothing, nothing) :
+                           initial_solution
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
     xor(initial_W === nothing, initial_R === nothing) && throw(ArgumentError(
         "initial_W and initial_R must either both be supplied or both be omitted"))
@@ -309,7 +310,7 @@ function solve_cohomological_problem(
             "ORD" => ORD, "FOM" => FOM, "ROM" => ROM, "N_EXT" => N_EXT,
             "NVAR" => NVAR, "monomial_count" => length(mset),
             "scalar_type" => string(T), "backend_request" => string(options.backend),
-            "grouping" => string(options.grouping),
+            "grouping" => string(options.grouping)
         )
         _open_checkpoint(checkpoint, fingerprint, metadata)
     end
@@ -338,7 +339,7 @@ function solve_cohomological_problem(
     end
     completed_indices = isnothing(checkpoint_session) ? nothing :
                         _restore_checkpoint!(checkpoint_session, W, R;
-                            verify_existing = initial_W !== nothing)
+        verify_existing = initial_W !== nothing)
     completed_degrees = isnothing(checkpoint_session) ? nothing :
                         _completed_degrees(checkpoint_session)
     completed_degree = isnothing(completed_degrees) || isempty(completed_degrees) ?
@@ -512,8 +513,9 @@ function solve_cohomological_problem(
                     degree_complete = false)
             elseif event == :degree
                 if checkpoint.granularity == :degree
-                    degree_indices = [idx for idx in eachindex(mset.exponents)
-                        if sum(mset[idx]) == degree]
+                    degree_indices = [idx
+                                      for idx in eachindex(mset.exponents)
+                                      if sum(mset[idx]) == degree]
                     _write_chunk!(checkpoint_session, W, R, degree,
                         degree_indices, sparse_solver; degree_complete = true)
                 else

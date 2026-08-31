@@ -129,7 +129,8 @@ function CohomologicalBuffers(::Type{T}, ::Type{MT}, FOM::Int, ROM::Int,
         Vector{T}(undef, nsys),
         zeros(T, FOM),
         zeros(T, FOM),
-        _configured_residual_tolerance(T, options) === nothing ? T[] : Vector{T}(undef, nsys),
+        _configured_residual_tolerance(T, options) === nothing ? T[] :
+        Vector{T}(undef, nsys),
         T[],
         _configured_residual_tolerance(T, options),
         options.max_refinement_steps
@@ -202,7 +203,7 @@ release C-side memory, and Julia refuses to finalise an immutable object.
 """
 abstract type AbstractSparseBackend end
 struct KLUBackend{VERIFY} <: AbstractSparseBackend end
-struct PardisoBackend{P,VERIFY} <: AbstractSparseBackend
+struct PardisoBackend{P, VERIFY} <: AbstractSparseBackend
     solver::P
 end
 
@@ -250,13 +251,14 @@ function SparseLinearSolverState{T}(
     RT = typeof(real(zero(T)))
     residual_tolerance = _configured_residual_tolerance(T, options)
     verify = !isnothing(residual_tolerance)
-    backend = ps === nothing ? KLUBackend{verify}() : PardisoBackend{typeof(ps),verify}(ps)
+    backend = ps === nothing ? KLUBackend{verify}() : PardisoBackend{typeof(ps), verify}(ps)
     state = SparseLinearSolverState{T, typeof(backend), RT}(
         bordered, L_template, L_mappings, border_row_base,
         backend isa PardisoBackend ? Vector{T}(undef, nsys) : T[],
         nothing, nothing,
         backend, residual_tolerance, options.max_refinement_steps,
-        isnothing(residual_tolerance) || backend isa PardisoBackend ? T[] : Vector{T}(undef, nsys),
+        isnothing(residual_tolerance) || backend isa PardisoBackend ? T[] :
+        Vector{T}(undef, nsys),
         T[], zero(RT), 0
     )
     # Pardiso's factorisation lives in C-side memory the GC does not track, so it has

@@ -12,7 +12,8 @@ rs = deserialize(joinpath(ref, "summary.jls"))
 cs = deserialize(joinpath(cand, "summary.jls"))
 
 fail = false
-@printf("%-24s %-10s %14s %14s %8s\n", "model", "coeffs", "bytes ref", "bytes cand", "Δtime")
+@printf("%-24s %-10s %14s %14s %8s\n", "model", "coeffs", "bytes ref", "bytes cand",
+    "Δtime")
 println(repeat("-", 78))
 
 for name in sort(collect(keys(rs)))

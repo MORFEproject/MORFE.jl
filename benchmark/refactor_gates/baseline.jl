@@ -15,7 +15,7 @@ using MORFE
 using LinearAlgebra, SparseArrays, StaticArrays, Serialization, Printf
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver, SpectralData,
-                           left_eigenmode_orders_from_slice
+                                   left_eigenmode_orders_from_slice
 using MORFE.CohomologicalEquations: solve_cohomological_problem
 using MORFE.Resonance: build_resonance_set, ResonanceConfig
 
@@ -116,7 +116,8 @@ let ROM = 2, order = 5
     ep = eigenproblem(dense_lt)
     Ω = 1.3
     fvec = [1.0, 0.5]
-    force = MultilinearMap((res, r) -> begin
+    force = MultilinearMap(
+        (res, r) -> begin
             @inbounds for j in 1:2
                 iszero(r[j]) || (res .+= r[j] .* fvec)
             end

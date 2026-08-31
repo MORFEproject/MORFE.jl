@@ -349,10 +349,12 @@ function solve_single_monomial!(
     solve_single_monomial!(W, R, idx, ctx, _NO_SYM, model, ml_cache)
 end
 
-solve_single_monomial!(W, R, idx::Int, ctx, sym, model, ml_cache,
-    reuse_factor::Bool) = reuse_factor ?
-    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(true)) :
-    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(false))
+function solve_single_monomial!(W, R, idx::Int, ctx, sym, model, ml_cache,
+        reuse_factor::Bool)
+    reuse_factor ?
+    solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache, Val(true)) :
+    solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache, Val(false))
+end
 
 # Canonical implementation: dispatches the solve step at compile time via sym.
 function solve_single_monomial!(
@@ -479,8 +481,9 @@ function _cohomological_groups(ctx, sym, mset, grouping::Symbol, ::Val{ROM}) whe
     NVAR = length(ctx.lambda_diag)
     Key = StructuralFactorKey{NVAR, ROM}
     ordered_groups = Vector{Vector{Int}}()
-    degrees = sort!(unique(sum(mset[idx]) for idx in eachindex(mset.exponents)
-        if !sym.skip_bits[idx]))
+    degrees = sort!(unique(sum(mset[idx])
+    for idx in eachindex(mset.exponents)
+    if !sym.skip_bits[idx]))
     for degree in degrees
         keys = Key[]
         groups = Dict{Key, Vector{Int}}()
@@ -554,9 +557,9 @@ function solve_cohomological_equations!(
                     _checkpoint_event!(checkpoint_callback, :degree, current_degree)
                 current_degree = degree
                 if position == 1
-                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache)
+                    solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
                 else
-                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(true))
+                    solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache, Val(true))
                 end
                 n_done += 1
                 _progress_tick!(prog, n_done, degree)
@@ -639,9 +642,9 @@ function solve_cohomological_equations!(
                     _checkpoint_event!(checkpoint_callback, :degree, current_degree)
                 current_degree = degree
                 if position == 1
-                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache)
+                    solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache)
                 else
-                    solve_single_monomial!(W,R,idx,ctx,sym,model,ml_cache,Val(true))
+                    solve_single_monomial!(W, R, idx, ctx, sym, model, ml_cache, Val(true))
                 end
                 n_done += 1
                 _progress_tick!(prog, n_done, degree)
@@ -650,7 +653,9 @@ function solve_cohomological_equations!(
                 end
             end
             chunk_indices = copy(group)
-            append!(chunk_indices, (secondary_for_primary[idx] for idx in group
+            append!(chunk_indices,
+                (secondary_for_primary[idx]
+                for idx in group
                 if haskey(secondary_for_primary, idx)))
             sort!(unique!(chunk_indices))
             _checkpoint_event!(checkpoint_callback, :group, current_degree, chunk_indices)

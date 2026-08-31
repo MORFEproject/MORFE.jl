@@ -58,7 +58,6 @@ function has_own_doc(mod, sym)
     meta = try
         Base.Docs.meta(mod)
     catch
-        ;
         return false
     end
     haskey(meta, binding) && !isempty(meta[binding].docs)

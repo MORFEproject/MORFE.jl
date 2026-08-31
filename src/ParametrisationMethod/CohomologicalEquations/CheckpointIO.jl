@@ -25,7 +25,8 @@ end
 
 function _fingerprint_value!(ctx, value)
     _digest_text!(ctx, typeof(value))
-    if value === nothing || value isa Number || value isa Symbol || value isa AbstractString ||
+    if value === nothing || value isa Number || value isa Symbol ||
+       value isa AbstractString ||
        value isa Bool
         _digest_text!(ctx, value)
     elseif value isa SparseMatrixCSC
@@ -76,9 +77,10 @@ function _problem_fingerprint(model, spectral, resonance_set, mset, conj_perm,
     _fingerprint_value!(ctx, resonance_set)
     _fingerprint_value!(ctx, mset.exponents)
     _fingerprint_value!(ctx, conj_perm)
-    _fingerprint_value!(ctx, (options.backend, options.grouping,
-        options.residual_check, options.residual_tolerance,
-        options.max_refinement_steps))
+    _fingerprint_value!(ctx,
+        (options.backend, options.grouping,
+            options.residual_check, options.residual_tolerance,
+            options.max_refinement_steps))
     return bytes2hex(SHA.digest!(ctx))
 end
 
@@ -117,8 +119,9 @@ function _open_checkpoint(options::CheckpointOptions, fingerprint, metadata)
         "checkpoint path $root is a legacy file; migrate it to the directory format first"))
     mkpath(joinpath(root, "chunks"))
     path = _manifest_path(root)
-    !options.resume && isfile(path) && throw(ArgumentError(
-        "checkpoint $root already exists and resume=false; choose a new directory"))
+    !options.resume && isfile(path) &&
+        throw(ArgumentError(
+            "checkpoint $root already exists and resume=false; choose a new directory"))
     manifest = if isfile(path)
         parsed = TOML.parsefile(path)
         get(parsed, "schema_version", 0) == _CHECKPOINT_SCHEMA || throw(ArgumentError(
@@ -136,7 +139,7 @@ function _open_checkpoint(options::CheckpointOptions, fingerprint, metadata)
             "byte_order" => string(Base.ENDIAN_BOM),
             "metadata" => metadata,
             "completed_degrees" => Int[],
-            "chunks" => Any[],
+            "chunks" => Any[]
         )
     end
     string(get(manifest, "byte_order", "")) == string(Base.ENDIAN_BOM) ||
@@ -184,7 +187,7 @@ function _write_chunk!(session::CheckpointSession, W, R, degree::Int, indices,
             "degree" => degree,
             "indices" => ids,
             "w_size" => collect(size(w_slice)),
-            "r_size" => collect(size(r_slice)),
+            "r_size" => collect(size(r_slice))
         )
         manifest = TOML.parsefile(_manifest_path(root))
         manifest["fingerprint"] == session.fingerprint || throw(ArgumentError(
@@ -197,10 +200,11 @@ function _write_chunk!(session::CheckpointSession, W, R, degree::Int, indices,
             degree in degrees || push!(degrees, degree)
             sort!(degrees)
         end
-        diagnostics = isnothing(sparse_solver) ? Dict("backend" => "dense") : Dict(
+        diagnostics = isnothing(sparse_solver) ? Dict("backend" => "dense") :
+                      Dict(
             "backend" => string(_backend_name(sparse_solver.backend)),
             "max_backward_error" => sparse_solver.max_relative_residual,
-            "refinement_count" => sparse_solver.refinement_count,
+            "refinement_count" => sparse_solver.refinement_count
         )
         manifest["diagnostics"] = diagnostics
         _atomic_manifest(_manifest_path(root), manifest)
@@ -257,5 +261,6 @@ function _restore_checkpoint!(session::CheckpointSession, W, R;
     return completed
 end
 
-_completed_degrees(session::CheckpointSession) =
+function _completed_degrees(session::CheckpointSession)
     Int.(get(session.manifest, "completed_degrees", Int[]))
+end

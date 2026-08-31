@@ -202,7 +202,7 @@ arrays.
 """
 function _bordered_solve!(
         ss::SparseLinearSolverState{T, <:KLUBackend{VERIFY}}, x::AbstractVector, s;
-        reuse_factor::Val{REUSE} = Val(false)) where {T,REUSE,VERIFY}
+        reuse_factor::Val{REUSE} = Val(false)) where {T, REUSE, VERIFY}
     norm_b = zero(typeof(ss.max_relative_residual))
     if VERIFY
         copyto!(ss.residual_work, x)
@@ -218,8 +218,8 @@ function _bordered_solve!(
 end
 
 function _bordered_solve!(
-        ss::SparseLinearSolverState{T, <:PardisoBackend{P,VERIFY}}, x::AbstractVector, s;
-        reuse_factor::Val{REUSE} = Val(false)) where {T,P,REUSE,VERIFY}
+        ss::SparseLinearSolverState{T, <:PardisoBackend{P, VERIFY}}, x::AbstractVector, s;
+        reuse_factor::Val{REUSE} = Val(false)) where {T, P, REUSE, VERIFY}
     # Pardiso's public phase interface always performs a numeric factorisation before
     # solving. Its one existing scratch vector preserves b and is reused for the
     # backward-error residual; no second persistent RHS copy is introduced.

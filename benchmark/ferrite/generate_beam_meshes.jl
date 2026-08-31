@@ -50,8 +50,8 @@ include(joinpath(@__DIR__, "generate_beam_mesh.jl"))
 #]
 
 const MESH_SUITE = [
-	(20, 4, 4),
-	(40, 8, 8),
+    (20, 4, 4),
+    (40, 8, 8)
 ]
 
 println("=" ^ 70)
@@ -61,42 +61,44 @@ println()
 
 results = []
 for (nx, ny, nz) in MESH_SUITE
-	println("-" ^ 50)
-	println("Generating $(nx)×$(ny)×$(nz) …")
-	meta = generate_beam_mesh(nx, ny, nz, max_order = 11)
-	push!(results, meta)
-	println()
+    println("-" ^ 50)
+    println("Generating $(nx)×$(ny)×$(nz) …")
+    meta = generate_beam_mesh(nx, ny, nz, max_order = 11)
+    push!(results, meta)
+    println()
 end
 
 # Also copy the NX=40 (2×2) mesh to the canonical names used by benchmark_ferrite.jl
 # and the existing legacy benchmark (beam_h27.msh / beam_h27.mphtxt).
 idx40 = findfirst(r -> occursin("40x2x2", r.msh_path), results)
 if !isnothing(idx40)
-	canonical_msh    = joinpath(@__DIR__, "beam_h27.msh")
-	canonical_mphtxt = joinpath(
-	@__DIR__, "../../legacy_morfe/MORFE2.0/input/beam_h27.mphtxt")
-	cp(results[idx40].msh_path, canonical_msh; force = true)
-	cp(results[idx40].mphtxt_path, canonical_mphtxt; force = true)
-	println("Canonical files updated:")
-	println("  ", canonical_msh)
-	println("  ", canonical_mphtxt)
-	println()
+    canonical_msh = joinpath(@__DIR__, "beam_h27.msh")
+    canonical_mphtxt = joinpath(
+        @__DIR__, "../../legacy_morfe/MORFE2.0/input/beam_h27.mphtxt")
+    cp(results[idx40].msh_path, canonical_msh; force = true)
+    cp(results[idx40].mphtxt_path, canonical_mphtxt; force = true)
+    println("Canonical files updated:")
+    println("  ", canonical_msh)
+    println("  ", canonical_mphtxt)
+    println()
 end
 
 # Summary table
 println("=" ^ 70)
 println("Summary")
 println("=" ^ 70)
-@printf("%-24s  %6s  %5s  %5s  %-30s  %s\n", "Mesh", "FreeDOF", "#Q9", "#H27", "Dirichlet Q9 indices", "H27 range")
+@printf("%-24s  %6s  %5s  %5s  %-30s  %s\n",
+    "Mesh", "FreeDOF", "#Q9", "#H27", "Dirichlet Q9 indices", "H27 range")
 println("-" ^ 70)
 for ((nx, ny, nz), meta) in zip(MESH_SUITE, results)
-	dq9     = meta.dirichlet_q9_indices
-	hr      = meta.h27_range
-	n_q9    = hr.start - 1
-	n_h27   = hr.stop - hr.start + 1
-	dq9_str = length(dq9) <= 4 ? string(dq9) : "[$(dq9[1])…$(dq9[end])]"
-	@printf("%-24s  %6d  %5d  %5d  %-30s  %d:%d\n",
-		"beam_h27_$(nx)x$(ny)x$(nz)", meta.free_dofs, n_q9, n_h27, dq9_str, hr.start, hr.stop)
+    dq9 = meta.dirichlet_q9_indices
+    hr = meta.h27_range
+    n_q9 = hr.start - 1
+    n_h27 = hr.stop - hr.start + 1
+    dq9_str = length(dq9) <= 4 ? string(dq9) : "[$(dq9[1])…$(dq9[end])]"
+    @printf("%-24s  %6d  %5d  %5d  %-30s  %d:%d\n",
+        "beam_h27_$(nx)x$(ny)x$(nz)", meta.free_dofs, n_q9, n_h27, dq9_str, hr.start,
+        hr.stop)
 end
 println("=" ^ 70)
 println()

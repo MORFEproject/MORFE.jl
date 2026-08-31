@@ -23,9 +23,9 @@ FEM:  O5 Re/Im decomposition in ferrite_assembly.jl (no heap allocs in accumulat
 using Pkg: Pkg
 Pkg.activate(@__DIR__)
 if !haskey(Pkg.project().dependencies, "MORFE")
-	Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
-	Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
-		"BenchmarkTools", "Gmsh"])
+    Pkg.develop(Pkg.PackageSpec(path = joinpath(@__DIR__, "../..")))
+    Pkg.add(["Ferrite", "FerriteGmsh", "Arpack", "LinearMaps", "StaticArrays",
+        "BenchmarkTools", "Gmsh"])
 end
 Pkg.instantiate()
 
@@ -51,10 +51,10 @@ isfile(_msh) || error("Mesh not found: run generate_beam_mesh.jl first.")
 println("Loading mesh …")
 grid = togrid(_msh)   # "Dirichlet" physical group already in .msh
 
-ip     = Lagrange{RefHexahedron, 2}()^3   # 27-node quadratic Lagrange, matches H27
+ip = Lagrange{RefHexahedron, 2}()^3   # 27-node quadratic Lagrange, matches H27
 geo_ip = Lagrange{RefHexahedron, 2}()     # quadratic geometry (isoparametric H27)
-qr     = QuadratureRule{RefHexahedron}(3) # 27 QPs (integrates degree 5)
-cv     = CellValues(qr, ip, geo_ip)
+qr = QuadratureRule{RefHexahedron}(3) # 27 QPs (integrates degree 5)
+cv = CellValues(qr, ip, geo_ip)
 
 dh = DofHandler(grid)
 add!(dh, :u, ip)
@@ -83,9 +83,9 @@ K_full = allocate_matrix(dh)
 M_full = allocate_matrix(dh)
 assemble_KM!(K_full, M_full, dh, cv, λ_lame, μ_lame, ρ)
 
-free          = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
+free = sort(setdiff(1:ndofs(dh), ch.prescribed_dofs))
 free_to_local = Dict(d => i for (i, d) in enumerate(free))
-n_free        = length(free)
+n_free = length(free)
 
 K = K_full[free, free]
 M = M_full[free, free]
@@ -114,11 +114,12 @@ solver_eig = StructureModalDampingEigensolver(10, α, β)
 
 r1 = @timed spectrum(K, M, solver_eig; sorter! = (args...) -> nothing)
 eigenproblem = r1.value
-(eigenvalues, Y, X) = (eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
+(eigenvalues, Y, X) = (
+    eigenproblem.eigenvalues, eigenproblem.eigenmodes, eigenproblem.left_eigenmodes)
 
 println("  First eigenvalues:")
 for (i, λi) in enumerate(eigenvalues)
-	println("    mode $i: λ = $λi")
+    println("    mode $i: λ = $λi")
 end
 
 FOM = n_free
@@ -130,9 +131,9 @@ left_eigenmodes = X[:, 1:ROM]   # adjoint mode shapes — X is the FOM × n_eigs
 ORD_model = size(eigenproblem.eigenmodes, 2)
 master_modes_derivatives = zeros(ComplexF64, FOM, ORD_model - 1, ROM)
 for r in 1:ROM
-	for k in 1:(ORD_model-1)
-		master_modes_derivatives[:, k, r] .= Y[:, k+1, r]
-	end
+    for k in 1:(ORD_model - 1)
+        master_modes_derivatives[:, k, r] .= Y[:, k + 1, r]
+    end
 end
 
 # -----------------------------------------------------------------------
@@ -140,9 +141,9 @@ end
 # -----------------------------------------------------------------------
 
 term_quad = FerriteGeometricNonlinearity{2}(
-	dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
+    dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
 term_cubic = FerriteGeometricNonlinearity{3}(
-	dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
+    dh, cv, free_to_local, n_free, λ_lame, μ_lame; max_unique_cols = _max_uniq)
 
 # Forcing frequency = damped natural frequency of mode 1; force shape = mode 1
 Ω_force = abs(eigenvalues[1])
@@ -151,8 +152,8 @@ f_vec = real(2.5 .* (M * master_modes[:, 1])) # alpha = 5; real: physical forcin
 # Forcing matrix N×N_EXT (filled after eigenproblem; captured by closure).
 # f_vec · sum(r) = f_vec · (r₁+r₂) = f_vec · 2 cos(Ωt)
 term_forcing = MultilinearMap(
-	(res, r) -> (res .+= f_vec * sum(r)),
-	(0, 0), 1,
+    (res, r) -> (res .+= f_vec * sum(r)),
+    (0, 0), 1
 )
 # r1' = i Ω_force r1 -> r1 = exp(im * Ω_force * t)
 # r2' = -i Ω_force r2 -> r2 = exp(-im * Ω_force * t)
@@ -161,14 +162,14 @@ term_forcing = MultilinearMap(
 ext_sys = ExternalSystem((im * Ω_force, -im * Ω_force))
 
 model = NthOrderModel(
-	(K, C, M),
-	(term_quad, term_cubic, term_forcing),
-	ext_sys,
+    (K, C, M),
+    (term_quad, term_cubic, term_forcing),
+    ext_sys
 )
 
 resonance_set = resonance_set_from_complex_normal_form_style(
-	mset, Vector{ComplexF64}(master_eigenvalues), 0.05;
-	external_eigenvalues = ComplexF64[im*Ω_force, -im*Ω_force])
+    mset, Vector{ComplexF64}(master_eigenvalues), 0.05;
+    external_eigenvalues = ComplexF64[im * Ω_force, -im * Ω_force])
 
 # -----------------------------------------------------------------------
 # §2 — Cohomological solve  (quadratic + cubic, full model)
@@ -176,22 +177,22 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 
 println("\n§2  Cohomological solve (max_degree = $max_degree) …")
 left_modes_derivatives = left_eigenmode_orders_from_slice(
-	model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
+    model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
 spectral = SpectralData(; eigenvalues = master_eigenvalues,
-	right_modes = master_modes, right_derivatives = master_modes_derivatives,
-	left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
+    right_modes = master_modes, right_derivatives = master_modes_derivatives,
+    left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 r2 = @timed solve_cohomological_problem(
-	model, mset, spectral, resonance_set;
-	conjugate_permutation = [2, 1, 4, 3],
-	# benchmark_dir = joinpath(@__DIR__, "benchmark_results"),
+    model, mset, spectral, resonance_set;
+    conjugate_permutation = [2, 1, 4, 3]
+    # benchmark_dir = joinpath(@__DIR__, "benchmark_results"),
 )
 (W, R) = r2.value
 
 println("\nReduced dynamics coefficients:")
 for m in 1:length(R.poly.multiindex_set.exponents)
-	mi = R.poly.multiindex_set.exponents[m]
-	c = R.poly.coefficients[:, m]
-	any(abs.(c) .> 1e-12) && println("$mi   $(c[1]) \t $(c[2])")
+    mi = R.poly.multiindex_set.exponents[m]
+    c = R.poly.coefficients[:, m]
+    any(abs.(c) .> 1e-12) && println("$mi   $(c[1]) \t $(c[2])")
 end
 
 # -----------------------------------------------------------------------
@@ -210,12 +211,13 @@ println("-" ^ 67)
 @printf("  %-32s  %9s  %11s  %7s\n", "Phase", "Time (s)", "Memory (GB)", "GC (s)")
 println("-" ^ 67)
 @printf("  §1  %-28s  %9.3f  %11.2f  %7.3f\n",
-	"Spectrum", r1.time, to_gb(r1.bytes), r1.gctime)
+    "Spectrum", r1.time, to_gb(r1.bytes), r1.gctime)
 @printf("  §2  %-28s  %9.3f  %11.2f  %7.3f\n",
-	"Cohomological solve", r2.time, to_gb(r2.bytes), r2.gctime)
+    "Cohomological solve", r2.time, to_gb(r2.bytes), r2.gctime)
 println("-" ^ 67)
 @printf("  %-32s  %9.3f  %11.1f  %7.3f\n",
-	"Σ  Cumulative (§1+§2)", r1.time + r2.time, to_gb(r1.bytes)+to_gb(r2.bytes), r1.gctime+r2.gctime)
+    "Σ  Cumulative (§1+§2)", r1.time + r2.time, to_gb(r1.bytes)+to_gb(r2.bytes),
+    r1.gctime+r2.gctime)
 println("Monomials (max_degree=$max_degree) =", length(mset.exponents))
 println(sep)
 
@@ -225,14 +227,14 @@ using Random
 using Plots
 r_levels = [0.0, 0.02, 0.05, 0.1]
 err_conv = invariance_error_convergence(model, W, R;
-	n_samples = 300, r_magnitudes = r_levels, rng = MersenneTwister(0))
+    n_samples = 300, r_magnitudes = r_levels, rng = MersenneTwister(0))
 
 println("\n=== Invariance error convergence ===")
 for res in err_conv
-	println("  |r| = $(res.r_magnitude)  →  max_order = $(res.max_order)",
-		"  s̄ = $(round(res.s_bar, digits=4))",
-		"  force_err ∈ [$(round(minimum(res.force_errors), sigdigits=2)),",
-		" $(round(maximum(res.force_errors), sigdigits=2))]")
+    println("  |r| = $(res.r_magnitude)  →  max_order = $(res.max_order)",
+        "  s̄ = $(round(res.s_bar, digits=4))",
+        "  force_err ∈ [$(round(minimum(res.force_errors), sigdigits=2)),",
+        " $(round(maximum(res.force_errors), sigdigits=2))]")
 end
 
 plots = plot_invariance_convergence(err_conv)

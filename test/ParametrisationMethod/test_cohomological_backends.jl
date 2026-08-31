@@ -11,8 +11,9 @@ const _CheckpointTOML = MORFE.CohomologicalEquations.TOML
 function _checkpoint_test_cubic!(res, x1, x2, x3)
     @. res += -x1 * x2 * x3
 end
-MORFE.checkpoint_fingerprint_data(::typeof(_checkpoint_test_cubic!)) =
+function MORFE.checkpoint_fingerprint_data(::typeof(_checkpoint_test_cubic!))
     ("checkpoint-test-cubic", 1)
+end
 
 @testset "Cohomological sparse backends and durable checkpoints" begin
     relerr(a, b) = norm(a .- b) / max(norm(a), norm(b), eps())
@@ -62,13 +63,14 @@ MORFE.checkpoint_fingerprint_data(::typeof(_checkpoint_test_cubic!)) =
         # structural reuse offers no reduction. Residual verification must not
         # perturb an already accepted solve.
         @test Wka.poly.coefficients == Wk.poly.coefficients ==
-            Wlegacy.poly.coefficients
+              Wlegacy.poly.coefficients
         @test Rka.poly.coefficients == Rk.poly.coefficients ==
-            Rlegacy.poly.coefficients
+              Rlegacy.poly.coefficients
 
         @test_throws ArgumentError solve_with(quiet(); model = dense_model)
-        Wd, Rd = solve_with(ParametrisationOptions(
-            show_progress = false, verbose = false); model = dense_model)
+        Wd, Rd = solve_with(
+            ParametrisationOptions(
+                show_progress = false, verbose = false); model = dense_model)
         @test relerr(Wd.poly.coefficients, Wk.poly.coefficients) <= 1e-11
         @test relerr(Rd.poly.coefficients, Rk.poly.coefficients) <= 1e-11
     end
@@ -81,9 +83,9 @@ MORFE.checkpoint_fingerprint_data(::typeof(_checkpoint_test_cubic!)) =
             options = quiet(grouping = :on, checkpoint = checkpoint)
 
             opaque = MultilinearMap(
-                (res,x1,x2,x3)->(@. res += -x1*x2*x3),(3,0))
-            opaque_model = NthOrderModel(map(sparse,(B0,B1,B2)),(opaque,))
-            @test_throws ArgumentError solve_with(options; model=opaque_model)
+                (res, x1, x2, x3)->(@. res += -x1*x2*x3), (3, 0))
+            opaque_model = NthOrderModel(map(sparse, (B0, B1, B2)), (opaque,))
+            @test_throws ArgumentError solve_with(options; model = opaque_model)
 
             W0, R0 = solve_with(options)
 
@@ -102,8 +104,9 @@ MORFE.checkpoint_fingerprint_data(::typeof(_checkpoint_test_cubic!)) =
             @test Wr.poly.coefficients == W0.poly.coefficients
             @test Rr.poly.coefficients == R0.poly.coefficients
 
-            stale = quiet(grouping = :on, checkpoint = CheckpointOptions(path;
-                problem_id = "stale-id", granularity = :factor_group))
+            stale = quiet(grouping = :on,
+                checkpoint = CheckpointOptions(path;
+                    problem_id = "stale-id", granularity = :factor_group))
             @test_throws ArgumentError solve_with(stale)
             changed = quiet(grouping = :on, residual_tolerance = 1e-9,
                 checkpoint = checkpoint)
@@ -126,7 +129,8 @@ MORFE.checkpoint_fingerprint_data(::typeof(_checkpoint_test_cubic!)) =
             Wi, Ri = solve_with(options)
             @test relerr(Wi.poly.coefficients, W0.poly.coefficients) <= 1e-12
             @test relerr(Ri.poly.coefficients, R0.poly.coefficients) <= 1e-12
-            @test _CheckpointTOML.parsefile(manifest_path)["completed_degrees"] == collect(1:5)
+            @test _CheckpointTOML.parsefile(manifest_path)["completed_degrees"] ==
+                  collect(1:5)
 
             manifest = _CheckpointTOML.parsefile(manifest_path)
             chunk_path = joinpath(path, "chunks", manifest["chunks"][1]["file"])
