@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Symbolic model definition · MORFE Literate</title>
+<title>Symbolic full-order model · MORFE Literate</title>
 <style>
 :root { --bg:#0a0a0f; --ink:#e8e8ee; --ink2:#a0a0b0; --hair:#26262f; --acc:#9558B2; }
 * { box-sizing:border-box; }
@@ -25,7 +25,7 @@ code { font-family: "JuliaMono", ui-monospace, SFMono-Regular, Menlo, monospace;
   padding:10px 14px; border-radius:0 6px 6px 0; font-size:14px; color:var(--ink2); }
 </style></head><body><main>
 <span class="kicker">MORFE · Literate example</span>
-<h1>Symbolic model definition</h1>
+<h1>Symbolic full-order model</h1>
 <div class="btnrow"><a class="btn" href="../symbolics_ext.html">Custom tutorial page</a>
 <a class="btn" href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/internals/symbolics_ext" target="_blank" rel="noopener">Example folder on GitHub ↗</a>
 <a class="btn" href="../index.html">All tutorials</a></div>
@@ -33,8 +33,8 @@ code { font-family: "JuliaMono", ui-monospace, SFMono-Regular, Menlo, monospace;
 (narrative comments + code, not executed here). Run it yourself with the
 commands in the script header; expected numbers are asserted by the example's
 <code>validate.jl</code> and quoted in its README.</div>
-<h1>Symbolic model definition — examples</h1>
-<p>A runnable walkthrough of the examples from the &quot;Symbolic model definition&quot; tutorial: the two-mass Shaw–Pierre oscillator, and three <code>ExternalSystem</code> drivers &#40;harmonic, quasi-periodic / multiharmonic, chaotic&#41;. For the general API and the full contract, see the tutorial itself — this script only walks the examples.</p>
+<h1>Symbolic full-order model — examples</h1>
+<p>A runnable walkthrough of the examples from the &quot;Symbolic full-order model&quot; tutorial: the two-mass Shaw–Pierre oscillator, and three <code>ExternalSystem</code> drivers &#40;harmonic, quasi-periodic / multiharmonic, chaotic&#41;. For the general API and the full contract, see the tutorial itself — this script only walks the examples.</p>
 <pre><code class="language-julia">using MORFE, Symbolics</code></pre>
 <h2>Full model: two-mass oscillator</h2>
 <p>The two-degree-of-freedom nonlinear oscillator introduced by Shaw and Pierre: two coupled masses with linear stiffness and damping, the first mass carrying an additional cubic restoring force and a harmonic forcing term.</p>

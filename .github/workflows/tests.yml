@@ -4,17 +4,19 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * 1'
 
 jobs:
   test:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
-    # Both ends of the declared `julia = "1.10"` compat bound, so the registry entry is
-    # backed by a run: the lower bound users may resolve to, and the current stable.
+    # Exercise the lower bound, the intervening minor, and current stable.
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1.10', '1']
+        julia-version: ['1.10', '1.11', '1']
 
     name: Julia ${{ matrix.julia-version }}
 
@@ -33,8 +35,8 @@ jobs:
       - name: Install dependencies
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
-      - name: Run tests on Julia 1.10
-        if: matrix.julia-version == '1.10'
+      - name: Run tests without coverage
+        if: matrix.julia-version != '1'
         run: julia --project=. -e 'using Pkg; Pkg.test()'
 
       - name: Run tests with coverage on current stable
@@ -59,3 +61,27 @@ jobs:
           name: MORFE
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+  prerelease:
+    if: github.event_name == 'schedule'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    name: Julia prerelease (non-blocking)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Julia prerelease
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: 'pre'
+
+      - name: Cache packages
+        uses: julia-actions/cache@v2
+
+      - name: Install dependencies
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Run prerelease tests
+        run: julia --project=. -e 'using Pkg; Pkg.test()'
