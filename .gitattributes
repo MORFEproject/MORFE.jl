@@ -1,4 +1,7 @@
 **/*.html linguist-detectable=false
+*.jsx -linguist-detectable=false
+*.js -linguist-detectable=false
+*.css -linguist-detectable=false
 
 # Julia sources are stored and checked out with LF, whatever the contributor's
 # core.autocrlf happens to be. Without this the repo drifts back to mixed line

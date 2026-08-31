@@ -35,21 +35,34 @@
     <h1>Install MORFE.jl</h1>
     <p class="lede">Install Julia, add MORFE from the package registry, and verify that it loads.</p>
 
-    <h2>Standard installation</h2>
+    <h2 id="standard-installation">Standard installation</h2>
     <p>Install <a class="inline" href="https://julialang.org/downloads/" target="_blank" rel="noopener">Julia 1.10 or later</a>, then run:</p>
 <pre class="code">using Pkg
 Pkg.add("MORFE")
 using MORFE</pre>
 
-    <h2>Development version</h2>
+    <h2 id="development-version">Development version</h2>
     <p>To install the latest development version from GitHub instead of the registered release, run:</p>
 <pre class="code">using Pkg
 Pkg.add(url = "https://github.com/MORFEproject/MORFE.jl.git")</pre>
 
-    <h2>FEM tutorials</h2>
+    <h2 id="fem-backends">FEM tutorials</h2>
     <p>The structural and fluid tutorials also use the unregistered MORFEFerrite backend:</p>
 <pre class="code">using Pkg
 Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")</pre>
+
+    <h2 id="example-checkout">Run an example checkout</h2>
+    <p>
+      To run a notebook from a cloned MORFEFerrite repository, use the repository source
+      instead of installing MORFEFerrite from GitHub. From the repository root, initialise
+      the example environment once:
+    </p>
+<pre class="code">julia --project=examples/01_clamped_beam_ferrite -e \
+  'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'</pre>
+    <p>
+      This develops MORFEFerrite from the current checkout while resolving MORFE from the
+      Julia registry. The example's generated <code>Manifest.toml</code> remains local.
+    </p>
 
     <div class="adm note">
       <div class="adm-head">Next step</div>
@@ -57,7 +70,15 @@ Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")</pre>
     </div>
   </main>
 
-  <aside class="docs-toc"><h5>On this page</h5><ul><li><a href="#">Installation</a></li></ul></aside>
+  <aside class="docs-toc">
+    <h5>On this page</h5>
+    <ul>
+      <li><a href="#standard-installation">Standard installation</a></li>
+      <li><a href="#development-version">Development version</a></li>
+      <li><a href="#fem-backends">FEM tutorials</a></li>
+      <li><a href="#example-checkout">Example checkout</a></li>
+    </ul>
+  </aside>
 </div>
 <footer id="site-footer" class="foot" data-base="../"></footer>
 <script src="../assets/footer.js"></script>

@@ -107,15 +107,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h2 id="setup">Setup</h2>
     <p>
-      Activate the environment stored beside the notebook and load both packages.
-      <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-build_model"><code>build_model</code></a>
-      is <a class="doc-link" href="../morfeferrite-documentation.html"><code>MORFEFerrite</code></a>'s backend-independent interface, shared by every physics backend;
-      <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>
-      is <a href="../documentation.html"><code>MORFE</code></a>'s entry point to the reduction.
+      Follow the <a class="inline" href="installation.html">installation guide</a> to install
+      MORFE and MORFEFerrite, then load both packages.
     </p>
-<pre class="code"><span class="kw">import</span> Pkg
-Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
-<span class="kw">using</span> MORFE, <a class="doc-link" href="../morfeferrite-documentation.html">MORFEFerrite</a>
+<pre class="code"><span class="kw">using</span> MORFE, <a class="doc-link" href="../morfeferrite-documentation.html">MORFEFerrite</a>
 <span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK">MORFEFerrite.StructuralSVK</a> <span class="cm"># for Saint-Venant-Kirchhoff hyperelasticity</span></pre>
 
     <div class="step">
