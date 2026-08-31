@@ -23,9 +23,11 @@ end
     local_exports = filter(
         symbol -> _is_locally_defined_api(_CE_DOCS, symbol),
         names(_CE_DOCS; all = false))
-    undocumented = intersect(
-        Set(local_exports),
-        Set(Base.Docs.undocumented_names(_CE_DOCS; private = false)))
+    # `Base.Docs.undocumented_names` is unavailable on the supported Julia 1.10
+    # lower bound, so inspect the binding metadata directly.
+    undocumented = Set(filter(
+        symbol -> isempty(_binding_doc_text(_CE_DOCS, symbol)),
+        local_exports))
     @test isempty(undocumented)
 
     for type_name in (:CohomologicalBuffers, :CohomologicalContext,
