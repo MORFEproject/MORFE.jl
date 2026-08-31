@@ -28,12 +28,12 @@ using Test
         "organization" => "organisation",
         "organize" => "organise",
         "serialization" => "serialisation",
-        "serialize" => "serialise",
+        "serialize" => "serialise"
     )
 
     paths = vcat(
         filter(path -> endswith(path, ".jl"), readdir(source_root; join = true)),
-        filter(path -> endswith(path, ".jl"), readdir(test_root; join = true)),
+        filter(path -> endswith(path, ".jl"), readdir(test_root; join = true))
     )
     scanner_path = normpath(@__FILE__)
     violations = String[]
