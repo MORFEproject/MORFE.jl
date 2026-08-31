@@ -20,16 +20,15 @@ function _embed_external_dynamics!(
     N_EXT > 0 || return nothing
     index_map = build_exponent_index_map(mset)
     external_coefficients = external_polynomial.coefficients
-    for (monomial_index, external_exponent) in
-        enumerate(external_polynomial.multiindex_set.exponents)
+    for (monomial_index, external_exponent) in enumerate(external_polynomial.multiindex_set.exponents)
         full_exponent = SVector{NVAR, Int}(ntuple(
             index -> index <= ROM ? 0 : external_exponent[index - ROM], Val(NVAR)))
         full_index = get(index_map, full_exponent, nothing)
         if full_index === nothing
-            nonzero_coefficients = [
-                (external_index, external_coefficients[external_index, monomial_index])
-                for external_index in 1:N_EXT
-                if !iszero(external_coefficients[external_index, monomial_index])]
+            nonzero_coefficients = [(external_index,
+                                        external_coefficients[external_index, monomial_index])
+                                    for external_index in 1:N_EXT
+                                    if !iszero(external_coefficients[external_index, monomial_index])]
             isempty(nonzero_coefficients) && continue
             throw(ArgumentError("""
                 External dynamics carry the monomial r^$(Tuple(external_exponent)) with \
@@ -418,11 +417,10 @@ function _prepare_master_operators(
         ((unit_offset + 1):(unit_offset + ROM)))
     lambda_master = view(
         R.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
-    invariance_C_coeffs, master_derivative_steps =
-        precompute_master_column_polynomials(
-            linear_terms, master_right_modes, lambda_master)
+    invariance_C_coeffs, master_derivative_steps = precompute_master_column_polynomials(
+        linear_terms, master_right_modes, lambda_master)
     return orthogonality_J_coeffs, right_master_blocks,
-           invariance_C_coeffs, master_derivative_steps
+    invariance_C_coeffs, master_derivative_steps
 end
 
 """
@@ -674,10 +672,9 @@ function solve_cohomological_problem(
     Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
     lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
 
-    linear_skip_set, lower_order, sym, ml_cache, buffers =
-        _prepare_shared_resources(
-            model, W, mset, conj_perm, completed_indices,
-            dimensions, MT, options)
+    linear_skip_set, lower_order, sym, ml_cache, buffers = _prepare_shared_resources(
+        model, W, mset, conj_perm, completed_indices,
+        dimensions, MT, options)
     orthogonality_J_coeffs, right_master_blocks,
     invariance_C_coeffs, master_derivative_steps = _prepare_master_operators(
         linear_terms, W, R, master_right_modes, master_left_modes,
