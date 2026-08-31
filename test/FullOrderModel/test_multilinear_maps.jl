@@ -139,7 +139,7 @@ end
             @test m.multiplicity_external == 0
             @test m.fully_asymmetric === nothing
 
-            # `order = 1` is the way to get a first-order term, which `FirstOrderModel` needs.
+            # `order = 1` is the way to get a first-order term.
             m1 = @test_logs (:info,) match_mode=:any MultilinearMap(f!; order = 1)
             @test m1.multiindex === (2,)
             @test m1 isa MultilinearMap{1}

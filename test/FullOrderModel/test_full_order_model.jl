@@ -73,31 +73,6 @@ using SparseArrays
         @test B ≈ Matrix(B1)
     end
 
-    @testset "FirstOrderModel basics" begin
-        n = 3
-        B0 = rand(n, n)
-        B1 = rand(n, n)
-
-        model = MORFE.FullOrderModel.FirstOrderModel((B0, B1), ())
-
-        @test model.n_fom == n
-        @test model.B0 == B0
-        @test model.B1 == B1
-    end
-
-    @testset "FirstOrderModel linear matrices" begin
-        n = 2
-        B0 = [1.0 0; 0 1]
-        B1 = [2.0 0; 0 2]
-
-        model = MORFE.FullOrderModel.FirstOrderModel((B0, B1), ())
-
-        A, B = MORFE.FullOrderModel.linear_first_order_matrices(model)
-
-        @test A ≈ -B0
-        @test B ≈ B1
-    end
-
     @testset "evaluate_nonlinear_terms! no-op cases" begin
         n = 3
         B0 = rand(n, n)

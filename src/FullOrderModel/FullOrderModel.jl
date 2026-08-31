@@ -23,7 +23,7 @@ using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap, MultilinearM
                          evaluate_term!, fem_elements, _definition_site
 using ..ExternalSystems: ExternalSystem, external_basis
 
-export NthOrderModel, FirstOrderModel, linear_first_order_matrices,
+export NthOrderModel, linear_first_order_matrices,
        evaluate_nonlinear_terms!
 
 abstract type AbstractFullOrderModel end
@@ -404,78 +404,6 @@ function linear_first_order_matrices(model::NthOrderModel{ORD, ORDP1, N_NL, N_EX
     end
 
     return A, B
-end
-
-"""
-	FirstOrderModel{MT, N_NL} <: AbstractFullOrderModel
-
-Optimised representation of a first‑order dynamical system
-
-	B₁ ẋ + B₀ x = F(x)
-
-where `F(x)` is a polynomial/multilinear function of `x`.
-
-# Fields
-
-- `n_fom::Int` — dimension of the full‑order state vector `x`.
-- `B0::MT` — the zeroth-order linear coefficient matrix.
-- `B1::MT` — the first-order linear coefficient matrix; same size as `B0`, checked
-  at construction.
-- `nonlinear_terms::NTuple{N_NL, MultilinearMap{1}}` — the nonlinear contributions
-  `F(x)`.  Fixed at order 1, so no derivative bookkeeping is needed.
-
-# Construction
-	FirstOrderModel((B0, B1), nonlinear_terms)
-
-`nonlinear_terms` can be any iterable of `MultilinearMap{1}`.
-"""
-struct FirstOrderModel{MT, N_NL} <: AbstractFullOrderModel
-    n_fom::Int
-    B0::MT
-    B1::MT
-    nonlinear_terms::NTuple{N_NL, MultilinearMap{1}}
-
-    function FirstOrderModel(
-            linear_terms::NTuple{2, MT},
-            nonlinear_terms::NTuple{N_NL, MultilinearMap{1}}) where {
-            MT, N_NL}
-        B0, B1 = linear_terms
-        @assert size(B0)==size(B1) "Linear matrices must have identical size"
-        n_fom = size(B0, 1)
-        new{MT, N_NL}(n_fom, B0, B1, nonlinear_terms)
-    end
-end
-
-"""
-	evaluate_nonlinear_terms!(res, model::FirstOrderModel, order, state_vectors)
-
-Evaluate all nonlinear terms of given `order` and accumulate into `res`.
-`state_vectors` must be a 1‑tuple `(x,)`.
-"""
-function evaluate_nonlinear_terms!(res, model::FirstOrderModel,
-        order::Int, state_vector)
-    order <= 1 && return res
-    @assert length(res)==model.n_fom "Result vector length does not match full‑order state dimension"
-
-    @inbounds for term in model.nonlinear_terms
-        deg = term.deg
-        if deg == order
-            term.f!(res, ntuple(_ -> state_vector, deg)...)
-        end
-    end
-    return res
-end
-
-"""
-	linear_first_order_matrices(model::FirstOrderModel)
-
-Return the matrices `(A, B)` of the equivalent linear first‑order system
-`B Ẋ = A X`.  Because the model is already first order, `X = x` and
-
-	A = -B₀,    B = B₁.
-"""
-function linear_first_order_matrices(model::FirstOrderModel)
-    return -model.B0, model.B1
 end
 
 end # module
