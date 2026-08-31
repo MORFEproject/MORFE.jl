@@ -137,7 +137,11 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
+<<<<<<< Updated upstream
   <p class="lede">19 modules · 281 documented entries · generated 31 August 2026</p>
+=======
+  <p class="lede">18 modules · 257 documented entries · generated 28 August 2026</p>
+>>>>>>> Stashed changes
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -332,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
 T &#61; delete_multiindices&#40;S, &#91;&#91;2, 0&#93;, &#91;0, 2&#93;&#93;&#41;  # drop the two pure squares
 length&#40;S&#41;, length&#40;T&#41;                          # &#40;6, 4&#41; — S is unchanged</code></pre>
 </div><div class="markdown"><pre><code>delete_multiindices&#40;pred, set::MultiindexSet&#123;N&#125;&#41; -&gt; MultiindexSet&#123;N&#125;</code></pre>
-<p>Return a <strong>new</strong> <code><a class="doc-ref" href="#Multiindices-MultiindexSet">MultiindexSet</a></code> holding the exponents of <code>set</code> for which <code>pred&#40;α&#41;</code> is <code>false</code>; <code>set</code> itself is never modified.  <code>pred</code> receives each exponent as an <code>SVector&#123;N,Int&#125;</code>.  This is the exact complement of <code>filter&#40;pred, set&#41;</code>: together the two partition <code>set</code>.</p>
+<p>Return a <strong>new</strong> <code><a class="doc-ref" href="#Multiindices-MultiindexSet">MultiindexSet</a></code> holding the exponents of <code>set</code> for which <code>pred&#40;α&#41;</code> is <code>false</code>; <code>set</code> itself is never modified.  <code>pred</code> receives each exponent as an <code>SVector&#123;N,Int&#125;</code>.  This is the exact complement of <code><a class="doc-ref" href="#Multiindices-filter">filter&#40;pred, set&#41;</a></code>: together the two partition <code>set</code>.</p>
 <h1>Examples</h1>
 <pre><code class="language-julia">S &#61; all_multiindices_up_to&#40;3, 4&#41;
 delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_multiindices_up_to&#40;3, 2&#41;   # true</code></pre>
@@ -382,6 +386,20 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="markdown"><pre><code>factorisations_groupwise_symmetric&#40;set, exp, group_sizes, candidate_indices&#41; -&gt; Vector&#123;FactorisationEntry&#125;</code></pre>
 <p>Return factorisations of <code>exp</code> into <code>M &#61; length&#40;group_sizes&#41;</code> groups, where group <code>i</code> has <code>group_sizes&#91;i&#93;</code> factor slots and is internally symmetric.</p>
 <p><code>factor_indices</code> in each entry is the concatenation of per-group indices in group order &#40;each group sorted non-decreasingly&#41;.  <code>multiplier</code> is the product of the per-group permutation counts — the total number of ordered arrangements.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="Multiindices-filter" data-doc-name="filter" data-doc-module="Multiindices">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L344" target="_blank" rel="noopener">filter</a>(pred, set::MultiindexSet{N}) where N</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>filter&#40;pred, set::MultiindexSet&#123;N&#125;&#41; -&gt; MultiindexSet&#123;N&#125;</code></pre>
+<p>Return a <strong>new</strong> <code><a class="doc-ref" href="#Multiindices-MultiindexSet">MultiindexSet</a></code> holding the exponents of <code>set</code> for which <code>pred&#40;α&#41;</code> is <code>true</code>, leaving <code>set</code> untouched.  <code>pred</code> receives each exponent as an <code>SVector&#123;N,Int&#125;</code>.</p>
+<p>Filtering preserves Grlex order, so the result is built through the pre-sorted path. Use it to intersect independent conditions, e.g. a total-degree bound on the master coordinates together with a per-parameter box:</p>
+<pre><code class="language-julia">mset &#61; filter&#40;α -&gt; α&#91;1&#93; &#43; α&#91;2&#93; ≤ 4 &amp;&amp; α&#91;3&#93; ≤ 2, all_multiindices_in_box&#40;&#91;4, 4, 2&#93;&#41;&#41;</code></pre>
+<p>See <a class="doc-ref" href="#Multiindices-delete_multiindices"><code>delete_multiindices</code></a> for the removal-side counterpart.</p>
 </div>
   </div>
 </div>
@@ -747,6 +765,18 @@ p &#61; mmap_polynomial&#40;&quot;coeffs.bin&quot;, &#40;5,&#41;, Float64, mset;
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="Polynomials-zero" data-doc-name="zero" data-doc-module="Polynomials">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L300" target="_blank" rel="noopener">zero</a>(::Type{DensePolynomial{T, NVAR, N, A} where {NVAR, N, A&lt;:AbstractArray{T, N}}}, mset::MultiindexSet) where T&lt;:Number</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L300" target="_blank" rel="noopener">zero</a>(::Type{DensePolynomial{T, NVAR, N, A} where {NVAR, N, A&lt;:AbstractArray{T, N}}}, cshape::NTuple{M, Int64}, mset::MultiindexSet) where {T&lt;:Number, M}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>zero&#40;DensePolynomial&#123;T&#125;, mset&#41;              # scalar
+zero&#40;DensePolynomial&#123;T&#125;, coeff_shape, mset&#41; # tensor-valued</code></pre>
+</div>
+  </div>
+</div>
   <div id="MultilinearMaps" class="doc-module-h">MultilinearMaps</div>
   <div class="doc-module-desc" data-module="MultilinearMaps"><div class="markdown"><p>Module <code><a class="doc-ref" href="#MultilinearMaps">MultilinearMaps</a></code> — multilinear nonlinear term representations for <code><a class="doc-ref" href="#FullOrderModel-NthOrderModel">NthOrderModel</a></code>.</p>
 <p>Nonlinear terms in the full-order ODE are encoded as <code><a class="doc-ref" href="#MultilinearMaps-AbstractMultilinearMap">AbstractMultilinearMap</a></code> subtypes:</p>
@@ -1033,7 +1063,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_definition_site&#40;f&#33;&#41; -&gt; String</code></pre>
-<p>Return <code>&quot; @ file.jl:12&quot;</code> for the first method of <code>f&#33;</code>, or <code>&quot;&quot;</code> when <code>f&#33;</code> exposes no methods.  Used by <code>show</code> and by <code>FullOrderModel._term_label</code> to point a diagnostic at the definition of a term.  Deliberately uses <code>first</code> rather than <code>only</code>: <code>f&#33;</code> is allowed to carry several methods, and a display helper must never throw.</p>
+<p>Return <code>&quot; @ file.jl:12&quot;</code> for the first method of <code>f&#33;</code>, or <code>&quot;&quot;</code> when <code>f&#33;</code> exposes no methods.  Used by <code><a class="doc-ref" href="#FullOrderModel-show">show</a></code> and by <code>FullOrderModel._term_label</code> to point a diagnostic at the definition of a term.  Deliberately uses <code>first</code> rather than <code>only</code>: <code>f&#33;</code> is allowed to carry several methods, and a display helper must never throw.</p>
 </div>
   </div>
 </div>
@@ -1591,6 +1621,20 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div><div class="markdown"><pre><code>linear_first_order_matrices&#40;model::FirstOrderModel&#41;</code></pre>
 <p>Return the matrices <code>&#40;A, B&#41;</code> of the equivalent linear first‑order system <code>B Ẋ &#61; A X</code>.  Because the model is already first order, <code>X &#61; x</code> and</p>
 <pre><code>A &#61; -B₀,    B &#61; B₁.</code></pre>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="FullOrderModel-show" data-doc-name="show" data-doc-module="FullOrderModel">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L209" target="_blank" rel="noopener">show</a>(io::IO, ::MIME{Symbol("text/plain")}, m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L209" target="_blank" rel="noopener">show</a>(io::IO, m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>Base.show&#40;io::IO, ::MIME&quot;text/plain&quot;, m::NthOrderModel&#41;</code></pre>
+<p>Print a summary of the model.</p>
+<p>Without this, showing a model dumps every field — which for a FEM backend means the entire <code>DofHandler</code> behind each nonlinear term. Everything printed here is already on the type; nothing is computed.</p>
+<p>The one-line method exists for the same reason: a model nested inside another container would otherwise expand its whole field tree there too.</p>
 </div>
   </div>
 </div>
@@ -3229,7 +3273,7 @@ J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
   <div class="doc-body">
 <div class="markdown"><pre><code>evaluate_orthogonality_column_row&#33;&#40;c, s, r, C_coeffs, resonance&#41; -&gt; c</code></pre>
 <p>Evaluate the joint operator row <code>C_r&#40;s&#41;</code> in-place via Horner&#39;s method, overwriting the pre-allocated <strong>length-<code>ROM</code></strong> vector <code>c</code>.</p>
-<p><code>C_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; C_coeffs&#91;r&#93;&#91;j, :&#93; · s^&#123;j-1&#125;</code> is a <code>1 × ROM</code> row polynomial.  Entry <code>c&#91;j&#93;</code> holds <code>C_r&#40;s&#41;&#91;j&#93;</code> when master mode <code>j</code> is resonant and <code>zero&#40;T&#41;</code> otherwise — i.e. the layout is <strong>expanded and masked</strong>, indexed by the mode <code>j</code> itself rather than compacted into resonant rank order.</p>
+<p><code>C_r&#40;s&#41; &#61; Σ_&#123;j&#61;1&#125;^&#123;ORD-1&#125; C_coeffs&#91;r&#93;&#91;j, :&#93; · s^&#123;j-1&#125;</code> is a <code>1 × ROM</code> row polynomial.  Entry <code>c&#91;j&#93;</code> holds <code>C_r&#40;s&#41;&#91;j&#93;</code> when master mode <code>j</code> is resonant and <code><a class="doc-ref" href="#Polynomials-zero">zero&#40;T&#41;</a></code> otherwise — i.e. the layout is <strong>expanded and masked</strong>, indexed by the mode <code>j</code> itself rather than compacted into resonant rank order.</p>
 <p>Masking rather than compacting is what keeps the bordered cohomological system at the constant size <code>FOM &#43; ROM</code> for every monomial &#40;one sparsity pattern, one cached symbolic factorisation&#41;.  Dropping the non-resonant entries is lossless: the matching orthogonality row pins <code>R_&#123;j,α&#125; &#61; 0</code>, so those coefficients multiply zero.</p>
 <p><code>c</code> may be a plain <code>Vector&#123;T&#125;</code> or a row view <code>view&#40;M, row, col_range&#41;</code>.</p>
 <h2>Horner recurrence &#40;column-wise, no allocation&#41;</h2>
@@ -4227,7 +4271,33 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverConfiguration.jl#L1" target="_blank" rel="noopener">CheckpointOptions</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>Durable checkpoint policy for a cohomological reduction.</p>
+<div class="markdown"><pre><code>CheckpointOptions&#40;path; problem_id, resume &#61; true, granularity &#61; :factor_group&#41;</code></pre>
+<p>Configure durable checkpoints for <a class="doc-ref" href="#ParametrisationMethod-parametrise"><code>parametrise</code></a>. Pass the resulting object as the <code>checkpoint</code> field of <a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions"><code>ParametrisationOptions</code></a>.</p>
+<h1>Arguments</h1>
+<ul>
+<li><p><code>path::AbstractString</code> — checkpoint directory. MORFE creates it and stores a manifest plus checksummed coefficient chunks beneath it.</p>
+</li>
+<li><p><code>problem_id::AbstractString</code> — required, non-empty identifier for the physical problem. It is checked when resuming so that a checkpoint cannot silently be used for a different run.</p>
+</li>
+<li><p><code>resume::Bool &#61; true</code> — restore compatible completed work found at <code>path</code>. With <code>resume &#61; false</code>, MORFE refuses an existing checkpoint manifest instead of overwriting it; use a new directory for a fresh run.</p>
+</li>
+<li><p><code>granularity::Symbol &#61; :factor_group</code> — when data are committed:</p>
+<ul>
+<li><p><code>:factor_group</code> writes after every exact factor-reuse group &#40;a group may contain one monomial&#41;, giving finer restart points and more chunk files;</p>
+</li>
+<li><p><code>:degree</code> writes once after each completed total degree, giving fewer, larger chunks.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>A checkpoint is accepted only when its fingerprint matches the model, spectral data, resonance set, multiindex set, conjugate permutation, and numerical solver policy. Models containing application-defined callable kernels must implement <a class="doc-ref" href="#CohomologicalEquations-checkpoint_fingerprint_data"><code>checkpoint_fingerprint_data</code></a> before they can be checkpointed.</p>
+<h1>Example</h1>
+<pre><code class="language-julia">checkpoint &#61; CheckpointOptions&#40;&quot;checkpoints/beam-order-9&quot;;
+    problem_id &#61; &quot;clamped-beam-v1&quot;,
+    granularity &#61; :degree&#41;
+
+options &#61; ParametrisationOptions&#40;checkpoint &#61; checkpoint&#41;
+W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 </div>
   </div>
 </div>
@@ -4407,11 +4477,86 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-type" id="CohomologicalEquations-ParametrisationOptions" data-doc-name="ParametrisationOptions" data-doc-module="CohomologicalEquations">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverConfiguration.jl#L19" target="_blank" rel="noopener">ParametrisationOptions</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/SolverConfiguration.jl#L55" target="_blank" rel="noopener">ParametrisationOptions</a></code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>Operational controls for <a class="doc-ref" href="#ParametrisationMethod-parametrise"><code>parametrise</code></a>.</p>
-<p>Mathematical choices &#40;<code>resonance</code> and <code>conjugate_permutation</code>&#41; deliberately remain explicit keywords of <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>; this object contains validation, execution, checkpoint, and presentation policy only.</p>
+<div class="markdown"><pre><code>ParametrisationOptions&#40;;
+    backend &#61; :auto,
+    grouping &#61; :auto,
+    residual_check &#61; :off,
+    residual_tolerance &#61; nothing,
+    max_refinement_steps &#61; 3,
+    validate_mset &#61; true,
+    checkpoint &#61; nothing,
+    show_progress &#61; true,
+    verbose &#61; true,
+    setup_io &#61; stderr&#41;</code></pre>
+<p>Operational controls passed to <a class="doc-ref" href="#ParametrisationMethod-parametrise"><code>parametrise</code></a> through its <code>options</code> keyword:</p>
+<pre><code class="language-julia">options &#61; ParametrisationOptions&#40;
+    backend &#61; :klu,
+    residual_check &#61; :backward_error,
+    residual_tolerance &#61; 1e-10,
+    show_progress &#61; false&#41;
+
+W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code></pre>
+<p>The fields below are constructor keywords of <code><a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions">ParametrisationOptions</a></code>; they are <strong>not</strong> direct keywords of <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>. Mathematical choices &#40;<code>resonance</code> and <code>conjugate_permutation</code>&#41; deliberately remain explicit keywords of <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>.</p>
+<h1>Solver options</h1>
+<ul>
+<li><p><code>backend::Symbol &#61; :auto</code> — linear solver for the bordered cohomological systems:</p>
+<ul>
+<li><p><code>:auto</code> uses dense LU for dense full-order matrices; for sparse matrices it uses Pardiso when a Pardiso extension is active and otherwise KLU;</p>
+</li>
+<li><p><code>:klu</code> requires sparse full-order matrices and forces KLU;</p>
+</li>
+<li><p><code>:pardiso</code> requires sparse full-order matrices and an active Pardiso extension, otherwise construction of the solver fails.</p>
+</li>
+</ul>
+</li>
+<li><p><code>grouping::Symbol &#61; :auto</code> — exact reuse of a factorisation by monomials whose cohomological matrices are structurally identical:</p>
+<ul>
+<li><p><code>:auto</code> groups only when repeated or zero eigenvalues make reuse possible and grouping actually reduces the number of factorisations;</p>
+</li>
+<li><p><code>:on</code> always builds and processes the exact structural groups;</p>
+</li>
+<li><p><code>:off</code> solves directly in graded-lexicographic order without grouping.</p>
+</li>
+</ul>
+<p>Grouping is exact; it never clusters approximately equal eigenvalues.</p>
+</li>
+<li><p><code>residual_check::Symbol &#61; :off</code> — <code>:backward_error</code> verifies every bordered solve; <code>:off</code> skips this additional check.</p>
+</li>
+<li><p><code>residual_tolerance::Union&#123;Nothing, Real&#125; &#61; nothing</code> — positive backward-error limit. It is used only with <code>residual_check &#61; :backward_error</code>. <code>nothing</code> selects the scalar-type-aware default <code>sqrt&#40;eps&#40;real&#40;T&#41;&#41;&#41; / 100</code> &#40;approximately <code>1.49e-10</code> for <code>Float64</code>&#41;.</p>
+</li>
+<li><p><code>max_refinement_steps::Integer &#61; 3</code> — maximum number of iterative-refinement corrections after a failed backward-error check on the dense and KLU paths. Must be non-negative. A solve still throws if it remains outside the tolerance.</p>
+</li>
+</ul>
+<h1>Validation and restart options</h1>
+<ul>
+<li><p><code>validate_mset::Bool &#61; true</code> — validate the multiindex set before solving: dimensions, allowed degrees, required master unit vectors, downward closure, and &#40;when active&#41; conjugate closure. Set this to <code>false</code> only when the same set has already been validated.</p>
+</li>
+<li><p><code>checkpoint::Union&#123;Nothing, CheckpointOptions&#125; &#61; nothing</code> — durable checkpoint and resume policy. <code>nothing</code> disables checkpoint I/O; see <a class="doc-ref" href="#CohomologicalEquations-CheckpointOptions"><code>CheckpointOptions</code></a>.</p>
+</li>
+</ul>
+<h1>Output options</h1>
+<ul>
+<li><p><code>show_progress::Bool &#61; true</code> — show the in-place monomial progress indicator on <code>stderr</code> when it is an interactive terminal. It remains silent in redirected output and CI logs.</p>
+</li>
+<li><p><code>verbose::Bool &#61; true</code> — print the model/setup summary before building the resonance set. With the default <code>setup_io &#61; stderr</code>, the summary is printed only when <code>stderr</code> is interactive; an explicitly supplied output stream is always honoured.</p>
+</li>
+<li><p><code>setup_io::IO &#61; stderr</code> — destination for the setup summary controlled by <code>verbose</code>. This does not redirect the progress indicator, which always uses <code>stderr</code>.</p>
+</li>
+</ul>
+<h1>Common configurations</h1>
+<p>Quiet run:</p>
+<pre><code class="language-julia">options &#61; ParametrisationOptions&#40;show_progress &#61; false, verbose &#61; false&#41;</code></pre>
+<p>Verified sparse solve with automatic exact factor reuse:</p>
+<pre><code class="language-julia">options &#61; ParametrisationOptions&#40;
+    backend &#61; :auto,
+    grouping &#61; :auto,
+    residual_check &#61; :backward_error,
+    residual_tolerance &#61; 1e-10,
+    max_refinement_steps &#61; 3&#41;</code></pre>
+<p>All symbolic options are validated when <code><a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions">ParametrisationOptions</a></code> is constructed, so a misspelling such as <code>backend &#61; :umfpack</code> or <code>grouping &#61; :approximate</code> fails immediately.</p>
 </div>
   </div>
 </div>
@@ -4873,7 +5018,10 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L203" target="_blank" rel="noopener">parametrise</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, spectral::SpectralData{ORD, ROM}, expansion_order; resonance, conjugate_permutation, options, kwargs...) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, ROM}</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>parametrise&#40;model, spectral::SpectralData, expansion_order; resonance, …&#41; -&gt; &#40;W, R&#41;</code></pre>
+<div class="markdown"><pre><code>parametrise&#40;model, spectral::SpectralData, expansion_order;
+    resonance &#61; ResonanceConfig&#40;&#41;,
+    conjugate_permutation &#61; :from_spectral,
+    options &#61; ParametrisationOptions&#40;&#41;&#41; -&gt; &#40;W, R&#41;</code></pre>
 <p>Compute the invariant manifold and its reduced dynamics. <strong>This is the entry point.</strong></p>
 <p>Two positional arguments carry everything the reduction needs — the full-order model and the spectral data — and the third says how far to expand:</p>
 <pre><code class="language-julia">&#40;; model, spectral&#41; &#61; build_model&#40;case&#41;    # or SpectralData&#40;model, spectrum; master &#61; …&#41;
@@ -4894,9 +5042,22 @@ W, R &#61; parametrise&#40;model, spectral, mset&#41;  # a monomial set you buil
 </li>
 <li><p><code>conjugate_permutation &#61; :from_spectral</code> — by default the master-block involution from <code>spectral</code>, extended over the external variables using the model&#39;s external system. Pass an explicit <code>NVAR</code>-length vector to override, or <code>nothing</code> to disable conjugate symmetry for this solve.</p>
 </li>
-<li><p><code>options::ParametrisationOptions &#61; ParametrisationOptions&#40;&#41;</code> — backend selection, exact structural grouping, backward-error verification, multiindex validation, durable checkpointing, and presentation controls. Mathematical choices are not hidden in this object.</p>
+<li><p><code>options::ParametrisationOptions &#61; ParametrisationOptions&#40;&#41;</code> — backend selection, exact structural grouping, backward-error verification, multiindex validation, durable checkpointing, and presentation controls. Mathematical choices are not hidden in this object. See <a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions"><code>ParametrisationOptions</code></a> for every accepted field, value, default, and its effect.</p>
 </li>
 </ul>
+<p>The operational fields are supplied when constructing <code><a class="doc-ref" href="#CohomologicalEquations-ParametrisationOptions">ParametrisationOptions</a></code>; they are not direct keywords of <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>. For example:</p>
+<pre><code class="language-julia">options &#61; ParametrisationOptions&#40;
+    backend &#61; :auto,
+    grouping &#61; :auto,
+    residual_check &#61; :backward_error,
+    residual_tolerance &#61; 1e-10,
+    show_progress &#61; false,
+    verbose &#61; false&#41;
+
+W, R &#61; parametrise&#40;model, spectral, 7;
+    resonance &#61; ResonanceConfig&#40;style &#61; :complex_normal_form, tol &#61; 0.05&#41;,
+    options &#61; options&#41;</code></pre>
+<p>Thus use <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise&#40;...; options &#61; ParametrisationOptions&#40;backend &#61; :klu&#41;&#41;</a></code>, <strong>not</strong> <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise&#40;...; backend &#61; :klu&#41;</a></code>.</p>
 <h2>Returns</h2>
 <p><code>&#40;W, R&#41;</code> — the solved <a class="doc-ref" href="#ParametrisationObjects-Parametrisation"><code>Parametrisation</code></a> and <a class="doc-ref" href="#ParametrisationObjects-ReducedDynamics"><code>ReducedDynamics</code></a>.</p>
 </div>
@@ -4910,7 +5071,7 @@ W, R &#61; parametrise&#40;model, spectral, mset&#41;  # a monomial set you buil
   <div class="doc-body">
 <div class="markdown"><pre><code>print_setup&#40;io, model, spectral, mset, resonance&#41;</code></pre>
 <p>Print a summary of what <a class="doc-ref" href="#ParametrisationMethod-parametrise"><code>parametrise</code></a> is about to solve: model size and layout, nonlinear terms, external system, reduced dimensions, master eigenvalues, the monomial count, the resonance policy and the conjugate involution.</p>
-<p>A normal function, so a caller who wants a different banner defines a method rather than editing <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>. It prints <strong>only what the arguments genuinely carry</strong>: <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code> receives an <code><a class="doc-ref" href="#FullOrderModel-NthOrderModel">NthOrderModel</a></code>, and every backend&#39;s model is that same type, so there is nothing backend-specific to dispatch on here. Backends with richer information print their own summary before calling — they already have <code>show</code> methods for it.</p>
+<p>A normal function, so a caller who wants a different banner defines a method rather than editing <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code>. It prints <strong>only what the arguments genuinely carry</strong>: <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code> receives an <code><a class="doc-ref" href="#FullOrderModel-NthOrderModel">NthOrderModel</a></code>, and every backend&#39;s model is that same type, so there is nothing backend-specific to dispatch on here. Backends with richer information print their own summary before calling — they already have <code><a class="doc-ref" href="#FullOrderModel-show">show</a></code> methods for it.</p>
 <p>Called by <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code> only when the output is going somewhere interactive; see the <code>verbose</code> / <code>setup_io</code> keywords there.</p>
 </div>
   </div>

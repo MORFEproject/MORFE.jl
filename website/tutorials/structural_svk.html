@@ -108,15 +108,15 @@ document.addEventListener('DOMContentLoaded', function () {
     <h2 id="setup">Setup</h2>
     <p>
       Activate the environment stored beside the notebook and load both packages.
-      <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><code>build_model</code></a>
-      is <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite</code></a>'s backend-independent interface, shared by every physics backend;
+      <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-build_model"><code>build_model</code></a>
+      is <a class="doc-link" href="../morfeferrite-documentation.html"><code>MORFEFerrite</code></a>'s backend-independent interface, shared by every physics backend;
       <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>
       is <a href="../documentation.html"><code>MORFE</code></a>'s entry point to the reduction.
     </p>
 <pre class="code"><span class="kw">import</span> Pkg
 Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
-<span class="kw">using</span> MORFE, MORFEFerrite
-<span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> MORFEFerrite.StructuralSVK <span class="cm"># for Saint-Venant-Kirchhoff hyperelasticity</span></pre>
+<span class="kw">using</span> MORFE, <a class="doc-link" href="../morfeferrite-documentation.html">MORFEFerrite</a>
+<span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK">MORFEFerrite.StructuralSVK</a> <span class="cm"># for Saint-Venant-Kirchhoff hyperelasticity</span></pre>
 
     <div class="step">
       <div class="num">01</div>
@@ -137,9 +137,9 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
           If your mesh uses a different physical-group name, pass that name instead.
         </p>
 <pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span> <span class="cm"># Change to 9 for the reference calculation.</span>
-<span class="var">case</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
-    <span class="var">material</span> <span class="op">=</span> <span class="fn">SVK.SVKMaterial</span>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
-    <span class="var">damping</span> <span class="op">=</span> <span class="fn">SVK.RayleighDamping</span>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
+<span class="var">case</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><span class="fn">SVK.mechanical_model</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
+    <span class="var">material</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-SVKMaterial"><span class="fn">SVK.SVKMaterial</span></a>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
+    <span class="var">damping</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-RayleighDamping"><span class="fn">SVK.RayleighDamping</span></a>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
     <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">"Dirichlet"</span>)</pre>
       </div>
     </div>
@@ -149,12 +149,12 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
       <div class="body">
         <h3 id="step-build">Build a physics-independent model for MORFE</h3>
         <p>
-          <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><code>build_model</code></a>
+          <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-build_model"><code>build_model</code></a>
           converts the structural case into MORFE's physics-independent
           model and computes its spectral data. <code>master = [1]</code> selects the first
           conjugate vibration-mode pair. <code>meta</code> holds auxiliary backend information.
         </p>
-<pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <span class="fn">build_model</span>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
+<pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
 <span class="var">meta</span>.<span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">meta</span>.<span class="var">master_indices</span>] <span class="cm"># print master eigenvalues</span></pre>
       </div>
     </div>
@@ -214,7 +214,7 @@ Pkg.<span class="fn">activate</span>(<span class="var">@__DIR__</span>)
       <p><a href="../documentation.html"><code>MORFE</code></a> contains the DPIM reduced order modelling, which is physics-agnostic.
         It is independent of any one finite-element library or physics backend.
         You can connect it to your favourite library.</p>
-      <p>Use <a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener"><code>MORFEFerrite</code></a> to benefit from the mesh
+      <p>Use <a class="doc-link" href="../morfeferrite-documentation.html"><code>MORFEFerrite</code></a> to benefit from the mesh
       and finite-element capabilities of 
       <a href="https://ferrite-fem.github.io/" target="_blank" rel="noopener"><code>Ferrite</code></a>.</p>
       </div>

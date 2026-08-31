@@ -3,11 +3,10 @@
     <mask id="plate-domain">
       <rect width="720" height="980" fill="black"/>
       <path d="M92 72 646 96 688 224 668 846 596 920 158 892 74 782 58 226Z" fill="white"/>
-      <circle cx="430" cy="390" r="106" fill="black"/>
     </mask>
   </defs>
 
-  <!-- A meshed plate with a circular cut-out: deliberately irregular rows and
+  <!-- A meshed plate: deliberately irregular rows and
        alternating diagonals make this read as a finite-element discretisation. -->
   <g mask="url(#plate-domain)">
     <g fill="#d4a056" fill-opacity=".055">
@@ -52,15 +51,10 @@
 
   <g stroke="#d4a056" stroke-opacity=".62" stroke-width="1.6">
     <path d="M92 72 646 96 688 224 668 846 596 920 158 892 74 782 58 226Z"/>
-    <circle cx="430" cy="390" r="106"/>
   </g>
 
-  <!-- Boundary and selected interior nodes retain the site's Julia palette. -->
+  <!-- Selected interior nodes retain the site's Julia palette. -->
   <g fill-opacity=".88">
-    <circle cx="430" cy="284" r="4" fill="#4063d8"/>
-    <circle cx="536" cy="390" r="4" fill="#389826"/>
-    <circle cx="430" cy="496" r="4" fill="#9558b2"/>
-    <circle cx="324" cy="390" r="4" fill="#cb3c33"/>
     <circle cx="165" cy="220" r="3.6" fill="#9558b2"/>
     <circle cx="585" cy="560" r="3.6" fill="#4063d8"/>
     <circle cx="300" cy="665" r="3.6" fill="#389826"/>

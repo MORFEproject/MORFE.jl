@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Companion Packages</span><span class="sep">/</span><span>MORFEFerrite.jl</span></div>
   <h1>MORFEFerrite.jl Code Documentation</h1>
-  <p class="lede">4 modules · 153 documented entries · generated 28 August 2026</p>
+  <p class="lede">4 modules · 157 documented entries · generated 28 August 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -240,10 +240,6 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order&#41;</code></pre>
 <div class="doc doc-function" id="Common-summary_entries" data-doc-name="summary_entries" data-doc-module="Common">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/summary.jl#L18" target="_blank" rel="noopener">summary_entries</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel, meta::NamedTuple)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/summary.jl#L18" target="_blank" rel="noopener">summary_entries</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel, ::Nothing)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/summary.jl#L18" target="_blank" rel="noopener">summary_entries</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, meta::NamedTuple)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/summary.jl#L18" target="_blank" rel="noopener">summary_entries</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, ::Nothing)</code>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/summary.jl#L18" target="_blank" rel="noopener">summary_entries</a>(case, rom)</code>
   </div>
   <div class="doc-body">
@@ -527,9 +523,6 @@ dΩ  →  dΩ · &#40;1/det J&#40;θ&#41;&#41;^p            weak-form weighting<
   <div class="doc-sig">
     <span class="badge f">function</span>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/build_model.jl#L8" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.ParametricGeometry.AssembledParametricModel; master, spectrum, conjugate_permutation, diagnostics, diagnostics_rtol)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/build_model.jl#L8" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel; master, forcing, nev, spectrum, expansion_order, n_monomials)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/build_model.jl#L8" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, eig; master, outer, n_monomials, scale, normalisation, conjugate_permutation, conjugate_atol)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/build_model.jl#L8" target="_blank" rel="noopener">build_model</a>(pm::MORFEFerrite.FluidNavierStokes.AssembledParametricFluidModel; spectrum, master, conjugate_permutation)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>build_model&#40;m::AssembledParametricModel; master, spectrum, …&#41;
@@ -829,7 +822,7 @@ beam &#61; SVK.mechanical_model&#40;mesh; material, damping, dirichlet, fe_order
 &#40;; model, spectral, meta&#41; &#61; build_model&#40;beam; master &#61; &#91;1&#93;, expansion_order &#61; 9&#41;
 W, R &#61; parametrise&#40;model, spectral, 9;
     resonance &#61; ResonanceConfig&#40;style &#61; :complex_normal_form, tol &#61; 0.05&#41;&#41;</code></pre>
-<p><strong>There is one <code>parametrise</code> and it is MORFE&#39;s.</strong> This module contributes <code><a class="doc-ref" href="#Common-build_model">build_model</a></code> — the single contract every physics backend implements — and returns the same physics-independent <code>&#40;W, R&#41;</code> result as every other backend. The Ferrite SVK geometric nonlinearity factory is <code><a class="doc-ref" href="#StructuralSVK-svk_nonlinearity">svk_nonlinearity</a></code> and the linear stiffness/mass assembler is <code><a class="doc-ref" href="#StructuralSVK-svk_assemble_KM!">svk_assemble_KM&#33;</a></code> &#40;a concrete <code>MORFE.FEMMultilinearMap</code> backend&#41;.</p>
+<p><strong>There is one <code>parametrise</code> and it is MORFE&#39;s.</strong> This module contributes <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> — the single contract every physics backend implements — and returns the same physics-independent <code>&#40;W, R&#41;</code> result as every other backend. The Ferrite SVK geometric nonlinearity factory is <code><a class="doc-ref" href="#StructuralSVK-svk_nonlinearity">svk_nonlinearity</a></code> and the linear stiffness/mass assembler is <code><a class="doc-ref" href="#StructuralSVK-svk_assemble_KM!">svk_assemble_KM&#33;</a></code> &#40;a concrete <code>MORFE.FEMMultilinearMap</code> backend&#41;.</p>
 </div></div>
 <div class="doc doc-type" id="StructuralSVK-AnisotropicMaterial" data-doc-name="AnisotropicMaterial" data-doc-module="StructuralSVK">
   <div class="doc-sig">
@@ -922,7 +915,7 @@ W, R &#61; parametrise&#40;model, spectral, 9;
   <div class="doc-body">
 <div class="markdown"><pre><code>HarmonicForcing&#40;; mode, amplitude, Ω &#61; nothing&#41;</code></pre>
 <p>Harmonic load <code>f&#40;t&#41; &#61; amplitude · M·ϕ_mode · cos&#40;Ω t&#41;</code>: shaped like mode <code>mode</code>, oscillating at that same mode&#39;s natural frequency unless <code>Ω</code> is given.</p>
-<p><code><a class="doc-ref" href="#Common-build_model">build_model</a></code> accepts either one of these or a vector of them &#40;multi-harmonic excitation&#41;; each element adds its own pair of external states with eigenvalues ±iΩ, so <code>N_EXT &#61; 2 · length&#40;forcing&#41;</code>. <code>mode</code> need not be a <code>master</code> pair — it only supplies the load shape — but <code>parametrise</code> warns if Ω is near-resonant with a mode left off the manifold, which makes that direction&#39;s solve ill-conditioned however the load is shaped.</p>
+<p><code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> accepts either one of these or a vector of them &#40;multi-harmonic excitation&#41;; each element adds its own pair of external states with eigenvalues ±iΩ, so <code>N_EXT &#61; 2 · length&#40;forcing&#41;</code>. <code>mode</code> need not be a <code>master</code> pair — it only supplies the load shape — but <code>parametrise</code> warns if Ω is near-resonant with a mode left off the manifold, which makes that direction&#39;s solve ill-conditioned however the load is shaped.</p>
 </div>
   </div>
 </div>
@@ -1029,6 +1022,28 @@ M_rs &#61; ∫ ρ φ_r · φ_s dΩ</code></pre>
   <div class="doc-body">
 <div class="markdown"><pre><code>base_operators&#40;m::AssembledParametricModel&#41; -&gt; &#40;K, M&#41;</code></pre>
 <p>The θ⁰ stiffness and mass of a parametric SVK model — the base configuration&#39;s operators, which is what the eigenproblem is solved on.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="StructuralSVK-build_model" data-doc-name="build_model" data-doc-module="StructuralSVK">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/build_model.jl#L28" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel; master, forcing, nev, spectrum, expansion_order, n_monomials)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>build_model&#40;m::AssembledMechanicalModel; master &#61; &#91;1&#93;, forcing &#61; nothing,
+			nev &#61; ..., spectrum &#61; nothing&#41; -&gt; &#40;; model, spectral, meta&#41;</code></pre>
+<p>Assemble the full-order model and its spectral data — what <code>MORFE.parametrise&#40;model, spectral, expansion_order&#41;</code> consumes.</p>
+<p>This is StructuralSVK&#39;s implementation of the <a class="doc-ref" href="#StructuralSVK-build_model"><code>build_model</code></a> contract, and it is where every SVK-specific convention lives:</p>
+<ul>
+<li><p><strong><code>master</code> lists physical mode PAIRS.</strong> Eigenvalues come in conjugate pairs, so physical mode <code>p</code> occupies spectrum entries <code>2p-1, 2p</code>; <code>master &#61; &#91;1&#93;</code> means <code>ROM &#61; 2</code>. The pairs need not be leading or contiguous.</p>
+</li>
+<li><p><strong><code>forcing</code></strong> takes one <a class="doc-ref" href="#StructuralSVK-HarmonicForcing"><code>HarmonicForcing</code></a> or a vector of them, giving <code>f&#40;t&#41; &#61; Σₖ aₖ · M·ϕ_&#123;pₖ&#125; · cos&#40;Ωₖ t&#41;</code>. Each appends its own conjugate pair of external states with eigenvalues <code>±iΩₖ</code>, so <code>N_EXT &#61; 2·length&#40;forcing&#41;</code>. A forcing whose shape mode is not a master pair is allowed — it only supplies the load shape.</p>
+</li>
+<li><p><strong><code><a class="doc-ref" href="#StructuralSVK-spectrum">spectrum</a></code></strong> reuses an already-solved <a class="doc-ref" href="#StructuralSVK-spectrum"><code>spectrum</code></a> instead of solving again; <code>nev</code> sizes the solve when one is needed.</p>
+</li>
+</ul>
+<p>The conjugate permutation is derived rather than written out: the master block pairs adjacent modes, and the external block comes from the external system itself, so it stays correct for an odd <code>N_EXT</code> or a change of external coordinates.</p>
 </div>
   </div>
 </div>
@@ -1139,14 +1154,11 @@ mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet, ..
   <div class="doc-sig">
     <span class="badge f">function</span>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L1" target="_blank" rel="noopener">spectrum</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel; nev, eigensolver)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L1" target="_blank" rel="noopener">spectrum</a>(model::MORFE.FullOrderModel.NthOrderModel, solver::MORFE.SpectralDecomposition.StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L1" target="_blank" rel="noopener">spectrum</a>(stiffness::AbstractMatrix, mass::AbstractMatrix, solver::MORFE.SpectralDecomposition.StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L1" target="_blank" rel="noopener">spectrum</a>(model::MORFE.FullOrderModel.NthOrderModel; solver, sorter!, normaliser!)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>spectrum&#40;m::AssembledMechanicalModel; nev &#61; 10, eigensolver &#61; nothing&#41;
 	-&gt; Spectrum</code></pre>
-<p>Solve the model&#39;s eigenproblem. Pass the result to <code><a class="doc-ref" href="#Common-build_model">build_model</a></code> as <code>spectrum &#61; …</code> to inspect the spectrum first without paying for a second solve — and so that inspecting it cannot perturb the ROM.</p>
+<p>Solve the model&#39;s eigenproblem. Pass the result to <code><a class="doc-ref" href="#StructuralSVK-build_model">build_model</a></code> as <code>spectrum &#61; …</code> to inspect the spectrum first without paying for a second solve — and so that inspecting it cannot perturb the ROM.</p>
 </div>
   </div>
 </div>
@@ -1514,6 +1526,19 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="FluidNavierStokes-accumulate_qp!" data-doc-name="accumulate_qp!" data-doc-module="FluidNavierStokes">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/fluid_maps.jl#L153" target="_blank" rel="noopener">accumulate_qp!</a>(Fe, ∇W_args::Tuple{MORFEFerrite.FluidNavierStokes.FluidVelQP{ComplexF64}, MORFEFerrite.FluidNavierStokes.FluidVelQP{ComplexF64}}, mult, ::Any, q, dΩ, t::MORFEFerrite.FluidNavierStokes.FluidConvection)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>MORFE.accumulate_qp&#33;&#40;Fe, ∇W_args::NTuple&#123;2&#125;, mult, element, q, dΩ, t::FluidConvection&#41;</code></pre>
+<p>Accumulate convective integrand at one quadrature point:</p>
+<pre><code>Fe&#91;k&#93; &#43;&#61; mult · φᵢ · &#40;−½&#41;&#91;∇u₂·u₁ &#43; ∇u₁·u₂&#93; · dΩ   for velocity DOF k</code></pre>
+<p>∇u ⋅ v computes &#40;v·∇u&#41; via Tensor&#123;2,2&#125; × Vec&#123;2&#125; → Vec&#123;2&#125; contraction: 	&#40;∇u ⋅ v&#41;&#91;i&#93; &#61; Σ<em>j ∂</em>j u<em>i · v</em>j &#61; &#40;v·∇u&#41;_i which is exactly the &#40;v·∇&#41;u material-derivative direction.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="FluidNavierStokes-amplitude_series" data-doc-name="amplitude_series" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
@@ -1538,6 +1563,17 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 <pre><code>K_visc_kl &#61; ∫ 2 ε&#40;φ^k&#41; : ε&#40;φ^l&#41; dΩ    &#40;velocity test and trial, P2&#41;</code></pre>
 <p>Pressure DOF rows and columns are zero.  Two restrictions are returned:</p>
 <p>K<em>visc</em>free — square free×free block, for the parametric coupling g₁ acting on 				the perturbation &#40;which vanishes on prescribed DOFs&#41;;   K<em>visc</em>rect — rectangular free×ALL block, for the base-flow forcing h₀ &#61; K·u₀, 				where u₀ is nonzero on the prescribed inlet DOFs &#40;Poiseuille&#41;.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="FluidNavierStokes-assemble_element!" data-doc-name="assemble_element!" data-doc-module="FluidNavierStokes">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/fluid_maps.jl#L189" target="_blank" rel="noopener">assemble_element!</a>(accum, Fe, element, t::MORFEFerrite.FluidNavierStokes.FluidConvection)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>MORFE.assemble_element&#33;&#40;accum, Fe, element, t::FluidConvection&#41;</code></pre>
+<p>Scatter element residual into the global free-DOF accumulator. Pressure-DOF entries of Fe are zero so only velocity-DOF contributions are added.</p>
 </div>
   </div>
 </div>
@@ -1633,8 +1669,6 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 <div class="doc doc-function" id="FluidNavierStokes-build_model" data-doc-name="build_model" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L5" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.ParametricGeometry.AssembledParametricModel; master, spectrum, conjugate_permutation, diagnostics, diagnostics_rtol)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L5" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel; master, forcing, nev, spectrum, expansion_order, n_monomials)</code>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L5" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, eig; master, outer, n_monomials, scale, normalisation, conjugate_permutation, conjugate_atol)</code>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L5" target="_blank" rel="noopener">build_model</a>(pm::MORFEFerrite.FluidNavierStokes.AssembledParametricFluidModel; spectrum, master, conjugate_permutation)</code>
   </div>
@@ -2223,6 +2257,18 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
   <div class="doc-body">
 <div class="markdown"><pre><code>roots_at_re&#40;R, re; re0, rho_lo, rho_hi, n&#41; → Vector&#123;Float64&#125;</code></pre>
 <p>Every ρ &gt; 0 with F&#40;ρ, η&#40;re&#41;&#41; &#61; 0, by sign change on a log grid then bisection. Used to continue a branch where the arclength corrector cannot, and to cross-check a traced one.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="FluidNavierStokes-scatter_qp!" data-doc-name="scatter_qp!" data-doc-module="FluidNavierStokes">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/fluid_maps.jl#L124" target="_blank" rel="noopener">scatter_qp!</a>(∇W_col, W_free, element, t::MORFEFerrite.FluidNavierStokes.FluidConvection)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>MORFE.scatter_qp&#33;&#40;∇W_col, W_free, element, t::FluidConvection&#41;</code></pre>
+<p>Extract velocity DOFs from the free-DOF state vector <code>W_free</code>, compute velocity value and gradient at each QP, and store as <code><a class="doc-ref" href="#FluidNavierStokes-FluidVelQP">FluidVelQP</a></code> in <code>∇W_col</code>.</p>
+<p>Pressure DOFs in <code>W_free</code> are ignored — only velocity DOFs feed into the convective nonlinearity.</p>
 </div>
   </div>
 </div>

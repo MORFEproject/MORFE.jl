@@ -95,6 +95,7 @@ function item_kind(mod, sym)
 end
 
 function get_signatures(mod, sym, kind)
+<<<<<<< Updated upstream
     kind in ("type", "macro", "constant", "skip") && return String[]
     try
         obj = getfield(mod, sym)
@@ -107,6 +108,44 @@ function get_signatures(mod, sym, kind)
     catch
         return String[]
     end
+=======
+	kind in ("type", "macro", "constant", "skip") && return String[]
+	try
+		obj = getfield(mod, sym)
+		all_methods = collect(methods(obj))
+		# A shared generic such as MORFEFerrite.Common.build_model can have separately
+		# documented implementations in several backend modules. On a backend entry,
+		# show only methods defined by that backend; on the generic contract entry,
+		# where no method is defined locally, retain the complete method list.
+		local_methods = filter(m -> m.module === mod, all_methods)
+		methods_to_show = isempty(local_methods) ? all_methods : local_methods
+		sigs = String[]
+		for m in methods_to_show
+			s = replace(string(m), r"\s+(in \S+ at|@)\s+.*$" => "")
+			push!(sigs, s)
+		end
+		return sigs
+	catch
+		return String[]
+	end
+>>>>>>> Stashed changes
+end
+
+# `names(mod, all=true)` omits some imported bindings even when the module attaches
+# its own method docstring to them. Include symbols present in the module's Docs metadata
+# so backend implementations of shared generics (notably StructuralSVK.build_model) are
+# rendered under the backend that documents them.
+function documented_symbols(mod)
+	syms = Set{Symbol}(names(mod, all = true))
+	meta = try
+		Base.Docs.meta(mod)
+	catch
+		return sort!(collect(syms); by = string)
+	end
+	for binding in keys(meta)
+		binding.var isa Symbol && push!(syms, binding.var)
+	end
+	return sort!(collect(syms); by = string)
 end
 
 function get_source_url(mod, sym, kind)
@@ -209,6 +248,7 @@ function get_module_doc_html(mod)
 end
 
 function extract_all()
+<<<<<<< Updated upstream
     result = ModData[]
     for (mod, label) in MODS
         @info "Extracting $label..."
@@ -229,6 +269,27 @@ function extract_all()
         @info "  → $(length(entries)) entries"
     end
     return result
+=======
+	result = ModData[]
+	for (mod, label) in MODS
+		@info "Extracting $label..."
+		desc_html = get_module_doc_html(mod)
+		entries = Entry[]
+		for sym in documented_symbols(mod)
+			string(sym)[1] == '#' && continue
+			has_own_doc(mod, sym) || continue
+			kind = item_kind(mod, sym)
+			kind == "skip" && continue
+			sigs  = get_signatures(mod, sym, kind)
+			dhtml = get_doc_html(mod, sym)
+			push!(entries, Entry(string(sym), kind, sigs, dhtml, get_source_url(mod, sym, kind)))
+		end
+		isempty(entries) && continue
+		push!(result, ModData(label, desc_html, entries))
+		@info "  → $(length(entries)) entries"
+	end
+	return result
+>>>>>>> Stashed changes
 end
 
 # ── Cross-reference resolution ────────────────────────────────────────────────

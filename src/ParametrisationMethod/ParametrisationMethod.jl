@@ -201,7 +201,10 @@ end
 # ==================== The unified entry point ====================
 
 """
-	parametrise(model, spectral::SpectralData, expansion_order; resonance, …) -> (W, R)
+    parametrise(model, spectral::SpectralData, expansion_order;
+        resonance = ResonanceConfig(),
+        conjugate_permutation = :from_spectral,
+        options = ParametrisationOptions()) -> (W, R)
 
 Compute the invariant manifold and its reduced dynamics. **This is the entry point.**
 
@@ -237,7 +240,28 @@ W, R = parametrise(model, spectral, mset)  # a monomial set you built
 - `options::ParametrisationOptions = ParametrisationOptions()` — backend selection,
   exact structural grouping, backward-error verification, multiindex validation,
   durable checkpointing, and presentation controls. Mathematical choices are not hidden
-  in this object.
+  in this object. See [`ParametrisationOptions`](@ref) for every accepted field, value,
+  default, and its effect.
+
+The operational fields are supplied when constructing `ParametrisationOptions`; they are
+not direct keywords of `parametrise`. For example:
+
+```julia
+options = ParametrisationOptions(
+    backend = :auto,
+    grouping = :auto,
+    residual_check = :backward_error,
+    residual_tolerance = 1e-10,
+    show_progress = false,
+    verbose = false)
+
+W, R = parametrise(model, spectral, 7;
+    resonance = ResonanceConfig(style = :complex_normal_form, tol = 0.05),
+    options = options)
+```
+
+Thus use `parametrise(...; options = ParametrisationOptions(backend = :klu))`, **not**
+`parametrise(...; backend = :klu)`.
 
 ## Returns
 
