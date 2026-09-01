@@ -75,7 +75,7 @@ export fem_elements, fem_n_qp, fem_ndofs_per_cell,
        fem_reinit!
 
 # FullOrderModel
-export FullOrderModel, FirstOrderModel, NthOrderModel,
+export FullOrderModel, NthOrderModel,
        linear_first_order_matrices, evaluate_nonlinear_terms!
 
 # SpectralDecomposition

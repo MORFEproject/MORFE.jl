@@ -48,7 +48,6 @@ model = model_from_symbolics(exprs, groups)
 
 @variables u[1:2] du[1:2] ddu[1:2] r[1:2]
 u, du, ddu = collect(u), collect(du), collect(ddu)
-groups = (u, du, ddu)   # ascending order: (u, u̇, ü)
 
 k, g, c = 1.0, 6.0, 0.1
 Ω = 1.3
@@ -63,6 +62,7 @@ ext_exprs = [
     -im * Ω * r[2]
 ]
 
+groups = (u, du, ddu)   # ascending order: (u, u̇, ü)
 ext_var = collect(r)
 model = model_from_symbolics(exprs, groups, ext_var, ext_exprs)
 
@@ -143,7 +143,7 @@ ext_exprs = [
 ]
 lorenz = externalsystem_from_symbolics(ext_exprs, r)
 
-# ## Using the function layout
+# ## ## Using the function layout
 #
 # Everything above only *builds* symbolic objects — it never runs anything.
 # To see a driver actually do what it claims, we integrate a tiny,
@@ -172,6 +172,7 @@ using DifferentialEquations, Plots
 ext_rhs!(dr, r, p, t) = (dr[1] = im*Ω*r[1]; dr[2] = -im*Ω*r[2])
 r0 = ComplexF64[1.0, 1.0]
 forcing(r) = real(r[1] + r[2])                 # = 2 cos(Ωt)
+terms = [(2.0, Ω, 0.0)]                        # analytical: one cosine term
 
 ## --- Option 2: multiharmonic excitation -------------------------------
 # Ω = 1.3
@@ -183,6 +184,7 @@ forcing(r) = real(r[1] + r[2])                 # = 2 cos(Ωt)
 # end
 # r0 = ComplexF64[-1.0, -1.0, 0.0, 0.0]         # r₁(0)=-1, r₂(0)=-1, r₃(0)=r₄(0)=0
 # forcing(r) = real(r[2])                        # = 0.03 sin(Ωt) - cos(4Ωt)
+# terms = [(0.03, Ω, -pi/2), (-1.0, 4*Ω, 0.0)]   # analytical: two cosine terms
 
 ## --- Option 3: chaotic (Lorenz) excitation -----------------------------
 # σ, ρ, β = 10.0, 28.0, 8/3
@@ -195,6 +197,7 @@ forcing(r) = real(r[1] + r[2])                 # = 2 cos(Ωt)
 # end
 # r0 = ComplexF64[1.0, 1.0, 1.0]                 # any small offset from the (unstable) origin
 # forcing(r) = 0.05*real(r[1])                   # scaled down — Lorenz amplitudes are large
+# terms = nothing                                # no closed form — X(t) itself has none
 
 # ### Integrate and plot
 #
@@ -217,7 +220,7 @@ state0 = vcat(0.0+0im, 0.0+0im, r0)   # u(0)=0, u̇(0)=0, r(0) from the active b
 tspan = (0.0, 40.0)
 
 prob = ODEProblem(combined_rhs!, state0, tspan)
-sol = solve(prob, Tsit5())
+sol = solve(prob, Tsit5(); reltol = 1e-10, abstol = 1e-10)
 
 forcing_t = real.(forcing.(eachcol(sol[3:end, :])))
 
@@ -228,3 +231,46 @@ plot!(sol.t, forcing_t; label = "forcing(t)", linestyle = :dash)
 # for Option 1, the two-frequency wave for Option 2, or a chaotic-looking
 # trace for Option 3 — the driver is doing exactly what its symbolic
 # definition above says it should.
+
+# ### Compare against the analytical solution (Options 1 & 2 only)
+#
+# The oscillator itself is linear, so any purely harmonic or multiharmonic
+# forcing has a closed-form steady-state response — one phasor term per
+# cosine, superposed by linearity, plus the homogeneous transient fixed by
+# $u(0)=\dot u(0)=0$:
+#
+# ```math
+# u(t) = \underbrace{e^{\lambda t}(A\cos\omega_d t + B\sin\omega_d t)}_{\text{transient}}
+#      + \underbrace{\sum_j \mathrm{Re}\!\left(\frac{F_j e^{i\psi_j}}{k-\Omega_j^2+ic\Omega_j}\,e^{i\Omega_j t}\right)}_{\text{steady-state}}
+# ```
+#
+# The chaotic (Lorenz) driver has no such formula — $X(t)$ itself has no
+# closed form, so neither does the forced response; `terms = nothing` in
+# that block skips this comparison rather than faking one.
+
+function analytical_response(t, c, k, terms)
+    ωn = sqrt(k)
+    ζ = c/(2ωn)
+    ωd = ωn*sqrt(1 - ζ^2)
+    λ = -ζ*ωn
+
+    up, up0, dup0 = 0.0, 0.0, 0.0
+    for (F, Ωj, ψ) in terms
+        Z = F*exp(im*ψ) / (k - Ωj^2 + im*c*Ωj)   # phasor amplitude
+        up += real(Z*exp(im*Ωj*t))
+        up0 += real(Z)
+        dup0 += real(im*Ωj*Z)
+    end
+
+    A = -up0
+    B = (-dup0 - λ*A)/ωd
+    return exp(λ*t)*(A*cos(ωd*t) + B*sin(ωd*t)) + up
+end
+
+if terms !== nothing
+    t_grid = range(tspan...; length = 2000)
+    u_analytical = analytical_response.(t_grid, c, k, Ref(terms))
+    plot!(t_grid, u_analytical; label = "analytical u(t)", linestyle = :dot, linewidth = 2)
+else
+    @info "Option 3 (Lorenz) has no closed-form solution — skipping the analytical overlay."
+end

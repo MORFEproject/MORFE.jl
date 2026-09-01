@@ -1,5 +1,5 @@
 """
-Demonstration of the usage of NthOrderModel and FirstOrderModel
+Demonstration of the usage of NthOrderModel
 """
 
 using MORFE
@@ -10,44 +10,7 @@ using StaticArrays: SVector
 n = 2 # dimension of system
 
 # -------------------------------------------------------------------
-# 1. FirstOrderModel: first‑order system
-#    B₁ ẋ + B₀ x = F(x)
-# -------------------------------------------------------------------
-
-# Linear matrices (diagonal for simplicity)
-B₁ = 0.5 * Matrix{Float64}(I, n, n)
-B₀ = 3.0 * Matrix{Float64}(I, n, n)
-
-function bilinear_term!(res, x1, x2)
-    @. res += x1 * x2
-end
-# `order = 1` is required here: `FirstOrderModel` takes `MultilinearMap{1}` terms, and an
-# omitted order defaults to the second-order mechanical setting, ORD = 2.
-f_term1 = MultilinearMap(bilinear_term!; order = 1)   # degree 2
-
-function trilinear_term!(res, x1, x2, x3)
-    @. res += 3.0 * x1 * x2 * x3
-end
-f_term2 = MultilinearMap(trilinear_term!; order = 1)  # degree 3
-
-model_fo = FirstOrderModel((B₀, B₁), (f_term1, f_term2))
-A_fo, B_fo = linear_first_order_matrices(model_fo)
-println("=== FirstOrderModel ===")
-println("\nA (linear part):\n", repr("text/plain", A_fo))
-println("\nB (mass matrix):\n", repr("text/plain", B_fo))
-
-# Evaluate nonlinear terms – note the state is passed as a 1‑tuple (x,)
-x_fo = [1.0, 2.0]
-res_fo = zeros(n)
-
-for deg in 1:4
-    res_fo .= 0
-    evaluate_nonlinear_terms!(res_fo, model_fo, deg, x_fo)
-    println("\nDegree $deg contribution: ", res_fo)
-end
-
-# -------------------------------------------------------------------
-# 2. NthOrderModel: second‑order system
+# 1. NthOrderModel: second‑order system
 #    B₂ x'' + B₁ x' + B₀ x = F(x, x', r)
 #    where r is an external forcing variable satisfying r' = 3*r
 # -------------------------------------------------------------------
