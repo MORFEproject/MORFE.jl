@@ -45,7 +45,8 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
     # Solve the same spectral problem through both matrix types. The eigenproblem
     # is solved once and its output fed to both runs, so any difference is due to
     # the linear solver alone and not to eigenvector gauge.
-    function solve_both(linear_terms, nl_terms, order, ROM; resonance_style, tol)
+    function solve_both(linear_terms, nl_terms, order, ROM;
+            resonance_style, tol, umfpack_dense_rtol = 1e-9)
         dense_model = NthOrderModel(linear_terms, nl_terms)
         sparse_model = NthOrderModel(map(sparse, linear_terms), nl_terms)
         @test sparse_model.linear_terms[1] isa SparseMatrixCSC
@@ -71,9 +72,11 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         Wu, Ru = solve_parametrisation(
             sparse_model, args...; options = umfpack_options)
         @test norm(Wu.poly.coefficients - Wd.poly.coefficients) /
-              max(norm(Wu.poly.coefficients), norm(Wd.poly.coefficients), eps()) <= 1e-9
+              max(norm(Wu.poly.coefficients), norm(Wd.poly.coefficients), eps()) <=
+              umfpack_dense_rtol
         @test norm(Ru.poly.coefficients - Rd.poly.coefficients) /
-              max(norm(Ru.poly.coefficients), norm(Rd.poly.coefficients), eps()) <= 1e-9
+              max(norm(Ru.poly.coefficients), norm(Rd.poly.coefficients), eps()) <=
+              umfpack_dense_rtol
         return (; Wd, Rd, Ws, Rs, Wu, Ru, mset, rset, master_eigs)
     end
 
@@ -241,8 +244,9 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         return (K, C, M), (tc,)
     end
 
-    # One solve serves both assertions below: `solve_both` runs a dense eigensolve
-    # plus two full parametrisations, so building the fixture twice was pure waste.
+    # One solve serves all assertions below: `solve_both` runs a dense eigensolve
+    # plus dense, KLU and UMFPACK parametrisations, so rebuilding the fixture would be
+    # pure waste.
     @testset "FE scale — stiff operator" begin
         lin, nl = fe_bar_model(200)
         # Guard the premise: if this ever stops being FE-scaled the test silently
@@ -251,13 +255,17 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         @test maximum(abs, lin[1]) / maximum(abs, lin[3]) > 1e10
 
         r = solve_both(map(Matrix, lin), nl, 5, 2;
-            resonance_style = :complex_normal_form, tol = 0.05)
+            resonance_style = :complex_normal_form, tol = 0.05,
+            umfpack_dense_rtol = 1e-8)
 
-        # Measured 5.3e-10 (W) / 2.3e-10 (R) — orders looser than the 1e-16 seen at
-        # FOM = 2, which is the conditioning of the stiff operator showing through,
-        # not a defect: it sits at the κ·u floor for this dynamic range.
+        # Sparse-to-dense differences are O(1e-9), with the precise value varying across
+        # SuiteSparse and BLAS builds. This is orders looser than the 1e-16 seen at FOM = 2:
+        # the conditioning of the stiff operator is showing through at the κ·u floor for
+        # this dynamic range.
         @test relerr(r.Ws.poly.coefficients, r.Wd.poly.coefficients) ≤ 1e-8
         @test relerr(r.Rs.poly.coefficients, r.Rd.poly.coefficients) ≤ 1e-8
+        @test relerr(r.Wu.poly.coefficients, r.Wd.poly.coefficients) ≤ 1e-8
+        @test relerr(r.Ru.poly.coefficients, r.Rd.poly.coefficients) ≤ 1e-8
 
         # A-posteriori residual. `sparse ≡ dense` cannot scale past the point where the
         # dense path is runnable; this check can, because it evaluates the defining
@@ -266,8 +274,11 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         model = NthOrderModel(lin, nl)
         rng = MersenneTwister(20260731)
         amplitude = 1e-3
-        rms = invariance_error_norms(
+        klu_rms = invariance_error_norms(
             model, r.Ws, r.Rs; n_samples = 200, amplitude, rng).rms
+        umfpack_rms = invariance_error_norms(
+            model, r.Wu, r.Ru; n_samples = 200, amplitude,
+            rng = MersenneTwister(20260731)).rms
 
         # Scale of a representative term, ‖B₀·W₁(z)‖, at the same amplitude.
         scale = 0.0
@@ -281,7 +292,8 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         # Measured ≈ 5.2e-8 here and 3.5e-8 on the 4977-DOF Gridap beam, flat across
         # amplitude 1e-4…1e-3 — i.e. the arithmetic floor, not truncation error, which
         # is what "solved as well as the arithmetic allows" looks like.
-        @test rms / scale ≤ 1e-6
+        @test klu_rms / scale ≤ 1e-6
+        @test umfpack_rms / scale ≤ 1e-6
     end
 
     # ── 7. Solver state must be finalisable ──────────────────────────────────
