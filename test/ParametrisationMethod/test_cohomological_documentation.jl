@@ -104,8 +104,9 @@ end
             :_group_solve_jobs,
             :_compose_observers,
             :_execute_solve_plan!,
-            :_solve_cohomological_equations!,
-            :_solve_cohomological_equations_typed!),
+            :_execute_solve_schedule!,
+            :_execute_benchmarked_schedule!,
+            :_execute_problem_schedule!),
         _CE_DOCS => (
             :_assemble_nonlinear_rhs!,
             :_solve_prepared_system!,
@@ -132,7 +133,7 @@ end
     @test occursin("master right eigenmodes", context_doc)
     @test occursin("left eigenmodes are represented separately", context_doc)
 
-    problem_doc = _binding_doc_text(_PS_DOCS, :solve_cohomological_problem)
+    problem_doc = _binding_doc_text(_PS_DOCS, :solve_parametrisation)
     @test occursin("storage reuse", problem_doc)
     @test occursin("not implicit", problem_doc)
     @test occursin("checkpoint-committed", problem_doc)
@@ -144,24 +145,45 @@ end
 
     @test !isdefined(_CE_DOCS, :_translate_legacy_options)
 
-    # The old namespace remains source-compatible while implementation ownership is clear.
-    @test _CE_DOCS.SparseLinearSolverState === _BLS_DOCS.SparseLinearSolverState
-    @test _CE_DOCS.solve_cohomological_problem === _PS_DOCS.solve_cohomological_problem
-    @test _CE_DOCS.solve_cohomological_equations! ===
-          _PS_DOCS.solve_cohomological_equations!
+    # Each symbol is available only from its owning module; the former compatibility
+    # namespace and workflow names have deliberately disappeared.
+    for removed_name in (
+        :solve_cohomological_problem,
+        :solve_cohomological_equations!,
+        :solve_cohomological_equations_benchmarked!,
+        :_solve_cohomological_equations!,
+        :_solve_cohomological_equations_typed!
+    )
+        @test !isdefined(_CE_DOCS, removed_name)
+    end
+    @test !isdefined(MORFE, :solve_cohomological_problem)
+    @test !isdefined(MORFE, :solve_cohomological_equations!)
+    @test !isdefined(MORFE, :solve_cohomological_equations_benchmarked!)
     @test parentmodule(MORFE.solve_single_monomial!) === _CE_DOCS
     @test parentmodule(MORFE.SparseLinearSolverState) === _BLS_DOCS
-    @test parentmodule(MORFE.solve_cohomological_problem) === _PS_DOCS
+    @test parentmodule(MORFE.solve_parametrisation) === _PS_DOCS
 
     generated_page = read(
         joinpath(@__DIR__, "..", "..", "website",
             "documentation.html"), String)
     @test !occursin("href=\"@ref\"", generated_page)
+    for module_name in (
+        "BorderedLinearSolvers",
+        "CohomologicalEquations",
+        "ParametrisationSolver"
+    )
+        @test occursin("id=\"$(module_name)\" class=\"doc-module-h\"", generated_page)
+        @test occursin("data-module=\"$(module_name)\"", generated_page)
+    end
     for removed_name in (
         "_translate_legacy_options",
         "CohomologicalSolverConfig",
         "CohomologicalCheckpoint",
-        "primary_pairs"
+        "primary_pairs",
+        "solve_cohomological_problem",
+        "solve_cohomological_equations!",
+        "solve_cohomological_equations_benchmarked!",
+        "_solve_cohomological_equations_typed!"
     )
         @test !occursin(removed_name, generated_page)
     end
@@ -175,4 +197,15 @@ end
     for source_path in source_paths
         @test isfile(source_path)
     end
+    documented_directories = (
+        joinpath(repo_root, "src", "ParametrisationMethod", "BorderedLinearSolvers"),
+        joinpath(repo_root, "src", "ParametrisationMethod", "CohomologicalEquations"),
+        joinpath(repo_root, "src", "ParametrisationMethod", "ParametrisationSolver")
+    )
+    expected_source_paths = Set(
+        normpath(source_path)
+    for directory in documented_directories
+    for source_path in readdir(directory; join = true)
+    if endswith(source_path, ".jl"))
+    @test issubset(expected_source_paths, source_paths)
 end

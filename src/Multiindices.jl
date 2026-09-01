@@ -372,7 +372,7 @@ missing divisor would be silently read as zero.  Combinatorial truncations
 (`all_multiindices_up_to`, `all_multiindices_in_box`) are closed by construction, but a
 spectral criterion such as `|⟨λ, α⟩| ≤ R` generally is not.
 
-`parametrise` and `solve_cohomological_problem` enforce this through
+`parametrise` and `solve_parametrisation` enforce this through
 `validate_multiindex_set`, which reports *which* divisor is missing; use this predicate
 when a plain `Bool` is enough.
 

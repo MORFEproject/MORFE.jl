@@ -227,7 +227,7 @@ every monomial.
 
 The solve visits every multi-index in turn, and nothing in this struct varies with
 the multi-index: operator coefficients, resonance look-ups, buffers and the cached
-factorisation are all built once by [`solve_cohomological_problem`](@ref) and reused.
+factorisation are all built once by [`solve_parametrisation`](@ref) and reused.
 That is what allows [`solve_single_monomial!`](@ref) to run without heap allocation.
 Related data is grouped into named sub-structs rather than kept flat, so each field's
 provenance is visible at the call site (`ctx.orthogonality.J_coeffs`, not a bare

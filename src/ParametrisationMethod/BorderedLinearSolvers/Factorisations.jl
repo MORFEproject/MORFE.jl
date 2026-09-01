@@ -36,6 +36,23 @@ function _fresh_klu_factor!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
 end
 
 """
+	_discard_klu_factor!(state, factorisation) -> nothing
+
+Remove a failed KLU factorisation from `state` and release its native symbolic and
+numeric storage before another analysis begins. Merely assigning `nothing` to `state.fact`
+would leave that storage alive until garbage collection, which can retain damaged KLU
+state across the immediate recovery attempt on Windows.
+
+`Base.finalize` is Julia's required external spelling; it runs the finaliser already
+owned by `KLUFactorization` and prevents it from running twice later.
+"""
+function _discard_klu_factor!(ss::SparseLinearSolverState, factorisation::KLUFactorization)
+    ss.fact = nothing
+    Base.finalize(factorisation)
+    return nothing
+end
+
+"""
 	_refactorise_klu!(ss, A) -> KLU factorisation of `A`
 
 Factorise the bordered matrix for the current monomial, reusing the symbolic analysis
@@ -68,7 +85,8 @@ and are invariant in any case.
 A factorisation is cached only if it succeeded. Both fresh and cached numeric
 factorisations use KLU's checked path because stored zeros in the constant border can make
 an unchecked status appear successful even when the numeric factor is singular. A failed
-cached factor is discarded and retried once from a fresh symbolic analysis.
+cached factor has its native storage released immediately and is retried once from a fresh
+symbolic analysis.
 """
 function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     if ss.fact === nothing
@@ -85,11 +103,11 @@ function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
         klu_factor!(F; check = true, allowsingular = false)
     catch error
         _is_unrecoverable_failure(error) && rethrow()
-        ss.fact = nothing
+        _discard_klu_factor!(ss, F)
         return _fresh_klu_factor!(ss, A)
     end
     issuccess(F) && return F
-    ss.fact = nothing
+    _discard_klu_factor!(ss, F)
     return _fresh_klu_factor!(ss, A)
 end
 

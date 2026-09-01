@@ -117,7 +117,7 @@ function _ec_solve(A::AbstractMatrix{ComplexF64}, F::AbstractMatrix{ComplexF64};
     res_set = resonance_set_from_complex_normal_form_style(
         _EC_mset, Vector{ComplexF64}(_EC_master_eigenvalues), 0.1;
         external_eigenvalues = ComplexF64[_EC_λ_ext...])
-    return solve_cohomological_problem(
+    return solve_parametrisation(
         model, _EC_mset, _EC_spectral, res_set;
         conjugate_permutation = nothing,
         options = ParametrisationOptions(; backend, show_progress = false)

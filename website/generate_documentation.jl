@@ -134,13 +134,8 @@ function documented_symbols(mod)
     return sort!(collect(syms); by = string)
 end
 
-function get_source_url(mod, sym, kind)
-    kind == "skip" && return ""
+function get_doc_source_url(mod, sym)
     try
-        # Prefer the docstring's own line number (opening """) so the GitHub
-        # view lands at the top of the docstring rather than the function body.
-        # `ordered_docstrs` puts the type's own docstring first, so a struct with
-        # a documented constructor links to the struct, not the constructor.
         binding = Base.Docs.Binding(mod, sym)
         meta = Base.Docs.meta(mod)
         if haskey(meta, binding)
@@ -154,6 +149,21 @@ function get_source_url(mod, sym, kind)
                 return "$(GITHUB_BASE)/$(rel)#L$(line)"
             end
         end
+    catch
+        return ""
+    end
+    return ""
+end
+
+function get_source_url(mod, sym, kind)
+    kind == "skip" && return ""
+    try
+        # Prefer the docstring's own line number (opening """) so the GitHub
+        # view lands at the top of the docstring rather than the function body.
+        # `ordered_docstrs` puts the type's own docstring first, so a struct with
+        # a documented constructor links to the struct, not the constructor.
+        doc_source_url = get_doc_source_url(mod, sym)
+        isempty(doc_source_url) || return doc_source_url
         # Fallback: use the first method definition line.
         obj = getfield(mod, sym)
         ms = methods(obj)
@@ -214,6 +224,7 @@ end
 struct ModData
     label::String
     desc_html::String
+    source_url::String
     entries::Vector{Entry}
 end
 
@@ -250,7 +261,8 @@ function extract_all()
                 string(sym), kind, sigs, dhtml, get_source_url(mod, sym, kind)))
         end
         isempty(entries) && continue
-        push!(result, ModData(label, desc_html, entries))
+        module_source_url = get_doc_source_url(mod, nameof(mod))
+        push!(result, ModData(label, desc_html, module_source_url, entries))
         @info "  → $(length(entries)) entries"
     end
     return result
@@ -381,7 +393,7 @@ function resolve_all_refs(mods::Vector{ModData})
             resolve_refs(md.desc_html, md.label, index, unresolved),
             md.label, index
         )
-        push!(resolved, ModData(md.label, desc, entries))
+        push!(resolved, ModData(md.label, desc, md.source_url, entries))
     end
     if isempty(unresolved)
         @info "All @ref cross-references resolved."
@@ -596,7 +608,10 @@ function write_page(mods::Vector{ModData}, outpath::String)
 
         # ── content sections ───────────────────────────────────────────────
         for md in mods
-            print(io, "  <div id=\"$(md.label)\" class=\"doc-module-h\">$(md.label)</div>\n")
+            module_heading = isempty(md.source_url) ? md.label :
+                             """<a href="$(md.source_url)" target="_blank" rel="noopener">$(md.label)</a>"""
+            print(io,
+                "  <div id=\"$(md.label)\" class=\"doc-module-h\">$(module_heading)</div>\n")
             if !isempty(md.desc_html)
                 print(io,
                     "  <div class=\"doc-module-desc\" data-module=\"$(md.label)\">$(md.desc_html)</div>\n")

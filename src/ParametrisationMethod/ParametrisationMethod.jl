@@ -10,7 +10,7 @@ separate functions, so a new policy is a new method rather than a new branch:
 |------|----------|---------------|
 | build the monomial set | [`build_multiindex_set`](@ref) | the expansion order |
 | build the resonance set | `build_resonance_set` | the resonance style |
-| solve | `solve_cohomological_problem` | dense vs sparse model |
+| solve | `solve_parametrisation` | dense vs sparse model |
 
 The coefficient containers themselves (`Parametrisation`, `ReducedDynamics`, …) live in
 [`ParametrisationObjects`](@ref) and are re-exported here, so this module remains the
@@ -19,7 +19,7 @@ single namespace users need.
 ## Load order
 
 This module is included after `ParametrisationSolver`, whose documented workflow owns
-`solve_cohomological_problem`. The mathematical `CohomologicalEquations` module and the
+`solve_parametrisation`. The mathematical `CohomologicalEquations` module and the
 numerical `BorderedLinearSolvers` module therefore remain independent of this user-facing
 entry point. Checkpointing, symmetry, scheduling, progress, and benchmarking do not live
 in this module.
@@ -35,7 +35,7 @@ using ..FullOrderModel: NthOrderModel, _term_label
 using ..SpectralDecomposition: SpectralData, master_eigenvalues,
                                master_conjugate_permutation
 using ..Resonance: ResonanceSet, ResonanceConfig, build_resonance_set
-using ..ParametrisationSolver: solve_cohomological_problem,
+using ..ParametrisationSolver: solve_parametrisation,
                                ParametrisationOptions,
                                CheckpointOptions,
                                checkpoint_fingerprint_data,
@@ -298,7 +298,7 @@ function parametrise(
     resonance_set = resonance isa ResonanceSet ? resonance :
                     build_resonance_set(model, mset, spectral, resonance)
 
-    return solve_cohomological_problem(model, mset, spectral, resonance_set;
+    return solve_parametrisation(model, mset, spectral, resonance_set;
         conjugate_permutation = conjugate_permutation,
         options = _replace_options(options; validate_mset = false))
 end

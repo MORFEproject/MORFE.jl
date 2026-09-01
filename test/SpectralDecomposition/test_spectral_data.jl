@@ -13,7 +13,7 @@ using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver,
                                    left_eigenmode_orders_from_slice
-using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.ParametrisationSolver: solve_parametrisation
 using MORFE.Resonance: build_resonance_set, ResonanceConfig
 using MORFE.SpectralDecomposition: SpectralData, ModeBundle, check_biorthogonality,
                                    right_modes, left_modes,
@@ -168,10 +168,10 @@ end
         for perm in (nothing, [2, 1])
             # Carried by the bundle ...
             sd = SpectralData(model, ep; master = idx, conjugate_permutation = perm)
-            Wa, Ra = solve_cohomological_problem(model, mset, sd, rset;
+            Wa, Ra = solve_parametrisation(model, mset, sd, rset;
                 options = ParametrisationOptions(show_progress = false))
             # ... must be the same solve as stating it at the call site.
-            Wb, Rb = solve_cohomological_problem(model, mset, plain, rset;
+            Wb, Rb = solve_parametrisation(model, mset, plain, rset;
                 conjugate_permutation = perm,
                 options = ParametrisationOptions(show_progress = false))
             @test Wa.poly.coefficients == Wb.poly.coefficients
@@ -205,7 +205,7 @@ end
         # them simply has to work at the augmented order.
         mset = all_multiindices_up_to(ROM, 5; min_degree = 1)
         rset = build_resonance_set(aug, mset, sd, cnf)
-        W, R = solve_cohomological_problem(aug, mset, sd, rset;
+        W, R = solve_parametrisation(aug, mset, sd, rset;
             options = ParametrisationOptions(show_progress = false))
         @test size(W.poly.coefficients, 2) == 3     # ORD = 3 order-blocks
         @test size(R.poly.coefficients, 2) == length(mset)
@@ -229,10 +229,10 @@ end
 
         # The ROM-length master block is extended over the external variables from the
         # external system, and must reproduce the literal [2, 1, 4, 3] exactly.
-        Wa, Ra = solve_cohomological_problem(forced, mset, sd, rset;
+        Wa, Ra = solve_parametrisation(forced, mset, sd, rset;
             conjugate_permutation = [2, 1, 4, 3],
             options = ParametrisationOptions(show_progress = false))
-        Wb, Rb = solve_cohomological_problem(forced, mset, sd, rset;
+        Wb, Rb = solve_parametrisation(forced, mset, sd, rset;
             options = ParametrisationOptions(show_progress = false))
         @test Wa.poly.coefficients == Wb.poly.coefficients
         @test Ra.poly.coefficients == Rb.poly.coefficients

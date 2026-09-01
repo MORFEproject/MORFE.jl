@@ -28,7 +28,7 @@ Three reasons, all load-bearing:
 1. A `Bool`-mask selection is not strided, so a view of it would drop downstream
    BLAS/sparse products onto the slow generic path — the reason the previous code took
    copies explicitly.
-2. `solve_cohomological_problem` types its right modes as a concrete `Matrix{ComplexF64}`.
+2. `solve_parametrisation` types its right modes as a concrete `Matrix{ComplexF64}`.
 3. An accessor that sliced would allocate on every call rather than once.
 
 The cost is `2·FOM·n` complex numbers, negligible beside the `FOM × ORD × L`

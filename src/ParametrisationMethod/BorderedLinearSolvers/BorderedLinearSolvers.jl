@@ -11,7 +11,8 @@ checkpoints.
 
 The supported sparse backends are KLU, UMFPACK, and extension-provided Pardiso. A cached
 factorisation is retained only after a successful factorisation; failed cached KLU and
-UMFPACK updates receive one fresh symbolic analysis before failure is reported.
+UMFPACK updates receive one fresh symbolic analysis before failure is reported. Failed KLU
+native storage is released before that recovery analysis begins.
 
 # Source organisation
 

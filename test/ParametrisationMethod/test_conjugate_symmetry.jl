@@ -6,7 +6,7 @@ using StaticArrays
 using MORFE.Multiindices: all_multiindices_up_to
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.Resonance: resonance_set_from_complex_normal_form_style
-using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.ParametrisationSolver: solve_parametrisation
 using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice, SpectralData
 
 # ── Minimal 2-DOF Duffing model ──────────────────────────────────────────────
@@ -96,21 +96,21 @@ end
 _pairs, _self_conj = _build_pairs(_mset, _conj_perm)
 
 # ── Solve once per strategy ───────────────────────────────────────────────────
-W_nosym, R_nosym = solve_cohomological_problem(
+W_nosym, R_nosym = solve_parametrisation(
     _model, _mset, _spectral, _resonance_set; conjugate_permutation = nothing
 )
 
-W_expl, R_expl = solve_cohomological_problem(
+W_expl, R_expl = solve_parametrisation(
     _model, _mset, _spectral, _resonance_set; conjugate_permutation = _conj_perm
 )
 
 _sparse_model = NthOrderModel(map(sparse, (B0, B1, B2)), (term_cubic,))
 _umfpack_options = ParametrisationOptions(
     backend = :umfpack, show_progress = false, verbose = false)
-W_umfpack_nosym, R_umfpack_nosym = solve_cohomological_problem(
+W_umfpack_nosym, R_umfpack_nosym = solve_parametrisation(
     _sparse_model, _mset, _spectral, _resonance_set;
     conjugate_permutation = nothing, options = _umfpack_options)
-W_umfpack_expl, R_umfpack_expl = solve_cohomological_problem(
+W_umfpack_expl, R_umfpack_expl = solve_parametrisation(
     _sparse_model, _mset, _spectral, _resonance_set;
     conjugate_permutation = _conj_perm, options = _umfpack_options)
 

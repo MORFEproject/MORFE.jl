@@ -7,7 +7,7 @@ using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver, SpectralData
 using MORFE.Resonance: ResonanceConfig
-const _CheckpointTOML = MORFE.CohomologicalEquations.TOML
+const _CheckpointTOML = MORFE.ParametrisationSolver.TOML
 
 function _checkpoint_test_cubic!(res, x1, x2, x3)
     @. res += -x1 * x2 * x3
@@ -33,10 +33,12 @@ end
     @test_throws ArgumentError CheckpointOptions(""; problem_id = "valid")
     @test_throws ArgumentError CheckpointOptions("state"; problem_id = "")
 
+    PS = MORFE.ParametrisationSolver
     CE = MORFE.CohomologicalEquations
-    @test !CE._has_structural_factor_reuse(ComplexF64[1, 2])
-    @test CE._has_structural_factor_reuse(ComplexF64[1, 1])
-    @test CE._has_structural_factor_reuse(ComplexF64[0, 2])
+    BLS = MORFE.BorderedLinearSolvers
+    @test !PS._has_structural_factor_reuse(ComplexF64[1, 2])
+    @test PS._has_structural_factor_reuse(ComplexF64[1, 1])
+    @test PS._has_structural_factor_reuse(ComplexF64[0, 2])
 
     # Mathematically equal superharmonics need not be bit-equal when equal-eigenvalue
     # contributions are distributed differently. Structural grouping deliberately
@@ -44,17 +46,17 @@ end
     repeated = ComplexF64[-0.7021951987576804 - 0.07258186804586991im,
         -0.7021951987576804 - 0.07258186804586991im]
     resonance_mask = SVector(false)
-    representatives = CE._eigenvalue_representatives(repeated)
-    key_split = CE._structural_factor_key(
+    representatives = PS._eigenvalue_representatives(repeated)
+    key_split = PS._structural_factor_key(
         SVector(12, 14), resonance_mask, representatives)
-    key_combined = CE._structural_factor_key(
+    key_combined = PS._structural_factor_key(
         SVector(26, 0), resonance_mask, representatives)
     split_superharmonic = CE._superharmonic(SVector(12, 14), repeated)
     combined_superharmonic = CE._superharmonic(SVector(26, 0), repeated)
     @test isequal(key_split, key_combined)
     @test split_superharmonic != combined_superharmonic
-    canonical_group = CE._SolveGroup(
-        split_superharmonic, [CE._SolveJob(1, 0), CE._SolveJob(2, 0)])
+    canonical_group = PS._SolveGroup(
+        split_superharmonic, [PS._SolveJob(1, 0), PS._SolveJob(2, 0)])
     @test canonical_group.superharmonic == split_superharmonic
     @test length(canonical_group.jobs) == 2
 
@@ -62,28 +64,28 @@ end
     rounding_resonances = MORFE.Resonance.empty_resonance_set(rounding_mset, 1)
     rounding_context = (
         lambda_diag = repeated, resonance_set = rounding_resonances)
-    rounding_groups = CE._group_solve_jobs(rounding_context, rounding_mset,
-        [CE._SolveJob(1, 0), CE._SolveJob(2, 0)], Val(1))
+    rounding_groups = PS._group_solve_jobs(rounding_context, rounding_mset,
+        [PS._SolveJob(1, 0), PS._SolveJob(2, 0)], Val(1))
     @test length(rounding_groups) == 1
     scheduled_first_superharmonic = CE._superharmonic(rounding_mset[1], repeated)
     @test rounding_groups[1].superharmonic == scheduled_first_superharmonic
     @test rounding_groups[1].jobs ==
-          [CE._SolveJob(1, 0), CE._SolveJob(2, 0)]
+          [PS._SolveJob(1, 0), PS._SolveJob(2, 0)]
 
     @testset "solve jobs use the final skip mask" begin
         mset = all_multiindices_up_to(2, 3; min_degree = 1)
-        linear = Set(CE._linear_monomial_indices(mset))
-        inactive = CE._build_conjugate_symmetry(
+        linear = Set(PS._linear_monomial_indices(mset))
+        inactive = PS._build_conjugate_symmetry(
             NoConjugatePermutation(), linear, length(mset))
-        inactive_jobs = CE._build_solve_jobs(inactive)
+        inactive_jobs = PS._build_solve_jobs(inactive)
         @test all(job.conjugate_target == 0 for job in inactive_jobs)
         @test all(!inactive.skip_bits[job.index] for job in inactive_jobs)
         @test issorted(sum(mset[job.index]) for job in inactive_jobs)
 
         dictionary = MORFE.Multiindices.build_exponent_index_map(mset)
-        active = CE._build_conjugate_symmetry(
+        active = PS._build_conjugate_symmetry(
             SVector(2, 1), linear, mset, dictionary)
-        active_jobs = CE._build_solve_jobs(active)
+        active_jobs = PS._build_solve_jobs(active)
         paired = findfirst(job -> job.conjugate_target != 0, active_jobs)
         @test paired !== nothing
         pair = active_jobs[paired]
@@ -93,11 +95,11 @@ end
         # Resume and external-direction setup mark additional entries after symmetry
         # discovery. Rebuilding jobs must observe those final mutations.
         active.skip_bits[pair.index] = true
-        rebuilt = CE._build_solve_jobs(active)
+        rebuilt = PS._build_solve_jobs(active)
         @test all(job.index != pair.index for job in rebuilt)
         @test all(job.conjugate_target != pair.conjugate_target for job in rebuilt)
         @test any(job.conjugate_target == 0 for job in rebuilt)
-        @test_throws ArgumentError CE._build_solve_plan(
+        @test_throws ArgumentError PS._build_solve_plan(
             nothing, nothing, nothing, :invalid, Val(1))
     end
 
@@ -110,9 +112,9 @@ end
         cross = findfirst(==(SVector(1, 1)), ext_set.exponents)
         ext_coefficients[1, cross] = 1
         ext_poly = DensePolynomial(ext_coefficients, ext_set)
-        @test_throws ArgumentError CE._embed_external_dynamics!(R, ext_poly, mset)
+        @test_throws ArgumentError PS._embed_external_dynamics!(R, ext_poly, mset)
         ext_coefficients[1, cross] = 0
-        @test CE._embed_external_dynamics!(R, ext_poly, mset) === nothing
+        @test PS._embed_external_dynamics!(R, ext_poly, mset) === nothing
     end
 
     B0 = [2.0 -1.0; -1.0 2.0]
@@ -140,7 +142,7 @@ end
         rset = MORFE.Resonance.build_resonance_set(
             sparse_model, mset, sd, resonance)
         options = quiet(grouping = :off)
-        W_reference, R_reference = solve_cohomological_problem(
+        W_reference, R_reference = solve_parametrisation(
             sparse_model, mset, sd, rset;
             conjugate_permutation = nothing, options)
 
@@ -152,7 +154,7 @@ end
         W_coefficients = W_supplied.poly.coefficients
         R_coefficients = R_supplied.poly.coefficients
 
-        W_result, R_result = solve_cohomological_problem(
+        W_result, R_result = solve_parametrisation(
             sparse_model, mset, sd, rset;
             initial_solution = (W_supplied, R_supplied),
             conjugate_permutation = nothing, options)
@@ -220,9 +222,9 @@ end
                 max_refinement_steps = steps)
             strict_umfpack = quiet(backend = :umfpack, grouping = :off,
                 residual_tolerance = 1e-30, max_refinement_steps = steps)
-            @test_throws CE._BorderedSolveFailure solve_with(strict_dense; model = dense_model)
-            @test_throws CE._BorderedSolveFailure solve_with(strict_klu)
-            @test_throws CE._BorderedSolveFailure solve_with(strict_umfpack)
+            @test_throws BLS._BorderedSolveFailure solve_with(strict_dense; model = dense_model)
+            @test_throws BLS._BorderedSolveFailure solve_with(strict_klu)
+            @test_throws BLS._BorderedSolveFailure solve_with(strict_umfpack)
         end
     end
 
@@ -274,7 +276,7 @@ end
             checkpoint_mset = W0.poly.multiindex_set
             checkpoint_rset = MORFE.Resonance.build_resonance_set(
                 sparse_model, checkpoint_mset, sd, resonance)
-            W_same, R_same = solve_cohomological_problem(
+            W_same, R_same = solve_parametrisation(
                 sparse_model, checkpoint_mset, sd, checkpoint_rset;
                 initial_solution = (W_supplied, R_supplied), options)
             @test W_same === W_supplied
@@ -284,13 +286,13 @@ end
 
             W_mismatch = deepcopy(W0)
             W_mismatch.poly.coefficients[1] += 1
-            @test_throws ArgumentError solve_cohomological_problem(
+            @test_throws ArgumentError solve_parametrisation(
                 sparse_model, checkpoint_mset, sd, checkpoint_rset;
                 initial_solution = (W_mismatch, deepcopy(R0)), options)
 
             R_mismatch = deepcopy(R0)
             R_mismatch.poly.coefficients[1] += 1
-            @test_throws ArgumentError solve_cohomological_problem(
+            @test_throws ArgumentError solve_parametrisation(
                 sparse_model, checkpoint_mset, sd, checkpoint_rset;
                 initial_solution = (deepcopy(W0), R_mismatch), options)
 
@@ -323,7 +325,7 @@ end
                 eachindex(checkpoint_mset.exponents))
             W_partial.poly.coefficients[:, :, degree_five] .= 23 - 7im
             R_partial.poly.coefficients[:, degree_five] .= -19 - 2im
-            W_completed, R_completed = solve_cohomological_problem(
+            W_completed, R_completed = solve_parametrisation(
                 sparse_model, checkpoint_mset, sd, checkpoint_rset;
                 initial_solution = (W_partial, R_partial), options)
             @test W_completed === W_partial
@@ -367,11 +369,11 @@ end
             grouping = :off, show_progress = false, verbose = false)
 
         function check_benchmark(permutation)
-            ordinary = solve_cohomological_problem(
+            ordinary = solve_parametrisation(
                 dense_model, mset, sd, rset;
                 conjugate_permutation = permutation, options = base_options)
             mktempdir() do directory
-                measured = solve_cohomological_problem(
+                measured = solve_parametrisation(
                     dense_model, mset, sd, rset;
                     conjugate_permutation = permutation,
                     benchmark_dir = directory, options = base_options)
@@ -401,7 +403,7 @@ end
             conflicting = ParametrisationOptions(
                 checkpoint = checkpoint, grouping = :off,
                 show_progress = false, verbose = false)
-            @test_throws ArgumentError solve_cohomological_problem(
+            @test_throws ArgumentError solve_parametrisation(
                 dense_model, mset, sd, rset;
                 benchmark_dir = joinpath(directory, "benchmark"),
                 options = conflicting)

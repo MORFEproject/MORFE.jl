@@ -182,11 +182,11 @@ function _finish_observer!(observer::_BenchmarkSolveObserver)
 end
 
 # =============================================================================
-# Benchmarked solve loops
+# Benchmarked schedule execution
 # =============================================================================
 
 """
-	solve_cohomological_equations_benchmarked!(W, R, ctx, sym, model, ml_cache;
+	_execute_benchmarked_schedule!(W, R, context, symmetry, model, cache;
 		benchmark_dir, show_progress = true) -> nothing
 
 Run the causal cohomological solve while timing nonlinear right-hand-side assembly and the
@@ -202,10 +202,10 @@ does not include lower-order coupling assembly, coefficient unpacking, higher-de
 updates, progress output, or CSV writing. This diagnostic loop supports conjugate filling
 but deliberately does not use structural factor grouping or checkpoint callbacks.
 
-`benchmark_dir` is required and is created when necessary. `show_progress` has the same TTY
-behaviour as in [`solve_cohomological_equations!`](@ref).
+`benchmark_dir` is required and is created when necessary. `show_progress` follows the
+ordinary schedule's TTY behaviour.
 """
-function solve_cohomological_equations_benchmarked!(
+function _execute_benchmarked_schedule!(
         W::Parametrisation{ORD, NVAR, T},
         R::ReducedDynamics{ROM, NVAR, T},
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},

@@ -19,7 +19,7 @@ using Random: MersenneTwister, randn
 using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver, SpectralData
-using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.ParametrisationSolver: solve_parametrisation
 using MORFE.InvarianceError: invariance_error_norms
 using MORFE.InvarianceEquation: precompute_sparse_L_template,
                                 precompute_sparse_bordered_template,
@@ -64,11 +64,11 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
 
         args = (mset, sd, rset)
         kwargs = (; options = ParametrisationOptions(show_progress = false))
-        Wd, Rd = solve_cohomological_problem(dense_model, args...; kwargs...)
-        Ws, Rs = solve_cohomological_problem(sparse_model, args...; kwargs...)
+        Wd, Rd = solve_parametrisation(dense_model, args...; kwargs...)
+        Ws, Rs = solve_parametrisation(sparse_model, args...; kwargs...)
         umfpack_options = ParametrisationOptions(
             backend = :umfpack, show_progress = false)
-        Wu, Ru = solve_cohomological_problem(
+        Wu, Ru = solve_parametrisation(
             sparse_model, args...; options = umfpack_options)
         @test norm(Wu.poly.coefficients - Wd.poly.coefficients) /
               max(norm(Wu.poly.coefficients), norm(Wd.poly.coefficients), eps()) <= 1e-9
@@ -193,7 +193,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
             catch e
                 e
             end
-            @test err isa MORFE.CohomologicalEquations._BorderedSolveFailure
+            @test err isa MORFE.BorderedLinearSolvers._BorderedSolveFailure
             @test err.category == :outer_resonance
             @test !isempty(err.outer_resonance_targets)
             message = sprint(showerror, err)
@@ -295,7 +295,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         Mass = spdiagm(0 => ones(n))
         L_tmpl, L_maps = precompute_sparse_L_template(
             (complex(K), complex(0.01 .* Mass), complex(Mass)))
-        ss = MORFE.CohomologicalEquations.SparseLinearSolverState{ComplexF64}(
+        ss = MORFE.BorderedLinearSolvers.SparseLinearSolverState{ComplexF64}(
             L_tmpl, L_maps, n, ROM)
         @test ismutable(ss)
         # The call the Pardiso branch makes; on an immutable state this throws
@@ -316,7 +316,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         Mass = spdiagm(0 => ones(n))
         lt = (complex(K), complex(0.01 .* Mass), complex(Mass))
         L_tmpl, L_maps = precompute_sparse_L_template(lt)
-        ss = MORFE.CohomologicalEquations.SparseLinearSolverState{ComplexF64}(
+        ss = MORFE.BorderedLinearSolvers.SparseLinearSolverState{ComplexF64}(
             L_tmpl, L_maps, n, ROM)
 
         # Fill the template the way _solve_monomial! does: L(s) in the (1,1) block and
@@ -333,10 +333,10 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         end
 
         fill_template!(0.3 + 1.1im)
-        F = MORFE.CohomologicalEquations._refactorise!(ss, ss.bordered)
+        F = MORFE.BorderedLinearSolvers._refactorise!(ss, ss.bordered)
         @test issuccess(F)
         @test F.nzval === ss.bordered.nzval
-        @test @inferred(MORFE.CohomologicalEquations._cached_klu_factor(
+        @test @inferred(MORFE.BorderedLinearSolvers._cached_klu_factor(
             ss, ss.bordered)) === F
 
         # Behavioural form of the same invariant, independent of *why* it might break:
@@ -347,7 +347,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         ldiv!(x_first, F, copy(b))
 
         fill_template!(-2.7 + 0.4im)
-        F2 = MORFE.CohomologicalEquations._refactorise!(ss, ss.bordered)
+        F2 = MORFE.BorderedLinearSolvers._refactorise!(ss, ss.bordered)
         x_second = similar(b)
         ldiv!(x_second, F2, copy(b))
 
@@ -357,7 +357,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
     end
 
     @testset "failed SuiteSparse caches are discarded" begin
-        CE = MORFE.CohomologicalEquations
+        BLS = MORFE.BorderedLinearSolvers
         mset = MultiindexSet([SVector(2)])
         unflagged = MORFE.Resonance.empty_resonance_set(mset, 1)
         flagged = MORFE.Resonance.empty_resonance_set(mset, 1, 1)
@@ -369,7 +369,7 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
             mappings = [collect(eachindex(template.nzval))]
             options = ParametrisationOptions(
                 backend = backend, residual_check = :off, show_progress = false)
-            return CE.SparseLinearSolverState{ComplexF64}(
+            return BLS.SparseLinearSolverState{ComplexF64}(
                 template, mappings, 2, 1; options)
         end
         function set_diagonal!(state, values)
@@ -380,29 +380,29 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
             return state.bordered
         end
 
-        @test CE._backend_name(make_state(:auto).backend) == :klu
+        @test BLS._backend_name(make_state(:auto).backend) == :klu
 
         for backend in (:klu, :umfpack)
             state = make_state(backend)
             set_diagonal!(state, ComplexF64[2, 3, 1])
-            factor = backend == :klu ? CE._refactorise_klu!(state, state.bordered) :
-                     CE._refactorise_umfpack!(state, state.bordered)
+            factor = backend == :klu ? BLS._refactorise_klu!(state, state.bordered) :
+                     BLS._refactorise_umfpack!(state, state.bordered)
             @test issuccess(factor)
             @test state.fact === factor
             if backend == :umfpack
-                @test @inferred(CE._cached_umfpack_factor(
+                @test @inferred(BLS._cached_umfpack_factor(
                     state, state.bordered)) === factor
             end
 
             set_diagonal!(state, ComplexF64[0, 3, 1])
             failure = try
-                CE._bordered_solve!(state, ones(ComplexF64, 3), 0.5 + 0.2im,
+                BLS._bordered_solve!(state, ones(ComplexF64, 3), 0.5 + 0.2im,
                     1, mset[1], resonance, unflagged)
                 nothing
             catch error
                 error
             end
-            @test failure isa CE._BorderedSolveFailure
+            @test failure isa BLS._BorderedSolveFailure
             @test failure.category == :factorisation
             @test failure.backend == backend
             @test failure.index == 1
@@ -414,10 +414,14 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
             message = sprint(showerror, failure)
             @test occursin("not by itself proof", message)
             @test occursin("fresh retry", message)
+            if backend == :klu
+                @test factor._symbolic == C_NULL
+                @test factor._numeric == C_NULL
+            end
 
             set_diagonal!(state, ComplexF64[4, 5, 1])
-            recovered = backend == :klu ? CE._refactorise_klu!(state, state.bordered) :
-                        CE._refactorise_umfpack!(state, state.bordered)
+            recovered = backend == :klu ? BLS._refactorise_klu!(state, state.bordered) :
+                        BLS._refactorise_umfpack!(state, state.bordered)
             @test issuccess(recovered)
             @test state.fact === recovered
         end
@@ -425,13 +429,13 @@ using MORFE.InvarianceEquation: precompute_sparse_L_template,
         outer_state = make_state(:umfpack)
         set_diagonal!(outer_state, ComplexF64[0, 3, 1])
         outer_failure = try
-            CE._bordered_solve!(outer_state, ones(ComplexF64, 3), 0.5 + 0.2im,
+            BLS._bordered_solve!(outer_state, ones(ComplexF64, 3), 0.5 + 0.2im,
                 1, mset[1], resonance, flagged)
             nothing
         catch error
             error
         end
-        @test outer_failure isa CE._BorderedSolveFailure
+        @test outer_failure isa BLS._BorderedSolveFailure
         @test outer_failure.category == :outer_resonance
         @test outer_failure.outer_resonance_targets == [1]
         @test occursin("likely cause", sprint(showerror, outer_failure))

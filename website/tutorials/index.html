@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <span class="tag" style="color:var(--jl-green); border-color:rgba(56,152,38,0.3); background:rgba(56,152,38,0.06);"></span>
           </div>
           <h3 style="font-size:24px; margin:6px 0 12px;">Parametrisation method demo</h3>
-          <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current code: <code>NthOrderModel</code> → eigenproblem → resonance detection → <code>solve_cohomological_problem</code>. Ships in <code>examples/internals/</code>.</p>
+          <p style="color:var(--ink-2); margin:0 0 18px;">Complete pipeline using the current code: <code>NthOrderModel</code> → eigenproblem → resonance detection → <code>solve_parametrisation</code>. Ships in <code>examples/internals/</code>.</p>
           <div style="display:flex; gap:24px; font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:0.06em;">
             <span>JULIA 1.10+</span>
             <span>CURRENT CODE</span>
@@ -133,7 +133,7 @@ model = NthOrderModel(M, C, K, G)
 ep    = compute_eigenproblem(model)
 m     = select_master_modes_by_hand(ep, [1,2])
 res   = resonance_set_from_graph_style(m)
-W, R  = solve_cohomological_problem(
+W, R  = solve_parametrisation(
             model, m, res; order=7)</pre>
         </div>
       </div>

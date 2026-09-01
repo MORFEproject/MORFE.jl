@@ -13,7 +13,7 @@ using StaticArrays
 using MORFE
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap
 using MORFE.SpectralDecomposition: spectrum, DefaultEigensolver, SpectralData
-using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.ParametrisationSolver: solve_parametrisation
 using MORFE.Resonance: ResonanceConfig, build_resonance_set
 using MORFE.Multiindices: MultiindexSet, find_in_set
 
@@ -42,7 +42,7 @@ using MORFE.Multiindices: MultiindexSet, find_in_set
         W1, R1 = parametrise(model, sd, mset; resonance = cnf)
 
         rset = build_resonance_set(model, mset, sd, cnf)
-        W2, R2 = solve_cohomological_problem(model, mset, sd, rset)
+        W2, R2 = solve_parametrisation(model, mset, sd, rset)
         @test R1.poly.coefficients == R2.poly.coefficients
         @test W1.poly.coefficients == W2.poly.coefficients
     end
@@ -83,7 +83,7 @@ using MORFE.Multiindices: MultiindexSet, find_in_set
         # The solve is where every path lands, so it must reject the set too — that is
         # what `validate_mset = true` on the low-level entry is for.
         rset = build_resonance_set(model, not_closed, sd, cnf)
-        @test_throws ArgumentError solve_cohomological_problem(
+        @test_throws ArgumentError solve_parametrisation(
             model, not_closed, sd, rset)
     end
 

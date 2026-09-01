@@ -25,7 +25,7 @@ This condition can fail when:
 
 **Always verify eigenvector conjugacy** (e.g. check
 `norm(master_modes[:, perm[r]] - conj(master_modes[:, r]))`) before passing the
-returned vector to `solve_cohomological_problem` as `conjugate_permutation`.
+returned vector to `solve_parametrisation` as `conjugate_permutation`.
 Passing an incorrect permutation silently corrupts W and R.
 
 ## Arguments

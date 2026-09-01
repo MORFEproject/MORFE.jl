@@ -19,7 +19,6 @@ include("ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl")
 include("ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl")
 include("ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl")
 include("ParametrisationMethod/ParametrisationSolver/ParametrisationSolver.jl")
-include("ParametrisationMethod/CohomologicalEquations/Compatibility.jl")
 include("ParametrisationMethod/ParametrisationMethod.jl")
 include("BifurcationSolvers/BifurcationKitInterface.jl")
 include("Validation/InvarianceError.jl")
@@ -41,7 +40,14 @@ using .MasterModeOrthogonality
 using .ParametrisationObjects
 using .MultilinearTerms: compute_multilinear_terms
 using .LowerOrderCouplings
+using .BorderedLinearSolvers: SparseLinearSolverState
 using .CohomologicalEquations
+using .ParametrisationSolver: ParametrisationOptions, CheckpointOptions,
+                              checkpoint_fingerprint_data,
+                              NoConjugatePermutation, ConjugateSymmetryData,
+                              fill_conjugate_monomial!, detect_conjugate_permutation,
+                              external_conjugate_permutation, full_conjugate_permutation,
+                              solve_parametrisation
 using .ParametrisationMethod
 using .BifurcationKitInterface
 using .InvarianceError
@@ -111,8 +117,7 @@ export CohomologicalContext,
 export NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
        detect_conjugate_permutation,
        external_conjugate_permutation, full_conjugate_permutation
-export solve_cohomological_equations!, solve_cohomological_equations_benchmarked!,
-       solve_single_monomial!, solve_cohomological_problem
+export solve_single_monomial!, solve_parametrisation
 
 # BifurcationKit interface
 export make_bk_problem

@@ -138,11 +138,11 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">20 modules · 375 documented entries · generated 1 September 2026</p>
+  <p class="lede">20 modules · 374 documented entries · generated 1 September 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
-  <div id="Multiindices" class="doc-module-h">Multiindices</div>
+  <div id="Multiindices" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L1" target="_blank" rel="noopener">Multiindices</a></div>
   <div class="doc-module-desc" data-module="Multiindices"><div class="markdown"><p>Module <code><a class="doc-ref" href="#Multiindices">Multiindices</a></code> — graded-lexicographic multiindex sets and combinatorial utilities.</p>
 <p>A <em>multiindex</em> is an exponent vector <code>α ∈ ℕᴺ</code> that identifies the monomial <code>z₁^α₁ ⋯ zₙ^αₙ</code> in <code>N</code> variables.  This module provides:</p>
 <ul>
@@ -486,7 +486,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="markdown"><pre><code>is_downward_closed&#40;set::MultiindexSet&#123;N&#125;&#41; -&gt; Bool</code></pre>
 <p>Return <code>true</code> when every divisor of every member of <code>set</code> is itself a member.</p>
 <p>This is the <em>downward closure</em> property that <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise&#40;model, spectral, mset&#41;</a></code> requires: the graded solve reads lower-order coefficients <code>W&#91;α - eᵢ&#93;</code> while working on <code>α</code>, so a missing divisor would be silently read as zero.  Combinatorial truncations &#40;<code><a class="doc-ref" href="#Multiindices-all_multiindices_up_to">all_multiindices_up_to</a></code>, <code><a class="doc-ref" href="#Multiindices-all_multiindices_in_box">all_multiindices_in_box</a></code>&#41; are closed by construction, but a spectral criterion such as <code>|⟨λ, α⟩| ≤ R</code> generally is not.</p>
-<p><code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code> and <code><a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem">solve_cohomological_problem</a></code> enforce this through <code><a class="doc-ref" href="#ParametrisationObjects-validate_multiindex_set">validate_multiindex_set</a></code>, which reports <em>which</em> divisor is missing; use this predicate when a plain <code>Bool</code> is enough.</p>
+<p><code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code> and <code><a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation">solve_parametrisation</a></code> enforce this through <code><a class="doc-ref" href="#ParametrisationObjects-validate_multiindex_set">validate_multiindex_set</a></code>, which reports <em>which</em> divisor is missing; use this predicate when a plain <code>Bool</code> is enough.</p>
 <p>The zero multiindex is <strong>exempt</strong>: DPIM sets are built with <code>min_degree &#61; 1</code>, so a degree-1 exponent is not asked to have its constant divisor present.</p>
 <p>Only the immediate predecessors <code>α - eᵢ</code> are probed; by induction over the total degree that is equivalent to checking every divisor.  Cost is <code>O&#40;N · |set| · log&#41;</code> through <a class="doc-ref" href="#Multiindices-find_in_set"><code>find_in_set</code></a>.</p>
 </div>
@@ -549,7 +549,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 </div>
   </div>
 </div>
-  <div id="Polynomials" class="doc-module-h">Polynomials</div>
+  <div id="Polynomials" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Polynomials.jl#L1" target="_blank" rel="noopener">Polynomials</a></div>
   <div class="doc-module-desc" data-module="Polynomials"><div class="markdown"><p>Module <code><a class="doc-ref" href="#Polynomials">Polynomials</a></code> — dense multivariate polynomial type aligned to a <code><a class="doc-ref" href="#Multiindices-MultiindexSet">MultiindexSet</a></code>.</p>
 <p>A <code><a class="doc-ref" href="#Polynomials-DensePolynomial">DensePolynomial&#123;T, NVAR, RANK&#125;</a></code> stores coefficients in a single contiguous array whose last axis indexes monomials in the same GrLex order as the associated <code><a class="doc-ref" href="#Multiindices-MultiindexSet">MultiindexSet</a></code>.  The layout is chosen so that polynomial evaluation reduces to a single BLAS <code>gemv</code> / <code>dot</code> call regardless of the output rank:</p>
 <ul>
@@ -774,7 +774,7 @@ zero&#40;DensePolynomial&#123;T&#125;, coeff_shape, mset&#41; # tensor-valued</c
 </div>
   </div>
 </div>
-  <div id="MultilinearMaps" class="doc-module-h">MultilinearMaps</div>
+  <div id="MultilinearMaps" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L1" target="_blank" rel="noopener">MultilinearMaps</a></div>
   <div class="doc-module-desc" data-module="MultilinearMaps"><div class="markdown"><p>Module <code><a class="doc-ref" href="#MultilinearMaps">MultilinearMaps</a></code> — multilinear nonlinear term representations for <code><a class="doc-ref" href="#FullOrderModel-NthOrderModel">NthOrderModel</a></code>.</p>
 <p>Nonlinear terms in the full-order ODE are encoded as <code><a class="doc-ref" href="#MultilinearMaps-AbstractMultilinearMap">AbstractMultilinearMap</a></code> subtypes:</p>
 <ul>
@@ -1273,7 +1273,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div>
   </div>
 </div>
-  <div id="ExternalSystems" class="doc-module-h">ExternalSystems</div>
+  <div id="ExternalSystems" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/ExternalSystems.jl#L1" target="_blank" rel="noopener">ExternalSystems</a></div>
   <div class="doc-module-desc" data-module="ExternalSystems"><div class="markdown"><p>Module <code><a class="doc-ref" href="#ExternalSystems">ExternalSystems</a></code> — representation of autonomous external dynamical systems that drive a full-order model.</p>
 <p>An <code><a class="doc-ref" href="#ExternalSystems-ExternalSystem">ExternalSystem</a></code> encodes a finite-dimensional autonomous ODE</p>
 <pre><code>ṙ &#61; f&#40;r&#41; &#61; A r &#43; higher-order terms</code></pre>
@@ -1437,7 +1437,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div>
   </div>
 </div>
-  <div id="FullOrderModel" class="doc-module-h">FullOrderModel</div>
+  <div id="FullOrderModel" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L1" target="_blank" rel="noopener">FullOrderModel</a></div>
   <div class="doc-module-desc" data-module="FullOrderModel"><div class="markdown"><p>Module <code><a class="doc-ref" href="#FullOrderModel">FullOrderModel</a></code> — representation of high-dimensional nonlinear ODEs.</p>
 <p>The central type is <code><a class="doc-ref" href="#FullOrderModel-NthOrderModel">NthOrderModel&#123;ORD, ORDP1, N_NL, N_EXT, T, MT&#125;</a></code>, which encodes an <code>ORD</code>-th order system</p>
 <pre><code>B_ORD ẋ^&#40;ORD&#41; &#43; … &#43; B₁ ẋ &#43; B₀ x &#61; F&#40;x, ẋ, …, r&#41;</code></pre>
@@ -1635,7 +1635,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div>
   </div>
 </div>
-  <div id="SpectralDecomposition" class="doc-module-h">SpectralDecomposition</div>
+  <div id="SpectralDecomposition" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralDecomposition.jl#L1" target="_blank" rel="noopener">SpectralDecomposition</a></div>
   <div class="doc-module-desc" data-module="SpectralDecomposition"><div class="markdown"><p>Module <code><a class="doc-ref" href="#SpectralDecomposition">SpectralDecomposition</a></code> — solve the generalised eigenproblem for an <code><a class="doc-ref" href="#FullOrderModel-NthOrderModel">NthOrderModel</a></code> and package the result for a parametrisation.</p>
 <p>The whole spectral layer, in one module. It replaces the former split between <code>Eigensolvers</code> &#40;a stub that held no solvers&#41; and <code>Eigenproblems</code> &#40;which held them&#41; — a division that named neither half for what it contained.</p>
 <h2>Files</h2>
@@ -1727,7 +1727,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <ol>
 <li><p>A <code>Bool</code>-mask selection is not strided, so a view of it would drop downstream BLAS/sparse products onto the slow generic path — the reason the previous code took copies explicitly.</p>
 </li>
-<li><p><code><a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem">solve_cohomological_problem</a></code> types its right modes as a concrete <code>Matrix&#123;ComplexF64&#125;</code>.</p>
+<li><p><code><a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation">solve_parametrisation</a></code> types its right modes as a concrete <code>Matrix&#123;ComplexF64&#125;</code>.</p>
 </li>
 <li><p>An accessor that sliced would allocate on every call rather than once.</p>
 </li>
@@ -1955,7 +1955,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <li><p>eigenvectors were post-processed with different phases or normalisation.</p>
 </li>
 </ul>
-<p><strong>Always verify eigenvector conjugacy</strong> &#40;e.g. check <code>norm&#40;master_modes&#91;:, perm&#91;r&#93;&#93; - conj&#40;master_modes&#91;:, r&#93;&#41;&#41;</code>&#41; before passing the returned vector to <code><a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem">solve_cohomological_problem</a></code> as <code>conjugate_permutation</code>. Passing an incorrect permutation silently corrupts W and R.</p>
+<p><strong>Always verify eigenvector conjugacy</strong> &#40;e.g. check <code>norm&#40;master_modes&#91;:, perm&#91;r&#93;&#93; - conj&#40;master_modes&#91;:, r&#93;&#41;&#41;</code>&#41; before passing the returned vector to <code><a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation">solve_parametrisation</a></code> as <code>conjugate_permutation</code>. Passing an incorrect permutation silently corrupts W and R.</p>
 <h2>Arguments</h2>
 <ul>
 <li><p><code>lambda</code> — eigenvalue vector of length <code>NVAR</code> &#40;master &#43; external eigenvalues&#41;.</p>
@@ -2263,7 +2263,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div>
   </div>
 </div>
-  <div id="Realification" class="doc-module-h">Realification</div>
+  <div id="Realification" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Realification.jl#L1" target="_blank" rel="noopener">Realification</a></div>
   <div class="doc-module-desc" data-module="Realification"><div class="markdown"><p>Module <code><a class="doc-ref" href="#Realification">Realification</a></code> — convert complex-valued parametrisations and reduced dynamics to real-valued form.</p>
 <p>The cohomological equations are solved in <code>ComplexF64</code> to handle both damped and undamped systems uniformly.  For systems with real matrices and complex-conjugate master-mode pairs, the resulting <code>W</code> and <code>R</code> satisfy conjugate-symmetry relations that allow an exact transformation to real arithmetic.  This module implements that transformation so that subsequent time integration and post-processing can operate entirely in real arithmetic.</p>
 </div></div>
@@ -2332,7 +2332,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 </div>
   </div>
 </div>
-  <div id="Resonance" class="doc-module-h">Resonance</div>
+  <div id="Resonance" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/Resonance.jl#L1" target="_blank" rel="noopener">Resonance</a></div>
   <div class="doc-module-desc" data-module="Resonance"><div class="markdown"><p>Module <code><a class="doc-ref" href="#Resonance">Resonance</a></code> — resonance detection for the parametrisation method.</p>
 <h2>Eigenvalue roles</h2>
 <p>Three eigenvalue groups are distinguished:</p>
@@ -2814,7 +2814,7 @@ set_resonance&#33;&#40;rs, target, mi, value&#41;  -&gt; rs</code></pre>
 </div>
   </div>
 </div>
-  <div id="InvarianceEquation" class="doc-module-h">InvarianceEquation</div>
+  <div id="InvarianceEquation" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/InvarianceEquation/InvarianceEquation.jl#L1" target="_blank" rel="noopener">InvarianceEquation</a></div>
   <div class="doc-module-desc" data-module="InvarianceEquation"><div class="markdown"><p>Assemble the part of the cohomological equations that corresponds to the <a class="doc-ref" href="#FullOrderModel"><code>FullOrderModel</code></a>, thereby imposing invariance of the manifold. <a class="doc-ref" href="#MasterModeOrthogonality"><code>MasterModeOrthogonality</code></a> handles the orthogonality conditions induced by the parametrisation styles.</p>
 <hr />
 <h1>Nomenclature</h1>
@@ -3168,7 +3168,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 </div>
   </div>
 </div>
-  <div id="MasterModeOrthogonality" class="doc-module-h">MasterModeOrthogonality</div>
+  <div id="MasterModeOrthogonality" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl#L1" target="_blank" rel="noopener">MasterModeOrthogonality</a></div>
   <div class="doc-module-desc" data-module="MasterModeOrthogonality"><div class="markdown"><p>Assemble the orthogonality conditions that arise in the parametrisation method, a reduced-order modelling technique for high-dimensional dynamical systems.</p>
 <hr />
 <h1>Nomenclature</h1>
@@ -3460,7 +3460,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </div>
   </div>
 </div>
-  <div id="ParametrisationObjects" class="doc-module-h">ParametrisationObjects</div>
+  <div id="ParametrisationObjects" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationObjects.jl#L1" target="_blank" rel="noopener">ParametrisationObjects</a></div>
   <div class="doc-module-desc" data-module="ParametrisationObjects"><div class="markdown"><p>Module <code><a class="doc-ref" href="#ParametrisationObjects">ParametrisationObjects</a></code> — the coefficient containers of the DPIM parametrisation, and the contract their multiindex set must satisfy.</p>
 <p>Defines the two objects that together represent the invariant manifold and the reduced dynamics:</p>
 <ul>
@@ -3652,12 +3652,12 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <li><p>With a <code>conjugate_permutation</code>: that it is an involutive permutation of <code>1:nvar</code> mapping <code>1:rom</code> into itself, and that <code>mset</code> is <strong>closed under it</strong>. A member whose partner is absent is solved directly rather than filled by conjugation, so the result loses the conjugate structure the permutation asserts.</p>
 </li>
 </ol>
-<p>Returns <code>nothing</code>.  Cost is <code>O&#40;nvar · |mset| · log|mset|&#41;</code> — negligible beside a solve, but <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code> and <code><a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem">solve_cohomological_problem</a></code> both take a <code>validate_mset &#61; false</code> escape hatch for callers that have already checked.</p>
+<p>Returns <code>nothing</code>.  Cost is <code>O&#40;nvar · |mset| · log|mset|&#41;</code> — negligible beside a solve, but <code><a class="doc-ref" href="#ParametrisationMethod-parametrise">parametrise</a></code> and <code><a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation">solve_parametrisation</a></code> both take a <code>validate_mset &#61; false</code> escape hatch for callers that have already checked.</p>
 <p>See <a class="doc-ref" href="#Multiindices-is_downward_closed"><code>is_downward_closed</code></a> and <a class="doc-ref" href="#Multiindices-is_conjugate_closed"><code>is_conjugate_closed</code></a> for the two closure predicates on their own.</p>
 </div>
   </div>
 </div>
-  <div id="MultilinearTerms" class="doc-module-h">MultilinearTerms</div>
+  <div id="MultilinearTerms" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/RightHandSide/MultilinearTerms/MultilinearTerms.jl#L1" target="_blank" rel="noopener">MultilinearTerms</a></div>
   <div class="doc-module-desc" data-module="MultilinearTerms"><div class="markdown"><p>Module <code><a class="doc-ref" href="#MultilinearTerms">MultilinearTerms</a></code> — efficient evaluation of the nonlinear right-hand side of the cohomological equations.</p>
 <p>For each monomial <code>α</code> the nonlinear contribution is</p>
 <pre><code>Σₜ  Σ_&#123;β₁&#43;…&#43;βₖ&#61;α&#125;  multiplier · t.f&#33;&#40;W&#91;β₁&#93;, …, W&#91;βₖ&#93;, r₁, …, rₘ&#41;</code></pre>
@@ -4126,7 +4126,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </div>
   </div>
 </div>
-  <div id="LowerOrderCouplings" class="doc-module-h">LowerOrderCouplings</div>
+  <div id="LowerOrderCouplings" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/RightHandSide/LowerOrderCouplings.jl#L1" target="_blank" rel="noopener">LowerOrderCouplings</a></div>
   <div class="doc-module-desc" data-module="LowerOrderCouplings"><div class="markdown"><p>Module <code><a class="doc-ref" href="#LowerOrderCouplings">LowerOrderCouplings</a></code> — computation of lower-order coupling vectors <code>ξ&#91;α&#93;</code>.</p>
 <p>For each monomial <code>α</code> the cohomological right-hand side includes a coupling term</p>
 <pre><code>ξ&#91;α&#93; &#61; Σ_&#123;β&#43;γ&#61;α, β after e_i in GrLex&#125; R_β · &#40;|γ₁| W_&#123;γ&#43;e₁&#125; &#43; … &#43; |γₙ| W_&#123;γ&#43;eₙ&#125;&#41;</code></pre>
@@ -4189,10 +4189,10 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </div>
   </div>
 </div>
-  <div id="BorderedLinearSolvers" class="doc-module-h">BorderedLinearSolvers</div>
+  <div id="BorderedLinearSolvers" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L1" target="_blank" rel="noopener">BorderedLinearSolvers</a></div>
   <div class="doc-module-desc" data-module="BorderedLinearSolvers"><div class="markdown"><p>Numerical linear algebra for MORFE&#39;s constant-size bordered systems.</p>
 <p>This internal module owns sparse backend selection, constant-pattern solver state, symbolic-factorisation caching, numeric refactorisation, exact factor reuse, residual verification, iterative refinement, and Pardiso extension hooks. It deliberately does not assemble cohomological equations, schedule monomials, manage symmetry, or persist checkpoints.</p>
-<p>The supported sparse backends are KLU, UMFPACK, and extension-provided Pardiso. A cached factorisation is retained only after a successful factorisation; failed cached KLU and UMFPACK updates receive one fresh symbolic analysis before failure is reported.</p>
+<p>The supported sparse backends are KLU, UMFPACK, and extension-provided Pardiso. A cached factorisation is retained only after a successful factorisation; failed cached KLU and UMFPACK updates receive one fresh symbolic analysis before failure is reported. Failed KLU native storage is released before that recovery analysis begins.</p>
 <h1>Source organisation</h1>
 <table><tr><th align="left">File</th><th align="left">Purpose</th></tr><tr><td align="left"><code>SolverState.jl</code></td><td align="left">Backend markers, constant-pattern sparse storage, and cache lifetime</td></tr><tr><td align="left"><code>FailureDiagnostics.jl</code></td><td align="left">Contextual failure categories and user-facing diagnostics</td></tr><tr><td align="left"><code>Factorisations.jl</code></td><td align="left">Typed KLU and UMFPACK symbolic/numeric factorisation reuse</td></tr><tr><td align="left"><code>AccuracyControl.jl</code></td><td align="left">Sparse backward errors and iterative refinement</td></tr><tr><td align="left"><code>BorderedSolve.jl</code></td><td align="left">Backend dispatch, exact factor reuse, and in-place solves</td></tr></table>
 </div></div>
@@ -4397,11 +4397,23 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_configured_residual_tolerance" data-doc-name="_configured_residual_tolerance" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L57" target="_blank" rel="noopener">_configured_residual_tolerance</a>(::Type{T}, options) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L58" target="_blank" rel="noopener">_configured_residual_tolerance</a>(::Type{T}, options) where T</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_configured_residual_tolerance&#40;T, options&#41; -&gt; tolerance or nothing</code></pre>
 <p>Resolve the backward-error threshold in the real scalar type associated with <code>T</code>. <code>options &#61; nothing</code> selects the standard checked default used by the low-level constructor.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="BorderedLinearSolvers-_discard_klu_factor!" data-doc-name="_discard_klu_factor!" data-doc-module="BorderedLinearSolvers">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/Factorisations.jl#L38" target="_blank" rel="noopener">_discard_klu_factor!</a>(ss::SparseLinearSolverState, factorisation::KLU.KLUFactorization)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_discard_klu_factor&#33;&#40;state, factorisation&#41; -&gt; nothing</code></pre>
+<p>Remove a failed KLU factorisation from <code>state</code> and release its native symbolic and numeric storage before another analysis begins. Merely assigning <code>nothing</code> to <code>state.fact</code> would leave that storage alive until garbage collection, which can retain damaged KLU state across the immediate recovery attempt on Windows.</p>
+<p><code>Base.finalize</code> is Julia&#39;s required external spelling; it runs the finaliser already owned by <code>KLUFactorization</code> and prevents it from running twice later.</p>
 </div>
   </div>
 </div>
@@ -4438,7 +4450,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_pardiso_factorise_solve!" data-doc-name="_pardiso_factorise_solve!" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L48" target="_blank" rel="noopener">_pardiso_factorise_solve!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L49" target="_blank" rel="noopener">_pardiso_factorise_solve!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Run Pardiso numeric factorisation followed by a solve.</p>
@@ -4448,7 +4460,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_pardiso_prepare!" data-doc-name="_pardiso_prepare!" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L45" target="_blank" rel="noopener">_pardiso_prepare!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L46" target="_blank" rel="noopener">_pardiso_prepare!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Run Pardiso configuration and symbolic analysis for a bordered matrix.</p>
@@ -4458,7 +4470,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_pardiso_release!" data-doc-name="_pardiso_release!" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L54" target="_blank" rel="noopener">_pardiso_release!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L55" target="_blank" rel="noopener">_pardiso_release!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Release extension-owned Pardiso factorisation storage.</p>
@@ -4468,7 +4480,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_pardiso_solve!" data-doc-name="_pardiso_solve!" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L51" target="_blank" rel="noopener">_pardiso_solve!</a>(args...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L52" target="_blank" rel="noopener">_pardiso_solve!</a>(args...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Solve with the current Pardiso numeric factorisation.</p>
@@ -4478,7 +4490,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_refactorise!" data-doc-name="_refactorise!" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/Factorisations.jl#L126" target="_blank" rel="noopener">_refactorise!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/Factorisations.jl#L144" target="_blank" rel="noopener">_refactorise!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Backward-compatible internal alias for <a class="doc-ref" href="#BorderedLinearSolvers-_refactorise_klu!"><code>_refactorise_klu&#33;</code></a>.</p>
@@ -4488,7 +4500,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_refactorise_klu!" data-doc-name="_refactorise_klu!" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/Factorisations.jl#L38" target="_blank" rel="noopener">_refactorise_klu!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/Factorisations.jl#L55" target="_blank" rel="noopener">_refactorise_klu!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_refactorise_klu&#33;&#40;ss, A&#41; -&gt; KLU factorisation of &#96;A&#96;</code></pre>
@@ -4499,7 +4511,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <h2>Preconditions and aliasing</h2>
 <p><code>A</code>&#39;s sparsity pattern must be identical on every call — <a class="doc-ref" href="#BorderedLinearSolvers-SparseLinearSolverState"><code>SparseLinearSolverState</code></a> guarantees this by construction, since only <code>nzval</code> is ever written.</p>
 <p><code>klu</code> takes <code>A.nzval</code> by reference rather than copying it, so the factorisation and the template share one value array: per-monomial assembly writes straight into what KLU reads, with no copy-in step. <code>colptr</code>/<code>rowval</code> stay KLU&#39;s own &#40;0-based&#41; copies, and are invariant in any case.</p>
-<p>A factorisation is cached only if it succeeded. Both fresh and cached numeric factorisations use KLU&#39;s checked path because stored zeros in the constant border can make an unchecked status appear successful even when the numeric factor is singular. A failed cached factor is discarded and retried once from a fresh symbolic analysis.</p>
+<p>A factorisation is cached only if it succeeded. Both fresh and cached numeric factorisations use KLU&#39;s checked path because stored zeros in the constant border can make an unchecked status appear successful even when the numeric factor is singular. A failed cached factor has its native storage released immediately and is retried once from a fresh symbolic analysis.</p>
 </div>
   </div>
 </div>
@@ -4517,7 +4529,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_refactorise_umfpack!" data-doc-name="_refactorise_umfpack!" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/Factorisations.jl#L96" target="_blank" rel="noopener">_refactorise_umfpack!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/Factorisations.jl#L114" target="_blank" rel="noopener">_refactorise_umfpack!</a>(ss::SparseLinearSolverState, A::SparseArrays.SparseMatrixCSC)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_refactorise_umfpack&#33;&#40;state, matrix&#41; -&gt; UMFPACK factorisation</code></pre>
@@ -4594,7 +4606,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="BorderedLinearSolvers-_try_build_pardiso_solver" data-doc-name="_try_build_pardiso_solver" data-doc-module="BorderedLinearSolvers">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L37" target="_blank" rel="noopener">_try_build_pardiso_solver</a>(...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/BorderedLinearSolvers/BorderedLinearSolvers.jl#L38" target="_blank" rel="noopener">_try_build_pardiso_solver</a>(...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_try_build_pardiso_solver&#40;&#41; -&gt; solver or nothing</code></pre>
@@ -4602,7 +4614,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </div>
   </div>
 </div>
-  <div id="CohomologicalEquations" class="doc-module-h">CohomologicalEquations</div>
+  <div id="CohomologicalEquations" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/CohomologicalEquations/CohomologicalEquations.jl#L1" target="_blank" rel="noopener">CohomologicalEquations</a></div>
   <div class="doc-module-desc" data-module="CohomologicalEquations"><div class="markdown"><p>Solve the cohomological equations that arise in the parametrisation method for computing Spectral Submanifolds &#40;SSMs&#41; of high-dimensional dynamical systems.</p>
 <hr />
 <h1>Problem statement</h1>
@@ -4695,7 +4707,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
   <div class="doc-body">
 <div class="markdown"><pre><code>CohomologicalContext&#123;T, ORD, ORDP1, NVAR, FOM, LT, MT&#125;</code></pre>
 <p>Bundles all precomputed data required to solve the cohomological equations for every monomial.</p>
-<p>The solve visits every multi-index in turn, and nothing in this struct varies with the multi-index: operator coefficients, resonance look-ups, buffers and the cached factorisation are all built once by <a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem"><code>solve_cohomological_problem</code></a> and reused. That is what allows <a class="doc-ref" href="#CohomologicalEquations-solve_single_monomial!"><code>solve_single_monomial&#33;</code></a> to run without heap allocation. Related data is grouped into named sub-structs rather than kept flat, so each field&#39;s provenance is visible at the call site &#40;<code>ctx.orthogonality.J_coeffs</code>, not a bare <code>ctx.J_coeffs</code>&#41;.</p>
+<p>The solve visits every multi-index in turn, and nothing in this struct varies with the multi-index: operator coefficients, resonance look-ups, buffers and the cached factorisation are all built once by <a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a> and reused. That is what allows <a class="doc-ref" href="#CohomologicalEquations-solve_single_monomial!"><code>solve_single_monomial&#33;</code></a> to run without heap allocation. Related data is grouped into named sub-structs rather than kept flat, so each field&#39;s provenance is visible at the call site &#40;<code>ctx.orthogonality.J_coeffs</code>, not a bare <code>ctx.J_coeffs</code>&#41;.</p>
 <h1>Type parameters</h1>
 <table><tr><th align="left">Parameter</th><th align="left">Meaning</th></tr><tr><td align="left"><code>T</code></td><td align="left">Scalar type &#40;typically <code>ComplexF64</code>&#41;</td></tr><tr><td align="left"><code>ORD</code></td><td align="left">Differential-equation order of the full-order model</td></tr><tr><td align="left"><code>ORDP1</code></td><td align="left"><code>ORD &#43; 1</code></td></tr><tr><td align="left"><code>NVAR</code></td><td align="left">Total reduced variables: <code>ROM &#43; N_EXT</code></td></tr><tr><td align="left"><code>FOM</code></td><td align="left">Full-order state dimension</td></tr><tr><td align="left"><code>LT</code></td><td align="left">Element type of the FOM matrices</td></tr><tr><td align="left"><code>MT</code></td><td align="left">Matrix type; sparse path when <code>MT &lt;: SparseMatrixCSC</code></td></tr></table>
 <h1>Fields</h1>
@@ -4945,7 +4957,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </div>
   </div>
 </div>
-  <div id="ParametrisationSolver" class="doc-module-h">ParametrisationSolver</div>
+  <div id="ParametrisationSolver" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ParametrisationSolver.jl#L1" target="_blank" rel="noopener">ParametrisationSolver</a></div>
   <div class="doc-module-desc" data-module="ParametrisationSolver"><div class="markdown"><p>Operational workflow for constructing a parametrisation and reduced dynamics.</p>
 <p>This internal submodule owns the work surrounding the mathematical cohomological equation: configuration, <code>W</code>/<code>R</code> storage preparation, checkpoint restoration and commits, conjugate reconstruction, causal monomial scheduling, progress, and benchmarking. It delegates each individual cohomological equation to <code><a class="doc-ref" href="#CohomologicalEquations">CohomologicalEquations</a></code> and delegates sparse factorisation to <code><a class="doc-ref" href="#BorderedLinearSolvers">BorderedLinearSolvers</a></code>.</p>
 <h1>Source organisation</h1>
@@ -5600,6 +5612,26 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="ParametrisationSolver-_execute_benchmarked_schedule!" data-doc-name="_execute_benchmarked_schedule!" data-doc-module="ParametrisationSolver">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Benchmarking.jl#L188" target="_blank" rel="noopener">_execute_benchmarked_schedule!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_execute_benchmarked_schedule&#33;&#40;W, R, context, symmetry, model, cache;
+	benchmark_dir, show_progress &#61; true&#41; -&gt; nothing</code></pre>
+<p>Run the causal cohomological solve while timing nonlinear right-hand-side assembly and the bordered linear solve separately. On successful completion it overwrites two files:</p>
+<ul>
+<li><p><code>benchmark_per_monomial.csv</code> contains order, monomial index and exponents, time and allocations for each measured phase, monomial total, and cumulative measured time.</p>
+</li>
+<li><p><code>benchmark_per_order.csv</code> aggregates those quantities by polynomial degree and records live GC bytes when each order is flushed.</p>
+</li>
+</ul>
+<p>Rows are buffered in memory and written only after the solve completes. The measured time does not include lower-order coupling assembly, coefficient unpacking, higher-derivative updates, progress output, or CSV writing. This diagnostic loop supports conjugate filling but deliberately does not use structural factor grouping or checkpoint callbacks.</p>
+<p><code>benchmark_dir</code> is required and is created when necessary. <code>show_progress</code> follows the ordinary schedule&#39;s TTY behaviour.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="ParametrisationSolver-_execute_job!" data-doc-name="_execute_job!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
@@ -5619,7 +5651,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L48" target="_blank" rel="noopener">_execute_problem_schedule!</a>(W, R, ctx, symmetry, model, cache, mset, sparse_solver, checkpoint_session, benchmark_dir, options)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><p>Execute benchmark or ordinary scheduling with the appropriate typed observer.</p>
+<div class="markdown"><p>Execute benchmark or ordinary scheduling with the appropriate concrete observer.</p>
 </div>
   </div>
 </div>
@@ -5633,6 +5665,17 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="markdown"><pre><code>_execute_solve_plan&#33;&#40;plan, instrumentation, observer, W, R, ctx, sym, model,
 	ml_cache&#41; -&gt; nothing</code></pre>
 <p>Execute a direct or grouped plan in causal degree order. The grouped overload factorises the first job in each group and passes <code>Val&#40;true&#41;</code> only to later jobs with a provably identical bordered matrix.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="ParametrisationSolver-_execute_solve_schedule!" data-doc-name="_execute_solve_schedule!" data-doc-module="ParametrisationSolver">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveExecution.jl#L266" target="_blank" rel="noopener">_execute_solve_schedule!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx, sym, model, ml_cache; show_progress, grouping, observer, instrumentation) where {ORD, NVAR, T, ROM}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_execute_solve_schedule&#33;&#40;W, R, context, symmetry, model, cache; ...&#41; -&gt; nothing</code></pre>
+<p>Build the solve plan, compose progress with the requested observer, and execute the plan. The concrete coefficient-container signature forms the inference boundary directly; no second function distinguished only by a <code>_typed</code> suffix is required.</p>
 </div>
   </div>
 </div>
@@ -6032,29 +6075,6 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 </div>
   </div>
 </div>
-<div class="doc doc-function" id="ParametrisationSolver-_solve_cohomological_equations!" data-doc-name="_solve_cohomological_equations!" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveExecution.jl#L266" target="_blank" rel="noopener">_solve_cohomological_equations!</a>(W, R, ctx, sym, model, ml_cache; show_progress, grouping, observer, instrumentation)</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>_solve_cohomological_equations&#33;&#40;W, R, ctx, sym, model, ml_cache; ...&#41; -&gt; nothing</code></pre>
-<p>Internal execution boundary that specialises the optional observer and instrumentation before entering the typed solve loop.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="ParametrisationSolver-_solve_cohomological_equations_typed!" data-doc-name="_solve_cohomological_equations_typed!" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveExecution.jl#L280" target="_blank" rel="noopener">_solve_cohomological_equations_typed!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx, sym, model, ml_cache, observer, instrumentation, show_progress, grouping) where {ORD, NVAR, T, ROM}</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>_solve_cohomological_equations_typed&#33;&#40;W, R, ctx, sym, model, ml_cache,
-	observer, instrumentation, show_progress, grouping&#41; -&gt; nothing</code></pre>
-<p>Build the solve plan, compose progress with the requested observer, and execute the plan. This method exists as the type-stable target of the public scheduling overloads.</p>
-</div>
-  </div>
-</div>
 <div class="doc doc-function" id="ParametrisationSolver-_solve_external_directions!" data-doc-name="_solve_external_directions!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
@@ -6160,54 +6180,20 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 </div>
   </div>
 </div>
-<div class="doc doc-function" id="ParametrisationSolver-solve_cohomological_equations!" data-doc-name="solve_cohomological_equations!" data-doc-module="ParametrisationSolver">
+<div class="doc doc-function" id="ParametrisationSolver-solve_parametrisation" data-doc-name="solve_parametrisation" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveExecution.jl#L303" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W, R, ctx, model, ml_cache; show_progress, grouping)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveExecution.jl#L303" target="_blank" rel="noopener">solve_cohomological_equations!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, symmetry::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; show_progress, grouping) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L67" target="_blank" rel="noopener">solve_parametrisation</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>solve_cohomological_equations&#33;&#40;W, R, ctx, model, ml_cache&#41; -&gt; nothing
-solve_cohomological_equations&#33;&#40;W, R, ctx, symmetry, model, ml_cache;
-	show_progress &#61; true, grouping &#61; :off&#41; -&gt; nothing</code></pre>
-<p>Solve every scheduled cohomological equation in causal degree order. Conjugate secondary coefficients are reconstructed immediately after their primary, and exact grouped solves reuse the first job&#39;s factorisation without grouping across degrees.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="ParametrisationSolver-solve_cohomological_equations_benchmarked!" data-doc-name="solve_cohomological_equations_benchmarked!" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Benchmarking.jl#L188" target="_blank" rel="noopener">solve_cohomological_equations_benchmarked!</a>(W::Parametrisation{ORD, NVAR, T}, R::ReducedDynamics{ROM, NVAR, T}, ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}, sym::ConjugateSymmetryData, model::NthOrderModel, ml_cache::MORFE.MultilinearTerms.MultilinearTermsCache; benchmark_dir, show_progress) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>solve_cohomological_equations_benchmarked&#33;&#40;W, R, ctx, sym, model, ml_cache;
-	benchmark_dir, show_progress &#61; true&#41; -&gt; nothing</code></pre>
-<p>Run the causal cohomological solve while timing nonlinear right-hand-side assembly and the bordered linear solve separately. On successful completion it overwrites two files:</p>
-<ul>
-<li><p><code>benchmark_per_monomial.csv</code> contains order, monomial index and exponents, time and allocations for each measured phase, monomial total, and cumulative measured time.</p>
-</li>
-<li><p><code>benchmark_per_order.csv</code> aggregates those quantities by polynomial degree and records live GC bytes when each order is flushed.</p>
-</li>
-</ul>
-<p>Rows are buffered in memory and written only after the solve completes. The measured time does not include lower-order coupling assembly, coefficient unpacking, higher-derivative updates, progress output, or CSV writing. This diagnostic loop supports conjugate filling but deliberately does not use structural factor grouping or checkpoint callbacks.</p>
-<p><code>benchmark_dir</code> is required and is created when necessary. <code>show_progress</code> has the same TTY behaviour as in <a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_equations!"><code>solve_cohomological_equations&#33;</code></a>.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="ParametrisationSolver-solve_cohomological_problem" data-doc-name="solve_cohomological_problem" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L67" target="_blank" rel="noopener">solve_cohomological_problem</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>solve_cohomological_problem&#40;
+<div class="markdown"><pre><code>solve_parametrisation&#40;
 	model, mset, spectral::SpectralData, resonance_set;
 	initial_solution &#61; nothing,
 	conjugate_permutation &#61; :from_spectral,
 	benchmark_dir &#61; nothing,
 	options &#61; ParametrisationOptions&#40;&#41;
 &#41; -&gt; &#40;W, R&#41;</code></pre>
-<p>High-level driver that assembles a <a class="doc-ref" href="#CohomologicalEquations-CohomologicalContext"><code>CohomologicalContext</code></a> from spectral data and solves the full set of cohomological equations.</p>
+<p>Prepare all workflow data, solve the requested parametrisation coefficients, and return the parametrisation and reduced dynamics.</p>
 <p>The spectral input is <strong>one</strong> object. It replaces five separately maintained inputs: master eigenvalues, master right modes, master left modes, right-mode derivative blocks, and left-mode order blocks. Every former call site had to slice and keep those arrays mutually consistent — including the mirrored right/left block convention, where a swap is type-correct and compiles silently. <a class="doc-ref" href="#SpectralDecomposition-SpectralData"><code>SpectralData</code></a>&#39;s explicitly named accessors own that convention now, and it is checked numerically by <code><a class="doc-ref" href="#SpectralDecomposition-check_biorthogonality">check_biorthogonality</a></code>.</p>
 <p>The external dynamics enter through <code>model.external_system.first_order_dynamics</code>, which <code><a class="doc-ref" href="#ParametrisationSolver-_embed_external_dynamics!">_embed_external_dynamics&#33;</a></code> copies into the external rows of <code>R</code>; the superharmonics <code>s</code> are then contracted against <code>diag&#40;Λ&#41;</code> read back from <code>R</code>, so the external part of <code>s</code> is the diagonal of the external linear matrix.  That matrix must be upper triangular — the <code><a class="doc-ref" href="#ExternalSystems-ExternalSystem">ExternalSystem</a></code> constructors guarantee it, re-basing the external coordinates when the supplied matrix is not, as explained in the <code><a class="doc-ref" href="#ExternalSystems">ExternalSystems</a></code> module docstring.  When that happens the reduced external coordinates returned here are the re-based <code>r′</code>, related to the physical <code>r</code> by <code>r &#61; Q r′</code> with <code>Q &#61; external_basis&#40;model.external_system&#41;</code>.  The linear-operator tuple is read from <code>model.linear_terms</code>.</p>
 <h2>Steps</h2>
@@ -6241,7 +6227,7 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, symmetry, model, ml_cache;
 </li>
 <li><p><code>options</code> — execution, validation, residual-verification, and checkpoint policy in a <a class="doc-ref" href="#ParametrisationSolver-ParametrisationOptions"><code>ParametrisationOptions</code></a>. Mathematical choices remain separate arguments.</p>
 </li>
-<li><p><code>benchmark_dir</code> — <code>nothing</code> for the normal grouped/checkpoint-capable solve, or a directory in which <a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_equations_benchmarked!"><code>solve_cohomological_equations_benchmarked&#33;</code></a> writes timing CSV files. Benchmark mode uses the shared direct execution plan and therefore does not perform factor grouping. It cannot be combined with checkpointing because benchmark timings do not form resumable checkpoint commits.</p>
+<li><p><code>benchmark_dir</code> — <code>nothing</code> for the normal grouped/checkpoint-capable solve, or a directory in which the benchmark observer writes timing CSV files. Benchmark mode uses the shared direct execution plan and therefore does not perform factor grouping. It cannot be combined with checkpointing because benchmark timings do not form resumable checkpoint commits.</p>
 </li>
 </ul>
 <h2>Returns</h2>
@@ -6249,13 +6235,13 @@ solve_cohomological_equations&#33;&#40;W, R, ctx, symmetry, model, ml_cache;
 </div>
   </div>
 </div>
-  <div id="ParametrisationMethod" class="doc-module-h">ParametrisationMethod</div>
+  <div id="ParametrisationMethod" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationMethod.jl#L1" target="_blank" rel="noopener">ParametrisationMethod</a></div>
   <div class="doc-module-desc" data-module="ParametrisationMethod"><div class="markdown"><p>Module <code><a class="doc-ref" href="#ParametrisationMethod">ParametrisationMethod</a></code> — the user-facing entry point to the DPIM parametrisation.</p>
 <p>Owns <a class="doc-ref" href="#ParametrisationMethod-parametrise"><code>parametrise</code></a>, the public entry point that turns a full-order model plus spectral data into a solved invariant manifold <code>&#40;W, R&#41;</code>. It coordinates the following separate functions, so a new policy is a new method rather than a new branch:</p>
-<table><tr><th align="right">Step</th><th align="right">Function</th><th align="right">Dispatches on</th></tr><tr><td align="right">build the monomial set</td><td align="right"><a class="doc-ref" href="#ParametrisationMethod-build_multiindex_set"><code>build_multiindex_set</code></a></td><td align="right">the expansion order</td></tr><tr><td align="right">build the resonance set</td><td align="right"><code><a class="doc-ref" href="#Resonance-build_resonance_set">build_resonance_set</a></code></td><td align="right">the resonance style</td></tr><tr><td align="right">solve</td><td align="right"><code><a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem">solve_cohomological_problem</a></code></td><td align="right">dense vs sparse model</td></tr></table>
+<table><tr><th align="right">Step</th><th align="right">Function</th><th align="right">Dispatches on</th></tr><tr><td align="right">build the monomial set</td><td align="right"><a class="doc-ref" href="#ParametrisationMethod-build_multiindex_set"><code>build_multiindex_set</code></a></td><td align="right">the expansion order</td></tr><tr><td align="right">build the resonance set</td><td align="right"><code><a class="doc-ref" href="#Resonance-build_resonance_set">build_resonance_set</a></code></td><td align="right">the resonance style</td></tr><tr><td align="right">solve</td><td align="right"><code><a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation">solve_parametrisation</a></code></td><td align="right">dense vs sparse model</td></tr></table>
 <p>The coefficient containers themselves &#40;<code><a class="doc-ref" href="#ParametrisationObjects-Parametrisation">Parametrisation</a></code>, <code><a class="doc-ref" href="#ParametrisationObjects-ReducedDynamics">ReducedDynamics</a></code>, …&#41; live in <a class="doc-ref" href="#ParametrisationObjects"><code>ParametrisationObjects</code></a> and are re-exported here, so this module remains the single namespace users need.</p>
 <h2>Load order</h2>
-<p>This module is included after <code><a class="doc-ref" href="#ParametrisationSolver">ParametrisationSolver</a></code>, whose documented workflow owns <code><a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem">solve_cohomological_problem</a></code>. The mathematical <code><a class="doc-ref" href="#CohomologicalEquations">CohomologicalEquations</a></code> module and the numerical <code><a class="doc-ref" href="#BorderedLinearSolvers">BorderedLinearSolvers</a></code> module therefore remain independent of this user-facing entry point. Checkpointing, symmetry, scheduling, progress, and benchmarking do not live in this module.</p>
+<p>This module is included after <code><a class="doc-ref" href="#ParametrisationSolver">ParametrisationSolver</a></code>, whose documented workflow owns <code><a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation">solve_parametrisation</a></code>. The mathematical <code><a class="doc-ref" href="#CohomologicalEquations">CohomologicalEquations</a></code> module and the numerical <code><a class="doc-ref" href="#BorderedLinearSolvers">BorderedLinearSolvers</a></code> module therefore remain independent of this user-facing entry point. Checkpointing, symmetry, scheduling, progress, and benchmarking do not live in this module.</p>
 </div></div>
 <div class="doc doc-function" id="ParametrisationMethod-build_multiindex_set" data-doc-name="build_multiindex_set" data-doc-module="ParametrisationMethod">
   <div class="doc-sig">
@@ -6357,9 +6343,9 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 </div>
   </div>
 </div>
-  <div id="InvarianceError" class="doc-module-h">InvarianceError</div>
+  <div id="InvarianceError" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L1" target="_blank" rel="noopener">InvarianceError</a></div>
   <div class="doc-module-desc" data-module="InvarianceError"><div class="markdown"><p>Module <code><a class="doc-ref" href="#InvarianceError">InvarianceError</a></code> — a posteriori validation of the computed invariant manifold.</p>
-<p>After <code><a class="doc-ref" href="#ParametrisationSolver-solve_cohomological_problem">solve_cohomological_problem</a></code> produces <code>&#40;W, R&#41;</code>, this module measures how well the parametrisation satisfies the invariance equation</p>
+<p>After <code><a class="doc-ref" href="#ParametrisationSolver-solve_parametrisation">solve_parametrisation</a></code> produces <code>&#40;W, R&#41;</code>, this module measures how well the parametrisation satisfies the invariance equation</p>
 <pre><code>∂W/∂z · R&#40;z&#41; &#61; F&#40;W&#40;z&#41;&#41;</code></pre>
 <p>by evaluating both sides on random points <code>z</code> on the manifold and computing the relative residual.  Results are plotted as convergence curves against the polynomial order and returned as structured data for further analysis.</p>
 </div></div>
@@ -6449,7 +6435,7 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 </div>
   </div>
 </div>
-  <div id="SymbolicsExtension" class="doc-module-h">SymbolicsExtension</div>
+  <div id="SymbolicsExtension" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/ext/MORFESymbolicsExt.jl#L1" target="_blank" rel="noopener">SymbolicsExtension</a></div>
   <div class="doc-module-desc" data-module="SymbolicsExtension"><div class="markdown"><p>This module is an extension using Symbolics.jl to introduce  a clean and nice looking interface for definition and generating the NDOrdermodel and ExternalSystem</p>
 </div></div>
 <div class="doc doc-function" id="SymbolicsExtension-_differential_equations_helper" data-doc-name="_differential_equations_helper" data-doc-module="SymbolicsExtension">

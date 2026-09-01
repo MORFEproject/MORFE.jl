@@ -84,7 +84,6 @@ include("SolveProblem.jl")
 export ParametrisationOptions, CheckpointOptions, checkpoint_fingerprint_data,
        NoConjugatePermutation, ConjugateSymmetryData, fill_conjugate_monomial!,
        detect_conjugate_permutation, external_conjugate_permutation,
-       full_conjugate_permutation, solve_cohomological_equations!,
-       solve_cohomological_equations_benchmarked!, solve_cohomological_problem
+       full_conjugate_permutation, solve_parametrisation
 
 end # module ParametrisationSolver

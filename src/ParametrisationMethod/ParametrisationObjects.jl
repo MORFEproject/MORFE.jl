@@ -61,7 +61,7 @@ The clauses, and why each one matters:
    loses the conjugate structure the permutation asserts.
 
 Returns `nothing`.  Cost is `O(nvar · |mset| · log|mset|)` — negligible beside a solve,
-but `parametrise` and `solve_cohomological_problem` both take a `validate_mset = false`
+but `parametrise` and `solve_parametrisation` both take a `validate_mset = false`
 escape hatch for callers that have already checked.
 
 See [`is_downward_closed`](@ref) and [`is_conjugate_closed`](@ref) for the two closure

@@ -350,7 +350,7 @@ write_lattice(joinpath(FIGDIR, "fig4_spectral.html"),
 # a set can be checked the moment it is built rather than after a long assembly.
 #
 # It throws an ArgumentError naming the offending exponent. Both `parametrise` and
-# `solve_cohomological_problem` take `validate_mset = false` to skip the check.
+# `solve_parametrisation` takes `validate_mset = false` to skip the check.
 # ------------------------------------------------------------------------------
 
 println("\n" * "="^92)

@@ -45,18 +45,18 @@ function _commit_initial_degree!(
     return 1
 end
 
-"""Execute benchmark or ordinary scheduling with the appropriate typed observer."""
+"""Execute benchmark or ordinary scheduling with the appropriate concrete observer."""
 function _execute_problem_schedule!(W, R, ctx, symmetry, model, cache, mset,
         sparse_solver, checkpoint_session, benchmark_dir, options)
     if benchmark_dir !== nothing
-        solve_cohomological_equations_benchmarked!(
+        _execute_benchmarked_schedule!(
             W, R, ctx, symmetry, model, cache;
             benchmark_dir, show_progress = options.show_progress)
     else
         observer = checkpoint_session === nothing ? _NO_SOLVE_OBSERVER :
                    _CheckpointSolveObserver(
             checkpoint_session, W, R, mset, sparse_solver)
-        _solve_cohomological_equations!(W, R, ctx, symmetry, model, cache;
+        _execute_solve_schedule!(W, R, ctx, symmetry, model, cache;
             show_progress = options.show_progress,
             grouping = options.grouping,
             observer)
@@ -65,7 +65,7 @@ function _execute_problem_schedule!(W, R, ctx, symmetry, model, cache, mset,
 end
 
 """
-	solve_cohomological_problem(
+	solve_parametrisation(
 		model, mset, spectral::SpectralData, resonance_set;
 		initial_solution = nothing,
 		conjugate_permutation = :from_spectral,
@@ -73,8 +73,8 @@ end
 		options = ParametrisationOptions()
 	) -> (W, R)
 
-High-level driver that assembles a [`CohomologicalContext`](@ref) from spectral data and
-solves the full set of cohomological equations.
+Prepare all workflow data, solve the requested parametrisation coefficients, and return
+the parametrisation and reduced dynamics.
 
 The spectral input is **one** object. It replaces five separately maintained inputs: master
 eigenvalues, master right modes, master left modes, right-mode derivative blocks, and
@@ -137,7 +137,7 @@ linear-operator tuple is read from `model.linear_terms`.
 - `options` — execution, validation, residual-verification, and checkpoint policy in a
   [`ParametrisationOptions`](@ref). Mathematical choices remain separate arguments.
 - `benchmark_dir` — `nothing` for the normal grouped/checkpoint-capable solve, or a directory
-  in which [`solve_cohomological_equations_benchmarked!`](@ref) writes timing CSV files.
+  in which the benchmark observer writes timing CSV files.
   Benchmark mode uses the shared direct execution plan and therefore does not perform
   factor grouping. It cannot be combined with checkpointing because benchmark timings do
   not form resumable checkpoint commits.
@@ -146,7 +146,7 @@ linear-operator tuple is read from `model.linear_terms`.
 
 `(W, R)` — the solved [`Parametrisation`](@ref) and [`ReducedDynamics`](@ref).
 """
-function solve_cohomological_problem(
+function solve_parametrisation(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
         mset::MultiindexSet{NVAR},
         spectral::SpectralData{ORD, ROM},

@@ -33,7 +33,7 @@ using MORFE.Resonance: resonance_set_from_graph_style,
 using MORFE.FullOrderModel: NthOrderModel, MultilinearMap, linear_first_order_matrices
 using MORFE.ExternalSystems: ExternalSystem
 using MORFE.ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients
-using MORFE.CohomologicalEquations: solve_cohomological_problem
+using MORFE.ParametrisationSolver: solve_parametrisation
 using MORFE.SpectralDecomposition: left_eigenmode_orders_from_slice
 using MORFE.InvarianceError: invariance_error_norms, invariance_error_convergence,
                              plot_invariance_convergence
@@ -98,7 +98,7 @@ external_system = ExternalSystem(
 
 # ------------------------------------------------------------------------------
 # 3. Build the full-order model
-#    Embedding the ExternalSystem lets solve_cohomological_problem read the
+#    Embedding the ExternalSystem lets solve_parametrisation read the
 #    external eigenvalues directly from model.external_system.eigenvalues.
 # ------------------------------------------------------------------------------
 model = NthOrderModel(
@@ -215,7 +215,7 @@ spectral = SpectralData(; eigenvalues = master_eigenvalues,
     right_modes = master_modes, right_derivatives = master_modes_derivatives,
     left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 
-W, R = solve_cohomological_problem(
+W, R = solve_parametrisation(
     model, mset, spectral, resonance_set;
     conjugate_permutation = [2, 1, 3]
 )

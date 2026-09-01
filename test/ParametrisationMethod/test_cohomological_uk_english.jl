@@ -48,6 +48,8 @@ using Test
         for (line_number, line) in enumerate(eachline(path))
             # This is an exact quotation of Julia's externally defined error message.
             occursin("cannot be finalized because they are not mutable", line) && continue
+            # `Base.finalize` is a Julia-defined function, not MORFE-owned language.
+            occursin("Base.finalize", line) && continue
             for (us_spelling, uk_spelling) in spellings
                 pattern = Regex("(?i)(?<![A-Za-z])" * us_spelling * "(?![A-Za-z])")
                 occursin(pattern, line) || continue

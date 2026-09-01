@@ -264,31 +264,19 @@ function _execute_solve_plan!(plan::_GroupedSolvePlan, instrumentation, observer
 end
 
 """
-	_solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache; ...) -> nothing
-
-Internal execution boundary that specialises the optional observer and instrumentation
-before entering the typed solve loop.
-"""
-function _solve_cohomological_equations!(W, R, ctx, sym, model, ml_cache;
-        show_progress::Bool, grouping::Symbol,
-        observer::_AbstractSolveObserver = _NO_SOLVE_OBSERVER,
-        instrumentation = _NO_MONOMIAL_INSTRUMENTATION)
-    return _solve_cohomological_equations_typed!(W, R, ctx, sym, model, ml_cache,
-        observer, instrumentation, show_progress, grouping)
-end
-
-"""
-	_solve_cohomological_equations_typed!(W, R, ctx, sym, model, ml_cache,
-		observer, instrumentation, show_progress, grouping) -> nothing
+	_execute_solve_schedule!(W, R, context, symmetry, model, cache; ...) -> nothing
 
 Build the solve plan, compose progress with the requested observer, and execute the plan.
-This method exists as the type-stable target of the public scheduling overloads.
+The concrete coefficient-container signature forms the inference boundary directly; no
+second function distinguished only by a `_typed` suffix is required.
 """
-function _solve_cohomological_equations_typed!(
+function _execute_solve_schedule!(
         W::Parametrisation{ORD, NVAR, T},
         R::ReducedDynamics{ROM, NVAR, T},
-        ctx, sym, model, ml_cache,
-        observer, instrumentation, show_progress, grouping
+        ctx, sym, model, ml_cache;
+        show_progress::Bool, grouping::Symbol,
+        observer::_AbstractSolveObserver = _NO_SOLVE_OBSERVER,
+        instrumentation = _NO_MONOMIAL_INSTRUMENTATION
 ) where {ORD, NVAR, T, ROM}
     plan = _build_solve_plan(ctx, sym, multiindex_set(W), grouping, Val(ROM))
     n_jobs = plan isa _DirectSolvePlan ? length(plan.jobs) : plan.n_jobs
@@ -299,48 +287,3 @@ function _solve_cohomological_equations_typed!(
         W, R, ctx, sym, model, ml_cache)
     return nothing
 end
-
-"""
-	solve_cohomological_equations!(W, R, ctx, model, ml_cache) -> nothing
-	solve_cohomological_equations!(W, R, ctx, symmetry, model, ml_cache;
-		show_progress = true, grouping = :off) -> nothing
-
-Solve every scheduled cohomological equation in causal degree order. Conjugate secondary
-coefficients are reconstructed immediately after their primary, and exact grouped solves
-reuse the first job's factorisation without grouping across degrees.
-"""
-function solve_cohomological_equations!(
-        W, R, ctx, model, ml_cache; show_progress::Bool = true,
-        grouping::Symbol = :off)
-    nterms = length(multiindex_set(W))
-    symmetry = _build_conjugate_symmetry(
-        NoConjugatePermutation(), ctx.linear_monomial_skip_set, nterms)
-    return solve_cohomological_equations!(W, R, ctx, symmetry, model, ml_cache;
-        show_progress, grouping)
-end
-
-function solve_cohomological_equations!(
-        W::Parametrisation{ORD, NVAR, T},
-        R::ReducedDynamics{ROM, NVAR, T},
-        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-        symmetry::ConjugateSymmetryData,
-        model::NthOrderModel,
-        ml_cache::MultilinearTermsCache;
-        show_progress::Bool = true,
-        grouping::Symbol = :off
-) where {ORD, NVAR, T, ROM, FOM, ORDP1, LT, MT}
-    _solve_cohomological_equations!(W, R, ctx, symmetry, model, ml_cache;
-        show_progress, grouping)
-    return nothing
-end
-
-# =============================================================================
-# Benchmarked cohomological solve variants
-#
-# Writes two CSV files to `benchmark_dir`:
-#   benchmark_per_monomial.csv — one row per solved monomial
-#   benchmark_per_order.csv   — one aggregate row per polynomial degree
-#
-# Both files are buffered in `IOBuffer`s and written at the end of the solve loop to
-# avoid per-row file-system overhead. Existing files are overwritten; the writes are
-# not transactional.

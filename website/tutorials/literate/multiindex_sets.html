@@ -307,7 +307,7 @@ write_lattice&#40;joinpath&#40;FIGDIR, &quot;fig4_spectral.html&quot;&#41;,
 </li>
 </ol>
 <p><code>parametrise&#40;model, spectral, mset&#41;</code> enforces the whole contract before it solves anything, through <code>validate_multiindex_set</code>. That function needs no model, so a set can be checked the moment it is built rather than after a long assembly.</p>
-<p>It throws an ArgumentError naming the offending exponent. Both <code>parametrise</code> and <code>solve_cohomological_problem</code> take <code>validate_mset &#61; false</code> to skip the check. –––––––––––––––––––––––––––––––––––––––</p>
+<p>It throws an ArgumentError naming the offending exponent. Both <code>parametrise</code> and <code>solve_parametrisation</code> take <code>validate_mset &#61; false</code> to skip the check. –––––––––––––––––––––––––––––––––––––––</p>
 <pre><code class="language-julia">println&#40;&quot;\n&quot; * &quot;&#61;&quot;^92&#41;
 println&#40;&quot;6. Checking the parametrise contract\n&quot;&#41;</code></pre>
 <p>The two closure predicates on their own, when a Bool is all you want:</p>

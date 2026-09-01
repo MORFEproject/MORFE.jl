@@ -96,12 +96,12 @@ function compare_paths(f_vec::AbstractVector{ComplexF64})
     model = _make_model(f_vec)
     res_set = _make_resonance()
 
-    W_conj, R_conj = solve_cohomological_problem(
+    W_conj, R_conj = solve_parametrisation(
         model, _mset, _spectral, res_set;
         conjugate_permutation = [2, 1, 4, 3],
         options = ParametrisationOptions(show_progress = false)
     )
-    W_noconj, R_noconj = solve_cohomological_problem(
+    W_noconj, R_noconj = solve_parametrisation(
         model, _mset, _spectral, res_set;
         conjugate_permutation = nothing,
         options = ParametrisationOptions(show_progress = false)

@@ -1,7 +1,7 @@
 """
 Module `InvarianceError` — a posteriori validation of the computed invariant manifold.
 
-After `solve_cohomological_problem` produces `(W, R)`, this module measures how
+After `solve_parametrisation` produces `(W, R)`, this module measures how
 well the parametrisation satisfies the invariance equation
 
 	∂W/∂z · R(z) = F(W(z))

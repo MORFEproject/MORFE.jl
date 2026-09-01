@@ -166,7 +166,7 @@ for t in 1:NVAR
 end
 
 conj_map &#61; &#91;2, 1, 3&#93;   # mode 1 &#40;Im&gt;0&#41; ↔ mode 2 &#40;Im&lt;0&#41;; η′ self-conjugate
-r_dpim &#61; @timed solve_cohomological_problem&#40;
+r_dpim &#61; @timed solve_parametrisation&#40;
 	model, mset,
 	master_eigenvalues,
 	master_modes .* 1e-2, left_eigenmodes .* 1e-2,   # scale modes for better numerical stability &#40;see discussion in #48&#41;

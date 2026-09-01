@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <li>Centering the analysis on a steady state — here Newton–Raphson solves the base flow.</li>
       <li>Defining nonlinearities: a FEM-assembled quadratic term via the <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a> interface, matrix- and vector-based terms via <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> closures, and a bifurcation parameter via <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>.</li>
       <li>Selecting master modes and building the resonance set.</li>
-      <li>Running <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a> and <em>using</em> the outputs $(W, R)$.</li>
+      <li>Running <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a> and <em>using</em> the outputs $(W, R)$.</li>
     </ul>
 
     <div class="adm note">
@@ -312,7 +312,7 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
       <div class="num">05</div>
       <div class="body">
         <h3 id="step-solve">Solve the cohomological equations</h3>
-<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">solve_cohomological_problem</span>(
+<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">solve_parametrisation</span>(
     <span class="var">model</span>, <span class="var">mset</span>, <span class="var">master_eigenvalues</span>,
     <span class="var">master_modes</span> <span class="op">.*</span> <span class="num">1e-2</span>, <span class="var">left_eigenmodes</span> <span class="op">.*</span> <span class="num">1e-2</span>,   <span class="cm"># coordinate rescale for conditioning</span>
     <span class="var">resonance_set</span>;
@@ -395,13 +395,13 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
       <li><strong>Parameters</strong> — anything that enters (multi)linearly can be carried as an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> coordinate; the ROM becomes parametric.</li>
       <li><strong>Masters</strong> — pick the eigenpairs that span the physics (here the Hopf pair) and hand MORFE both right and left eigenvectors.</li>
       <li><strong>Style</strong> — the resonance set decides what survives in $\dot z = R(z)$; normal-form style keeps the minimal resonant core.</li>
-      <li><strong>Solve &amp; use</strong> — <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a> returns $(W, R)$; continuation runs on $R$, physical quantities come from projections of $W$.</li>
+      <li><strong>Solve &amp; use</strong> — <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a> returns $(W, R)$; continuation runs on $R$, physical quantities come from projections of $W$.</li>
     </ol>
 
     <h2 id="next">Where to next?</h2>
     <ul>
       <li><a class="inline" href="full_order_model.html">Building a full-order model</a> — the same three ingredients built from scratch, without a FEM backend.</li>
-      <li><a class="inline" href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, multilinear maps, resonance sets, <a class="doc-link" href="../documentation.html#CohomologicalEquations-solve_cohomological_problem"><code>solve_cohomological_problem</code></a>.</li>
+      <li><a class="inline" href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, multilinear maps, resonance sets, <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a>.</li>
       <li><a class="inline" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
     </ul>
 
