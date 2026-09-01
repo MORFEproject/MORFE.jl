@@ -1,12 +1,4 @@
-# Terminal progress state kept separate from scheduling and numerical work.
-
-# =============================================================================
-# Solve planning and execution
-# =============================================================================
-
-# =============================================================================
-# Progress indicator (stderr, \r-based, no external dependencies)
-# =============================================================================
+# Allocation-conscious terminal progress reporting.
 
 """
 	_SimpleProgress

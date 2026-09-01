@@ -4961,7 +4961,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
   <div class="doc-module-desc" data-module="ParametrisationSolver"><div class="markdown"><p>Operational workflow for constructing a parametrisation and reduced dynamics.</p>
 <p>This internal submodule owns the work surrounding the mathematical cohomological equation: configuration, <code>W</code>/<code>R</code> storage preparation, checkpoint restoration and commits, conjugate reconstruction, causal monomial scheduling, progress, and benchmarking. It delegates each individual cohomological equation to <code><a class="doc-ref" href="#CohomologicalEquations">CohomologicalEquations</a></code> and delegates sparse factorisation to <code><a class="doc-ref" href="#BorderedLinearSolvers">BorderedLinearSolvers</a></code>.</p>
 <h1>Source organisation</h1>
-<table><tr><th align="left">File</th><th align="left">Purpose</th></tr><tr><td align="left"><code>Configuration.jl</code></td><td align="left">User-facing execution and checkpoint options</td></tr><tr><td align="left"><code>Checkpointing.jl</code></td><td align="left">Validated, atomic checkpoint persistence and restoration</td></tr><tr><td align="left"><code>ConjugateSymmetry.jl</code></td><td align="left">Conjugate-pair bookkeeping and coefficient reconstruction</td></tr><tr><td align="left"><code>SolveProgress.jl</code></td><td align="left">Allocation-conscious terminal progress reporting</td></tr><tr><td align="left"><code>SolveSchedule.jl</code></td><td align="left">Causal jobs and exact structural factor groups</td></tr><tr><td align="left"><code>SolveExecution.jl</code></td><td align="left">Typed observers and plan execution</td></tr><tr><td align="left"><code>Benchmarking.jl</code></td><td align="left">Timing instrumentation and CSV reporting</td></tr><tr><td align="left"><code>SolutionStorage.jl</code></td><td align="left">Creation, reuse, initialisation, and checkpoint restoration of <code>W</code>/<code>R</code></td></tr><tr><td align="left"><code>ExternalDirections.jl</code></td><td align="left">Ordered external solves and conjugate-block validation</td></tr><tr><td align="left"><code>SolvePreparation.jl</code></td><td align="left">Backend, operator, symmetry, resources, and complete context</td></tr><tr><td align="left"><code>SolveProblem.jl</code></td><td align="left">Short top-level phase orchestration</td></tr></table>
+<table><tr><th align="left">File</th><th align="left">Purpose</th></tr><tr><td align="left"><code>Configuration.jl</code></td><td align="left">User-facing execution and checkpoint options</td></tr><tr><td align="left"><code>Checkpointing.jl</code></td><td align="left">Validated, atomic checkpoint persistence and restoration</td></tr><tr><td align="left"><code>ConjugateSymmetry.jl</code></td><td align="left">Conjugate-pair bookkeeping and coefficient reconstruction</td></tr><tr><td align="left"><code>ProgressIndicator.jl</code></td><td align="left">Allocation-conscious terminal progress reporting</td></tr><tr><td align="left"><code>SolveSchedule.jl</code></td><td align="left">Causal jobs and exact structural factor groups</td></tr><tr><td align="left"><code>SolveExecution.jl</code></td><td align="left">Typed observers and plan execution</td></tr><tr><td align="left"><code>Benchmarking.jl</code></td><td align="left">Timing instrumentation and CSV reporting</td></tr><tr><td align="left"><code>SolutionStorage.jl</code></td><td align="left">Creation, reuse, initialisation, and checkpoint restoration of <code>W</code>/<code>R</code></td></tr><tr><td align="left"><code>ExternalDirections.jl</code></td><td align="left">Ordered external solves and conjugate-block validation</td></tr><tr><td align="left"><code>SolvePreparation.jl</code></td><td align="left">Backend, operator, symmetry, resources, and complete context</td></tr><tr><td align="left"><code>SolveProblem.jl</code></td><td align="left">Short top-level phase orchestration</td></tr></table>
 <p>The module root contains only dependencies, includes, and exports so that these responsibilities remain visible rather than accumulating in one driver file.</p>
 </div></div>
 <div class="doc doc-type" id="ParametrisationSolver-CheckpointOptions" data-doc-name="CheckpointOptions" data-doc-module="ParametrisationSolver">
@@ -4982,14 +4982,11 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 </li>
 <li><p><code>granularity::Symbol &#61; :factor_group</code> — when data are committed:</p>
 <ul>
-<li><p><code>:factor_group</code> writes after every exact factor-reuse group &#40;a group may contain one</p>
+<li><p><code>:factor_group</code> writes after every exact factor-reuse group, giving finer restart points and more chunk files;</p>
 </li>
-</ul>
-</li>
-</ul>
-<pre><code>monomial&#41;, giving finer restart points and more chunk files;</code></pre>
-<ul>
 <li><p><code>:degree</code> writes once after each completed total degree, giving fewer, larger chunks.</p>
+</li>
+</ul>
 </li>
 </ul>
 <p>A checkpoint is accepted only when its fingerprint matches the model, spectral data, resonance set, multiindex set, conjugate permutation, and numerical solver policy. Models containing application-defined callable kernels must implement <a class="doc-ref" href="#ParametrisationSolver-checkpoint_fingerprint_data"><code>checkpoint_fingerprint_data</code></a> before they can be checkpointed.</p>
@@ -5060,7 +5057,7 @@ W, R &#61; parametrise&#40;model, spectral, 9; options&#41;</code></pre>
 <div class="doc doc-type" id="ParametrisationSolver-ParametrisationOptions" data-doc-name="ParametrisationOptions" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Configuration.jl#L58" target="_blank" rel="noopener">ParametrisationOptions</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Configuration.jl#L57" target="_blank" rel="noopener">ParametrisationOptions</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>ParametrisationOptions&#40;;
@@ -5368,7 +5365,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-type" id="ParametrisationSolver-_SimpleProgress" data-doc-name="_SimpleProgress" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProgress.jl#L11" target="_blank" rel="noopener">_SimpleProgress</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ProgressIndicator.jl#L3" target="_blank" rel="noopener">_SimpleProgress</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_SimpleProgress</code></pre>
@@ -5675,7 +5672,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_execute_solve_schedule&#33;&#40;W, R, context, symmetry, model, cache; ...&#41; -&gt; nothing</code></pre>
-<p>Build the solve plan, compose progress with the requested observer, and execute the plan. The concrete coefficient-container signature forms the inference boundary directly; no second function distinguished only by a <code>_typed</code> suffix is required.</p>
+<p>Build the solve plan, compose progress with the requested observer, and execute the plan. The concrete coefficient-container signature forms the inference boundary directly.</p>
 </div>
   </div>
 </div>
@@ -5814,7 +5811,7 @@ W, R &#61; parametrise&#40;model, spectral, expansion_order; options&#41;</code>
 <div class="doc doc-function" id="ParametrisationSolver-_make_progress" data-doc-name="_make_progress" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProgress.jl#L33" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ProgressIndicator.jl#L25" target="_blank" rel="noopener">_make_progress</a>(n_total::Int64, show_progress::Bool, max_nl_degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_make_progress&#40;n_total, show_progress, max_nl_degree&#41; -&gt; _SimpleProgress</code></pre>
@@ -6012,7 +6009,7 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_progress_done!" data-doc-name="_progress_done!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProgress.jl#L58" target="_blank" rel="noopener">_progress_done!</a>(progress::MORFE.ParametrisationSolver._SimpleProgress, completed::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ProgressIndicator.jl#L50" target="_blank" rel="noopener">_progress_done!</a>(progress::MORFE.ParametrisationSolver._SimpleProgress, completed::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_progress_done&#33;&#40;progress, completed&#41;</code></pre>
@@ -6023,7 +6020,7 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_progress_tick!" data-doc-name="_progress_tick!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProgress.jl#L43" target="_blank" rel="noopener">_progress_tick!</a>(progress::MORFE.ParametrisationSolver._SimpleProgress, completed::Int64, degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ProgressIndicator.jl#L35" target="_blank" rel="noopener">_progress_tick!</a>(progress::MORFE.ParametrisationSolver._SimpleProgress, completed::Int64, degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_progress_tick&#33;&#40;progress, completed, degree&#41;</code></pre>
@@ -6034,7 +6031,7 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_replace_options" data-doc-name="_replace_options" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Configuration.jl#L198" target="_blank" rel="noopener">_replace_options</a>(options::ParametrisationOptions; backend, grouping, residual_check, residual_tolerance, max_refinement_steps, validate_mset, checkpoint, show_progress, verbose, setup_io)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Configuration.jl#L197" target="_blank" rel="noopener">_replace_options</a>(options::ParametrisationOptions; backend, grouping, residual_check, residual_tolerance, max_refinement_steps, validate_mset, checkpoint, show_progress, verbose, setup_io)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_replace_options&#40;options; overrides...&#41; -&gt; ParametrisationOptions</code></pre>

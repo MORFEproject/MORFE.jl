@@ -267,8 +267,7 @@ end
 	_execute_solve_schedule!(W, R, context, symmetry, model, cache; ...) -> nothing
 
 Build the solve plan, compose progress with the requested observer, and execute the plan.
-The concrete coefficient-container signature forms the inference boundary directly; no
-second function distinguished only by a `_typed` suffix is required.
+The concrete coefficient-container signature forms the inference boundary directly.
 """
 function _execute_solve_schedule!(
         W::Parametrisation{ORD, NVAR, T},

@@ -16,7 +16,7 @@ sparse factorisation to `BorderedLinearSolvers`.
 | `Configuration.jl` | User-facing execution and checkpoint options |
 | `Checkpointing.jl` | Validated, atomic checkpoint persistence and restoration |
 | `ConjugateSymmetry.jl` | Conjugate-pair bookkeeping and coefficient reconstruction |
-| `SolveProgress.jl` | Allocation-conscious terminal progress reporting |
+| `ProgressIndicator.jl` | Allocation-conscious terminal progress reporting |
 | `SolveSchedule.jl` | Causal jobs and exact structural factor groups |
 | `SolveExecution.jl` | Typed observers and plan execution |
 | `Benchmarking.jl` | Timing instrumentation and CSV reporting |
@@ -75,7 +75,7 @@ include("ConjugateSymmetry.jl")
 include("SolutionStorage.jl")
 include("ExternalDirections.jl")
 include("SolvePreparation.jl")
-include("SolveProgress.jl")
+include("ProgressIndicator.jl")
 include("SolveSchedule.jl")
 include("SolveExecution.jl")
 include("Benchmarking.jl")

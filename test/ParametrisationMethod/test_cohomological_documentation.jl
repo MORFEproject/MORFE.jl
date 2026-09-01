@@ -183,7 +183,8 @@ end
         "solve_cohomological_problem",
         "solve_cohomological_equations!",
         "solve_cohomological_equations_benchmarked!",
-        "_solve_cohomological_equations_typed!"
+        "_solve_cohomological_equations_typed!",
+        "SolveProgress.jl"
     )
         @test !occursin(removed_name, generated_page)
     end
@@ -197,15 +198,22 @@ end
     for source_path in source_paths
         @test isfile(source_path)
     end
-    documented_directories = (
-        joinpath(repo_root, "src", "ParametrisationMethod", "BorderedLinearSolvers"),
-        joinpath(repo_root, "src", "ParametrisationMethod", "CohomologicalEquations"),
-        joinpath(repo_root, "src", "ParametrisationMethod", "ParametrisationSolver")
+    documented_modules = (
+        ("BorderedLinearSolvers", "BorderedLinearSolvers.jl"),
+        ("CohomologicalEquations", "CohomologicalEquations.jl"),
+        ("ParametrisationSolver", "ParametrisationSolver.jl")
     )
-    expected_source_paths = Set(
-        normpath(source_path)
-    for directory in documented_directories
-    for source_path in readdir(directory; join = true)
-    if endswith(source_path, ".jl"))
+    expected_source_paths = Set{String}()
+    for (directory_name, module_filename) in documented_modules
+        directory = joinpath(
+            repo_root, "src", "ParametrisationMethod", directory_name)
+        module_path = normpath(joinpath(directory, module_filename))
+        push!(expected_source_paths, module_path)
+        module_source = read(module_path, String)
+        for included in eachmatch(r"""include\("([^"]+\.jl)"\)""", module_source)
+            push!(expected_source_paths,
+                normpath(joinpath(directory, included.captures[1])))
+        end
+    end
     @test issubset(expected_source_paths, source_paths)
 end

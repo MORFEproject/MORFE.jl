@@ -1255,4 +1255,100 @@ end  # @testset "input validation"
         bad_sig(r, p) = -r                  # missing t
         @test_throws Exception ext._differential_equations_helper_external(bad_sig, 1)
     end
+
+    # ── the public DifferentialEquations-shaped methods ────────────────────────────────
+    # Only the private helpers above were covered before, which is how the argument-order
+    # and dropped-parameter bugs in these three methods survived.
+
+    @testset "model_from_symbolics(f!, order, nvars) ≡ the symbolic form" begin
+        c, k, g = 0.1, 2.0, 6.0
+        duffing!(ddu, du, u, p, t) = (ddu[1] = -c * du[1] - k * u[1] - g * u[1]^3)
+
+        model_fn = model_from_symbolics(duffing!, 2, 1)
+
+        # the helper writes exprs as dᵏu − f(...), so the equivalent expression form is
+        @variables u[1:1] du[1:1] ddu[1:1]
+        u, du, ddu = collect(u), collect(du), collect(ddu)
+        exprs = [ddu[1] + c * du[1] + k * u[1] + g * u[1]^3]
+        model_sym = model_from_symbolics(exprs, (u, du, ddu))
+
+        for j in 1:3
+            @test model_fn.linear_terms[j] ≈ model_sym.linear_terms[j]
+        end
+        @test length(model_fn.nonlinear_terms) == length(model_sym.nonlinear_terms) == 1
+        @test model_fn.nonlinear_terms[1].multiindex ==
+              model_sym.nonlinear_terms[1].multiindex
+    end
+
+    @testset "externalsystem_from_symbolics(f, nvars) ≡ the symbolic form" begin
+        Ω = 1.3
+        # real rotation — the function layout builds a Vector{Num}, so the RHS stays real
+        rot!(dr, r, p, t) = (dr[1] = Ω * r[2]; dr[2] = -Ω * r[1])
+        rot_oop(r, p, t) = [Ω * r[2], -Ω * r[1]]
+
+        @variables r[1:2]
+        r = collect(r)
+        sys_sym = externalsystem_from_symbolics([Ω * r[2], -Ω * r[1]], r)
+
+        for sys in (externalsystem_from_symbolics(rot!, 2),
+            externalsystem_from_symbolics(rot_oop, 2))
+            @test sys.first_order_dynamics.multiindex_set ==
+                  sys_sym.first_order_dynamics.multiindex_set
+            @test sys.first_order_dynamics.coefficients ≈
+                  sys_sym.first_order_dynamics.coefficients
+        end
+    end
+
+    @testset "coupled model_from_symbolics(f!, order, nvars, f_ext, nvars_ext)" begin
+        Ω, c, k = 1.3, 0.2, 1.0
+        # f! takes the external state as an extra argument, after u and before p
+        forced!(ddu, du, u, r, p, t) = (ddu[1] = -c * du[1] - k * u[1] + r[1])
+        rot!(dr, r, p, t) = (dr[1] = Ω * r[2]; dr[2] = -Ω * r[1])
+
+        model_fn = model_from_symbolics(forced!, 2, 1, rot!, 2)
+
+        @variables u[1:1] du[1:1] ddu[1:1] r[1:2]
+        u, du, ddu, r = collect(u), collect(du), collect(ddu), collect(r)
+        exprs = [ddu[1] + c * du[1] + k * u[1] - r[1]]
+        model_sym = model_from_symbolics(
+            exprs, (u, du, ddu), r, [Ω * r[2], -Ω * r[1]])
+
+        for j in 1:3
+            @test model_fn.linear_terms[j] ≈ model_sym.linear_terms[j]
+        end
+        @test model_fn.external_system.first_order_dynamics.coefficients ≈
+              model_sym.external_system.first_order_dynamics.coefficients
+
+        # the forcing term must actually read the external state
+        @test length(model_fn.nonlinear_terms) == length(model_sym.nonlinear_terms)
+        @test any(t -> t.multiplicity_external == 1, model_fn.nonlinear_terms)
+    end
+
+    @testset "p and p_ext reach the user's function" begin
+        # each of these reads p[1]; before the fix p was replaced by (), so they threw
+        scaled!(dr, r, p, t) = (dr[1] = p[1] * r[2]; dr[2] = -p[1] * r[1])
+        sys = externalsystem_from_symbolics(scaled!, 2; p = (2.5,))
+        @variables r[1:2]
+        r = collect(r)
+        ref = externalsystem_from_symbolics([2.5 * r[2], -2.5 * r[1]], r)
+        @test sys.first_order_dynamics.coefficients ≈ ref.first_order_dynamics.coefficients
+
+        stiff!(ddu, du, u, p, t) = (ddu[1] = -p[1] * u[1] - 0.3 * du[1])
+        model = model_from_symbolics(stiff!, 2, 1; p = (7.0,))
+        @test model.linear_terms[1] ≈ reshape([7.0], 1, 1)
+        @test model.linear_terms[2] ≈ reshape([0.3], 1, 1)
+
+        # both parameter sets on the coupled method, each reaching its own function
+        forced!(ddu, du, u, r, p, t) = (ddu[1] = -p[1] * u[1] - 0.3 * du[1] + r[1] + r[2])
+        coupled = model_from_symbolics(forced!, 2, 1, scaled!, 2; p = (7.0,), p_ext = (2.5,))
+        @test coupled.linear_terms[1] ≈ reshape([7.0], 1, 1)
+        @test coupled.external_system.first_order_dynamics.coefficients ≈
+              ref.first_order_dynamics.coefficients
+    end
+
+    @testset "coupled f! must carry the external-state argument" begin
+        rot!(dr, r, p, t) = (dr[1] = r[2]; dr[2] = -r[1])
+        no_ext!(ddu, du, u, p, t) = (ddu[1] = -u[1])   # arity order+1, not order+2
+        @test_throws AssertionError model_from_symbolics(no_ext!, 2, 1, rot!, 2)
+    end
 end  # "DifferentialEquations.jl formulation of ODEs"
