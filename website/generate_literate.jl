@@ -43,9 +43,8 @@ const EXAMPLES = [
 	(id = "05_karman_vortex_street", title = "Kármán vortex street — FluidNavierStokes",
 		src = joinpath(FERRITE_ROOT, "examples", "05_karman_vortex_street", "main.jl"),
 		gh = "$GH_FERRITE/tree/main/examples/05_karman_vortex_street", custom = "karman.html"),
-	(id = "symbolics", title = "Symbolic full-order model",
-		src = joinpath(ROOT, "examples", "internals", "symbolics_ext", "main.jl"),
-		gh = "$GH_MORFE/tree/main/examples/internals/symbolics_ext", custom = "symbolics_ext.html"),
+	# The symbolic tutorial is a notebook example (09_symbolic_two_mass_oscillator), not a
+	# Literate `main.jl`: its page links the notebook directly, so there is no entry here.
 ]
 
 # ── Preprocessing: a LEADING triple-quoted docstring becomes `#` markdown, so

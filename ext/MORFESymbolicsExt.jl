@@ -75,10 +75,15 @@ end
 Helper for mirroring DifferentialEquations.jl interface.
 Used in MORFE.model_from_symbolics(f, nvars::Int; p = ()).
 """
-function _differential_equations_helper(f!, order::Int, nvars::Int; p = ())
+function _differential_equations_helper(
+        f!, order::Int, nvars::Int; p = (), ext_vars::Union{Nothing, Vector{Num}} = nothing)
     @assert length(methods(f!)) == 1 "f must have exactly one method — pass a plain function, not a closure with multiple dispatches"
-    arity = methods(f!)[1].nargs - 1 - 2   # drop f itself, then p and t
-    @assert arity == order + 1 "f has arity $arity, expected $(order+1) for an in-place order-$order problem"
+    coupled = ext_vars !== nothing
+    # drop f itself, then p and t; a coupled f! carries one extra argument, the external state
+    arity = methods(f!)[1].nargs - 1 - 2
+    expected = coupled ? order + 2 : order + 1
+    @assert arity==expected "f has arity $arity, expected $expected for an in-place order-$order problem" *
+                            (coupled ? " coupled to an external system" : "")
 
     # ascending symbolic groups: (u, du, ..., d^{order-1}u)
     names = ["u"; ["d"^k * "u" for k in 1:(order - 1)]]
@@ -92,26 +97,37 @@ function _differential_equations_helper(f!, order::Int, nvars::Int; p = ())
 
     out = Vector{Num}(undef, nvars)
     fill!(out, Num(0))
-    f!(out, descending_args..., p, t)
+    if coupled
+        f!(out, descending_args..., ext_vars, p, t)
+    else
+        f!(out, descending_args..., p, t)
+    end
 
     exprs = collect(highest) .- out
     groups = (lower_groups..., highest)
 
     used = reduce(union, Symbolics.get_variables.(exprs); init = Set())
-    @assert !(Symbolics.value(t) in used) "f depends on t — external systems must be autonomous"
+    @assert !(Symbolics.value(t) in used) "f depends on t — the model must be autonomous; route time dependence through an ExternalSystem"
     return exprs, groups
 end
 
 """
     MORFE.model_from_symbolics(f!, order, nvars; p = ())
 
-Mirrors DifferentialEquations.jl's  convention of defining ODEs, generalized to order 'order'.
-In-place (arity == order + 1), mutates the first argument:
-    f(dᵏu, dᵏ⁻¹u, ..., du, u, p, t)
-Each dⁱ needst be a vector of length 'nvars'.
+Mirrors DifferentialEquations.jl's convention of defining ODEs, generalised to order `order`.
+
+`f!` must be **in-place** (arity `order + 1`) and mutates its first argument:
+
+    f!(dᵏu, dᵏ⁻¹u, ..., du, u, p, t)
+
+Each `dⁱu` is a vector of length `nvars`. A non-mutating `f(u, p, t)` is not accepted here —
+only `externalsystem_from_symbolics` supports that layout.
+
+`f!` must be polynomial in the state and must not depend on `t`; `p` is passed through to `f!`
+unchanged, so parameters may be closed over or supplied here.
 """
 function MORFE.model_from_symbolics(f!, order::Int, nvars::Int; p = ())
-    exprs, groups = _differential_equations_helper(f!, order, nvars; p = ())
+    exprs, groups = _differential_equations_helper(f!, order, nvars; p = p)
     return MORFE.model_from_symbolics(exprs, groups)
 end
 
@@ -187,19 +203,32 @@ function MORFE.model_from_symbolics(
 end
 
 """
-    MORFE.model_from_symbolics(f!, order, nvars, f_ext, nvars_ext; p = ())
+    MORFE.model_from_symbolics(f!, order, nvars, f_ext, nvars_ext; p = (), p_ext = ())
 
-Mirrors DifferentialEquations.jl's  convention of defining ODEs, generalized to order 'order'=k.
-In-place (arity == order + 1), mutates the first argument:
-    f!(dᵏu, dᵏ⁻¹u, ..., du, u, p, t)
-Each dⁱ needst be a vector of length 'nvars'.
-f! is supposed to be a polynom and is not allowed to be dependent on `t`.
+Mirrors DifferentialEquations.jl's convention of defining ODEs, generalised to order `order` = k,
+for a model coupled to an [`externalsystem_from_symbolics`](@ref) driver.
+
+`f!` must be **in-place** and takes the external state `r` as one extra argument, after `u`
+and before `p` — so its arity is `order + 2`:
+
+    f!(dᵏu, dᵏ⁻¹u, ..., du, u, r, p, t)
+
+Each `dⁱu` is a vector of length `nvars` and `r` one of length `nvars_ext`; referencing `r`
+in `f!` is how forcing enters the model. `f_ext` describes the external dynamics `ṙ = E(r)`
+and may be either layout accepted by `externalsystem_from_symbolics`: in-place
+`f_ext(dr, r, p, t)` or out-of-place `f_ext(r, p, t) -> dr`.
+
+Both right-hand sides must be polynomial and independent of `t`. `p` is passed to `f!` and
+`p_ext` to `f_ext`, unchanged.
 """
 function MORFE.model_from_symbolics(
         f!, order::Int, nvars::Int, f_ext, nvars_ext::Int; p = (), p_ext = ())
-    exprs, groups = _differential_equations_helper(f!, order, nvars; p = ())
-    exprs_ext, r_ext = _differential_equations_helper_external(f_ext, nvars_ext; p_ext = ())
-    return MORFE.model_from_symbolics(exprs, groups, exprs_ext, r_ext)
+    # The driver is built first so `f!` can be handed the *same* external symbols it must
+    # reference — otherwise the coupled model would carry a driver no term ever reads.
+    exprs_ext, r_ext = _differential_equations_helper_external(f_ext, nvars_ext; p = p_ext)
+    exprs, groups = _differential_equations_helper(
+        f!, order, nvars; p = p, ext_vars = r_ext)
+    return MORFE.model_from_symbolics(exprs, groups, r_ext, exprs_ext)
 end
 
 end # module MorfeSymbolics

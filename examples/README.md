@@ -11,8 +11,9 @@ all outputs under a `results/` subfolder that is git-ignored (except for
 
 Every runnable example satisfies:
 
-1. **Entry point** is `main.jl` at the example root. Running it end-to-end
-   produces files on disk — a run that only prints to the terminal is non-compliant.
+1. **Entry point** is `main.jl` or a notebook at the example root. Running it
+   end-to-end produces files on disk — a run that only prints to the terminal is
+   non-compliant.
 2. **Outputs** go under `results/` (never the CWD):
    - *Single-run examples* (02): `results/data/` (W.jls, R.jls,
      R_coefficients.csv), `results/figures/`, `results/summary.txt`.
@@ -26,12 +27,20 @@ Every runnable example satisfies:
 5. **`validate.jl`** compares a fresh run's `R_coefficients.csv` against the
    reference. Run after completing a fresh `main.jl` run.
 
+Clauses 3–5 presuppose that the example computes a ROM. A **demonstration
+example** — one that shows how to build or inspect MORFE objects without calling
+`parametrise` — satisfies 1 and 2, and records in `summary.txt` what it built
+along with the Julia version, MORFE git commit and timestamp. It carries no
+`reference_data/` or `validate.jl`, because it produces no `R_coefficients.csv`
+to compare. `09_symbolic_two_mass_oscillator/` is the one such example.
+
 ---
 
 ## Example table
 
 | Folder | Model | Demonstrates | Status | Approx. runtime |
 | ------ | ----- | ------------ | ------ | --------------- |
+| `09_symbolic_two_mass_oscillator/` | Shaw–Pierre 2-dof oscillator | Symbolic model definition: `model_from_symbolics`, `externalsystem_from_symbolics`, a gallery of drivers | demonstration | < 1 min |
 | `mesh_import/` | Test meshes | Abaqus/COMSOL → GMSH format conversion | utility | seconds |
 | `internals/` | Synthetic models | Low-level API: polynomials, multiindices, parametrisation method | utility | seconds–1 min |
 

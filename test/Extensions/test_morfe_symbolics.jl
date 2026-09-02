@@ -1340,7 +1340,8 @@ end  # @testset "input validation"
 
         # both parameter sets on the coupled method, each reaching its own function
         forced!(ddu, du, u, r, p, t) = (ddu[1] = -p[1] * u[1] - 0.3 * du[1] + r[1] + r[2])
-        coupled = model_from_symbolics(forced!, 2, 1, scaled!, 2; p = (7.0,), p_ext = (2.5,))
+        coupled = model_from_symbolics(
+            forced!, 2, 1, scaled!, 2; p = (7.0,), p_ext = (2.5,))
         @test coupled.linear_terms[1] ≈ reshape([7.0], 1, 1)
         @test coupled.external_system.first_order_dynamics.coefficients ≈
               ref.first_order_dynamics.coefficients

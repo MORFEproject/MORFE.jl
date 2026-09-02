@@ -131,16 +131,25 @@ function _differential_equations_helper_external(f, nvars::Int; p = ())
 end
 
 """
-    MORFE.externalsystem_from_symbolics(f, nvars::Int; p=())
+    MORFE.externalsystem_from_symbolics(f, nvars::Int; p = ())
 
-Mirrors DifferentialEquations.jl's  convention of defining ODEs.
-There are the two options to define the function f.
-1) In-place, mutates the first argument:
-    f(dr, r, p, t)
-2) Returns dr
-    f(r, p, t) -> dr
+Mirrors DifferentialEquations.jl's convention of defining ODEs, for the autonomous driver
+`ṙ = E(r)` in `nvars` external states.
+
+Both layouts are accepted:
+
+1) in-place, mutating the first argument — `f(dr, r, p, t)`
+2) out-of-place, returning `dr` — `f(r, p, t) -> dr`
+
+`f` must be polynomial in `r` and must not depend on `t`. `p` is passed through to `f`
+unchanged, so parameters may be closed over or supplied here.
+
+Note that the expression method `externalsystem_from_symbolics(exprs, var)` this ultimately
+calls performs **no** polynomial or equilibrium-at-origin check: a non-polynomial right-hand
+side surfaces later as a `_findgroup` error, and a non-zero constant term is absorbed
+silently. Those checks run only on the `model_from_symbolics` path, via `check_expr`.
 """
 function MORFE.externalsystem_from_symbolics(f, nvars::Int; p = ())
-    exprs, r = _differential_equations_helper_external(f, nvars::Int; p = ())
+    exprs, r = _differential_equations_helper_external(f, nvars::Int; p = p)
     return MORFE.externalsystem_from_symbolics(exprs, r)
 end

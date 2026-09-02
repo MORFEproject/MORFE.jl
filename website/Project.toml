@@ -2,7 +2,9 @@
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 MORFE = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
 Literate = "2"
+StaticArrays = "1"
