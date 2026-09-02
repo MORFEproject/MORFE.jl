@@ -36,6 +36,9 @@
 .docs-main .step .body > .fig,
 .docs-main .step .body > .math-block { margin-top: 22px; }
 .docs-main .math-block { margin: 24px 0; }
+/* sub-headings inside a numbered section — subordinate to the section's own h3 */
+.docs-main .step .body h4 { font-size: 15px; margin: 30px 0 10px; color: var(--ink);
+  font-weight: 500; letter-spacing: 0.01em; }
 /* looser spacing in the top-level intro / recap lists */
 .docs-main > ul > li, .docs-main > ol > li { margin-bottom: 11px; }
 /* small comparison table */
@@ -100,25 +103,13 @@ document.addEventListener('DOMContentLoaded', function () {
     <h1 id="overview">Symbolic full-order model</h1>
     <p style="margin:6px 0 14px;"><a class="btn" href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/09_symbolic_two_mass_oscillator/symbolic_model.ipynb" target="_blank" rel="noopener" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Open the notebook ↗</a></p>
     <p class="lede">
-      We extend the tutorial <a href="full_order_model.html"><strong>Building a full-order model</strong></a>
-      to write the system in symbolic form using
-      <a href="https://juliasymbolics.org/">Symbolics.jl</a>, letting MORFE extract the linear
-      matrices and multilinear terms from the expressions.
+      We extend the tutorial <a class="inline" href="full_order_model.html">Building a full-order model</a> 
+      defining the system via symbolic expressions using <a class="inline" href="https://juliasymbolics.org/" target="_blank" rel="noopener">Symbolics.jl</a>.
+      <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a>
+      builds the model,
+      <a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a>
+      builds a driver. MORFE handles only autonomous, polynomial systems.
     </p>
-    <p class="lede">
-      The ODE is given either as an expression that equals zero or as a right-hand-side function.
-      Only autonomous, polynomial ODEs are allowed.
-    </p>
-    <p class="lede">
-      This is especially useful for defining the
-      <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>
-      that describes forcing and parametrisation.
-    </p>
-    <p>The main functions are:</p>
-    <ul>
-      <li><a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a>.</li>
-      <li><a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a>.</li>
-    </ul>
 
     <div class="fig">
       <iframe src="assets/symbolics_ext/fig1_drivers.html"
@@ -135,35 +126,29 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="adm note">
       <div class="adm-head">It's a package extension</div>
       <div class="adm-body">
-        <p><code>MORFESymbolicsExt</code> is a weak-dependency extension of <code>MORFE</code>: it
-        loads automatically the moment <em>both</em> <code>MORFE</code> and <code>Symbolics</code>
+        <p><a class="doc-link" href="../documentation.html#SymbolicsExtension"><code>MORFESymbolicsExt</code></a> is a weak-dependency extension of <code>MORFE</code>: it
+        loads automatically the moment <em>both</em> <code>MORFE</code> and <a class="inline" href="https://juliasymbolics.org/" target="_blank" rel="noopener"><code>Symbolics</code></a>
         are loaded in the same session. You never import it by name — just</p>
 <pre class="code"><span class="kw">using</span> MORFE, Symbolics</pre>
       </div>
     </div>
 
-    <div class="adm tip">
-      <div class="adm-head">Reproduce this page</div>
-      <div class="adm-body">
-        <p>Every model on this page is built in
-        <a href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/09_symbolic_two_mass_oscillator" target="_blank" rel="noopener"><code>examples/09_symbolic_two_mass_oscillator</code></a>.
-        It needs no FEM backend and no mesh:</p>
-        <pre class="code" style="margin-top:10px;">julia --project=examples/09_symbolic_two_mass_oscillator -e \
-  'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'</pre>
-      </div>
-    </div>
-
     <h2 id="goal">What this tutorial covers</h2>
     <ul>
-      <li>Writing an ODE with <a href="https://juliasymbolics.org/">Symbolics.jl</a> variables and turning it into an <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a> with <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a>.</li>
-      <li>Defining a standalone <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> with <a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a>.</li>
-      <li>Coupling the two: a model whose right-hand side reads the external state, built in one call.</li>
-      <li>The <a href="https://docs.sciml.ai/DiffEqDocs/stable/">DifferentialEquations.jl</a>-style convenience layer, which takes the ODE as a function <code>f!(du, u, p, t)</code>.</li>
+      <li>Building an <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a> from expressions.</li>
+      <li>Building an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> — harmonic, quasi-periodic, multiharmonic, chaotic.</li>
+      <li>Coupling the two, and the <a class="inline" href="https://docs.sciml.ai/DiffEqDocs/stable/" target="_blank" rel="noopener">DifferentialEquations.jl</a>-shaped alternative.</li>
     </ul>
 
-    <h2 id="general">General usage</h2>
+    <hr style="margin: 56px 0;"/>
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="num">01</div>
+      <div class="body">
+        <h3 id="general">General usage</h3>
     <p>
-      As in <a href="full_order_model.html">Building a full-order model</a>, MORFE considers
+      As in <a class="inline" href="full_order_model.html">Building a full-order model</a>, MORFE considers
       $\mathrm{ORD}$-th order ODEs of the form
     </p>
     <div class="math-block">$$ \mathbf{B}_0\,\mathbf{u} + \mathbf{B}_1\,\dot{\mathbf{u}} + \mathbf{B}_{2} \, \ddot{\mathbf{u}} + \cdots
@@ -177,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <tr>
       <td>$\mathbf u, \dot{\mathbf u}, \ddot{\mathbf u}, \dots$</td>
       <td><code>groups = (u, du, ddu, ...)</code></td>
-      <td>one <code>Symbolics</code> vector per derivative order, ascending</td>
+      <td>one <a class="inline" href="https://juliasymbolics.org/" target="_blank" rel="noopener"><code>Symbolics</code></a> vector per derivative order, ascending</td>
     </tr>
     <tr>
       <td>$\mathbf B_0\mathbf u + \mathbf B_1\dot{\mathbf u} + \mathbf B_2\ddot{\mathbf u} + \cdots$</td>
@@ -206,12 +191,12 @@ document.addEventListener('DOMContentLoaded', function () {
 <p>
   The right-hand side $\mathbf{E}(\mathbf{r})$ of an
   <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>
-  must be a polynomial function in $\mathbf{r}\in\mathbb{R}^R$ and is not allowed to be
+  must be a polynomial function in $\mathbf{r}$ and is not allowed to be
   time-dependent. Zero must also be an equilibrium point, so
-  $\mathbf{E}(\mathbf{0})=\mathbf{0}$ has to hold.
+  $\mathbf{E}(\mathbf{0})=\mathbf{0}$ has to hold. There are two ways to define one symbolically.
 </p>
 <p>
-  There are two ways to define one symbolically. The first is to give the right-hand side
+  The first defines
   $\mathbf{E}(\mathbf{r})$ as an expression:
 </p>
 <pre class="code">
@@ -225,8 +210,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <span class="var">external_1</span> <span class="op">=</span> <span class="fn">externalsystem_from_symbolics</span>(<span class="var">ext_exprs</span>, <span class="var">r</span>)</pre>
 
-<p> The second is a <code>DifferentialEquations.jl</code>-shaped function, in either layout — a
-  returning function <code>g</code> or an in-place function <code>g!</code>:</p>
+<p> The second is a function shaped like in <a class="inline" href="https://docs.sciml.ai/DiffEqDocs/stable/" target="_blank" rel="noopener"><code>DifferentialEquations.jl</code></a>, either a
+  returning function <code>g</code> or in-place<code>g!</code>:</p>
 
 <pre class="code"><span class="kw">function</span> <span class="fn">g</span>(<span class="var">r</span>, <span class="var">params</span>, <span class="var">t</span>)
     <span class="var">dr</span> <span class="op">=</span> <span class="fn">similar</span>(<span class="var">r</span>)
@@ -248,15 +233,14 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="adm warn">
   <div class="adm-head">The expression method validates nothing</div>
   <div class="adm-body">
-    <p><code>externalsystem_from_symbolics(ext_exprs, ext_var)</code> does <strong>not</strong> check
-    that its right-hand side is polynomial, and does <strong>not</strong> check that the origin is an
-    equilibrium. A non-polynomial term surfaces later as a confusing
+    <p><a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics(ext_exprs, ext_var)</code></a> checks nothing: a
+    non-polynomial term surfaces later as
     <em>“Symbol … not found in any of the provided groups”</em>, and a non-zero constant term is
-    absorbed silently into the stored polynomial.</p>
-    <p>The checks — <a class="doc-link" href="../documentation.html#SymbolicsExtension-check_expr"><code>check_expr</code></a>, and through it <a class="doc-link" href="../documentation.html#SymbolicsExtension-is_polynomial"><code>is_polynomial</code></a> and
-    <a class="doc-link" href="../documentation.html#SymbolicsExtension-check_constant_terms"><code>check_constant_terms</code></a> — run only on the <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a> path.
-    That is why <a href="#step-lorenz">Step 05</a> shifts the Lorenz system to its non-trivial
-    equilibrium explicitly, rather than relying on being told.</p>
+    absorbed silently. <a class="doc-link" href="../documentation.html#SymbolicsExtension-check_expr"><code>check_expr</code></a> — and through it
+    <a class="doc-link" href="../documentation.html#SymbolicsExtension-is_polynomial"><code>is_polynomial</code></a> and
+    <a class="doc-link" href="../documentation.html#SymbolicsExtension-check_constant_terms"><code>check_constant_terms</code></a> —
+    runs only on the <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a> path.
+    That is why <a href="#step-lorenz">Step 05</a> shifts Lorenz to its equilibrium explicitly.</p>
   </div>
 </div>
 
@@ -286,18 +270,16 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">model</span> <span class="op">=</span> <span class="fn">model_from_symbolics</span>(<span class="var">exprs</span>, <span class="var">groups</span>, <span class="var">r</span>, <span class="var">ext_exprs</span>)</pre>
 
 <p>
-  Note the argument order: the external <strong>variables</strong> come third and their
-  <strong>equations</strong> fourth. Both can be dropped for a purely autonomous, unforced system —
-  call <code>model_from_symbolics(exprs, groups)</code> instead. The four-argument form is only
-  needed once an external state actually appears on the right-hand side.
+  Variables third, equations fourth. Drop both for an unforced system —
+  <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics(exprs, groups)</code></a>.
 </p>
 
 <p>
-  Both constructors also accept a <code>DifferentialEquations.jl</code>-shaped function directly —
-  no <code>Symbolics</code> variables to declare by hand, no <code>groups</code> tuple to build.
-  For <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a> the function must be <strong>in-place</strong>, and for a
-  plain order-$N$, $n$-dof model its arguments run from the highest derivative down to
-  $\mathbf u$ itself:
+  Both constructors also take a <a class="inline" href="https://docs.sciml.ai/DiffEqDocs/stable/" target="_blank" rel="noopener"><code>DifferentialEquations.jl</code></a>-shaped function, with no
+  <code>@variables</code> to declare.
+  <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a>
+  needs an <strong>in-place</strong> <code>f!</code> whose arguments run from the highest derivative
+  down to $\mathbf u$:
 </p>
 
 <pre class="code"><span class="kw">function</span> <span class="fn">f!</span>(<span class="var">dᴺu</span>, <span class="cm">#=…=#</span> <span class="var">ddu</span>, <span class="var">du</span>, <span class="var">u</span>, <span class="var">params</span>, <span class="var">t</span>)
@@ -323,34 +305,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <span class="var">model</span> <span class="op">=</span> <span class="fn">model_from_symbolics</span>(<span class="var">f!</span>, <span class="var">N</span>, <span class="var">n</span>, <span class="var">g!</span>, <span class="var">R</span>; <span class="var">p</span> <span class="op">=</span> <span class="var">params</span>, <span class="var">p_ext</span> <span class="op">=</span> <span class="var">params_ext</span>)</pre>
 
-    <h2 id="two-mass">Full model: Two-mass oscillator</h2>
-    <p>
-      We consider the two-degree-of-freedom
-      nonlinear oscillator introduced by Shaw and Pierre. The system consists of two
-      coupled masses with linear stiffness and damping, while the first mass has an
-      additional cubic restoring force:
-    </p>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="num">02</div>
+      <div class="body">
+        <h3 id="two-mass">Two-mass oscillator</h3>
+        <p>
+          The two-degree-of-freedom nonlinear oscillator introduced by Shaw and Pierre: two
+          coupled masses with linear stiffness and damping, the first carrying an additional
+          cubic restoring force.
+        </p>
     <div class="math-block">$$
       \ddot u_1 + c\,\dot u_1 - c\,\dot u_2 + (1+k)\,u_1 - k\,u_2 + g\,u_1^3 - 2\cos(\Omega\,t)= 0\\
       \quad\quad\,\ddot u_2 - c\,\dot u_1 + 2c\dot u_2 -k\,u_1 + (1+k)\,u_2 = 0
     $$</div>
-    <p>
-      Step 01 drops the harmonic force and Step 02 puts it back. Written as
-      $\text{expr} = 0$, with $\mathbf u = (u_1,u_2)$, this is exactly the input
-      <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a> expects: a vector of expressions and the tuple of
-      derivative groups $(\mathbf u, \dot{\mathbf u}, \ddot{\mathbf u})$ that appear in them.
-    </p>
-
-    <hr style="margin: 56px 0;"/>
-
-    <!-- Step 1 -->
-    <div class="step">
-      <div class="num">01</div>
-      <div class="body">
-        <h3 id="step-model1">Definition of the model using symbolic variables without forcing</h3>
+        <h4 id="step-model1">Without forcing</h4>
         <p>
-          We begin with the unforced/autonomous equation, so we drop the $-2\cos(\Omega t)$. We need to declare one <code>Symbolics.jl</code> vector per derivative order, write the equations of
-          motion as expressions that equal zero, and hand both to the function <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a>.
+          Drop the $-2\cos(\Omega t)$. Declare one <a class="inline" href="https://juliasymbolics.org/" target="_blank" rel="noopener"><code>Symbolics.jl</code></a> vector per derivative
+          order, write the equations of motion as expressions that equal zero, and hand both to
+          <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a>.
         </p>
 <pre class="code">
 <span class="an">@variables</span> u[<span class="num">1</span>:<span class="num">2</span>] du[<span class="num">1</span>:<span class="num">2</span>] ddu[<span class="num">1</span>:<span class="num">2</span>]
@@ -367,16 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <span class="var">model</span> <span class="op">=</span> <span class="fn">model_from_symbolics</span>(<span class="var">exprs</span>, <span class="var">groups</span>)</pre>
         <p>
-          The tuple <code>groups</code> is supposed to be ordered low-to-high: the last entry is the derivative the equation
-          is solved for.
-        </p>
-        <p>
-          Internally, <a class="doc-link" href="../documentation.html#SymbolicsExtension-extract_linear_matrices"><code>extract_linear_matrices</code></a> takes the Jacobian of
-          <code>exprs</code> with respect to each group and evaluates it at the origin to get the linear matrices
-          $\mathbf B_0, \mathbf B_1, \mathbf B_2$; everything left over after subtracting the
-          linear part is split into monomials, grouped by multidegree, and turned into one
-          <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>
-          per group — here just the cubic term $g\,u_1^3$:
+          The last entry of <code>groups</code> is the derivative solved for. What came out:
         </p>
         <table class="mi">
           <thead><tr><th>What came out</th><th>Value</th></tr></thead>
@@ -387,20 +354,13 @@ document.addEventListener('DOMContentLoaded', function () {
             <tr><td>multiindex (3, 0)</td><td>one <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>: three copies of $\mathbf u$ and none of $\dot{\mathbf u}$ — the cubic $g\,u_1^3$</td></tr>
           </tbody>
         </table>
-      </div>
-    </div>
 
-    <!-- Step 2 -->
-    <div class="step">
-      <div class="num">02</div>
-      <div class="body">
-        <h3 id="step-model2">Define the model using symbolic variables with forcing</h3>
+        <h4 id="step-model2">With forcing</h4>
         <p>
-          As explained in <a href="full_order_model.html">Building a full-order model</a>, we can
-          substitute the non-autonomous term $-2\cos(\Omega t)$ by $-r_1-r_2$ with
-          $\dot r_1 = i\Omega r_1$ and $\dot r_2 = -i\Omega r_2$. Those have solutions
-          $r_j(t) = r_{j,0}e^{\pm i\Omega t}$, so $r_1 + r_2 = 2\cos\Omega t$ when both start at 1.
-          So we add these new ODEs as an external system.
+          As in <a class="inline" href="full_order_model.html">Building a full-order model</a>, substitute
+          $-2\cos(\Omega t)$ by $-r_1-r_2$ with $\dot r_1 = i\Omega r_1$ and
+          $\dot r_2 = -i\Omega r_2$, so that $r_1 + r_2 = 2\cos\Omega t$ when both start at 1, and
+          add that ODE as an external system.
         </p>
 <pre class="code">
 <span class="an">@variables</span> u[<span class="num">1</span>:<span class="num">2</span>] du[<span class="num">1</span>:<span class="num">2</span>] ddu[<span class="num">1</span>:<span class="num">2</span>] r[<span class="num">1</span>:<span class="num">2</span>]
@@ -424,26 +384,21 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
-  <h2 id="external">Examples for ExternalSystem</h2>
-  <p>
-    In practice, the full-order side of a model rarely comes from a symbolic definition —
-    it comes out of a FEM code, as mass, damping, and stiffness matrices plus a nonlinear
-    assembly routine. Where the symbolic interface earns its keep is the
-    <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>:
-    the moment a forcing term, a bifurcation parameter, or any other external state enters
-    the picture, it has to be tracked through the whole reduced-order-model construction —
-    and <a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a> is an easy way to define it.
-  </p>
-
     <!-- Step 3 -->
     <div class="step">
       <div class="num">03</div>
       <div class="body">
         <h3 id="step-external">Harmonic excitation</h3>
         <p>
-          In <a href="full_order_model.html">Building a full-order model</a> the harmonic driver
+          In practice the full-order model comes from a FEM code, not from symbolic expressions. The
+          symbolic interface earns its keep on the
+          <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>,
+          where forcing terms and parameters enter.
+        </p>
+        <p>
+          In <a class="inline" href="full_order_model.html">Building a full-order model</a> the harmonic driver
           $\dot r_1 = i\Omega r_1,\ \dot r_2 = -i\Omega r_2$ is directly defined from its eigenvalues:
-          <code>ExternalSystem((im*Ω, -im*Ω))</code>. Written symbolically instead,
+          <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem((im*Ω, -im*Ω))</code></a>. Written symbolically instead,
           the same driver is just its own right-hand side:
         </p>
 <pre class="code"><span class="an">@variables</span> r[<span class="num">1</span>:<span class="num">2</span>]
@@ -453,12 +408,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">ext_exprs</span> <span class="op">=</span> [<span class="fn">im</span><span class="op">*</span><span class="var">Ω</span><span class="op">*</span><span class="var">r</span>[<span class="num">1</span>], <span class="op">-</span><span class="fn">im</span><span class="op">*</span><span class="var">Ω</span><span class="op">*</span><span class="var">r</span>[<span class="num">2</span>]]
 <span class="var">harmonic</span> <span class="op">=</span> <span class="fn">externalsystem_from_symbolics</span>(<span class="var">ext_exprs</span>, <span class="var">r</span>)   <span class="cm"># same object as ExternalSystem((im*Ω, -im*Ω))</span></pre>
         <p>
-          Unlike the eigenvalue-tuple constructor, <code>ext_exprs</code> does not have to be
-          linear — <a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a> accepts any polynomial right-hand
-          side, as the Lorenz driver of <a href="#step-lorenz">Step 05</a> shows. The one
-          constraint is that it must be <strong>autonomous</strong>: $t$ itself may never appear,
-          only the states $\mathbf r$ — that is the whole point of routing time-dependence through
-          an external system rather than writing it directly into the model.
+          Unlike the eigenvalue-tuple constructor, <code>ext_exprs</code> need not be linear — any
+          polynomial right-hand side works, as <a href="#step-lorenz">Step 05</a> shows.
         </p>
       </div>
     </div>
@@ -488,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function () {
           $r_1 = -\cos\Omega t$ and $r_2 = 0.03\sin\Omega t - \cos 4\Omega t$ — not diagonal in
           the obvious basis. Introducing auxiliary states $r_3=\sin\Omega t$, $r_4=\sin 4\Omega t$
           to close this as a first-order linear system gives $\dot{\mathbf r} = \mathbf A\mathbf r$
-          with (see <a href="full_order_model.html#step-external">Building a full-order model, Step 02</a>
+          with (see <a class="inline" href="full_order_model.html#step-external">Building a full-order model, Step 02</a>
           for the derivation):
         </p>
 <pre class="code"><span class="var">Ω</span> <span class="op">=</span> <span class="num">1.3</span>
@@ -503,15 +454,13 @@ document.addEventListener('DOMContentLoaded', function () {
 ]
 <span class="var">multiharmonic</span> <span class="op">=</span> <span class="fn">externalsystem_from_symbolics</span>(<span class="var">ext_exprs</span>, <span class="var">r</span>)</pre>
         <p>
-          <a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a> extracts the same linear matrix $\mathbf A$
-          from these expressions that you'd build by hand — it isn't upper triangular here, so
-          MORFE re-bases it internally and reports the change of coordinates, exactly as it does
-          for the matrix form. See
-          <a href="full_order_model.html#step-external">Building a full-order model, Step 02</a>
-          for that message. <code>external_basis(multiharmonic)</code> returns the $\mathbf Q$
-          relating the physical $\mathbf r$ to the stored coordinates $\mathbf r'$, and
+          This matrix is not upper triangular, so MORFE re-bases it and reports the change of
+          coordinates (see
+          <a class="inline" href="full_order_model.html#step-external">Building a full-order model, Step 02</a>).
+          <a class="doc-link" href="../documentation.html#ExternalSystems-external_basis"><code>external_basis</code></a> returns the $\mathbf Q$ relating the physical $\mathbf r$ to
+          the stored $\mathbf r'$, and
           <a class="doc-link" href="../documentation.html#ExternalSystems-to_physical_external"><code>to_physical_external</code></a>
-          maps a state back — which is how the multiharmonic panel of Figure 01 is drawn.
+          maps a state back.
         </p>
       </div>
     </div>
@@ -526,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
           everything else on this page: polynomial, with an
           equilibrium at the origin. The Lorenz system has three
           equilibria, none at the origin — so
-          <a href="full_order_model.html#step-lorenz">Building a full-order model, Step 03</a>
+          <a class="inline" href="full_order_model.html#step-lorenz">Building a full-order model, Step 03</a>
           shifts coordinates to the nontrivial equilibrium $C_+=(C,C,\rho-1)$,
           $C=\sqrt{\beta(\rho-1)}$, before defining it:
         </p>
@@ -534,10 +483,8 @@ document.addEventListener('DOMContentLoaded', function () {
           \dot X = \sigma(Y-X), \qquad \dot Y = X - Y - Z(X+C), \qquad \dot Z = C(X+Y)+XY-\beta Z
         $$</div>
         <p>
-          Written symbolically, that shift is just the coordinates you declare. Nothing verifies it
-          for you on this path: as the warning above notes, the expression method runs no
-          equilibrium-at-origin test, so an unshifted Lorenz would be accepted and its constant
-          term absorbed silently.
+          That shift is just the coordinates you declare — and nothing checks it for you here, as
+          the warning above explains.
         </p>
 <pre class="code"><span class="var">σ</span>, <span class="var">ρ</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">10.0</span>, <span class="num">28.0</span>, <span class="num">8</span><span class="op">/</span><span class="num">3</span>
 <span class="var">C</span> <span class="op">=</span> <span class="fn">sqrt</span>(<span class="var">β</span><span class="op">*</span>(<span class="var">ρ</span><span class="op">-</span><span class="num">1</span>))
@@ -587,13 +534,11 @@ document.addEventListener('DOMContentLoaded', function () {
           </div>
         </div>
         <p>
-          Everything above only <em>builds</em> objects. To see a driver do what it claims, the
-          example integrates a plain damped oscillator
-          $\ddot y + c\,\dot y + k\,y = \mathrm{forcing}(\mathbf r)$ alongside the driver's own
-          dynamics, as a single state vector. The driver's right-hand side is not written a second
-          time: it comes from the <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> itself through
-          <a class="doc-link" href="../documentation.html#Polynomials-evaluate"><code>evaluate</code></a>,
-          and the forcing reads the state back with <a class="doc-link" href="../documentation.html#ExternalSystems-to_physical_external"><code>to_physical_external</code></a>.
+          Everything above only <em>builds</em> objects. The example integrates a damped oscillator
+          $\ddot y + c\,\dot y + k\,y = \mathrm{forcing}(\mathbf r)$ together with its driver,
+          taking the driver's right-hand side from the
+          <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>
+          through <a class="doc-link" href="../documentation.html#Polynomials-evaluate"><code>evaluate</code></a>.
         </p>
         <div class="fig">
           <iframe src="assets/symbolics_ext/fig2_forced_response.html"
@@ -611,15 +556,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <h2 id="recap">Recap</h2>
     <ul>
-      <li><code>model_from_symbolics(exprs, groups)</code> replaces hand-built <code>B_k</code> matrices and <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> closures with a vector of expressions.</li>
-      <li><code>externalsystem_from_symbolics(exprs, var)</code> builds an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> from its own autonomous ODE — linear or not — but validates nothing on that path.</li>
-      <li><code>model_from_symbolics(exprs, groups, ext_var, ext_exprs)</code> couples the two in one call, building the <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> internally. Variables third, equations fourth.</li>
-      <li>Both constructors have a <code>DifferentialEquations.jl</code>-shaped method. <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a> takes an in-place <code>f!</code> only; <a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a> takes either layout. Both are real-only.</li>
+      <li><a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics(exprs, groups)</code></a> replaces hand-built <code>B_k</code> matrices and <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> closures with a vector of expressions.</li>
+      <li><a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics(exprs, var)</code></a> builds an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> from its own autonomous ODE — linear or not — but validates nothing on that path.</li>
+      <li><a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics(exprs, groups, ext_var, ext_exprs)</code></a> couples the two in one call, building the <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> internally. Variables third, equations fourth.</li>
+      <li>Both constructors have a <a class="inline" href="https://docs.sciml.ai/DiffEqDocs/stable/" target="_blank" rel="noopener"><code>DifferentialEquations.jl</code></a>-shaped method. <a class="doc-link" href="../documentation.html#SymbolicsExtension-model_from_symbolics"><code>model_from_symbolics</code></a> takes an in-place <code>f!</code> only; <a class="doc-link" href="../documentation.html#SymbolicsExtension-externalsystem_from_symbolics"><code>externalsystem_from_symbolics</code></a> takes either layout. Both are real-only.</li>
     </ul>
 
     <h2 id="next">Where to next?</h2>
     <ul>
-      <li><a href="full_order_model.html">Building a full-order model</a> — the underlying objects: <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>, <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>, <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, written by hand.</li>
+      <li><a class="inline" href="full_order_model.html">Building a full-order model</a> — the underlying objects: <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>, <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>, <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, written by hand.</li>
       <li><a href="multiindex_sets.html">Monomials and multiindices</a> — which monomials the solve will compute.</li>
       <li><a href="../documentation.html">Code documentation</a>.</li>
     </ul>
@@ -627,7 +572,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
       <div style="flex:1; min-width:240px;">
         <div class="kicker">Run it yourself</div>
-        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">Every model on this page is built in <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/09_symbolic_two_mass_oscillator/symbolic_model.ipynb" target="_blank" rel="noopener"><code>examples/09_symbolic_two_mass_oscillator/symbolic_model.ipynb</code></a>. No FEM backend, no mesh.</p>
+        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">Check the notebook <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/examples/09_symbolic_two_mass_oscillator/symbolic_model.ipynb" target="_blank" rel="noopener"><code>examples/09_symbolic_two_mass_oscillator/symbolic_model.ipynb</code></a>.</p>
       </div>
       <div style="display:flex; gap:10px;">
         <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFE.jl/tree/main/examples/09_symbolic_two_mass_oscillator" target="_blank" rel="noopener">Example 09<span class="arrow">→</span></a>
@@ -641,11 +586,8 @@ document.addEventListener('DOMContentLoaded', function () {
     <ul id="toc-list">
       <li><a href="#overview" class="active">Overview</a></li>
       <li><a href="#goal">What this tutorial covers</a></li>
-      <li><a href="#general">General usage</a></li>
-      <li><a href="#two-mass">Full model: Two-mass oscillator</a></li>
-      <li><a href="#step-model1">01 · Without forcing</a></li>
-      <li><a href="#step-model2">02 · With forcing</a></li>
-      <li><a href="#external">Examples for ExternalSystem</a></li>
+      <li><a href="#general">01 · General usage</a></li>
+      <li><a href="#two-mass">02 · Two-mass oscillator</a></li>
       <li><a href="#step-external">03 · Harmonic excitation</a></li>
       <li><a href="#step-quasi">04 · Quasi-periodic and multiharmonic</a></li>
       <li><a href="#step-lorenz">05 · Chaotic excitation</a></li>

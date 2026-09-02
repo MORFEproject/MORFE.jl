@@ -26,15 +26,38 @@ const COMPANION_DOC_HREF = "../morfeferrite-documentation.html"
 # `multiindex` means *the multiindex of a MultilinearMap* — the keyword argument and the
 # calling convention it encodes.  `multiindex_sets.html` is deliberately absent: there the
 # word will mean the `Multiindices` object, and the default resolution is the right one.
+#
+# Overrides also cover two cases the scraped map structurally cannot reach.  `MORFEFerrite`
+# and `MORFESymbolicsExt` are package/module names with no entry of their own, so without an
+# override they are unwrapped and left plain — that is how `MORFEFerrite` silently lost its
+# link on structural_svk.html.  And a key may be a whole call signature rather than a bare
+# name: the map is keyed on identifiers, so `model_from_symbolics(exprs, groups)` matches
+# nothing, while an override keyed on that exact string does.
 const OVERRIDES = Dict(
     "full_order_model.html" =>
         Dict("multiindex" => "$(DOC_HREF)#MultilinearMaps-MultilinearMap"),
-    "karman.html" => Dict("multiindex" => "$(DOC_HREF)#MultilinearMaps-MultilinearMap"),
+    "karman.html" => Dict(
+        "multiindex" => "$(DOC_HREF)#MultilinearMaps-MultilinearMap",
+        "MORFEFerrite.FluidNavierStokes" => "$(COMPANION_DOC_HREF)#FluidNavierStokes"
+    ),
     "structural_svk.html" => Dict(
         "build_model" => "$(COMPANION_DOC_HREF)#Common-build_model",
         "mechanical_model" => "$(COMPANION_DOC_HREF)#StructuralSVK-mechanical_model",
         "W" => "$(DOC_HREF)#ParametrisationObjects-Parametrisation",
-        "R" => "$(DOC_HREF)#ParametrisationObjects-ReducedDynamics"
+        "R" => "$(DOC_HREF)#ParametrisationObjects-ReducedDynamics",
+        "MORFEFerrite" => COMPANION_DOC_HREF
+    ),
+    "symbolics_ext.html" => Dict(
+        "MORFESymbolicsExt" => "$(DOC_HREF)#SymbolicsExtension",
+        "model_from_symbolics(exprs, groups)" =>
+            "$(DOC_HREF)#SymbolicsExtension-model_from_symbolics",
+        "model_from_symbolics(exprs, groups, ext_var, ext_exprs)" =>
+            "$(DOC_HREF)#SymbolicsExtension-model_from_symbolics",
+        "externalsystem_from_symbolics(exprs, var)" =>
+            "$(DOC_HREF)#SymbolicsExtension-externalsystem_from_symbolics",
+        "externalsystem_from_symbolics(ext_exprs, ext_var)" =>
+            "$(DOC_HREF)#SymbolicsExtension-externalsystem_from_symbolics",
+        "ExternalSystem((im*Ω, -im*Ω))" => "$(DOC_HREF)#ExternalSystems-ExternalSystem"
     )
 )
 

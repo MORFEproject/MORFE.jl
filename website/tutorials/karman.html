@@ -192,8 +192,8 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
 <span class="cm"># stage 4 — linearise around u₀:  B₁ ṡ + B₀ s = F(s, η′)</span>
 (<span class="var">B₀</span>, <span class="var">B₁</span>) <span class="op">=</span> <span class="fn">assemble_linear_operators</span>(<span class="var">s₀_full</span>, <span class="var">fom</span>; <span class="var">Re0</span> <span class="op">=</span> <span class="var">Re₀</span>)</pre>
         <p>
-          Both functions ship in <code>MORFEFerrite.FluidNavierStokes</code>
-          (<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-solve_steady_state"><code>solve_steady_state</code></a>, <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-assemble_linear_operators"><code>assemble_linear_operators</code></a> — plain Ferrite
+          Both functions ship in <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes"><code>MORFEFerrite.FluidNavierStokes</code></a>
+          (<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-solve_steady_state"><code>solve_steady_state</code></a>, <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-assemble_linear_operators"><code>assemble_linear_operators</code></a> — plain <a class="inline" href="https://ferrite-fem.github.io/" target="_blank" rel="noopener">Ferrite</a>
           assembly code) — but this part can be yours, in whatever FEM library you
           use. MORFE operates only on the sparse matrices $\mathbf B_0, \mathbf B_1$ once they exist.
         </p>
