@@ -58,22 +58,22 @@ document.addEventListener('DOMContentLoaded', function () {
   // Set --nav-h to the actual rendered nav height so sticky headings sit exactly below it.
   var nav = document.querySelector('nav.nav');
   if (nav) {
-	var navH = nav.getBoundingClientRect().height;
-	document.documentElement.style.setProperty('--nav-h', navH + 'px');
-	// --nav-h stays the bare nav height because the sticky module heading's `top`
-	// is keyed to it. Scroll padding also has to clear that heading, so any
-	// scroll the JS handler below does not intercept still lands in view.
-	var mh = document.querySelector('.doc-module-h');
-	document.documentElement.style.scrollPaddingTop =
-	  (navH + (mh ? mh.getBoundingClientRect().height : 0)) + 'px';
+    var navH = nav.getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--nav-h', navH + 'px');
+    // --nav-h stays the bare nav height because the sticky module heading's `top`
+    // is keyed to it. Scroll padding also has to clear that heading, so any
+    // scroll the JS handler below does not intercept still lands in view.
+    var mh = document.querySelector('.doc-module-h');
+    document.documentElement.style.scrollPaddingTop =
+      (navH + (mh ? mh.getBoundingClientRect().height : 0)) + 'px';
   }
   if (typeof renderMathInElement === 'function') {
-	renderMathInElement(document.body, {
-	  delimiters: [
-		{left: '\\[', right: '\\]', display: true},
-		{left: '\\(', right: '\\)', display: false}
-	  ]
-	});
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '\\[', right: '\\]', display: true},
+        {left: '\\(', right: '\\)', display: false}
+      ]
+    });
   }
 });
 </script>
@@ -95,8 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <aside class="docs-side">
   <div class="ver"><span><a href="morfeferrite-documentation.html">MORFEFerrite.jl · Code Documentation</a></span></div>
   <div class="search">
-	<span class="ic mono">⌕</span>
-	<input type="search" id="doc-search" placeholder="Filter…" autocomplete="off" />
+    <span class="ic mono">⌕</span>
+    <input type="search" id="doc-search" placeholder="Filter…" autocomplete="off" />
   </div>
 
   <h4>Modules</h4>
@@ -113,26 +113,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
   <h4>Core Package</h4>
   <ul class="package-switch">
-	<li><a href="documentation.html"><span class="package-mark core-mark" aria-hidden="true"></span>MORFE.jl</a></li>
+    <li><a href="documentation.html"><span class="package-mark core-mark" aria-hidden="true"></span>MORFE.jl</a></li>
   </ul>
 
 
   <h4>Resources</h4>
   <ul>
-	<li><a href="index.html">Getting started</a></li>
-	<li><a href="tutorials/index.html">Demo scripts</a></li>
-	<li><a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener">GitHub</a></li>
+    <li><a href="index.html">Getting started</a></li>
+    <li><a href="tutorials/index.html">Demo scripts</a></li>
+    <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener">GitHub</a></li>
   </ul>
 </aside>
 
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Companion Packages</span><span class="sep">/</span><span>MORFEFerrite.jl</span></div>
   <h1>MORFEFerrite.jl Code Documentation</h1>
-  <p class="lede">8 modules · 163 documented entries · generated 31 August 2026</p>
+  <p class="lede">8 modules · 164 documented entries · generated 2 September 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
-  <div id="Common" class="doc-module-h">Common</div>
+  <div id="Common" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/Common.jl#L1" target="_blank" rel="noopener">Common</a></div>
   <div class="doc-module-desc" data-module="Common"><div class="markdown"><p><code>MORFEFerrite.Common</code> — shared Ferrite backend layer.</p>
 <ul>
 <li><p><code><a class="doc-ref" href="#MeshIO">MeshIO</a></code> — COMSOL/Abaqus/Gmsh mesh loading and conversion.</p>
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <span class="badge f">function</span>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl#L13" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.ParametricGeometry.AssembledParametricModel; master, spectrum, conjugate_permutation, diagnostics, diagnostics_rtol)</code>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl#L13" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel; master, forcing, nev, spectrum, expansion_order, n_monomials)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl#L13" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, eig; master, outer, n_monomials, scale, normalisation, conjugate_permutation, conjugate_atol)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl#L13" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, eig; master, outer, n_monomials, expansion_order, scale, normalisation, conjugate_permutation, conjugate_atol)</code>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/assembled_model.jl#L13" target="_blank" rel="noopener">build_model</a>(pm::MORFEFerrite.FluidNavierStokes.AssembledParametricFluidModel; spectrum, master, conjugate_permutation)</code>
   </div>
   <div class="doc-body">
@@ -259,7 +259,7 @@ end</code></pre>
 </div>
   </div>
 </div>
-  <div id="MeshIO" class="doc-module-h">MeshIO</div>
+  <div id="MeshIO" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/MeshIO.jl#L1" target="_blank" rel="noopener">MeshIO</a></div>
   <div class="doc-module-desc" data-module="MeshIO"><div class="markdown"><p><code>MORFEFerrite.Common.MeshIO</code> — mesh loading and conversion utilities.</p>
 <p>The subsystem owns direct COMSOL-to-Ferrite loading and conversions between COMSOL, Abaqus, and Gmsh mesh formats.</p>
 </div></div>
@@ -351,7 +351,7 @@ end</code></pre>
 <div class="doc doc-function" id="MeshIO.ComsolToGmsh-comsol_to_gmsh_linear" data-doc-name="comsol_to_gmsh_linear" data-doc-module="MeshIO.ComsolToGmsh">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/ComsolToGmsh.jl#L387" target="_blank" rel="noopener">comsol_to_gmsh_linear</a>(comsol_file::String, gmsh_file::String)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/ComsolToGmsh.jl#L388" target="_blank" rel="noopener">comsol_to_gmsh_linear</a>(comsol_file::String, gmsh_file::String)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>comsol_to_gmsh_linear&#40;comsol_file::String, gmsh_file::String&#41;</code></pre>
@@ -363,7 +363,7 @@ end</code></pre>
 <div class="doc doc-function" id="MeshIO.GmshToComsol-gmsh_to_comsol" data-doc-name="gmsh_to_comsol" data-doc-module="MeshIO.GmshToComsol">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/GmshToComsol.jl#L22" target="_blank" rel="noopener">gmsh_to_comsol</a>(gmsh_file::String, comsol_file::String)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/common/MeshIO/GmshToComsol.jl#L21" target="_blank" rel="noopener">gmsh_to_comsol</a>(gmsh_file::String, comsol_file::String)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>gmsh_to_comsol&#40;gmsh_file::String, comsol_file::String&#41;</code></pre>
@@ -378,7 +378,7 @@ end</code></pre>
 </div>
   </div>
 </div>
-  <div id="ParametricGeometry" class="doc-module-h">ParametricGeometry</div>
+  <div id="ParametricGeometry" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/ParametricGeometry/ParametricGeometry.jl#L1" target="_blank" rel="noopener">ParametricGeometry</a></div>
   <div class="doc-module-desc" data-module="ParametricGeometry"><div class="markdown"><p><code>MORFEFerrite.ParametricGeometry</code> — parametric mesh coordinate transforms.</p>
 <p>A <strong>physics-blind</strong> module: it implements the general parametric coordinate transform <code>x&#40;θ,x₀&#41; &#61; Σ_α x_α&#40;x₀&#41; θ^α</code> as a multivariate θ-power series — the determinant, adjugate and inverse determinant of its Jacobian — and expands any physics&#39; multilinear maps over it.</p>
 <pre><code>J&#40;θ,x₀&#41; &#61; Σ_α J_α&#40;x₀&#41; θ^α             det/adj are then exact polynomials
@@ -924,7 +924,7 @@ dΩ  →  dΩ · &#40;1/det J&#40;θ&#41;&#41;^p            weak-form weighting<
 </div>
   </div>
 </div>
-  <div id="StructuralSVK" class="doc-module-h">StructuralSVK</div>
+  <div id="StructuralSVK" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/StructuralSVK.jl#L1" target="_blank" rel="noopener">StructuralSVK</a></div>
   <div class="doc-module-desc" data-module="StructuralSVK"><div class="markdown"><p><code>MORFEFerrite.StructuralSVK</code> — Ferrite-backed St. Venant-Kirchhoff structural models for autonomous or harmonically forced invariant-manifold reductions.</p>
 <pre><code>using MORFE, MORFEFerrite
 const SVK &#61; MORFEFerrite.StructuralSVK
@@ -940,7 +940,7 @@ W, R &#61; MORFE.parametrise&#40;model, spectral, 9;
 <div class="doc doc-type" id="StructuralSVK-AnisotropicMaterial" data-doc-name="AnisotropicMaterial" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L124" target="_blank" rel="noopener">AnisotropicMaterial</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L152" target="_blank" rel="noopener">AnisotropicMaterial</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>AnisotropicMaterial&#40;D, ρ&#41;</code></pre>
@@ -958,13 +958,20 @@ W, R &#61; MORFE.parametrise&#40;model, spectral, 9;
 <div class="markdown"><pre><code>AssembledMechanicalModel &lt;: AbstractAssembledModel</code></pre>
 <p>Assembled three-dimensional second-order model on the free DOFs. Its linear operators are <code>K</code>, <code>C</code>, and <code>M</code>; its FEM multilinear maps accumulate the negative quadratic and cubic internal forces, so MORFE&#39;s model form represents <code>M*ü &#43; C*u̇ &#43; K*u &#43; f_int,nl&#40;u&#41; &#61; f_ext</code>.</p>
 <p><code>term_factory&#40;degree, max_cols&#41;</code> lazily creates the degree-<code>2</code> or degree-<code>3</code> <code>MORFE.FEMMultilinearMap&#123;2&#125;</code> with storage for <code>max_cols</code> batched columns. <code>material</code>, <code>damping</code>, and <code>info</code> retain backend data used by eigensolvers, post-processing, and summaries.</p>
+<h2>Indexing <code>B</code></h2>
+<p>The linear operators live in one field, in <strong>derivative order</strong>, so <code>B&#91;k &#43; 1&#93;</code> is the coefficient of the <code>k</code>-th time derivative:</p>
+<pre><code>m.B&#91;1&#93;   # B₀ &#61; K, stiffness
+m.B&#91;2&#93;   # B₁ &#61; C, damping
+m.B&#91;3&#93;   # B₂ &#61; M, mass</code></pre>
+<p>This is the order <code>MORFE.NthOrderModel.linear_terms</code> wants, and <code>m.B</code> is handed to it unchanged. It is also the reason the field exists: the operators used to be three separate fields declared <code>K, M, C</code> while the model tuple was <code>&#40;K, C, M&#41;</code>, so the declaration order and the operator order disagreed and every call site had to restate the mapping. It is stated once now, here.</p>
+<p><code>m.K</code>, <code>m.C</code> and <code>m.M</code> remain available as read-only properties — for a structural problem the physics names read better than an index — and are exactly <code>B&#91;1&#93;</code>, <code>B&#91;2&#93;</code>, <code>B&#91;3&#93;</code>.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="StructuralSVK-CubicCrystal" data-doc-name="CubicCrystal" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L184" target="_blank" rel="noopener">CubicCrystal</a>(; c11, c12, c44, ρ, rotation)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L212" target="_blank" rel="noopener">CubicCrystal</a>(; c11, c12, c44, ρ, rotation)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>CubicCrystal&#40;; c11, c12, c44, ρ, rotation &#61; nothing&#41; -&gt; AnisotropicMaterial</code></pre>
@@ -1089,7 +1096,7 @@ SVKPullbackKernel&#123;DEG&#125;&#40;stress, ρ &#61; 0.0&#41;</code></pre>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_forcings&#40;forcing&#41; -&gt; Vector&#123;&lt;:HarmonicForcing&#125;</code></pre>
-<p>Normalise the public <code>forcing</code> forms—<code>nothing</code>, one <code><a class="doc-ref" href="#StructuralSVK-HarmonicForcing">HarmonicForcing</a></code>, or an abstract vector of them—to a vector. The autonomous case returns an empty vector.</p>
+<p>Normalize the public <code>forcing</code> forms—<code>nothing</code>, one <code><a class="doc-ref" href="#StructuralSVK-HarmonicForcing">HarmonicForcing</a></code>, or an abstract vector of them—to a vector. The autonomous case returns an empty vector.</p>
 </div>
   </div>
 </div>
@@ -1248,7 +1255,7 @@ mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet,
 <div class="doc doc-function" id="StructuralSVK-rotate_voigt" data-doc-name="rotate_voigt" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L147" target="_blank" rel="noopener">rotate_voigt</a>(D::AbstractMatrix, Q::AbstractMatrix)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L175" target="_blank" rel="noopener">rotate_voigt</a>(D::AbstractMatrix, Q::AbstractMatrix)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>rotate_voigt&#40;D, Q&#41; -&gt; SMatrix&#123;6,6&#125;</code></pre>
@@ -1303,8 +1310,8 @@ svk_nonlinearity&#40;degree, dh, cv, free_to_local, n_free, material;
 <div class="doc doc-function" id="StructuralSVK-voigt_stiffness" data-doc-name="voigt_stiffness" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L212" target="_blank" rel="noopener">voigt_stiffness</a>(m::MORFEFerrite.StructuralSVK.AnisotropicMaterial)</code>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L212" target="_blank" rel="noopener">voigt_stiffness</a>(m::SVKMaterial)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L240" target="_blank" rel="noopener">voigt_stiffness</a>(m::MORFEFerrite.StructuralSVK.AnisotropicMaterial)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/types.jl#L240" target="_blank" rel="noopener">voigt_stiffness</a>(m::SVKMaterial)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>voigt_stiffness&#40;material&#41; -&gt; SMatrix&#123;6,6&#125;</code></pre>
@@ -1312,7 +1319,7 @@ svk_nonlinearity&#40;degree, dh, cv, free_to_local, n_free, material;
 </div>
   </div>
 </div>
-  <div id="FluidNavierStokes" class="doc-module-h">FluidNavierStokes</div>
+  <div id="FluidNavierStokes" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/FluidNavierStokes.jl#L1" target="_blank" rel="noopener">FluidNavierStokes</a></div>
   <div class="doc-module-desc" data-module="FluidNavierStokes"><div class="markdown"><p><code>MORFEFerrite.FluidNavierStokes</code> — incompressible Navier-Stokes DPIM backend &#40;Taylor-Hood P2/P1, cylinder-flow class of problems&#41;, promoted from <code>examples/05_karman_vortex_street</code>.</p>
 <p>Pipeline &#40;see the Kármán example driver&#41;:</p>
 <pre><code>fom &#61; setup_fem&#40;meshfile&#41;                       # Ferrite P2/P1 spaces &#43; BCs
@@ -1362,7 +1369,7 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 </li>
 <li><p><code>s₀_full</code>     — Newton base flow over <strong>all</strong> DOFs &#40;prescribed inlet included&#41;</p>
 </li>
-<li><p><code>B₀</code>, <code>B₁</code>    — linearised operator and &#40;singular&#41; mass, free × free</p>
+<li><p><code>B</code>           — the linear operators <code>&#40;B₀, B₁&#41;</code>, free × free: the linearised operator and the &#40;singular&#41; mass. See the indexing note below.</p>
 </li>
 <li><p><code>K_visc</code>      — viscous coupling, free × free, <strong>already scaled by <code>−D</code></strong></p>
 </li>
@@ -1373,6 +1380,12 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 <li><p><code>info</code>        — DOF counts and per-stage timings</p>
 </li>
 </ul>
+<h2>Indexing <code>B</code></h2>
+<p><code>B</code> is a plain 1-indexed <code>Tuple</code>, so <strong><code>B&#91;k &#43; 1&#93;</code> is the mathematics&#39; <code>Bₖ</code></strong>:</p>
+<pre><code>m.B&#91;1&#93;   # B₀, the linearised operator
+m.B&#91;2&#93;   # B₁, the singular mass</code></pre>
+<p>That is the same convention as <code>MORFE.NthOrderModel.linear_terms</code>, which <code>B</code> is handed to verbatim — <code>linear_terms&#91;1&#93;</code> is <code>B₀</code> there too. Grouping the operators also means their order is defined in exactly one place instead of being implied by the order the fields happen to be declared in.</p>
+<p><code>m.B₀</code> and <code>m.B₁</code> keep working as read-only properties. They are the older spelling, retained because <code>examples/11_parametric_karman_profile</code> reads them in sixteen places; new code should use <code>m.B&#91;1&#93;</code> / <code>m.B&#91;2&#93;</code>.</p>
 <p><code>K_visc</code> and <code>h₀_vec</code> arrive pre-scaled deliberately: the <code>−D</code> factor &#40;<code>D</code> the cylinder diameter, the reference length in <code>ν &#61; D/Re</code>&#41; used to be applied by the example driver, which meant the convention lived in a comment and depended on two copies of <code>D</code> agreeing. It is applied once, here.</p>
 </div>
   </div>
@@ -1565,7 +1578,7 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 <div class="doc doc-function" id="FluidNavierStokes-_master_conjugate_pairing" data-doc-name="_master_conjugate_pairing" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L147" target="_blank" rel="noopener">_master_conjugate_pairing</a>(λ::AbstractVector; atol)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L164" target="_blank" rel="noopener">_master_conjugate_pairing</a>(λ::AbstractVector; atol)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_master_conjugate_pairing&#40;λ; atol &#61; 1e-8&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -1619,7 +1632,7 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 <div class="doc doc-function" id="FluidNavierStokes-_realify_self_conjugate" data-doc-name="_realify_self_conjugate" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L191" target="_blank" rel="noopener">_realify_self_conjugate</a>(φ::AbstractVector, ψ::AbstractVector, r::Int64, λ; rtol)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L208" target="_blank" rel="noopener">_realify_self_conjugate</a>(φ::AbstractVector, ψ::AbstractVector, r::Int64, λ; rtol)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_realify_self_conjugate&#40;φ, ψ, r, λ; rtol &#61; 1e-6&#41; -&gt; &#40;φ_real, ψ_real&#41;</code></pre>
@@ -1783,7 +1796,7 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 <div class="doc doc-function" id="FluidNavierStokes-build_model" data-doc-name="build_model" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L5" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, eig; master, outer, n_monomials, scale, normalisation, conjugate_permutation, conjugate_atol)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L5" target="_blank" rel="noopener">build_model</a>(m::MORFEFerrite.FluidNavierStokes.AssembledFluidModel, eig; master, outer, n_monomials, expansion_order, scale, normalisation, conjugate_permutation, conjugate_atol)</code>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/build_model.jl#L5" target="_blank" rel="noopener">build_model</a>(pm::MORFEFerrite.FluidNavierStokes.AssembledParametricFluidModel; spectrum, master, conjugate_permutation)</code>
   </div>
   <div class="doc-body">
@@ -1797,7 +1810,8 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
 <p><strong><code>ORD &#61; 1</code>.</strong> <code>NthOrderModel&#40;&#40;B₀, B₁&#41;, …&#41;</code> has two linear terms, so there are no companion derivative blocks and <code>SpectralData</code> takes plain <code>FOM × ROM</code> matrices. Nothing needs reconciling against a higher model order.</p>
 <p>The Reynolds continuation variable <code>η′ &#61; 1/Re − 1/Re₀</code> is a single frozen external state, so <code>N_EXT &#61; 1</code> — <em>odd</em>. <code>η′</code> is real and therefore its own conjugate, a pairing the usual adjacent-pairs formula cannot express, so the permutation is built with <code>full_conjugate_permutation</code>.</p>
 <p><code>conjugate_permutation</code> overrides the derived master-block pairing. Give it when the master set is not a plain sequence of adjacent conjugate pairs — for instance when real &#40;self-conjugate&#41; modes have been included alongside a Hopf pair.</p>
-<p><code>n_monomials</code> sizes <code><a class="doc-ref" href="#FluidNavierStokes-FluidConvection">FluidConvection</a></code>&#39;s batched-column cache. It is a cache capacity, not a reduction concept: <code><a class="doc-ref" href="#FluidNavierStokes-build_model">build_model</a></code> builds no <code>MultiindexSet</code> and no <code>ResonanceSet</code>.</p>
+<p><code>n_monomials</code> sizes <code><a class="doc-ref" href="#FluidNavierStokes-FluidConvection">FluidConvection</a></code>&#39;s batched-column buffer. It is a buffer capacity, not a reduction concept: <code><a class="doc-ref" href="#FluidNavierStokes-build_model">build_model</a></code> builds no <code>MultiindexSet</code> and no <code>ResonanceSet</code>. The buffer is allocated <code>&#40;n_monomials, n_qp&#41;</code> and indexed directly, so the value must be <strong>at least</strong> the monomial count the reduction will use.</p>
+<p><code>expansion_order</code> is the convenient spelling of the same thing, matching <code><a class="doc-ref" href="#StructuralSVK">StructuralSVK</a></code>&#39;s <code><a class="doc-ref" href="#FluidNavierStokes-build_model">build_model</a></code>: give the total-degree truncation and the count for the <code>ROM &#43; 1</code> reduced variables is derived here. Pass exactly one of the two — passing neither would silently size the buffer for a single column.</p>
 </div><div class="markdown"><p>Build the augmented ORD&#61;2 MORFE model from verified coefficient arrays.</p>
 </div>
   </div>
@@ -1810,6 +1824,31 @@ h0 &#61; make_base_forcing&#40;h₀_vec_free&#41;            # base-flow forcing
   <div class="doc-body">
 <div class="markdown"><pre><code>check_linearisation&#40;s0_full, fom, B0_free; Re0, ε &#61; 1e-5&#41;</code></pre>
 <p>Finite-difference check: compare A<em>lin s ≈ &#91;R&#40;s₀ &#43; ε·e</em>i&#41; − R&#40;s₀&#41;&#93; / ε for a few random free DOF directions.  Prints max relative error.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="FluidNavierStokes-close_under_conjugation" data-doc-name="close_under_conjugation" data-doc-module="FluidNavierStokes">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L227" target="_blank" rel="noopener">close_under_conjugation</a>(eig; rtol)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>close_under_conjugation&#40;eig; rtol &#61; 1e-4&#41;
+	-&gt; &#40;; eigenvalues, right_modes, hopf_index, conjugate_index&#41;</code></pre>
+<p>Complete a computed spectrum with the conjugates the eigensolve could not return, and report where the Hopf pair ended up.</p>
+<p><a class="doc-ref" href="#FluidNavierStokes-solve_hopf_eigenproblem"><code>solve_hopf_eigenproblem</code></a> shifts at a <strong>complex</strong> <code>σ</code>, so ARPACK returns only the modes near <code>σ</code>. A strongly oscillatory mode&#39;s conjugate sits near <code>σ̄</code> and is simply never computed — at <code>Re₀ &#61; 49.03</code> the Kármán mode <code>λ &#61; 0.004 &#43; 16.859i</code> comes back while <code>λ̄ &#61; 0.004 − 16.859i</code> does not. <code>conjugate_index</code> as returned by the eigensolve is then the <em>nearest available</em> eigenvalue rather than the true partner, and passing that pair as <code>master</code> makes <code><a class="doc-ref" href="#FluidNavierStokes-build_model">build_model</a></code> throw.</p>
+<p>The missing halves are synthesised rather than solved for. <code>B₀</code> and <code>B₁</code> are real, so <code>&#40;λ̄, φ̄&#41;</code> is an eigenpair exactly whenever <code>&#40;λ, φ&#41;</code> is — this is an identity, not an approximation, and it costs nothing. It is also the only way to get the partner with the phase <code>conjugate_permutation</code> asserts: an independent solve would pin it only up to a scalar.</p>
+<p>Three cases per computed mode:</p>
+<ul>
+<li><p><code>|Im λ| ≤ rtol·|λ|</code> — the mode is <strong>real</strong>, hence its own conjugate. Nothing is added; giving it a partner would duplicate the coordinate.</p>
+</li>
+<li><p>the conjugate is already in the set — nothing is added.</p>
+</li>
+<li><p>otherwise <code>conj&#40;λ&#41;</code> and <code>conj.&#40;φ&#41;</code> are appended.</p>
+</li>
+</ul>
+<p><code>rtol</code> is <strong>relative</strong>. ARPACK&#39;s numerical zero is ~1e-7 of a mode&#39;s magnitude, not machine epsilon, so an absolute threshold reads a real mode as complex and then demands a conjugate that does not exist.</p>
+<p><code>hopf_index</code> is carried through unchanged — the closure only appends — and <code>conjugate_index</code> is recomputed afterwards, so it now names the true partner.</p>
 </div>
   </div>
 </div>
@@ -2086,7 +2125,7 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-left_eigenvector" data-doc-name="left_eigenvector" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L190" target="_blank" rel="noopener">left_eigenvector</a>(A_lin::SparseArrays.AbstractSparseMatrix, B_mass::SparseArrays.AbstractSparseMatrix, λ::Number, φ::AbstractVector; normalisation, scale)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L276" target="_blank" rel="noopener">left_eigenvector</a>(A_lin::SparseArrays.AbstractSparseMatrix, B_mass::SparseArrays.AbstractSparseMatrix, λ::Number, φ::AbstractVector; normalisation, scale)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>left_eigenvector&#40;A_lin, B_mass, λ, φ; normalisation, scale&#41;
@@ -2422,16 +2461,17 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-solve_hopf_eigenproblem" data-doc-name="solve_hopf_eigenproblem" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L76" target="_blank" rel="noopener">solve_hopf_eigenproblem</a>(A_lin::SparseArrays.AbstractSparseMatrix, B_mass::SparseArrays.AbstractSparseMatrix; nev, sigma_re, sigma_im, target_freq, normalisation, scale, tol, maxiter, ncv, verbose)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L76" target="_blank" rel="noopener">solve_hopf_eigenproblem</a>(A_lin::SparseArrays.AbstractSparseMatrix, B_mass::SparseArrays.AbstractSparseMatrix; nev, sigma_re, sigma_im, target_freq, normalisation, scale, tol, maxiter, ncv, close_conjugates, conjugate_rtol, verbose)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_hopf_eigenproblem&#40;A_lin, B_mass; nev, sigma_re, sigma_im,
 						target_freq &#61; nothing,
 						normalisation &#61; SymmetricBiorthogonal&#40;&#41;,
 						scale &#61; 1.0, tol &#61; 0.0, maxiter &#61; 3000,
-						ncv &#61; nothing, verbose &#61; true&#41;
-	-&gt; &#40;; eigenvalues, right_modes, left_modes, all_eigenvalues, all_modes&#41;</code></pre>
-<p>Compute <code>nev</code> eigenvalues of <code>A_lin y &#61; λ B_mass y</code> by shift-invert ARPACK and return the Hopf conjugate pair with its adjoint.</p>
+						ncv &#61; nothing, close_conjugates &#61; true,
+						conjugate_rtol &#61; 1e-4, verbose &#61; true&#41;
+	-&gt; &#40;; eigenvalues, right_modes, hopf_index, conjugate_index&#41;</code></pre>
+<p>Compute eigenvalues of <code>A_lin y &#61; λ B_mass y</code> by shift-invert ARPACK, close the result under conjugation, and point at the Hopf pair.</p>
 <p><code>sigma_re</code> offsets the shift from the imaginary axis; <code>sigma_im</code> targets a frequency band. Neither affects which mode is selected — only the factorisation. <code>tol</code>, <code>maxiter</code>, and <code>ncv</code> are forwarded to ARPACK. Their defaults preserve the historical solver configuration.</p>
 <p>The Hopf mode is the eigenvalue with the smallest <code>|Re λ|</code> among those with <code>Im λ &gt; 0</code>. That heuristic is reliable <strong>near</strong> <code>Re_c</code>, where the shedding mode IS the least damped; away from it another oscillatory mode can sit closer to the imaginary axis and be picked silently, so pass <code>target_freq</code> &#40;rad/s&#41; to pin the frequency instead.</p>
 <h2>The two gauge choices, both explicit</h2>
@@ -2441,7 +2481,17 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 <li><p><code>scale</code> — a further uniform factor applied to <strong>both</strong> sides, purely for conditioning. The Kármán case uses <code>1e-2</code>, which makes <code>φᴴBψ &#61; 1e-4</code> rather than <code>1</code>. <code>SpectralData</code> deliberately has no <code>scale</code> field so that such a tweak stays visible where it is made; this keyword is that visibility.</p>
 </li>
 </ul>
-<p>Returns a <code>NamedTuple</code> so the fields are named at every call site: <code>eigenvalues</code> is the <code>SVector&#123;2&#125;</code> Hopf pair &#40;<code>Im λ₁ &gt; 0</code>&#41;, <code>right_modes</code> and <code>left_modes</code> are <code>n × 2</code>, and <code>all_*</code> carry the positive-imaginary half of the spectrum sorted by <code>|Re λ|</code>.</p>
+<h2>The spectrum comes back closed under conjugation</h2>
+<p>The shift <code>σ</code> is <strong>complex</strong>, so ARPACK returns only the modes near <code>σ</code> — a strongly oscillatory mode&#39;s conjugate sits near <code>σ̄</code> and is never computed. The result is therefore passed through <a class="doc-ref" href="#FluidNavierStokes-close_under_conjugation"><code>close_under_conjugation</code></a> before it is returned, which appends the missing halves analytically &#40;exact, because <code>A_lin</code> and <code>B_mass</code> are real&#41; and makes <code>conjugate_index</code> name the true partner of <code>hopf_index</code>.</p>
+<p>That is on by default because the raw <code>conjugate_index</code> is a footgun: it is an <code>argmin</code> over what ARPACK happened to return, so it names the <em>nearest available</em> mode, and handing that pair to <code><a class="doc-ref" href="#FluidNavierStokes-build_model">build_model</a></code> as <code>master</code> throws. Two consequences worth stating:</p>
+<ul>
+<li><p><strong><code>nev</code> is a lower bound on <code>length&#40;eigenvalues&#41;</code></strong>, not the count. Closure appends.</p>
+</li>
+<li><p>Appended conjugates go at the <strong>end</strong>, not next to their partners, so the result is not a sequence of adjacent pairs.</p>
+</li>
+</ul>
+<p><code>close_conjugates &#61; false</code> returns exactly what ARPACK produced. Pass it when a caller must post-process the raw modes before closing — for instance one that phase-aligns a tracked eigenvector and needs the synthesised partner to inherit that phase. <code>conjugate_rtol</code> is forwarded as <code><a class="doc-ref" href="#FluidNavierStokes-close_under_conjugation">close_under_conjugation</a></code>&#39;s <code>rtol</code>; it is relative because ARPACK&#39;s numerical zero is ~1e-7 of a mode&#39;s magnitude, not machine epsilon.</p>
+<p>Returns a <code>NamedTuple</code> so the fields are named at every call site: <code>eigenvalues</code> is a <code>Vector&#123;ComplexF64&#125;</code> in ARPACK order with any synthesised conjugates appended, <code>right_modes</code> is the matching <code>n × length&#40;eigenvalues&#41;</code> matrix, and <code>hopf_index</code> / <code>conjugate_index</code> locate the Hopf pair within them.</p>
 </div>
   </div>
 </div>
@@ -2565,97 +2615,97 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
     return { entry: entry, index: index, placeholder: null };
   });
   document.querySelectorAll('.doc-module-desc[data-module]').forEach(function (d) {
-	descMap[d.getAttribute('data-module')] = d;
+    descMap[d.getAttribute('data-module')] = d;
   });
 
   function rank(entry, q) {
-	var name = (entry.getAttribute('data-doc-name') || '').toLowerCase();
-	var moduleName = (entry.getAttribute('data-doc-module') || '').toLowerCase();
-	var signature = entry.querySelector('.doc-sig');
-	var signatureText = signature ? signature.textContent.toLowerCase() : '';
-	if (name === q) return 0;
-	if (name.indexOf(q) === 0) return 1;
-	if (name.indexOf(q) >= 0) return 2;
-	if (moduleName === q || moduleName.indexOf(q) === 0) return 3;
-	if (signatureText.indexOf(q) >= 0) return 4;
-	if (entry.textContent.toLowerCase().indexOf(q) >= 0) return 5;
-	return Infinity;
+    var name = (entry.getAttribute('data-doc-name') || '').toLowerCase();
+    var moduleName = (entry.getAttribute('data-doc-module') || '').toLowerCase();
+    var signature = entry.querySelector('.doc-sig');
+    var signatureText = signature ? signature.textContent.toLowerCase() : '';
+    if (name === q) return 0;
+    if (name.indexOf(q) === 0) return 1;
+    if (name.indexOf(q) >= 0) return 2;
+    if (moduleName === q || moduleName.indexOf(q) === 0) return 3;
+    if (signatureText.indexOf(q) >= 0) return 4;
+    if (entry.textContent.toLowerCase().indexOf(q) >= 0) return 5;
+    return Infinity;
   }
 
   function beginSearch() {
-	if (searching) return;
-	searching = true;
-	records.forEach(function (record) {
-	  record.placeholder = document.createComment('doc-search-position');
-	  record.entry.parentNode.insertBefore(record.placeholder, record.entry);
-	  results.appendChild(record.entry);
-	});
-	results.hidden = false;
-	status.hidden = false;
-	headings.forEach(function (h) {
-	  h.style.display = 'none';
-	  if (descMap[h.id]) descMap[h.id].style.display = 'none';
-	});
+    if (searching) return;
+    searching = true;
+    records.forEach(function (record) {
+      record.placeholder = document.createComment('doc-search-position');
+      record.entry.parentNode.insertBefore(record.placeholder, record.entry);
+      results.appendChild(record.entry);
+    });
+    results.hidden = false;
+    status.hidden = false;
+    headings.forEach(function (h) {
+      h.style.display = 'none';
+      if (descMap[h.id]) descMap[h.id].style.display = 'none';
+    });
   }
 
   function endSearch() {
-	if (!searching) return;
-	records.forEach(function (record) {
-	  record.placeholder.parentNode.insertBefore(record.entry, record.placeholder);
-	  record.placeholder.remove();
-	  record.placeholder = null;
-	  record.entry.style.display = '';
-	  record.entry.classList.remove('search-exact');
-	});
-	searching = false;
-	results.hidden = true;
-	status.hidden = true;
-	status.textContent = '';
-	headings.forEach(function (h) {
-	  h.style.display = '';
-	  if (descMap[h.id]) descMap[h.id].style.display = '';
-	});
+    if (!searching) return;
+    records.forEach(function (record) {
+      record.placeholder.parentNode.insertBefore(record.entry, record.placeholder);
+      record.placeholder.remove();
+      record.placeholder = null;
+      record.entry.style.display = '';
+      record.entry.classList.remove('search-exact');
+    });
+    searching = false;
+    results.hidden = true;
+    status.hidden = true;
+    status.textContent = '';
+    headings.forEach(function (h) {
+      h.style.display = '';
+      if (descMap[h.id]) descMap[h.id].style.display = '';
+    });
   }
 
   function revealFirstResult(ranked) {
-	var first = ranked.find(function (item) { return isFinite(item.rank); });
-	var target = first ? first.record.entry : status;
-	// Reordering changes the document above the current viewport. Browsers preserve the
-	// old scroll offset, which can leave the best result off-screen even though it is first
-	// in the DOM. Wait for layout, then pin the first result immediately below the site nav.
-	requestAnimationFrame(function () {
-	  var nav = document.querySelector('nav.nav');
-	  var navHeight = nav ? nav.getBoundingClientRect().height : 60;
-	  var top = target.getBoundingClientRect().top + window.scrollY - navHeight - 14;
-	  window.scrollTo({ top: Math.max(0, top), behaviour: 'auto' });
-	});
+    var first = ranked.find(function (item) { return isFinite(item.rank); });
+    var target = first ? first.record.entry : status;
+    // Reordering changes the document above the current viewport. Browsers preserve the
+    // old scroll offset, which can leave the best result off-screen even though it is first
+    // in the DOM. Wait for layout, then pin the first result immediately below the site nav.
+    requestAnimationFrame(function () {
+      var nav = document.querySelector('nav.nav');
+      var navHeight = nav ? nav.getBoundingClientRect().height : 60;
+      var top = target.getBoundingClientRect().top + window.scrollY - navHeight - 14;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+    });
   }
 
   input.addEventListener('input', function () {
-	var q = this.value.trim().toLowerCase();
-	if (!q) {
-	  endSearch();
-	  return;
-	}
-	beginSearch();
-	var ranked = records.map(function (record) {
-	  return { record: record, rank: rank(record.entry, q) };
-	}).sort(function (a, b) {
-	  return a.rank - b.rank || a.record.index - b.record.index;
-	});
-	var visible = 0;
-	var exact = 0;
-	ranked.forEach(function (item) {
-	  var matches = isFinite(item.rank);
-	  item.record.entry.style.display = matches ? '' : 'none';
-	  item.record.entry.classList.toggle('search-exact', item.rank === 0);
-	  results.appendChild(item.record.entry);
-	  if (matches) visible += 1;
-	  if (item.rank === 0) exact += 1;
-	});
-	status.textContent = visible + (visible === 1 ? ' result' : ' results') +
-	  (exact ? ' · exact name match first' : '');
-	revealFirstResult(ranked);
+    var q = this.value.trim().toLowerCase();
+    if (!q) {
+      endSearch();
+      return;
+    }
+    beginSearch();
+    var ranked = records.map(function (record) {
+      return { record: record, rank: rank(record.entry, q) };
+    }).sort(function (a, b) {
+      return a.rank - b.rank || a.record.index - b.record.index;
+    });
+    var visible = 0;
+    var exact = 0;
+    ranked.forEach(function (item) {
+      var matches = isFinite(item.rank);
+      item.record.entry.style.display = matches ? '' : 'none';
+      item.record.entry.classList.toggle('search-exact', item.rank === 0);
+      results.appendChild(item.record.entry);
+      if (matches) visible += 1;
+      if (item.rank === 0) exact += 1;
+    });
+    status.textContent = visible + (visible === 1 ? ' result' : ' results') +
+      (exact ? ' · exact name match first' : '');
+    revealFirstResult(ranked);
   });
 })();
 
@@ -2664,9 +2714,9 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
   var links    = document.querySelectorAll('.docs-side a[href^="#"]');
   var headings = document.querySelectorAll('.doc-module-h[id]');
   function update() {
-	var scrollY = window.scrollY + 90, active = null;
-	headings.forEach(function (h) { if (h.offsetTop <= scrollY) active = h.id; });
-	links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + active); });
+    var scrollY = window.scrollY + 90, active = null;
+    headings.forEach(function (h) { if (h.offsetTop <= scrollY) active = h.id; });
+    links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + active); });
   }
   window.addEventListener('scroll', update, { passive: true });
   update();
@@ -2689,55 +2739,55 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
   var VERTICAL_MARGIN = 60;   // pixels
 
   function navHeight() {
-	return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 60;
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 60;
   }
 
   function stickyHeadingHeight() {
-	var h = document.querySelector('.doc-module-h');
-	return h ? h.getBoundingClientRect().height : 0;
+    var h = document.querySelector('.doc-module-h');
+    return h ? h.getBoundingClientRect().height : 0;
   }
 
   function targetOf(href) {
-	if (!href || href.charAt(0) !== '#') return null;
-	var id = href.slice(1);
-	try { id = decodeURIComponent(id); } catch (err) { /* keep the raw id */ }
-	return document.getElementById(id);
+    if (!href || href.charAt(0) !== '#') return null;
+    var id = href.slice(1);
+    try { id = decodeURIComponent(id); } catch (err) { /* keep the raw id */ }
+    return document.getElementById(id);
   }
 
   function scrollToTarget(target) {
-	var isHeading = target.classList.contains('doc-module-h');
+    var isHeading = target.classList.contains('doc-module-h');
 
-	// Temporarily switch to relative (same JS task, no repaint) so
-	// getBoundingClientRect returns the natural flow top even when stuck.
-	if (isHeading) target.style.setProperty('position', 'relative', 'important');
-	var naturalTop = target.getBoundingClientRect().top + window.scrollY;
-	if (isHeading) target.style.removeProperty('position');
+    // Temporarily switch to relative (same JS task, no repaint) so
+    // getBoundingClientRect returns the natural flow top even when stuck.
+    if (isHeading) target.style.setProperty('position', 'relative', 'important');
+    var naturalTop = target.getBoundingClientRect().top + window.scrollY;
+    if (isHeading) target.style.removeProperty('position');
 
-	var offset = isHeading ? navHeight() + VERTICAL_MARGIN
-						   : navHeight() + stickyHeadingHeight();
-	window.scrollTo({ top: naturalTop - offset });
+    var offset = isHeading ? navHeight() + VERTICAL_MARGIN
+                           : navHeight() + stickyHeadingHeight();
+    window.scrollTo({ top: naturalTop - offset });
   }
 
   // Delegated so cross-references rendered inside docstrings are covered too.
   document.addEventListener('click', function (e) {
-	if (!e.target.closest) return;
-	var a = e.target.closest('a[href^="#"]');
-	if (!a) return;
-	var target = targetOf(a.getAttribute('href'));
-	if (!target) return;
-	e.preventDefault();
-	history.replaceState(null, '', a.getAttribute('href'));
-	scrollToTarget(target);
+    if (!e.target.closest) return;
+    var a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var target = targetOf(a.getAttribute('href'));
+    if (!target) return;
+    e.preventDefault();
+    history.replaceState(null, '', a.getAttribute('href'));
+    scrollToTarget(target);
   });
 
   // Deep links land the same way: the browser's own jump ignores the sticky heading.
   window.addEventListener('hashchange', function () {
-	var target = targetOf(location.hash);
-	if (target) scrollToTarget(target);
+    var target = targetOf(location.hash);
+    if (target) scrollToTarget(target);
   });
   if (location.hash) {
-	var initial = targetOf(location.hash);
-	if (initial) setTimeout(function () { scrollToTarget(initial); }, 0);
+    var initial = targetOf(location.hash);
+    if (initial) setTimeout(function () { scrollToTarget(initial); }, 0);
   }
 })();
 </script>

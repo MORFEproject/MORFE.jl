@@ -38,7 +38,12 @@ const OVERRIDES = Dict(
         Dict("multiindex" => "$(DOC_HREF)#MultilinearMaps-MultilinearMap"),
     "karman.html" => Dict(
         "multiindex" => "$(DOC_HREF)#MultilinearMaps-MultilinearMap",
-        "MORFEFerrite.FluidNavierStokes" => "$(COMPANION_DOC_HREF)#FluidNavierStokes"
+        "MORFEFerrite" => COMPANION_DOC_HREF,
+        "MORFEFerrite.FluidNavierStokes" => "$(COMPANION_DOC_HREF)#FluidNavierStokes",
+        # `build_model` is defined by four backends, so the scraped map drops it as a clash
+        # and it would silently stay plain text.  This page calls the fluid method, whose
+        # docstring is the one that documents `master`, `outer` and `expansion_order`.
+        "build_model" => "$(COMPANION_DOC_HREF)#FluidNavierStokes-build_model"
     ),
     "structural_svk.html" => Dict(
         "build_model" => "$(COMPANION_DOC_HREF)#Common-build_model",

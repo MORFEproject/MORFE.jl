@@ -89,13 +89,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <div style="display:flex; gap:10px; margin-bottom:14px;">
       <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> FLUIDS</span>
-      <span class="tag" style="color:var(--ink-3);">~10 MIN COMPUTE</span>
+      <span class="tag" style="color:var(--ink-3);">~2 MIN COMPUTE</span>
     </div>
 
     <h1 id="overview">Kármán vortex street</h1>
-    <p style="margin:6px 0 14px;"><a class="btn" href="literate/05_karman_vortex_street.html" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Literate script — standardized walkthrough ↗</a></p>
+    <p style="margin:6px 0 14px;"><a class="btn" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/12_karman_hopf/karman_hopf.ipynb" target="_blank" rel="noopener" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Open the notebook ↗</a></p>
     <p class="lede">
-      This tutorial teaches the complete MORFE workflow on the 57 860-DOF incompressible flow past a cylinder.
+      Reduce the 57 860-DOF incompressible flow past a cylinder to a single complex ODE, and read
+      the onset of vortex shedding off its coefficients.
     </p>
     <!-- Hero figure: real data (base flow + oscillating Hopf mode, WebGL) -->
     <div class="fig">
@@ -103,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
         title="Animated vorticity of the base flow plus the oscillating Hopf eigenmode: the Kármán vortex street travelling behind the cylinder"></iframe>
       <div class="fig-cap"><span class="lab">FIG · 01</span>
         Vorticity of <em>base flow + oscillating Hopf mode</em>,
-        animated on the actual FE mesh from the VTK output. The steady wake destabilises at Re_c ≈ 49 and the pattern travels
+        animated on the actual FE mesh from the VTK output. The steady wake destabilises at $\mathrm{Re}_c \approx 49$ and the pattern travels
         downstream at the shedding frequency $\omega_0 \approx 16.86$ rad/s.</div>
     </div>
 
@@ -111,28 +112,29 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="adm-head">Reproduce this page</div>
       <div class="adm-body">
         <p>All code on this page is the real, shipped implementation in
-        <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener"><code>examples/05_karman_vortex_street</code></a>.
-        Three commands reproduce every number and figure.</p>
+        <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/12_karman_hopf" target="_blank" rel="noopener"><code>examples/12_karman_hopf</code></a>.
+        The notebook is the four calls below and nothing else; <code class="nolink">validate.jl</code>
+        checks the result against a blessed reference.</p>
       </div>
     </div>
 
     <h2 id="goal">What this tutorial covers</h2>
     <ul>
-      <li>Defining up the full-order model for MORFE from <em>your own</em> FEM code.</li>
-      <li>Centering the analysis on a steady state — here Newton–Raphson solves the base flow.</li>
-      <li>Defining nonlinearities: a FEM-assembled quadratic term via the <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a> interface, matrix- and vector-based terms via <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> closures, and a bifurcation parameter via <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a>.</li>
-      <li>Selecting master modes and building the resonance set.</li>
-      <li>Running <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a> and <em>using</em> the outputs $(W, R)$.</li>
+      <li>Assembling a fluid case in one call.</li>
+      <li>Selecting the Hopf pair that spans the manifold.</li>
+      <li>Carrying the Reynolds number as a parametric coordinate.</li>
+      <li>Reading the physics off the reduced dynamics $R$ with <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>.</li>
     </ul>
-
+    <p>
+      The fluid backend builds the full-order model for you. To assemble one by hand, see
+      <a class="inline" href="full_order_model.html">Building a full-order model</a>.
+    </p>
     <div class="adm note">
       <div class="adm-head">Prerequisites</div>
       <div class="adm-body">
-        <p>Julia ≥ 1.10 (the example instantiates its own environment, Gmsh included) and, for the post-processing step only, Python 3 with <code>numpy</code> + <code>matplotlib</code>.</p>
-        <pre class="code" style="margin-top:10px;">git clone https://github.com/MORFEproject/MORFE.jl.git
-git clone https://github.com/MORFEproject/MORFEFerrite.jl.git   <span class="cm"># side by side</span>
-cd MORFEFerrite.jl/examples/05_karman_vortex_street
-julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 min</span></pre>
+        <p>Follow the <a class="inline" href="installation.html">installation guide</a> to install
+        MORFE and MORFEFerrite. The example carries its own environment and a committed mesh, so
+        nothing has to be generated first.</p>
       </div>
     </div>
 
@@ -141,7 +143,7 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
       The cylinder flow is a first-order ($N=1$)
       ODE: linearising the incompressible Navier–Stokes equations about the steady base flow
       and subtracting it leaves the perturbation $\mathbf x = [u';p']$ at the origin, obeying a
-      differential–algebraic system — pressure carries no time derivative, so the mass matrix $\mathbf{B_1}$
+      differential–algebraic system: pressure carries no time derivative, so the mass matrix $\mathbf{B_1}$
       is singular.
     </p>
     <div class="math-block" style="font-size:15px;">
@@ -152,25 +154,29 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
          + \!\! \underbrace{\mathbf T_3(\mathbf r)}_{\text{base-flow forcing}}$$
     </div>
     <p>
-      The right-hand side is a sum of <strong>multilinear maps</strong> $\mathbf T_j$, each
-      linear in every argument. A term's <em>signature</em> is simply how many copies of the
-      state $\mathbf x$ and of the external variable $\mathbf r$ it consumes — that is all
-      MORFE needs to place it in the expansion. For this model:
+      The right-hand side is a sum of <strong>multilinear maps</strong> $\mathbf T_j$: the
+      quadratic convection $-(u'\!\cdot\!\nabla)u'$, plus two terms carrying the Reynolds
+      dependence. $\mathbf B_1$ is the velocity mass matrix, $\mathbf B_0$ the Jacobian of
+      the steady operator at the base flow.
     </p>
-    <ul>
-      <li>$\mathbf B_1$ — velocity mass matrix; singular (no pressure time derivative), so this is a descriptor system that MORFE solves in native form.</li>
-      <li>$\mathbf B_0$ — Jacobian of the steady Navier–Stokes operator at the base flow: viscous, base-flow convection, and pressure/continuity coupling.</li>
-      <li>$\mathbf T_1(\mathbf x,\mathbf x) = -(u'\!\cdot\!\nabla)u'$ — two state arguments, no external one: the single quadratic nonlinearity of incompressible flow.</li>
-      <li>$\mathbf T_2(\mathbf x,\mathbf r) = -D\,\mathbf K_{\mathrm{visc}}\,u'\,r$ — one state and one external argument.</li>
-      <li>$\mathbf T_3(\mathbf r) = -D\,\mathbf K_{\mathrm{visc}}\,u_0\,r$ — no state argument, one external one: a constant vector scaled by $r$.</li>
-      <li>$\mathbf r = \eta' = 1/\mathrm{Re} - 1/\mathrm{Re}_0$, an external state with $\dot{\mathbf r} = 0$ (a frozen parameter). Because $\nu = D/\mathrm{Re}$ enters linearly, $\mathbf B_0$ holds the operator at $\mathrm{Re}_0$ while $\mathbf T_2$ and $\mathbf T_3$ carry the departure from it — so a single reduction is parametric in Re.</li>
-    </ul>
     <p>
-      MORFE interacts with the model only through the matrices $\mathbf B_k$, the callbacks
-      that evaluate the maps $\mathbf T_j$, and the eigenvectors of the linearised operator; it
-      imposes no mesh or element format. Any order-$N$ system with a polynomial right-hand side
-      fits this template.
+      The external variable $\mathbf r = \eta' = 1/\mathrm{Re} - 1/\mathrm{Re}_0$ is
+      <strong>frozen</strong>: $\dot{\mathbf r} = 0$. Because $\nu = D/\mathrm{Re}$ enters
+      linearly, one reduction is parametric in Re: it describes a neighbourhood of the
+      expansion point, not a single operating condition.
     </p>
+    <p>
+      MORFE sees only $\mathbf B_k$, the callbacks evaluating $\mathbf T_j$, and the
+      eigenvectors, not a mesh or element format. One backend call assembles all of it.
+    </p>
+
+    <h2 id="setup">Setup</h2>
+    <p>
+      Follow the <a class="inline" href="installation.html">installation guide</a> to install
+      MORFE and MORFEFerrite, then load both packages.
+    </p>
+<pre class="code"><span class="kw">using</span> MORFE, <a class="doc-link" href="../morfeferrite-documentation.html">MORFEFerrite</a>
+<span class="kw">const</span> <span class="var">NSE</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes"><span class="var">MORFEFerrite.FluidNavierStokes</span></a> <span class="cm"># for incompressible Navier-Stokes</span></pre>
 
     <hr style="margin: 56px 0;"/>
 
@@ -178,131 +184,101 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
     <div class="step">
       <div class="num">01</div>
       <div class="body">
-        <h3 id="step-steady">Center the analysis on the steady flow (Newton–Raphson)</h3>
+        <h3 id="step-case">State the fluid case</h3>
         <p>
-          DPIM expands an invariant manifold around a <strong>fixed point</strong>. For a fluid
-          that fixed point is the steady base flow $u_0$, which must be computed first — here by
-          a Newton–Raphson iteration on the stationary Navier–Stokes residual (quadratic
-          convergence, ‖R‖ → 10⁻¹⁰ in six iterations). The linear operators are then the
-          Jacobian <em>at that point</em>:
+          Set the expansion order: <code class="nolink">3</code> for a quick run,
+          <code class="nolink">9</code> to reproduce the reference. The solve is graded, so
+          order 3 reproduces the order-9 coefficients it shares exactly.
         </p>
-<pre class="code"><span class="cm"># stage 3 — Newton–Raphson for the base flow u₀ at Re₀ (the expansion point)</span>
-(<span class="var">_</span>, <span class="var">_</span>, <span class="var">s₀_full</span>) <span class="op">=</span> <span class="fn">solve_steady_state</span>(<span class="var">fom</span>; <span class="var">Re0</span> <span class="op">=</span> <span class="var">Re₀</span>)
-
-<span class="cm"># stage 4 — linearise around u₀:  B₁ ṡ + B₀ s = F(s, η′)</span>
-(<span class="var">B₀</span>, <span class="var">B₁</span>) <span class="op">=</span> <span class="fn">assemble_linear_operators</span>(<span class="var">s₀_full</span>, <span class="var">fom</span>; <span class="var">Re0</span> <span class="op">=</span> <span class="var">Re₀</span>)</pre>
         <p>
-          Both functions ship in <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes"><code>MORFEFerrite.FluidNavierStokes</code></a>
-          (<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-solve_steady_state"><code>solve_steady_state</code></a>, <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-assemble_linear_operators"><code>assemble_linear_operators</code></a> — plain <a class="inline" href="https://ferrite-fem.github.io/" target="_blank" rel="noopener">Ferrite</a>
-          assembly code) — but this part can be yours, in whatever FEM library you
-          use. MORFE operates only on the sparse matrices $\mathbf B_0, \mathbf B_1$ once they exist.
+          <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><code>fluid_model</code></a> reads the mesh and assembles the P2/P1 Taylor–Hood spaces,
+          the Newton solve for the base flow $u_0$, and the operators linearised about it.
         </p>
-        <div class="adm note">
-          <div class="adm-head">Why the fixed point matters</div>
-          <div class="adm-body"><p>Every coefficient MORFE computes is an expansion around $u_0$. If the Newton solve is not converged, the "linear" part of the dynamics silently contains residual forcing and every higher-order coefficient inherits the error. Check ‖R(u₀)‖ before proceeding.</p></div>
-        </div>
-      </div>
+<pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span>  <span class="cm"># Change to 9 for the reference calculation.</span>
+<span class="var">case</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><span class="fn">fluid_model</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"cylinder_flow.msh"</span>); <span class="var">Re</span> <span class="op">=</span> <span class="num">49.03</span>)</pre>
+        <p>
+          $\mathrm{Re}_0 = 49.03$ is the expansion point, just above critical. DPIM expands
+          about a fixed point, so an unconverged Newton solve poisons every coefficient.
+          The call reports its residual per iteration.
+        </p>
     </div>
 
+    </div>
     <!-- Step 2 -->
     <div class="step">
       <div class="num">02</div>
       <div class="body">
-        <h3 id="step-nonlinear">Declare the multilinear maps</h3>
+        <h3 id="step-modes">Select the Hopf pair</h3>
         <p>
-          The three terms of $\mathbf F$ from the previous section — $\mathbf T_1$, $\mathbf T_2$,
-          $\mathbf T_3$ — are declared one by one. Each states its <em>signature</em>: the number
-          of state arguments it consumes (<a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>multiindex</code></a>, one entry per derivative order —
-          here just $m_{j,0}$) and the number of external arguments (<code>multiplicity_external</code>,
-          the count $\widehat m_j$). MORFE needs nothing more than a callback that evaluates the map on
-          the supplied arguments, and it exploits symmetry in repeated arguments automatically.
+          The master modes span the manifold's tangent space: here the Hopf pair, the
+          least-damped conjugate eigenpair of $-\mathbf B_0\, y = \lambda\, \mathbf B_1\, y$.
+          Choosing them is a modelling decision, made here rather than by the backend.
+          <code>case.B[1]</code> and <code>case.B[2]</code> are $\mathbf B_0$ and $\mathbf B_1$.
         </p>
-        <p><strong>(a) $\mathbf T_1$ — quadratic convection</strong> </p>
-        <p>($-(u'\!\cdot\!\nabla)u'$; <code>multiindex=(2,)</code>, <code>multiplicity_external=0</code>) </p>
-        <p>It is evaluated by
-        element-level callbacks rather than stored as a dense, high-dimensional tensor: the example
-        subtypes <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a>, and MORFE calls it with the manifold columns it
-        needs, batched over the mesh:</p>
-<pre class="code"><span class="kw">struct</span> <span class="var">FluidConvection</span>{<span class="var">DH</span>, <span class="var">CV</span>} <span class="op">&lt;:</span> <span class="var">MORFE</span>.<span class="var">FEMMultilinearMap</span>{<span class="num">1</span>}
-    <span class="cm"># … FEM handles and buffers …</span>
-    <span class="var">multiindex</span><span class="op">::</span><span class="var">NTuple</span>{<span class="num">1</span>, <span class="var">Int</span>}      <span class="cm"># (2,)  — quadratic in the state</span>
-    <span class="var">multiplicity_external</span><span class="op">::</span><span class="var">Int</span>     <span class="cm"># 0    — no η′ factor</span>
-<span class="kw">end</span>
+<pre class="code"><span class="var">spectrum</span> <span class="op">=</span> <span class="var">NSE</span>.<span class="fn">solve_hopf_eigenproblem</span>(<span class="op">-</span><span class="var">case</span>.<span class="var">B</span>[<span class="num">1</span>], <span class="var">case</span>.<span class="var">B</span>[<span class="num">2</span>];
+    <span class="var">nev</span> <span class="op">=</span> <span class="num">40</span>, <span class="var">sigma_re</span> <span class="op">=</span> <span class="num">3.0</span>, <span class="var">sigma_im</span> <span class="op">=</span> <span class="num">8.0</span>)
 
-<span class="cm"># the physics is contained in a single quadrature-point callback:</span>
-<span class="kw">function</span> <span class="var">MORFE</span>.<span class="fn">accumulate_qp!</span>(<span class="var">Fe</span>, (<span class="var">qp1</span>, <span class="var">qp2</span>), <span class="var">mult</span>, <span class="var">_</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span><span class="op">::</span><span class="var">FluidConvection</span>)
-    <span class="var">conv</span> <span class="op">=</span> <span class="op">-</span><span class="num">0.5</span> <span class="op">*</span> (<span class="var">qp2</span>.<span class="var">grad</span> ⋅ <span class="var">qp1</span>.<span class="var">val</span> <span class="op">+</span> <span class="var">qp1</span>.<span class="var">grad</span> ⋅ <span class="var">qp2</span>.<span class="var">val</span>)   <span class="cm"># −½[(u₁·∇)u₂+(u₂·∇)u₁]</span>
-    <span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="var">t</span>.<span class="var">n_vel_dofs_per_cell</span>
-        <span class="var">Fe</span>[<span class="var">t</span>.<span class="var">dof_range_u</span>[<span class="var">i</span>]] <span class="op">+=</span> <span class="var">mult</span> <span class="op">*</span> <span class="var">dΩ</span> <span class="op">*</span> (<span class="fn">shape_value</span>(<span class="var">t</span>.<span class="var">cv_vel</span>, <span class="var">q</span>, <span class="var">i</span>) ⋅ <span class="var">conv</span>)
-    <span class="kw">end</span>
-<span class="kw">end</span></pre>
-        <p><strong>(b) $\mathbf T_2$ — viscous parameter coupling</strong></p>
+<span class="var">master</span> <span class="op">=</span> [<span class="var">spectrum</span>.<span class="var">hopf_index</span>, <span class="var">spectrum</span>.<span class="var">conjugate_index</span>]
+<span class="var">outer</span> <span class="op">=</span> <span class="fn">setdiff</span>(<span class="fn">eachindex</span>(<span class="var">spectrum</span>.<span class="var">eigenvalues</span>), <span class="var">master</span>)
+<span class="cm">#   λ₁ = +0.004029 +16.859170·i   (and λ₂ = conj(λ₁))</span></pre>
         <p>
-        ($-D\,\eta'\, \mathbf K_{\mathrm{visc}}\, u'$; <code>multiindex=(1,)</code>,
-        <code>multiplicity_external=1</code>)</p> 
-        <p>A pre-assembled sparse matrix wrapped in a closure —
-        one state argument, one external argument:</p>
-<pre class="code"><span class="var">g₁!</span>(<span class="var">acc</span>, <span class="var">s</span>, <span class="var">r</span>) <span class="op">=</span> <span class="fn">mul!</span>(<span class="var">acc</span>, <span class="var">K_visc</span>, <span class="var">s</span>, <span class="var">r</span>[<span class="num">1</span>], <span class="fn">one</span>(<span class="fn">eltype</span>(<span class="var">acc</span>)))
-<span class="var">g₁</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="var">g₁!</span>, (<span class="num">1</span>,), <span class="num">1</span>)          <span class="cm"># multiindex (1,), one η′ factor</span></pre>
-        <p><strong>(c) $\mathbf T_3$ — base-flow forcing</strong></p>
-        <p>($-D\,\eta'\, \mathbf K_{\mathrm{visc}}\, u_0$; <code>multiindex=(0,)</code>,
-        <code>multiplicity_external=1</code>)</p> 
-        <p>A fixed vector — no state argument, one external
-        argument. It aligns the $\eta'$-direction of the manifold with the family of steady states
-        at neighbouring Re:</p>
-<pre class="code"><span class="var">h₀!</span>(<span class="var">acc</span>, <span class="var">r</span>) <span class="op">=</span> <span class="fn">axpy!</span>(<span class="fn">eltype</span>(<span class="var">acc</span>)(<span class="var">r</span>[<span class="num">1</span>]), <span class="var">h₀_vec</span>, <span class="var">acc</span>)
-<span class="var">h₀</span> <span class="op">=</span> <span class="fn">MultilinearMap</span>(<span class="var">h₀!</span>, (<span class="num">0</span>,), <span class="num">1</span>)</pre>
-        <p>Finally the external state $\mathbf r = \eta'$ is an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> with a
-        single eigenvalue 0 ($\dot\eta' = 0$), and the maps are collected into the model:</p>
-<pre class="code"><span class="var">ext_sys</span> <span class="op">=</span> <span class="fn">ExternalSystem</span>((<span class="num">0.0</span> <span class="op">+</span> <span class="num">0.0im</span>,))
-<span class="var">model</span> <span class="op">=</span> <span class="fn">NthOrderModel</span>((<span class="var">B₀</span>, <span class="var">B₁</span>), (<span class="var">convection</span>, <span class="var">g₁</span>, <span class="var">h₀</span>), <span class="var">ext_sys</span>)</pre>
-      </div>
+          At $\mathrm{Re}_0 = 49.03$ the pair sits just right of the imaginary axis: marginally
+          unstable, shedding at $\omega_0 = 16.86$ rad/s (St ≈ 0.27). With $\eta'$ the reduced
+          coordinates are $(z_1, \bar z_1, \eta')$.
+        </p>
     </div>
 
+    </div>
     <!-- Step 3 -->
     <div class="step">
       <div class="num">03</div>
       <div class="body">
-        <h3 id="step-master">Choose the master modes</h3>
+        <h3 id="step-build">Build the MORFE model</h3>
         <p>
-          The master modes span the tangent space of the manifold. Here they are the Hopf pair —
-          the least-damped complex-conjugate eigenpair of the generalised problem
-          $-\mathbf B_0\, y = \lambda\, \mathbf B_1\, y$, found by shift-invert ARPACK.
-          MORFE also needs the <em>left</em> eigenvectors, which enter the solvability
-          conditions of the reduced dynamics:
+          <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-build_model"><code>build_model</code></a> turns the case and its spectrum into the physics-independent
+          model and spectral data that <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> consumes. It computes the left
+          eigenvectors and conjugates a pair's partner rather than solving for it, so the
+          conjugate symmetry holds by construction.
         </p>
-<pre class="code">(<span class="var">λs</span>, <span class="var">Φ</span>, <span class="var">Ψ</span>, <span class="var">…</span>) <span class="op">=</span> <span class="fn">solve_hopf_eigenproblem</span>(<span class="op">-</span><span class="var">B₀</span>, <span class="var">B₁</span>; <span class="var">nev</span> <span class="op">=</span> <span class="num">40</span>, <span class="var">…</span>)
-<span class="cm">#   Selected Hopf mode:  λ₁ = +0.004028 +16.859169·i   (and λ₂ = conj(λ₁))</span></pre>
+<pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>, <span class="var">spectrum</span>;
+    <span class="var">master</span> <span class="op">=</span> <span class="var">master</span>, <span class="var">outer</span> <span class="op">=</span> <span class="var">outer</span>, <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>, <span class="var">scale</span> <span class="op">=</span> <span class="num">1e-2</span>)</pre>
         <p>
-          At Re₀ = 49.03 the pair sits just right of the imaginary axis — the base flow is
-          marginally unstable, shedding at $\omega_0 = 16.86$ rad/s (St ≈ 0.27). Together with
-          $\eta'$, the reduced coordinates are $(z_1, \bar z_1, \eta')$: a 2-real-dimensional
-          oscillator plus one parameter direction.
+          <code class="nolink">scale</code> is a mode gauge applied to both eigenvector sides.
+          It changes what $W$ and $R$ mean, and coefficients from two gauges are not comparable,
+          so it is written at the call site. <code class="nolink">meta.conjugate_permutation</code>
+          comes back <code class="nolink">[2, 1, 3]</code>.
         </p>
-      </div>
     </div>
 
+    </div>
     <!-- Step 4 -->
     <div class="step">
       <div class="num">04</div>
       <div class="body">
-        <h3 id="step-resonance">Multi-indices and the resonance set</h3>
+        <h3 id="step-parametrise">Parametrise the invariant manifold</h3>
         <p>
-          The parametrisation is a polynomial in the reduced coordinates. You choose which
-          monomials exist (everything up to a total degree) and which of them stay in the
-          reduced dynamics (the <em>style</em> of the parametrisation). The normal-form style
-          keeps only near-resonant monomials — for a Hopf pair those are
-          $z_1 |z_1|^{2k} \eta'^{\,j}$:
+          This is where the 57 860 degrees of freedom collapse. Normal-form style keeps only
+          the resonant monomials, and for a Hopf pair that leaves a single complex equation:
+          the Stuart–Landau equation governing the shedding amplitude.
         </p>
-<pre class="code"><span class="var">mset</span> <span class="op">=</span> <span class="fn">all_multiindices_up_to</span>(<span class="num">3</span>, <span class="num">9</span>; <span class="var">min_degree</span> <span class="op">=</span> <span class="num">1</span>)   <span class="cm"># z₁^a z̄₁^b η′^c, a+b+c ≤ 9 → 219 monomials</span>
-
-<span class="var">resonance_set</span> <span class="op">=</span> <span class="fn">resonance_set_from_complex_normal_form_style</span>(
-    <span class="var">mset</span>, [<span class="var">im</span><span class="op">*</span><span class="var">ω₀</span>, <span class="op">-</span><span class="var">im</span><span class="op">*</span><span class="var">ω₀</span>], <span class="num">0.05</span><span class="var">ω₀</span>;
-    <span class="var">external_eigenvalues</span> <span class="op">=</span> [<span class="num">0.0</span> <span class="op">+</span> <span class="num">0.0im</span>])</pre>
+<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
+    <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol_relative</span> <span class="op">=</span> <span class="num">0.1</span>,
+        <span class="var">outer_targets</span> <span class="op">=</span> <span class="kw">true</span>))</pre>
+        <div class="math-block" style="font-size:14.5px;">
+          $$\dot z_1 = \underbrace{(0.0040 + 16.86\,i)}_{\lambda_1}\,z_1
+          + \underbrace{(-212.0 - 59.1\,i)}_{c_{101}}\,z_1\eta'
+          + \underbrace{(-0.111 + 0.071\,i)}_{c_{210}}\,z_1|z_1|^2 + \cdots$$
+        </div>
         <p>
-          Because the FOM matrices are real and the two master modes are conjugates, MORFE can
-          skip half of the work: the <code>conjugate_permutation</code> below declares that mode
-          2 is the conjugate of mode 1 and that $\eta'$ is self-conjugate (real).
+          $\lambda_1$ is the linear behaviour of the wake: its real part the growth rate, its
+          imaginary part the shedding frequency $\omega_0$. $c_{101}$ tilts that growth rate as
+          the Reynolds number moves. Setting it to zero,
+          $\mathrm{Re}(\lambda_1) + \mathrm{Re}(c_{101})\,\eta' = 0$, locates the bifurcation
+          at $\mathrm{Re}_c \approx 48.98$. And $\mathrm{Re}(c_{210}) < 0$, so the cubic term
+          bleeds energy out of a growing oscillation: the amplitude saturates instead of running
+          away. That sign is what makes the bifurcation <strong>supercritical</strong>, and it
+          is why a stable vortex street appears smoothly from $\mathrm{Re}_c$ rather than
+          jumping into existence.
         </p>
       </div>
     </div>
@@ -311,40 +287,14 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
     <div class="step">
       <div class="num">05</div>
       <div class="body">
-        <h3 id="step-solve">Solve the cohomological equations</h3>
-<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">solve_parametrisation</span>(
-    <span class="var">model</span>, <span class="var">mset</span>, <span class="var">master_eigenvalues</span>,
-    <span class="var">master_modes</span> <span class="op">.*</span> <span class="num">1e-2</span>, <span class="var">left_eigenmodes</span> <span class="op">.*</span> <span class="num">1e-2</span>,   <span class="cm"># coordinate rescale for conditioning</span>
-    <span class="var">resonance_set</span>;
-    <span class="var">conjugate_permutation</span> <span class="op">=</span> [<span class="num">2</span>, <span class="num">1</span>, <span class="num">3</span>])</pre>
+        <h3 id="step-save">Save the ROM (optional)</h3>
         <p>
-          This is the core of MORFE: it walks the 219 monomials in graded order and solves a
-          small bordered linear system per monomial (≈ 6 min here). It returns the two objects of
-          the invariance equation:
+          The common saver writes $W$, $R$, their coefficient table and a run summary to the
+          example's <code class="nolink">results</code> directory. The table is what the
+          example's <code class="nolink">validate.jl</code> checks against the reference.
         </p>
-        <ul>
-          <li><code>W</code> — the <strong>manifold map</strong>: coefficients $W_\alpha \in \mathbb C^{57860}$ such that the full state is $x = \sum_\alpha W_\alpha\, z^\alpha$. Access them via <code>MORFE.ParametrisationMethod.coefficients(W)</code>.</li>
-          <li><code>R</code> — the <strong>reduced dynamics</strong> $\dot z = R(z)$ on the manifold, over the coordinates $z = (z_1, \bar z_1, \eta')$. Only the first row must be solved numerically: row 2 is its complex conjugate ($z_2 = \bar z_1$) and row 3 is the frozen parameter ($\dot\eta' = 0$). With the normal-form style, only resonant monomials survive, so the first row reads</li>
-        </ul>
-        <div class="math-block" style="font-size:14.5px;">
-          $$\dot z_1 = (0.0040 + 16.86\,i)\,z_1 + (-212.0 - 59.1\,i)\,z_1\eta'
-          + (-0.111 + 0.071\,i)\,z_1|z_1|^2 + (2981 + 95\,i)\,z_1\eta'^2 + \cdots$$
-        </div>
-        <p>read directly from <code>reduced_dynamics.txt</code> (each row is one monomial
-        <code>[z₁-pow, z̄₁-pow, η′-pow]</code> and its complex coefficient):</p>
-<pre class="code"><span class="cm">ż₁ = R₁(z₁, z̄₁, η′) — nonzero monomials  [z₁-pow, z̄₁-pow, η′-pow]:</span>
-  [1, 0, 0]      : +4.0284400035e-03 +1.6859169021e+01·i     <span class="cm"># λ₁ = growth rate + shedding freq.</span>
-  [1, 0, 1]      : -2.1200793228e+02 -5.9107701234e+01·i     <span class="cm"># sensitivity to Re</span>
-  [2, 1, 0]      : -1.1101108534e-01 +7.0650764135e-02·i     <span class="cm"># cubic saturation</span>
-  [1, 0, 2]      : +2.9810858630e+03 +9.5235017009e+01·i
-  ...</pre>
-        <p>Three coefficients carry the physics. The linear one is the eigenvalue $\lambda_1$: its
-        real part is the growth rate, its imaginary part the shedding frequency $\omega_0$. The
-        $z_1\eta'$ coefficient is the sensitivity to Re; setting the growth rate to zero,
-        $\mathrm{Re}(\lambda_1) + \mathrm{Re}(c_{101})\,\eta' = 0$, places the bifurcation at
-        $\mathrm{Re}_c \approx 48.98$. The real part of the $z_1|z_1|^2$ coefficient is negative,
-        so the cubic term saturates the amplitude — the Hopf bifurcation is supercritical and a
-        stable limit cycle grows continuously from $\mathrm{Re}_c$.</p>
+<pre class="code">MORFE.<a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl" target="_blank" rel="noopener"><span class="fn">save_rom</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>;
+    <span class="var">external_system</span> <span class="op">=</span> <span class="var">meta</span>.<span class="var">external_system</span>)</pre>
       </div>
     </div>
 
@@ -354,66 +304,59 @@ julia --project=. main.jl        <span class="cm"># the whole reduction, ≈ 7 m
       <div class="body">
         <h3 id="step-use">Use the ROM: branch, observables, order convergence</h3>
         <p>
-          With normal-form style the ROM limit cycle is exactly a circle $z_1 = \rho e^{i\Omega t}$,
-          so the whole bifurcation diagram is the 2×2 continuation problem
-          $\mathrm{Re}[R_1(\rho,\rho,\eta')] = 0$ — solved in seconds
-          (<code>solve_rom.jl</code>). Physical observables are projections of $W$: the lift is
-          the polynomial $L_\alpha = l^{\!\top} W_\alpha$ and the kinetic energy needs only the
-          small Gram matrix $\mathbf G = W_{\mathrm{vel}}^{\!\top} \mathbf M_{\mathrm{vel}} W_{\mathrm{vel}}/|\Omega|$
-          — no full-order data is needed downstream:
+          In normal form the limit cycle is a circle $z_1 = \rho e^{i\Omega t}$, so the
+          bifurcation diagram is the scalar problem $\mathrm{Re}[R_1(\rho,\rho,\eta')] = 0$.
+          Observables are projections of $W$, so no full-order data is involved.
         </p>
-<pre class="code">julia --project=. solve_rom.jl      <span class="cm"># limit-cycle branch per truncation order</span>
-python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs Re, one curve per order</span></pre>
         <div class="adm tip">
           <div class="adm-head">One run = every order (exactly)</div>
-          <div class="adm-body"><p>The cohomological solve is <em>graded</em>: degree-$N$ coefficients never depend on degrees $&gt; N$. Zeroing all monomials above degree $N$ in the order-9 $(W,R)$ therefore gives the order-$N$ ROM <strong>bit-exactly</strong> (verified against separate runs). The order-convergence study below costs nothing beyond the single order-9 run.</p></div>
+          <div class="adm-body"><p>The solve is <em>graded</em>: degree-$N$ coefficients never depend on degrees $&gt; N$. Zeroing monomials above degree $N$ in the order-9 $(W,R)$ gives the order-$N$ ROM bit-exactly, so the order study costs nothing beyond the single run.</p></div>
         </div>
 
-        <div class="fig">
-          <iframe src="assets/karman/lift_vs_Re.html" title="Maximum lift along the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
-          <div class="fig-cap"><span class="lab">FIG · 02</span> Maximum lift along the limit cycle vs Re, per truncation order — hover for values, click the legend to toggle orders, or arm the toolbar tools to zoom/pan. The horizontal line is the steady base flow (solid = stable, dashed = unstable past the Hopf point); the limit-cycle branches grow from it at Re_c. The orders coincide near Re_c and separate with distance — the expected behaviour of a truncated expansion.</div>
-        </div>
-
-        <div class="fig">
-          <iframe src="assets/karman/tke_vs_Re.html" title="Period-averaged fluctuation kinetic energy vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
-          <div class="fig-cap"><span class="lab">FIG · 03</span> Period-averaged fluctuation kinetic energy vs Re (interactive). The horizontal line is the steady branch (solid = stable, dashed = unstable); the fluctuation energy grows from zero at the Hopf point Re_c ≈ 48.98. Where the orders agree the truncation is converged.</div>
-        </div>
-
-        <div class="adm warn">
-          <div class="adm-head">Convergence with expansion order</div>
-          <div class="adm-body"><p>Where the truncation orders separate, the reduced state has moved outside the region where the expansion converges — the order-5 branch even folds back around Re ≈ 54.6, a truncation artifact rather than physics. This is why the order study matters before relying on any single curve.</p></div>
-        </div>
       </div>
+    </div>
+
+    <div class="fig">
+      <iframe src="assets/karman/lift_vs_Re.html" title="Maximum lift along the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 02</span> Maximum lift along the limit cycle vs Re, per truncation order. The horizontal line is the steady base flow (solid = stable, dashed = unstable); branches grow from it at $\mathrm{Re}_c$. Orders coincide near $\mathrm{Re}_c$ and separate with distance.</div>
+    </div>
+
+
+    <div class="fig">
+      <iframe src="assets/karman/tke_vs_Re.html" title="Period-averaged fluctuation kinetic energy vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 03</span> Period-averaged fluctuation kinetic energy vs Re. It grows from zero at the Hopf point. Where the orders agree the truncation is converged.</div>
+    </div>
+
+    <div class="adm warn">
+      <div class="adm-head">Convergence with expansion order</div>
+      <div class="adm-body"><p>Where the orders separate, the reduced state has left the region where the expansion converges. The order-5 branch even folds back around Re ≈ 54.6, a truncation artifact rather than physics.</p></div>
     </div>
 
     <hr style="margin: 56px 0;"/>
 
     <h2 id="recap">Recap</h2>
-    <ol>
-      <li><strong>Fixed point</strong> — converge a steady state (Newton–Raphson) and linearise around it: $(\mathbf B_0, \mathbf B_1)$.</li>
-      <li><strong>Nonlinearities</strong> — declare each term of $F(x,r)$ as a <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a> (matrix/vector) or <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a> (element-level assembly), with its state/external signature.</li>
-      <li><strong>Parameters</strong> — anything that enters (multi)linearly can be carried as an <a class="doc-link" href="../documentation.html#ExternalSystems-ExternalSystem"><code>ExternalSystem</code></a> coordinate; the ROM becomes parametric.</li>
-      <li><strong>Masters</strong> — pick the eigenpairs that span the physics (here the Hopf pair) and hand MORFE both right and left eigenvectors.</li>
-      <li><strong>Style</strong> — the resonance set decides what survives in $\dot z = R(z)$; normal-form style keeps the minimal resonant core.</li>
-      <li><strong>Solve &amp; use</strong> — <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a> returns $(W, R)$; continuation runs on $R$, physical quantities come from projections of $W$.</li>
-    </ol>
+    <ul>
+      <li>One call assembles the mesh, the base flow and the linearised operators; <code>case.B</code> holds $(\mathbf B_0, \mathbf B_1)$.</li>
+      <li>The eigensolve returns its spectrum closed under conjugation, so the Hopf pair can be taken straight from it.</li>
+      <li>Anything entering (multi)linearly can ride along as an external coordinate: here $\eta'$, which makes the ROM parametric in Re.</li>
+      <li>The resonance style decides what survives in $\dot z = R(z)$; normal form keeps the minimal resonant core.</li>
+      <li>Continuation runs on $R$; physical quantities are projections of $W$.</li>
+    </ul>
 
     <h2 id="next">Where to next?</h2>
     <ul>
-      <li><a class="inline" href="full_order_model.html">Building a full-order model</a> — the same three ingredients built from scratch, without a FEM backend.</li>
-      <li><a class="inline" href="../documentation.html">Code documentation</a> — <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, multilinear maps, resonance sets, <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a>.</li>
-      <li><a class="inline" href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/05_karman_vortex_street/README.md" target="_blank" rel="noopener">Example README</a> — file-by-file layout and validation scripts.</li>
+      <li><a class="inline" href="structural_svk.html">From a mesh to a ROM</a>: the same calls on a structural problem.</li>
+      <li><a class="inline" href="full_order_model.html">Building a full-order model</a>: assemble the model by hand, without a FEM backend.</li>
+      <li><a class="inline" href="../documentation.html">Code documentation</a>: <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>, <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, multilinear maps, resonance sets.</li>
     </ul>
 
     <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
       <div style="flex:1; min-width:240px;">
-        <div class="kicker">Reproduce</div>
-        <h3 style="margin-top:14px; font-size:20px;">Three commands, every figure</h3>
-        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">The full pipeline ships in <code>examples/05_karman_vortex_street</code> — <code>main.jl</code>, <code>solve_rom.jl</code>, <code>compare_orders.py</code>.</p>
+        <div class="kicker">Run it yourself</div>
+        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">The full pipeline ships in <a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/12_karman_hopf/karman_hopf.ipynb" target="_blank" rel="noopener"><code>examples/12_karman_hopf/karman_hopf.ipynb</code></a>.</p>
       </div>
       <div style="display:flex; gap:10px;">
-        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder <span class="arrow">→</span></a>
-        <a class="btn" href="https://github.com/MORFEproject/MORFEFerrite.jl" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/12_karman_hopf" target="_blank" rel="noopener">Example 12<span class="arrow">→</span></a>
       </div>
     </div>
 
@@ -428,23 +371,24 @@ python3 compare_orders.py           <span class="cm"># lift &amp; ⟨TKE⟩ vs R
     <h5>On this page</h5>
     <ul id="toc-list">
       <li><a href="#overview" class="active">Overview</a></li>
-      <li><a href="#goal">What you will learn</a></li>
-      <li><a href="#model">The full order model</a></li>
-      <li><a href="#step-steady">01 · Steady flow (Newton)</a></li>
-      <li><a href="#step-nonlinear">02 · Multilinear maps</a></li>
-      <li><a href="#step-master">03 · Master modes</a></li>
-      <li><a href="#step-resonance">04 · Resonance set</a></li>
-      <li><a href="#step-solve">05 · Solve</a></li>
+      <li><a href="#goal">What this tutorial covers</a></li>
+      <li><a href="#model">Defining the full-order model</a></li>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#step-case">01 · State the case</a></li>
+      <li><a href="#step-modes">02 · Select the Hopf pair</a></li>
+      <li><a href="#step-build">03 · Build the model</a></li>
+      <li><a href="#step-parametrise">04 · Parametrise</a></li>
+      <li><a href="#step-save">05 · Save (optional)</a></li>
       <li><a href="#step-use">06 · Use the ROM</a></li>
       <li><a href="#recap">Recap</a></li>
       <li><a href="#next">Where to next?</a></li>
     </ul>
     <h5 style="margin-top:32px;">Links</h5>
     <ul>
-      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/05_karman_vortex_street" target="_blank" rel="noopener">Example folder ↗</a></li>
-      <li><a href="../documentation.html#FullOrderModel">FullOrderModel docs</a></li>
-      <li><a href="../documentation.html#MultilinearMaps">MultilinearMaps docs</a></li>
-      <li><a href="../documentation.html#CohomologicalEquations">CohomologicalEquations docs</a></li>
+      <li><a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/12_karman_hopf" target="_blank" rel="noopener">Example folder ↗</a></li>
+      <li><a href="../morfeferrite-documentation.html#FluidNavierStokes">FluidNavierStokes docs</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">ParametrisationMethod docs</a></li>
+      <li><a href="../documentation.html#Resonance">Resonance docs</a></li>
     </ul>
   </aside>
 
