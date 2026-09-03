@@ -395,7 +395,7 @@ function _structural_left_eigenmode_orders(
     # B_0 (the stiffness slot) is never read at ORD = 2, so `mass` stands in purely to
     # keep the tuple the right length.
     return left_eigenmode_orders_from_slice(
-        (mass, damping, mass), view(Y,:,1,:), λ; apply = identity)
+        (mass, damping, mass), view(Y, :, 1, :), λ; apply = identity)
 end
 
 """
