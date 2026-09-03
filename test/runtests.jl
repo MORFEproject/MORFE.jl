@@ -85,6 +85,9 @@ should_run(group) = GROUP == "all" || GROUP == group
             include("Extensions/test_plots.jl")
         end
     end
+    if should_run("aqua")
+        include("Quality/aqua.jl")
+    end
 end
 
 if GROUP == "examples"

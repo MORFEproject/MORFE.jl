@@ -156,7 +156,8 @@ struct NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
             external_system::ExternalSystem{N_EXT}
-    ) where {ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}}
+    ) where {ORD, ORDP1, N_NL, N_EXT, MT <: AbstractMatrix}
+        T = eltype(MT)
         @assert ORDP1 == ORD + 1
         n_fom = size(linear_terms[1], 1)
         @assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
@@ -172,7 +173,8 @@ struct NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}},
             external_dynamics::DensePolynomial{TE, N_EXT}
-    ) where {ORD, ORDP1, N_NL, N_EXT, T, TE, MT <: AbstractMatrix{T}}
+    ) where {ORD, ORDP1, N_NL, N_EXT, TE, MT <: AbstractMatrix}
+        T = eltype(MT)
         @assert ORDP1 == ORD + 1
         n_fom = size(linear_terms[1], 1)
         @assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
@@ -186,7 +188,8 @@ struct NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT <: AbstractMatrix{T}} <:
     function NthOrderModel(
             linear_terms::NTuple{ORDP1, MT},
             nonlinear_terms::NTuple{N_NL, AbstractMultilinearMap{ORD}}
-    ) where {ORD, ORDP1, N_NL, T, MT <: AbstractMatrix{T}}
+    ) where {ORD, ORDP1, N_NL, MT <: AbstractMatrix}
+        T = eltype(MT)
         @assert ORDP1 == ORD + 1
         n_fom = size(linear_terms[1], 1)
         @assert all(size(B) == (n_fom, n_fom) for B in linear_terms)
