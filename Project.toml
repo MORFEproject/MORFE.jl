@@ -1,12 +1,7 @@
 name = "MORFE"
 uuid = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
 version = "0.1.0"
-authors = [
-    "Tiago Martins <tiago.martins@tum.de>",
-    "Florian Tuschner <florian.tuschner@imfd.tu-freiberg.de>",
-    "Alessandra Vizzaccaro <alessandra.vizzaccaro@polimi.it>",
-    "Francesco Trainotti <francesco.trainotti@tum.de>",
-]
+authors = ["Tiago Martins <tiago.martins@tum.de>", "Florian Tuschner <florian.tuschner@imfd.tu-freiberg.de>", "Alessandra Vizzaccaro <alessandra.vizzaccaro@polimi.it>", "Francesco Trainotti <francesco.trainotti@tum.de>"]
 
 [deps]
 KLU = "ef3ab10e-7fda-4108-b977-705223b18434"
@@ -38,7 +33,7 @@ MORFESymbolicsExt = "Symbolics"
 
 [compat]
 Arpack = "= 0.5.3"
-BifurcationKit = "0.4"
+BifurcationKit = "0.4, 0.8"
 KLU = "0.6.0"
 LinearMaps = "3"
 Pardiso = "1.1.2"
