@@ -1,6 +1,6 @@
 """
 This module is an extension using Symbolics.jl to introduce 
-a clean and nice looking interface for definition and generating the NDOrdermodel
+a clean and nice looking interface for defining and generating the NthOrderModel
 and ExternalSystem
 """
 module MORFESymbolicsExt

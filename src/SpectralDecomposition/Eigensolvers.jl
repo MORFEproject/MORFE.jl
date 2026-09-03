@@ -157,11 +157,11 @@ mutable struct MorfeEigensolver <: AbstractEigensolver
     eigenvalues::Union{Nothing, Vector{ComplexF64}}
 
     function MorfeEigensolver()
-        new(nothing, nothing)
+        new(nothing, nothing, nothing)
     end
     function MorfeEigensolver(nev::Int64, shift::ComplexF64)
         @assert nev>0 "nev must be greater than zero!"
-        new(nev, shift)
+        new(nev, shift, nothing)
     end
 end
 
@@ -197,14 +197,16 @@ Solves left eigenproblem using σ-shift to recover the correct eigenvalues.
 """
 function eigensolve_left(model::NthOrderModel, solver::MorfeEigensolver)
     A, B = linear_first_order_matrices(model)
-    @assert solver.nev == length(solver.eigenvalues)
+    nev = something(solver.nev, error("nev has not been initialized"))
+    solver_eigenvalues = something(solver.eigenvalues, error("eigenvalues have not been computed"))
+    @assert nev == length(solver.eigenvalues)
     FOM = size(model.linear_terms[1], 1)
     ORD = length(model.linear_terms) - 1
-    left_eigenvectors = Array{ComplexF64}(undef, FOM, ORD, solver.nev)
+    left_eigenvectors = Array{ComplexF64}(undef, FOM, ORD, nev)
     eigenvalues = Vector{ComplexF64}(undef, solver.nev)
     for i in 1:(solver.nev)
         eig_results = generalised_eigenpairs(
-            A', B'; nev = 1, ncv = 30, shift = conj(solver.eigenvalues[i]))
+            A', B'; nev = 1, ncv = 30, shift = conj(solver_eigenvalues[i]))
         left_eigenvectors[:, :, i] = reshape(eig_results.vectors[:, 1], FOM, ORD)
         eigenvalues[i] = conj(eig_results.values[1])
     end
@@ -471,8 +473,8 @@ different things at different points in a script.
 """
 struct Spectrum{T}
     solver::AbstractEigensolver
-    eigenvalues::Array{Complex{T}}
-    eigenmodes::Array{Complex{T}}              # FOM × ORD × n_eigs
+    eigenvalues::Array{Complex{T}, 1}
+    eigenmodes::Array{Complex{T}, 3}              # FOM × ORD × n_eigs
     left_eigenmodes::Union{Nothing, Matrix{Complex{T}}}  # FOM × n_eigs — physical-space (highest-order) slice
     left_eigenmodes_orders::Union{Nothing, Array{Complex{T}, 3}}  # FOM × ORD × n_eigs — full order-blocks
     # Constructor from full 3-D left eigenvectors: retains the full order-block
@@ -480,9 +482,9 @@ struct Spectrum{T}
     # (physical-space) slice [:, ORD, :].
     function Spectrum(
             solver::AbstractEigensolver,
-            eigenvalues::Array{Complex{T}},
-            eigenmodes::Array{Complex{T}},
-            left_eigenmodes::Array{Complex{T}}) where {T}
+            eigenvalues::Array{Complex{T}, 1},
+            eigenmodes::Array{Complex{T}, 3},
+            left_eigenmodes::Array{Complex{T}, 3}) where {T}
         FOM = size(eigenmodes, 1)
         ORD = size(eigenmodes, 2)
         n_eigs = size(eigenmodes, 3)
@@ -505,8 +507,8 @@ struct Spectrum{T}
     # is left as `nothing`; ORD > 1 orthogonality solves require the full blocks.
     function Spectrum(
             solver::AbstractEigensolver,
-            eigenvalues::Array{Complex{T}},
-            eigenmodes::Array{Complex{T}},
+            eigenvalues::Array{Complex{T}, 1},
+            eigenmodes::Array{Complex{T}, 3},
             left_eigenmodes::Matrix{Complex{T}}) where {T}
         n_eigs = ndims(eigenmodes) == 3 ? size(eigenmodes, 3) : size(eigenmodes, 2)
         @assert size(eigenvalues, 1) == n_eigs "length(eigenvalues) must equal n_eigs = $n_eigs"
@@ -539,7 +541,8 @@ function spectrum(
 
     #calculate left eigenmodes
     (left_eigenvalues, left_eigenmodes) = eigensolve_left(model, solver)
-    left_eigenvalues, left_eigenmodes = sort_left_eigenmodes(
+    left_eigenvalues,
+    left_eigenmodes = sort_left_eigenmodes(
         eigenvalues, left_eigenvalues, left_eigenmodes)
 
     # normalise eigenpairs

@@ -64,38 +64,43 @@ abstract type FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD} end
 Return an iterator over the mesh elements (cells) for the FEM term `t`.
 Implement this for every concrete `FEMMultilinearMap` subtype.
 """
-function fem_elements end
-
+function fem_elements(t::FEMMultilinearMap)
+    error("fem_elements not implemented for $(typeof(t))")
+end
 """
 	fem_n_qp(t::FEMMultilinearMap) -> Int
 
 Return the number of quadrature points per element for the FEM term `t`.
 """
-function fem_n_qp end
-
+function fem_n_qp(t::FEMMultilinearMap)
+    error("fem_n_qp not implemented for $(typeof(t))")
+end
 """
 	fem_ndofs_per_cell(t::FEMMultilinearMap) -> Int
 
 Return the number of degrees of freedom per element (cell) for the FEM term `t`.
 """
-function fem_ndofs_per_cell end
-
+function fem_ndofs_per_cell(t::FEMMultilinearMap)
+    error("fem_ndofs_per_cell not implemented for $(typeof(t))")
+end
 """
 	fem_reinit!(element, t::FEMMultilinearMap) -> nothing
 
 Reinitialise the FEM quadrature cache (e.g. `CellValues`) for `element`.
 Called once per element before any `scatter_qp!` or `accumulate_qp!` calls.
 """
-function fem_reinit! end
-
+function fem_reinit!(element, t::FEMMultilinearMap)
+    error("fem_reinit! not implemented for $(typeof(t))")
+end
 """
 	scatter_qp!(∇W_col, W_global, element, t::FEMMultilinearMap) -> nothing
 
 Fill `∇W_col` in-place with the field values (e.g. gradients) at all quadrature
 points of `element` for one column of the parametrisation `W_global`.
 """
-function scatter_qp! end
-
+function scatter_qp!(∇W_col, W_global, element, t::FEMMultilinearMap)
+    error("scatter_qp! not implemented for $(typeof(t))")
+end
 """
 	accumulate_qp!(Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap) -> nothing
 
@@ -103,15 +108,18 @@ Accumulate the integrand contribution at quadrature point `q` (weight `dΩ`) int
 the element residual vector `Fe`.  `∇W_args` is an NTuple of pre-scattered W columns;
 `mult` is the combinatorial multiplicity of the term.
 """
-function accumulate_qp! end
-
+function accumulate_qp!(Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap)
+    error("accumulate_qp! not implemented for $(typeof(t))")
+end
 """
 	assemble_element!(accum, Fe, element, t::FEMMultilinearMap) -> nothing
 
 Scatter the element residual `Fe` into the global accumulator `accum` using the
 DOF map of `element`.
 """
-function assemble_element! end
+function assemble_element!(accum, Fe, element, t::FEMMultilinearMap)
+    error("assemble_element! not implemented for $(typeof(t))")
+end
 
 """
 	fem_getdetJdV(element, q, t::FEMMultilinearMap) -> Real
@@ -119,7 +127,9 @@ function assemble_element! end
 Return the integration weight `det(J) · w_q` at quadrature point index `q` of
 `element`.
 """
-function fem_getdetJdV end
+function fem_getdetJdV(element, q, t::FEMMultilinearMap)
+    error("fem_getdetJdV not implemented for $(typeof(t))")
+end
 
 """
 	fem_qp_buffer(t::FEMMultilinearMap)
@@ -127,7 +137,9 @@ function fem_getdetJdV end
 Return a pre-allocated scratch buffer sized for one quadrature point of the FEM
 term `t`.  Reused across calls to avoid allocation in the inner element loop.
 """
-function fem_qp_buffer end
+function fem_qp_buffer(t::FEMMultilinearMap)
+    error("fem_qp_buffer not implemented for $(typeof(t))")
+end
 
 """
 	MultilinearMap{ORD, F}
