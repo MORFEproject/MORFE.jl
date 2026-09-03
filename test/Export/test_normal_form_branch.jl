@@ -105,8 +105,9 @@ end
 
     amps = collect(0:0.5:2)
     cubic = normal_form_branch(restrict_ReducedDynamics_to_degree(R, 3); amplitudes = amps)
-    @test cubic.frequency ≈ _stuart_landau(σ, ω, a, b) |>
-                            R3 -> normal_form_branch(R3; amplitudes = amps).frequency atol=1e-12
+    @test cubic.frequency ≈
+          _stuart_landau(σ, ω, a, b) |>
+          R3 -> normal_form_branch(R3; amplitudes = amps).frequency atol=1e-12
     # and the quintic genuinely mattered, so the test is not vacuous
     @test !isapprox(normal_form_branch(R; amplitudes = amps).frequency, cubic.frequency;
         atol = 1e-8)
