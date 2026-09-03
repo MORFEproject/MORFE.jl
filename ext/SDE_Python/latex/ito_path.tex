@@ -1,0 +1,53 @@
+% ---------------------------------------------------------------------------
+%  (a) the sample path and the integration grid, (b) the two evaluation points.
+%
+%  Compile on its own for a cropped PDF, or include it in a document with
+%    \usepackage{standalone} ... \includestandalone{ito_path}
+%  in which case the surrounding document supplies the fonts.  Data comes from
+%  Ito_vs_Strat.py --latex.
+% ---------------------------------------------------------------------------
+\documentclass[border=2mm]{standalone}
+\input{ito_common}
+\begin{document}
+% Panel geometry, in the body so it is also applied under \includestandalone.
+\renewcommand{\panelsep}{1.1cm}     % (b) has no y label, so the gap can be tight
+\itopanelsizes
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=\panelsep},
+      itopanel,
+      xlabel={$t$},
+    ]
+
+    % ---------------------------------------------------------------- (a) ---
+    \nextgroupplot[
+      title={(a) sample path},
+      ylabel={$W(t)$},
+      xmin=0, xmax=4, xtick distance=1,
+    ]
+    \addplot[finegrid, black, forget plot]
+      table[x=t, y=W] {\datapath path_fine.dat};
+    \addplot[coarsegrid, black, forget plot]
+      table[x=t, y=W] {\datapath path_coarse.dat};
+
+    % ---------------------------------------------------------------- (b) ---
+    \nextgroupplot[
+      title={(b) evaluation points},
+      xmin=0, xmax=0.1, xtick distance=0.02,
+    ]
+    \addplot[finegrid, black, forget plot]
+      table[x=t, y=W] {\datapath zoom_fine.dat};
+    \addplot[coarsegrid, black, opacity=0.65, forget plot]
+      table[x=t, y=W] {\datapath zoom_coarse.dat};
+    % The Stratonovich iterate is the midpoint of the chord, not a value of the
+    % path: these connectors show which two endpoints it averages.
+    \addplot[black, dotted, line width=0.4pt, unbounded coords=jump, forget plot]
+      table[x=t, y=W] {\datapath connectors.dat};
+    \addplot[itomark, forget plot]
+      table[x=tI, y=WI] {\datapath iterates.dat};
+    \addplot[stratmark, forget plot]
+      table[x=tS, y=WS] {\datapath iterates.dat};
+
+  \end{groupplot}
+\end{tikzpicture}
+\end{document}

@@ -113,8 +113,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="adm-body">
         <p>All code on this page is the real, shipped implementation in
         <a href="https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples/12_karman_hopf" target="_blank" rel="noopener"><code>examples/12_karman_hopf</code></a>.
-        The notebook is the four calls below and nothing else; <code class="nolink">validate.jl</code>
-        checks the result against a blessed reference.</p>
+        The notebook is the calls below and nothing else; <code class="nolink">validate.jl</code>
+        checks the result against a blessed reference, and the figures come from its own run.</p>
       </div>
     </div>
 
@@ -124,6 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <li>Selecting the Hopf pair that spans the manifold.</li>
       <li>Carrying the Reynolds number as a parametric coordinate.</li>
       <li>Reading the physics off the reduced dynamics $R$ with <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>.</li>
+      <li>Tracing the limit-cycle branch, and the lift along it, straight off the ROM.</li>
     </ul>
     <p>
       The fluid backend builds the full-order model for you. To assemble one by hand, see
@@ -175,8 +176,12 @@ document.addEventListener('DOMContentLoaded', function () {
       Follow the <a class="inline" href="installation.html">installation guide</a> to install
       MORFE and MORFEFerrite, then load both packages.
     </p>
-<pre class="code"><span class="kw">using</span> MORFE, <a class="doc-link" href="../morfeferrite-documentation.html">MORFEFerrite</a>
-<span class="kw">const</span> <span class="var">NSE</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes"><span class="var">MORFEFerrite.FluidNavierStokes</span></a> <span class="cm"># for incompressible Navier-Stokes</span></pre>
+<!-- nbcode:1 -->
+<pre class="code"><span class="kw">import</span> <span class="var">Pkg</span>
+<span class="var">Pkg</span>.<span class="fn">activate</span>(@<span class="var">__DIR__</span>; <span class="var">io</span> <span class="op">=</span> <span class="var">devnull</span>)
+<span class="var">Pkg</span>.<span class="fn">instantiate</span>(; <span class="var">io</span> <span class="op">=</span> <span class="var">devnull</span>)
+<span class="kw">using</span> <span class="var">MORFE</span>, <span class="var">MORFEFerrite</span>
+<span class="kw">const</span> <span class="var">NSE</span> <span class="op">=</span> <span class="var">MORFEFerrite</span>.<span class="var">FluidNavierStokes</span> <span class="cm"># for incompressible Navier-Stokes</span></pre>
 
     <hr style="margin: 56px 0;"/>
 
@@ -194,8 +199,9 @@ document.addEventListener('DOMContentLoaded', function () {
           <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><code>fluid_model</code></a> reads the mesh and assembles the P2/P1 Taylor–Hood spaces,
           the Newton solve for the base flow $u_0$, and the operators linearised about it.
         </p>
+<!-- nbcode:2 -->
 <pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span>  <span class="cm"># Change to 9 for the reference calculation.</span>
-<span class="var">case</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><span class="fn">fluid_model</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"cylinder_flow.msh"</span>); <span class="var">Re</span> <span class="op">=</span> <span class="num">49.03</span>)</pre>
+<span class="var">case</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><span class="fn">fluid_model</span></a>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;cylinder_flow.msh&quot;</span>); <span class="var">Re</span> <span class="op">=</span> <span class="num">49.03</span>)</pre>
         <p>
           $\mathrm{Re}_0 = 49.03$ is the expansion point, just above critical. DPIM expands
           about a fixed point, so an unconverged Newton solve poisons every coefficient.
@@ -213,14 +219,16 @@ document.addEventListener('DOMContentLoaded', function () {
           The master modes span the manifold's tangent space: here the Hopf pair, the
           least-damped conjugate eigenpair of $-\mathbf B_0\, y = \lambda\, \mathbf B_1\, y$.
           Choosing them is a modelling decision, made here rather than by the backend.
-          <code>case.B[1]</code> and <code>case.B[2]</code> are $\mathbf B_0$ and $\mathbf B_1$.
+          <code>case.B</code> is the pair $(\mathbf B_0, \mathbf B_1)$; the descriptor system
+          carries the sign, so the eigensolve takes the tuple whole.
         </p>
-<pre class="code"><span class="var">spectrum</span> <span class="op">=</span> <span class="var">NSE</span>.<span class="fn">solve_hopf_eigenproblem</span>(<span class="op">-</span><span class="var">case</span>.<span class="var">B</span>[<span class="num">1</span>], <span class="var">case</span>.<span class="var">B</span>[<span class="num">2</span>];
+<!-- nbcode:3 -->
+<pre class="code"><span class="var">spectrum</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-solve_hopf_eigenproblem"><span class="fn">solve_hopf_eigenproblem</span></a>(<span class="var">case</span>.<span class="var">B</span>;
     <span class="var">nev</span> <span class="op">=</span> <span class="num">40</span>, <span class="var">sigma_re</span> <span class="op">=</span> <span class="num">3.0</span>, <span class="var">sigma_im</span> <span class="op">=</span> <span class="num">8.0</span>)
 
 <span class="var">master</span> <span class="op">=</span> [<span class="var">spectrum</span>.<span class="var">hopf_index</span>, <span class="var">spectrum</span>.<span class="var">conjugate_index</span>]
 <span class="var">outer</span> <span class="op">=</span> <span class="fn">setdiff</span>(<span class="fn">eachindex</span>(<span class="var">spectrum</span>.<span class="var">eigenvalues</span>), <span class="var">master</span>)
-<span class="cm">#   λ₁ = +0.004029 +16.859170·i   (and λ₂ = conj(λ₁))</span></pre>
+<span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">master</span>] <span class="cm"># print the Hopf pair</span></pre>
         <p>
           At $\mathrm{Re}_0 = 49.03$ the pair sits just right of the imaginary axis: marginally
           unstable, shedding at $\omega_0 = 16.86$ rad/s (St ≈ 0.27). With $\eta'$ the reduced
@@ -240,8 +248,10 @@ document.addEventListener('DOMContentLoaded', function () {
           eigenvectors and conjugates a pair's partner rather than solving for it, so the
           conjugate symmetry holds by construction.
         </p>
-<pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>, <span class="var">spectrum</span>;
-    <span class="var">master</span> <span class="op">=</span> <span class="var">master</span>, <span class="var">outer</span> <span class="op">=</span> <span class="var">outer</span>, <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>, <span class="var">scale</span> <span class="op">=</span> <span class="num">1e-2</span>)</pre>
+<!-- nbcode:4 -->
+<pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>, <span class="var">spectrum</span>;
+    <span class="var">master</span> <span class="op">=</span> <span class="var">master</span>, <span class="var">outer</span> <span class="op">=</span> <span class="var">outer</span>, <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>, <span class="var">scale</span> <span class="op">=</span> <span class="num">1e-2</span>)
+<span class="var">meta</span>.<span class="var">conjugate_permutation</span> <span class="cm"># print the conjugate permutation</span></pre>
         <p>
           <code class="nolink">scale</code> is a mode gauge applied to both eigenvector sides.
           It changes what $W$ and $R$ mean, and coefficients from two gauges are not comparable,
@@ -261,9 +271,11 @@ document.addEventListener('DOMContentLoaded', function () {
           the resonant monomials, and for a Hopf pair that leaves a single complex equation:
           the Stuart–Landau equation governing the shedding amplitude.
         </p>
-<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
-    <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol_relative</span> <span class="op">=</span> <span class="num">0.1</span>,
-        <span class="var">outer_targets</span> <span class="op">=</span> <span class="kw">true</span>))</pre>
+<!-- nbcode:5 -->
+<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><span class="fn">parametrise</span></a>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
+    <span class="var">resonance</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Resonance-ResonanceConfig"><span class="fn">ResonanceConfig</span></a>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol_relative</span> <span class="op">=</span> <span class="num">0.1</span>,
+        <span class="var">outer_targets</span> <span class="op">=</span> <span class="kw">true</span>))
+<span class="var">R</span> <span class="cm"># print reduced dynamics</span></pre>
         <div class="math-block" style="font-size:14.5px;">
           $$\dot z_1 = \underbrace{(0.0040 + 16.86\,i)}_{\lambda_1}\,z_1
           + \underbrace{(-212.0 - 59.1\,i)}_{c_{101}}\,z_1\eta'
@@ -287,49 +299,171 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">05</div>
       <div class="body">
-        <h3 id="step-save">Save the ROM (optional)</h3>
+        <h3 id="step-branch">Read the bifurcation diagram off $R$</h3>
         <p>
-          The common saver writes $W$, $R$, their coefficient table and a run summary to the
-          example's <code class="nolink">results</code> directory. The table is what the
-          example's <code class="nolink">validate.jl</code> checks against the reference.
+          In normal form the limit cycle is a circle $z_1 = \rho e^{i\Omega t}$. Every surviving
+          monomial has $a - b = 1$, so substituting it gives every term of $R_1$ the same factor
+          $e^{i\theta}$ and the phase drops out. Matching
+          $\dot z_1 = (\dot\rho + i\rho\dot\theta)e^{i\theta}$ against it separates amplitude
+          from phase:
         </p>
-<pre class="code">MORFE.<a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl" target="_blank" rel="noopener"><span class="fn">save_rom</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>;
-    <span class="var">external_system</span> <span class="op">=</span> <span class="var">meta</span>.<span class="var">external_system</span>)</pre>
+        <div class="math-block" style="font-size:15px;">
+          $$\dot\rho = \mathrm{Re}\,R_1(\rho, \rho, \eta')
+            \qquad\qquad \Omega = \frac{\mathrm{Im}\,R_1(\rho, \rho, \eta')}{\rho}$$
+        </div>
+        <p>
+          A limit cycle is a nonzero root of $\mathrm{Re}\,R_1(\rho, \rho, \eta') = 0$, and
+          $\Omega$ read there is its frequency. The whole bifurcation diagram is the roots of a
+          scalar polynomial.
+        </p>
+<!-- nbcode:6 -->
+<pre class="code"><span class="var">Re₀</span> <span class="op">=</span> <span class="num">49.03</span>
+<span class="fn">to_Re</span>(<span class="var">η</span>) <span class="op">=</span> <span class="num">1</span> <span class="op">/</span> (<span class="var">η</span> <span class="op">+</span> <span class="num">1</span> <span class="op">/</span> <span class="var">Re₀</span>)
+<span class="fn">to_η</span>(<span class="var">Re</span>) <span class="op">=</span> <span class="num">1</span> <span class="op">/</span> <span class="var">Re</span> <span class="op">-</span> <span class="num">1</span> <span class="op">/</span> <span class="var">Re₀</span>
+
+<span class="var">sweep</span> <span class="op">=</span> (<span class="var">parameter</span> <span class="op">=</span> <span class="num">1</span>, <span class="var">sheet</span> <span class="op">=</span> <span class="sym">:primary</span>, <span class="var">amplitudes</span> <span class="op">=</span> <span class="fn">range</span>(<span class="num">0</span>, <span class="num">4</span>; <span class="var">length</span> <span class="op">=</span> <span class="num">500</span>),
+    <span class="var">parameter_range</span> <span class="op">=</span> (<span class="fn">to_η</span>(<span class="num">70.0</span>), <span class="fn">to_η</span>(<span class="num">48.0</span>)))
+
+<span class="var">branch</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(<span class="var">R</span>; <span class="var">sweep</span>...)
+<span class="var">Re_c</span> <span class="op">=</span> <span class="fn">to_Re</span>(<span class="var">branch</span>.<span class="var">parameter</span>[<span class="num">1</span>]) <span class="cm"># the ρ = 0 end of the branch is the Hopf point</span></pre>
+        <p>
+          That polynomial is in $\eta'$ at fixed $\rho$, not the other way round, so each amplitude
+          costs one companion-matrix root-solve. There is no continuation, no step size and no
+          fold to chase: a fold in $\rho$ against Re is just a monotone $\eta'(\rho)$.
+        </p>
+        <p>
+          Two things the caller owns. <code class="nolink">parameter_range</code> keeps the sweep
+          physical: the $\eta'$-polynomial has roots far outside the expansion neighbourhood,
+          at order 3 a second one at $\eta' \approx 0.071$, which is Re $\approx 11$. And every
+          real root inside the window is returned, so where a high-order polynomial has more than
+          one, choosing the sheet is a modelling decision rather than something the solver should
+          guess.
+        </p>
       </div>
     </div>
+
+    <div class="fig">
+      <iframe src="assets/karman/cycles_3d.html" style="aspect-ratio: 900/560;"
+        title="The limit cycles of the reduced model drawn in three dimensions against Reynolds number: circles of growing radius forming a paraboloid out of the Hopf point"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 02</span> Every point of the branch is a
+        whole orbit: in the reduced coordinates the limit cycle is the circle
+        $z_1 = \rho e^{i\Omega t}$. Drawn against Re they form a paraboloid growing out of
+        the base flow at $\mathrm{Re}_c$; the grey axis is the steady flow, dashed where it
+        has gone unstable. Drag to orbit. The flat amplitude plots below are this figure
+        seen edge on.</div>
+    </div>
+
 
     <!-- Step 6 -->
     <div class="step">
       <div class="num">06</div>
       <div class="body">
-        <h3 id="step-use">Use the ROM: branch, observables, order convergence</h3>
+        <h3 id="step-lift">A physical observable: the lift</h3>
         <p>
-          In normal form the limit cycle is a circle $z_1 = \rho e^{i\Omega t}$, so the
-          bifurcation diagram is the scalar problem $\mathrm{Re}[R_1(\rho,\rho,\eta')] = 0$.
-          Observables are projections of $W$, so no full-order data is involved.
+          $\rho$ is measured in the normal-form coordinate, whose scale is the mode gauge set in
+          step 03, so it is not a quantity anyone measures. Physical observables are projections
+          of $W$, and cost no full-order work once the manifold is known.
         </p>
+        <p>
+          The lift is the pressure traction on the cylinder. Pushed through $W$ it becomes a
+          polynomial in $(z_1, \bar z_1, \eta')$, evaluated around the circular orbit.
+        </p>
+<!-- nbcode:7 -->
+<pre class="code"><span class="var">l_free</span>, <span class="var">L0</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-lift_functional"><span class="fn">lift_functional</span></a>(<span class="var">case</span>)
+<span class="var">L_coeffs</span>, <span class="var">mset_L</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-lift_polynomial"><span class="fn">lift_polynomial</span></a>(<span class="var">W</span>, <span class="var">l_free</span>)
+<span class="var">L</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Polynomials-DensePolynomial"><span class="fn">DensePolynomial</span></a>(<span class="var">L_coeffs</span>, <span class="var">mset_L</span>)
+
+<span class="var">θ</span> <span class="op">=</span> <span class="fn">range</span>(<span class="num">0</span>, <span class="num">2</span><span class="var">π</span>; <span class="var">length</span> <span class="op">=</span> <span class="num">257</span>)[<span class="num">1</span>:<span class="num">256</span>]
+
+<span class="kw">function</span> <span class="fn">max_lift</span>(<span class="var">P</span>, <span class="var">ρ</span>, <span class="var">η</span>)
+    <span class="var">base</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Polynomials-evaluate"><span class="fn">evaluate</span></a>(<span class="var">P</span>, [<span class="num">0.0im</span>, <span class="num">0.0im</span>, <span class="fn">complex</span>(<span class="var">η</span>)])
+    <span class="fn">maximum</span>(<span class="fn">abs</span>(<span class="fn">real</span>(<a class="doc-link" href="../documentation.html#Polynomials-evaluate"><span class="fn">evaluate</span></a>(<span class="var">P</span>, [<span class="var">ρ</span> <span class="op">*</span> <span class="fn">cis</span>(<span class="var">t</span>), <span class="var">ρ</span> <span class="op">*</span> <span class="fn">cis</span>(<span class="op">-</span><span class="var">t</span>), <span class="fn">complex</span>(<span class="var">η</span>)]) <span class="op">-</span> <span class="var">base</span>)) <span class="kw">for</span> <span class="var">t</span> <span class="kw">in</span> <span class="var">θ</span>)
+<span class="kw">end</span>
+
+<span class="fn">max_lift</span>(<span class="var">L</span>, <span class="var">branch</span>.<span class="var">amplitude</span>[<span class="kw">end</span>], <span class="var">branch</span>.<span class="var">parameter</span>[<span class="kw">end</span>]) <span class="cm"># peak lift at the far end</span></pre>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="step">
+      <div class="num">07</div>
+      <div class="body">
+        <h3 id="step-orders">Convergence with expansion order</h3>
+        <p>
+          Truncating $R$ and the projected lift to degree $N$ and reading the branch again
+          gives one curve per order, with no re-solve. Truncating the projected lift rather
+          than $W$ matters: at order 9 that array is ~193 MB, and its projection is a few
+          hundred numbers.
+        </p>
+<!-- nbcode:8 -->
+<pre class="code"><span class="kw">using</span> <span class="var">CairoMakie</span>
+
+<span class="var">D</span> <span class="op">=</span> <span class="var">case</span>.<span class="var">fom</span>.<span class="var">reference_length</span>      <span class="cm"># 0.1 m, the reference length in ν = D/Re</span>
+<span class="fn">strouhal</span>(<span class="var">Ω</span>) <span class="op">=</span> <span class="var">Ω</span> <span class="op">*</span> <span class="var">D</span> <span class="op">/</span> (<span class="num">2</span><span class="var">π</span> <span class="op">*</span> <span class="var">NSE</span>.<span class="var">U_MEAN</span>)
+
+<span class="var">fig</span> <span class="op">=</span> <span class="fn">Figure</span>(<span class="var">size</span> <span class="op">=</span> (<span class="num">900</span>, <span class="num">360</span>))
+<span class="var">ax_lift</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">1</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">&quot;Re&quot;</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">&quot;max |lift|&quot;</span>)
+<span class="var">ax_st</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">2</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">&quot;Re&quot;</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">&quot;Strouhal number&quot;</span>)
+<span class="var">rows</span> <span class="op">=</span> <span class="var">NTuple</span>{<span class="num">7</span>, <span class="var">Float64</span>}[]
+
+<span class="kw">for</span> <span class="var">N</span> <span class="kw">in</span> <span class="num">3</span>:<span class="num">2</span>:<span class="var">order</span>
+    <span class="var">b</span> <span class="op">=</span> <span class="fn">primary_sheet</span>(<a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(
+        <a class="doc-link" href="../documentation.html#ParametrisationObjects-restrict_ReducedDynamics_to_degree"><span class="fn">restrict_ReducedDynamics_to_degree</span></a>(<span class="var">R</span>, <span class="var">N</span>); <span class="var">sweep</span>...))
+    <span class="var">P</span> <span class="op">=</span> <span class="var">MORFE</span>.<span class="var">Polynomials</span>.<a class="doc-link" href="../documentation.html#Polynomials-restrict_polynomial_to_degree"><span class="fn">restrict_polynomial_to_degree</span></a>(<span class="var">L</span>, <span class="var">N</span>)
+    <span class="var">Re</span> <span class="op">=</span> <span class="var">to_Re</span>.(<span class="var">b</span>.<span class="var">parameter</span>)
+    <span class="var">lift</span> <span class="op">=</span> [<span class="fn">max_lift</span>(<span class="var">P</span>, <span class="var">ρ</span>, <span class="var">η</span>) <span class="kw">for</span> (<span class="var">ρ</span>, <span class="var">η</span>) <span class="kw">in</span> <span class="fn">zip</span>(<span class="var">b</span>.<span class="var">amplitude</span>, <span class="var">b</span>.<span class="var">parameter</span>)]
+    <span class="var">St</span> <span class="op">=</span> <span class="var">strouhal</span>.(<span class="var">b</span>.<span class="var">frequency</span>)
+    <span class="fn">lines!</span>(<span class="var">ax_lift</span>, <span class="var">Re</span>, <span class="var">lift</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">&quot;order $N&quot;</span>)
+    <span class="fn">lines!</span>(<span class="var">ax_st</span>, <span class="var">Re</span>, <span class="var">St</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">&quot;order $N&quot;</span>)
+    <span class="fn">append!</span>(<span class="var">rows</span>, <span class="fn">zip</span>(<span class="fn">fill</span>(<span class="fn">Float64</span>(<span class="var">N</span>), <span class="fn">length</span>(<span class="var">Re</span>)), <span class="var">b</span>.<span class="var">parameter</span>, <span class="var">Re</span>, <span class="var">b</span>.<span class="var">amplitude</span>,
+        <span class="var">b</span>.<span class="var">frequency</span>, <span class="var">St</span>, <span class="var">lift</span>))
+<span class="kw">end</span>
+
+<span class="fn">axislegend</span>(<span class="var">ax_lift</span>; <span class="var">position</span> <span class="op">=</span> <span class="sym">:lt</span>)
+<span class="var">fig</span></pre>
         <div class="adm tip">
           <div class="adm-head">One run = every order (exactly)</div>
           <div class="adm-body"><p>The solve is <em>graded</em>: degree-$N$ coefficients never depend on degrees $&gt; N$. Zeroing monomials above degree $N$ in the order-9 $(W,R)$ gives the order-$N$ ROM bit-exactly, so the order study costs nothing beyond the single run.</p></div>
         </div>
-
       </div>
     </div>
 
     <div class="fig">
       <iframe src="assets/karman/lift_vs_Re.html" title="Maximum lift along the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
-      <div class="fig-cap"><span class="lab">FIG · 02</span> Maximum lift along the limit cycle vs Re, per truncation order. The horizontal line is the steady base flow (solid = stable, dashed = unstable); branches grow from it at $\mathrm{Re}_c$. Orders coincide near $\mathrm{Re}_c$ and separate with distance.</div>
+      <div class="fig-cap"><span class="lab">FIG · 03</span> Maximum lift along the limit cycle vs Re, per truncation order. The horizontal line is the steady base flow (solid = stable, dashed = unstable); branches grow from it at $\mathrm{Re}_c$. Orders coincide near $\mathrm{Re}_c$ and separate with distance.</div>
     </div>
 
 
     <div class="fig">
-      <iframe src="assets/karman/tke_vs_Re.html" title="Period-averaged fluctuation kinetic energy vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
-      <div class="fig-cap"><span class="lab">FIG · 03</span> Period-averaged fluctuation kinetic energy vs Re. It grows from zero at the Hopf point. Where the orders agree the truncation is converged.</div>
+      <iframe src="assets/karman/strouhal_vs_Re.html" title="Strouhal number of the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 04</span> Strouhal number $\mathrm{St} = \Omega D / 2\pi U$ along the same branch. It leaves the Hopf point at the linear value 0.268 and rises as the cycle grows, a frequency shift no linear spectrum can give.</div>
     </div>
 
     <div class="adm warn">
-      <div class="adm-head">Convergence with expansion order</div>
-      <div class="adm-body"><p>Where the orders separate, the reduced state has left the region where the expansion converges. The order-5 branch even folds back around Re ≈ 54.6, a truncation artifact rather than physics.</p></div>
+      <div class="adm-head">Where the expansion stops converging</div>
+      <div class="adm-body"><p>Where the orders separate, the reduced state has left the region where the expansion converges. Orders 5 and 9 even fold back, which is not physical.</p></div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="step">
+      <div class="num">08</div>
+      <div class="body">
+        <h3 id="step-save">Save the ROM and the branch (optional)</h3>
+        <p>
+          The common saver writes $W$, $R$, their coefficient table and a run summary to the
+          example's <code class="nolink">results</code> directory. The table is what the example's
+          <code class="nolink">validate.jl</code> checks against the reference, and the branch
+          written beside it is what the figures above are drawn from.
+        </p>
+<!-- nbcode:9 -->
+<pre class="code"><span class="var">MORFE</span>.<a class="doc-link" href="../documentation.html#RomIO-save_rom"><span class="fn">save_rom</span></a>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;results&quot;</span>), <span class="var">W</span>, <span class="var">R</span>;
+    <span class="var">external_system</span> <span class="op">=</span> <span class="var">meta</span>.<span class="var">external_system</span>)
+
+<span class="fn">open</span>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;results&quot;</span>, <span class="str">&quot;data&quot;</span>, <span class="str">&quot;branch.csv&quot;</span>), <span class="str">&quot;w&quot;</span>) <span class="kw">do</span> <span class="var">io</span>
+    <span class="fn">println</span>(<span class="var">io</span>, <span class="str">&quot;order,eta,Re,rho,omega,St,max_abs_lift&quot;</span>)
+    <span class="fn">foreach</span>(<span class="var">r</span> <span class="op">-&gt;</span> <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">Int</span>(<span class="var">r</span>[<span class="num">1</span>]), <span class="str">&quot;,&quot;</span>, <span class="fn">join</span>(<span class="var">r</span>[<span class="num">2</span>:<span class="kw">end</span>], <span class="str">&quot;,&quot;</span>)), <span class="var">rows</span>)
+<span class="kw">end</span></pre>
+      </div>
     </div>
 
     <hr style="margin: 56px 0;"/>
@@ -340,7 +474,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <li>The eigensolve returns its spectrum closed under conjugation, so the Hopf pair can be taken straight from it.</li>
       <li>Anything entering (multi)linearly can ride along as an external coordinate: here $\eta'$, which makes the ROM parametric in Re.</li>
       <li>The resonance style decides what survives in $\dot z = R(z)$; normal form keeps the minimal resonant core.</li>
-      <li>Continuation runs on $R$; physical quantities are projections of $W$.</li>
+      <li>The branch comes off $R$ alone, through <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><code>normal_form_branch</code></a>; physical quantities are projections of $W$.</li>
     </ul>
 
     <h2 id="next">Where to next?</h2>
@@ -378,8 +512,10 @@ document.addEventListener('DOMContentLoaded', function () {
       <li><a href="#step-modes">02 · Select the Hopf pair</a></li>
       <li><a href="#step-build">03 · Build the model</a></li>
       <li><a href="#step-parametrise">04 · Parametrise</a></li>
-      <li><a href="#step-save">05 · Save (optional)</a></li>
-      <li><a href="#step-use">06 · Use the ROM</a></li>
+      <li><a href="#step-branch">05 · Bifurcation diagram</a></li>
+      <li><a href="#step-lift">06 · The lift</a></li>
+      <li><a href="#step-orders">07 · Order convergence</a></li>
+      <li><a href="#step-save">08 · Save (optional)</a></li>
       <li><a href="#recap">Recap</a></li>
       <li><a href="#next">Where to next?</a></li>
     </ul>

@@ -50,6 +50,7 @@ should_run(group) = GROUP == "all" || GROUP == group
     if should_run("rom_io")
         @testset "RomIO" begin
             include("Export/test_rom_io.jl")
+            include("Export/test_normal_form_branch.jl")
         end
         @testset "RomComparison" begin
             include("Validation/test_rom_comparison.jl")

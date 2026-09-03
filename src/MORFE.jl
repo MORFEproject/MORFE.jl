@@ -127,7 +127,7 @@ export invariance_error_norms, invariance_error_convergence, plot_invariance_con
 export compare_rom_coefficients
 
 # ROM persistence
-export save_rom, read_rom_coefficients, write_rom_coefficients_csv
+export save_rom, read_rom_coefficients, write_rom_coefficients_csv, normal_form_branch
 
 # MORFESymbolicsExt
 export model_from_symbolics, externalsystem_from_symbolics

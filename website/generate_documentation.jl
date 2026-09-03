@@ -41,6 +41,7 @@ if !isdefined(Main, :MORFE_DOC_CONFIG)
             (MORFE.ParametrisationMethod, "ParametrisationMethod"),
             (MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
             (MORFE.InvarianceError, "InvarianceError"),
+            (MORFE.RomIO, "RomIO"),
             (SymbolicsExt, "SymbolicsExtension")
         ]
     )

@@ -1,0 +1,61 @@
+% ---------------------------------------------------------------------------
+%  (c) the two cumulative integrals against their closed forms, (d) the
+%  difference they accumulate.
+%
+%  Compile on its own for a cropped PDF, or include it in a document with
+%    \usepackage{standalone} ... \includestandalone{ito_integrals}
+%  in which case the surrounding document supplies the fonts.  Data comes from
+%  Ito_vs_Strat.py --latex.
+% ---------------------------------------------------------------------------
+\documentclass[border=2mm]{standalone}
+\input{ito_common}
+\begin{document}
+% Panel geometry, in the body so it is also applied under \includestandalone.
+\renewcommand{\panelsep}{1.45cm}     % holds (d)'s y label
+\itopanelsizes
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=\panelsep},
+      itopanel,
+      xlabel={$t$},
+      xmin=0, xmax=4, xtick distance=1,
+    ]
+
+    % ---------------------------------------------------------------- (c) ---
+    \nextgroupplot[
+      title={(c) cumulative integrals},
+      ylabel={$\int_0^t W\,\mathrm{d}W$},
+    ]
+    \addplot[finegrid, itoblue, forget plot]
+      table[x=t, y=I] {\datapath integrals_fine.dat};
+    \addplot[finegrid, stratred, forget plot]
+      table[x=t, y=S] {\datapath integrals_fine.dat};
+    \addplot[coarsegrid, itoblue, forget plot]
+      table[x=t, y=I] {\datapath integrals_coarse.dat};
+    \addplot[coarsegrid, stratred, forget plot]
+      table[x=t, y=S] {\datapath integrals_coarse.dat};
+    % Stratonovich lands on W^2/2 exactly on any grid; Ito sits off (W^2-t)/2 by
+    % half the gap between the realised quadratic variation and t.
+    \addplot[closedform, forget plot]
+      table[x=t, y=Ith] {\datapath integrals_coarse.dat};
+    \addplot[closedform, forget plot]
+      table[x=t, y=Sth] {\datapath integrals_coarse.dat};
+
+    % ---------------------------------------------------------------- (d) ---
+    \nextgroupplot[
+      title={(d) accumulated difference},
+      ylabel={$\Strat(t)-\Ito(t)$},
+      ymin=0,
+    ]
+    \addplot[fill=diffgreen!12, draw=none, forget plot]
+      table[x=t, y=d] {\datapath difference_coarse.dat} \closedcycle;
+    \addplot[finegrid, diffgreen, forget plot]
+      table[x=t, y=d] {\datapath difference_fine.dat};
+    \addplot[coarsegrid, diffgreen, forget plot]
+      table[x=t, y=d] {\datapath difference_coarse.dat};
+    \addplot[closedform, forget plot]
+      table[x=t, y=th] {\datapath difference_coarse.dat};
+
+  \end{groupplot}
+\end{tikzpicture}
+\end{document}

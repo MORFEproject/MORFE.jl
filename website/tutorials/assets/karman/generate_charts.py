@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Generate the interactive Kármán tutorial charts (lift_vs_Re.html, tke_vs_Re.html).
+"""Generate the interactive Kármán tutorial charts (lift_vs_Re.html, strouhal_vs_Re.html).
 
-Reads examples/05_karman_vortex_street/results/comparison/comparison.csv and emits
-self-contained HTML assets: SVG in the website colour scheme, drawn by vanilla JS.
-Hovering always shows the nearest-point readout, but the view NEVER changes unless a
-toolbar tool is armed first: click the magnifier then drag a rectangle to zoom, click
-the hand then drag to pan, click home to reset. No wheel zoom (so scrolling the page
-never moves the plot). Embedded in tutorial-karman.html via <iframe>. Rerun after
-regenerating the data:
+Reads `branch.v1.csv`, the committed copy of the order-9 `results/data/branch.csv` that
+`examples/12_karman_hopf/karman_hopf.ipynb` writes, and emits self-contained HTML assets:
+SVG in the website colour scheme, drawn by vanilla JS. Hovering always shows the
+nearest-point readout, but the view NEVER changes unless a toolbar tool is armed first:
+click the magnifier then drag a rectangle to zoom, click the hand then drag to pan, click
+home to reset. No wheel zoom, so scrolling the page never moves the plot. Embedded in
+karman.html via <iframe>. Rerun after regenerating the data:
 
-    python3 website/assets/karman/generate_charts.py
+    python3 website/tutorials/assets/karman/generate_charts.py
+
+The notebook writes the rows in AMPLITUDE order, and they are plotted in file order. Orders
+5 and 9 fold, so sorting by Re here would draw a zig-zag across the fold.
 """
 from __future__ import annotations
 
@@ -18,26 +21,43 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[3]
-CSV = REPO / "examples/05_karman_vortex_street/results/comparison/comparison.csv"
+CSV = HERE / "branch.v1.csv"
 
 BG, INK, INK2, INK3, HAIR = "#07070b", "#e8e8ee", "#a0a0ab", "#6e6e7e", "#26262f"
 ORDER_COLORS = {3: "#4063d8", 5: "#389826", 7: "#cb3c33", 9: "#9558b2"}
 
-RE_C = 48.984  # Hopf bifurcation (η′_c → Re_c, from solve_rom.jl)
-X_VIEW_MAX = 56.0  # default x-axis upper bound; data runs past this (pan/zoom reveals it)
+RE_C = 48.9844  # Hopf bifurcation, the ρ = 0 end of the order-9 branch
+X_VIEW_MAX = 56.0  # default x-axis upper bound; the sweep runs to Re 70, pan/zoom reveals it
 
 W, H = 860, 470
 ML, MR, MT, MB = 64, 20, 18, 46  # margins
 
 
-def build(col: str, ylabel: str, ylim, out: Path):
+def trim_fold(re_, v, below):
+    """Cut a curve at the first point that is both descending and past `below`."""
+    dropping = (np.arange(len(re_)) > 0) & (np.diff(re_, prepend=re_[0]) < 0)
+    past = np.flatnonzero(dropping & (re_ < below))
+    return (re_[:past[0]], v[:past[0]]) if len(past) else (re_, v)
+
+
+def build(col: str, ylabel: str, ylim, out: Path, baseline: float | None = 0.0,
+          trim_below: dict[int, float] | None = None):
+    """`baseline` is the y of the steady base flow, drawn solid then dashed through Re_c.
+    Pass None for an observable that has no steady value, such as a frequency.
+
+    `trim_below` maps an order to the Re at which its curve is cut once it has folded and
+    started running back. The order-9 branch turns around near Re 55 and then dives; that
+    tail is the truncated series diverging rather than anything the model is saying, and
+    drawing it only stretches the axis.
+    """
     d = np.genfromtxt(CSV, delimiter=",", names=True)
     data_js = []
     x_lo = x_hi = y_max = None
     for o in (3, 5, 7, 9):
         s = d[d["order"] == o]
         re_, v = s["Re"], s[col]
+        if trim_below and o in trim_below:
+            re_, v = trim_fold(re_, v, trim_below[o])
         stride = max(1, len(re_) // 160)
         re_, v = re_[::stride], v[::stride]
         x_lo = re_.min() if x_lo is None else min(x_lo, re_.min())
@@ -147,7 +167,8 @@ var ML={ML}, MR={MR}, MT={MT}, MB={MB}, W={W}, H={H};
 var SVGNS = 'http://www.w3.org/2000/svg';
 var svgEl = document.getElementById('chart');
 var on = {{3:true,5:true,7:true,9:true}};
-var RE_C = {RE_C};   // Hopf bifurcation; steady branch is y=0 (no fluctuation)
+var RE_C = {RE_C};   // Hopf bifurcation
+var BASELINE = {'null' if baseline is None else baseline};   // steady base flow, or null if it has none
 
 function px(x) {{ return ML + (x-V.xlo)/(V.xhi-V.xlo)*(W-ML-MR); }}
 function py(y) {{ return H-MB - (y-V.ylo)/(V.yhi-V.ylo)*(H-MT-MB); }}
@@ -189,13 +210,18 @@ function redraw() {{
     document.getElementById('curve-'+o).setAttribute('points',
       DATA[o].p.map(function(q) {{ return px(q[0]).toFixed(1)+','+py(q[1]).toFixed(1); }}).join(' '));
   }});
-  // steady (base-flow) branch at y=0: solid before the Hopf point, dashed after.
-  var yb = py(0), xc = px(RE_C), xcl = Math.max(ML, Math.min(W-MR, xc));
+  // steady (base-flow) branch: solid before the Hopf point, dashed after.
   var ss = document.getElementById('steady-solid');
-  ss.setAttribute('x1', ML); ss.setAttribute('x2', xcl); ss.setAttribute('y1', yb); ss.setAttribute('y2', yb);
   var sd = document.getElementById('steady-dashed');
-  sd.setAttribute('x1', xcl); sd.setAttribute('x2', W-MR); sd.setAttribute('y1', yb); sd.setAttribute('y2', yb);
   var hp = document.getElementById('hopf');
+  if (BASELINE === null) {{
+    ss.setAttribute('visibility','hidden'); sd.setAttribute('visibility','hidden');
+    hp.setAttribute('visibility','hidden');
+    return;
+  }}
+  var yb = py(BASELINE), xc = px(RE_C), xcl = Math.max(ML, Math.min(W-MR, xc));
+  ss.setAttribute('x1', ML); ss.setAttribute('x2', xcl); ss.setAttribute('y1', yb); ss.setAttribute('y2', yb);
+  sd.setAttribute('x1', xcl); sd.setAttribute('x2', W-MR); sd.setAttribute('y1', yb); sd.setAttribute('y2', yb);
   if (xc >= ML && xc <= W-MR && yb >= MT-2 && yb <= H-MB+6) {{
     hp.setAttribute('visibility','visible');
     document.getElementById('hopf-dot').setAttribute('cx', xc);
@@ -317,5 +343,8 @@ svgEl.addEventListener('mouseleave', function() {{ hideProbe(); }});
     print(f"wrote {out}  ({out.stat().st_size//1024} KB)")
 
 
-build("max_abs_lift", "max |lift|", (-0.001, 0.015), HERE / "lift_vs_Re.html")
-build("avg_TKE", "period-averaged TKE", (-0.001, 0.02), HERE / "tke_vs_Re.html")
+build("max_abs_lift", "max |lift|", (-0.001, 0.015), HERE / "lift_vs_Re.html",
+      trim_below={9: 52.0})
+# The Strouhal number has no steady value to draw a base-flow line at, so baseline=None.
+build("St", "Strouhal number", (0.2675, 0.2775), HERE / "strouhal_vs_Re.html",
+      baseline=None, trim_below={9: 52.0})

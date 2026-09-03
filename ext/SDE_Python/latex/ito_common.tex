@@ -1,0 +1,87 @@
+% ---------------------------------------------------------------------------
+%  Shared preamble for the Ito / Stratonovich figures.
+%
+%  This file deliberately loads no font package.  Compiled on its own a figure
+%  uses the standalone class default (Computer Modern); pulled into a paper with
+%  \includestandalone it uses that paper's typeface, at that paper's size.
+%
+%  Knobs, all \providecommand, so redefining them before loading this file wins:
+%
+%    \figwidth    total width the figure fills, \textwidth by default, so the
+%                 panels grow with the document they land in
+%    \panelsep    gap between the two axis boxes, holds the inner y labels
+%    \panelchrome width the outer y label, its tick labels and the overhang of
+%                 the last x tick label take up
+%    \panelratio  height / width of one axis box
+%    \datapath    directory holding the .dat tables, with a trailing slash
+%    \Ito,\Strat  symbols for the two integrals
+%
+%  \itopanelsizes then sizes the two axis boxes so the whole figure comes to
+%  exactly \figwidth.  Each figure calls it at the top of its body rather than
+%  its preamble, because \includestandalone inputs only the body: that way the
+%  panels are recomputed against the host document's \textwidth.
+% ---------------------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+
+\providecommand{\figwidth}{\textwidth}
+\providecommand{\panelsep}{1.45cm}
+% Measured off the compiled PDF: a rotated y label, its tick labels and the
+% overhang of the last x tick label come to about this much.
+\providecommand{\panelchrome}{1.75cm}
+\providecommand{\panelratio}{0.78}
+\providecommand{\datapath}{data/}
+\providecommand{\Ito}{\mathcal{I}}
+\providecommand{\Strat}{\mathcal{S}}
+
+\ifdefined\panelw\else\newlength{\panelw}\fi
+\ifdefined\panelh\else\newlength{\panelh}\fi
+
+% Two axis boxes, the gap between them and the outer label chrome fill \figwidth.
+\newcommand{\itopanelsizes}{%
+  \setlength{\panelw}{\figwidth}%
+  \addtolength{\panelw}{-\panelsep}%
+  \addtolength{\panelw}{-\panelchrome}%
+  \setlength{\panelw}{0.5\panelw}%
+  \setlength{\panelh}{\panelratio\panelw}%
+}
+\itopanelsizes
+
+\definecolor{itoblue}{RGB}{40,92,205}
+\definecolor{stratred}{RGB}{214,44,44}
+\definecolor{diffgreen}{RGB}{32,140,64}
+
+\pgfplotsset{
+  itopanel/.style={
+    scale only axis=true,
+    width=\panelw,
+    height=\panelh,
+    tick label style={font=\scriptsize},
+    label style={font=\small},
+    title style={font=\small, at={(0,1)}, anchor=south west, yshift=2pt},
+    axis line style={line width=0.3pt},
+    tick style={line width=0.3pt, black!55},
+    tick align=outside,
+    tick pos=left,          % no tick marks on the top and right sides
+    grid=major,
+    grid style={line width=0.2pt, draw=black!12},
+    every axis y label/.append style={yshift=-2pt},
+    every axis x label/.append style={yshift=2pt},
+    scaled ticks=false,
+    /pgf/number format/fixed,
+  },
+  % The dense reference curve, drawn as a wide translucent halo behind the thin
+  % curve computed on the integration grid.
+  finegrid/.style={line width=1.6pt, opacity=0.25},
+  coarsegrid/.style={line width=0.5pt},
+  % Lighter than the curves it is laid over, so the colour still reads through.
+  closedform/.style={black!65, dash pattern=on 2.4pt off 2.0pt, line width=0.4pt},
+  itomark/.style={only marks, mark=*, mark size=1.3pt, itoblue},
+  stratmark/.style={only marks, mark=square*, mark size=1.2pt, stratred},
+}
+
+% The figures carry no legend: at this size one either crowds the panels or
+% widens the figure past \figwidth. The curves are named in the caption instead.
+% See preview.tex, whose captions are meant to be lifted into the paper.

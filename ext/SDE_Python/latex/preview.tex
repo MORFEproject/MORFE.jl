@@ -1,0 +1,47 @@
+% ---------------------------------------------------------------------------
+%  Preview: both figures set in a document, to check that the type in the plots
+%  sits correctly next to body text.  It is also the template for pulling them
+%  into a paper.  Change the geometry width below and recompile: the panels
+%  follow, because they are sized from \figwidth, which defaults to \textwidth.
+% ---------------------------------------------------------------------------
+\documentclass[10pt]{article}
+\usepackage[textwidth=12.2cm, textheight=19.3cm]{geometry}  % svproc page
+\usepackage{standalone}   % default mode=input: the figure body is inputted, so
+\input{ito_common}        % it is typeset in this document's font, at this size
+
+\begin{document}
+
+\section*{It\^o versus Stratonovich}
+
+The two integrals differ only in where the integrand is evaluated inside a step.
+Figure~\ref{fig:path} shows the sample path and the two evaluation points;
+figure~\ref{fig:integrals} shows what the choice accumulates to.
+
+\begin{figure}[t]
+  \centering
+  \includestandalone{ito_path}
+  \caption{(a) A Brownian path at $\Delta t=10^{-4}$ (pale) with the integration
+    grid it is sampled on, $\Delta t=10^{-2}$ (black), laid over it. (b) The
+    first ten steps of that grid. The It\^o rule evaluates the integrand at the
+    left end of each step, $W(t_k)$ (\textcolor{itoblue}{blue circles}); the
+    Stratonovich rule takes the mean of the two ends,
+    $\tfrac{1}{2}[W(t_k)+W(t_{k+1})]$ (\textcolor{stratred}{red squares}), which
+    is the midpoint of the chord and not a value of the path. The dotted segments
+    join each pair.}
+  \label{fig:path}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includestandalone{ito_integrals}
+  \caption{(c) $\int_0^t W\,\mathrm{d}W$ read as It\^o
+    (\textcolor{itoblue}{blue}) and as Stratonovich (\textcolor{stratred}{red}),
+    each drawn on the integration grid (thin) and, pale behind it, on the fine
+    grid, against the closed forms $(W^2-t)/2$ and $W^2/2$ (dashed). The
+    Stratonovich sum reproduces the chain rule on any grid; the It\^o sum sits
+    off its closed form by $\tfrac{1}{2}(\sum \Delta W^2 - t)$. (d) The gap the
+    two accumulate (\textcolor{diffgreen}{green}), against $t/2$ (dashed).}
+  \label{fig:integrals}
+\end{figure}
+
+\end{document}
