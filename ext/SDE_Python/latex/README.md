@@ -2,9 +2,9 @@
 
 Python owns the numbers, LaTeX owns the picture. `Ito_vs_Strat.py --latex` writes plain
 tables into `data/`; the figures here are pgfplots source you compile yourself, so every
-label, tick and legend entry is typeset by LaTeX in whatever font the document is using.
+label and tick is typeset by LaTeX in whatever font the document is using.
 
-```
+```text
 ito_common.tex      shared preamble: packages, colours, line styles, panel sizing
 ito_path.tex        (a) sample path + integration grid, (b) the two evaluation points
 ito_integrals.tex   (c) the two integrals vs their closed forms, (d) the difference
@@ -29,8 +29,11 @@ latexmk -pdf ito_path.tex ito_integrals.tex     # one cropped PDF each
 latexmk -pdf preview.tex                        # both, set in a document
 ```
 
-Two passes are needed, which `latexmk` handles: the legends are collected with
-`legend to name` and recalled with `\ref` below the panels.
+The figures carry no legend: at this width one either crowds the panels or pushes the
+figure past `\textwidth`. The curves are named in the captions instead. The captions in
+`preview.tex` are written to be lifted straight into the paper, and they use
+`\textcolor{itoblue}{...}` and friends, so the colour names in the text cannot drift from
+the colours in the plot.
 
 ## In Overleaf
 
@@ -69,7 +72,7 @@ If the figures live in a subdirectory, point `\datapath` at it before including 
 \renewcommand{\datapath}{figures/ito/data/}
 ```
 
-`ito_common.tex` loads `amsmath`, `pgfplots` (with `groupplots`) and TikZ's `calc`. A
+`ito_common.tex` loads `amsmath` and `pgfplots` (with the `groupplots` library). A
 document that already loads them is fine; `\input{ito_common}` after them costs nothing.
 
 ## Knobs
@@ -79,7 +82,7 @@ All of these are `\providecommand`, so redefining them before `\input{ito_common
 by `\itopanelsizes`, which is how `ito_path.tex` gives itself a tighter gap.
 
 | macro | default | meaning |
-|---|---|---|
+| --- | --- | --- |
 | `\figwidth` | `\textwidth` | total width the figure fills |
 | `\panelsep` | `1.45cm` | gap between the two axis boxes, holds the inner y labels |
 | `\panelchrome` | `1.75cm` | width the outer y label, its ticks and the last x tick's overhang take |

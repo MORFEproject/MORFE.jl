@@ -250,7 +250,8 @@ function normal_form_branch(R::ReducedDynamics{ROM, NVAR};
         "normal_form_branch needs a single conjugate pair (ROM = 2); this ReducedDynamics " *
         "has ROM = $ROM. Reduce onto one pair, or slave the extra coordinates first."))
     N_EXT = NVAR - ROM
-    η₀ = external_point === nothing ? zeros(Float64, N_EXT) : collect(Float64, external_point)
+    η₀ = external_point === nothing ? zeros(Float64, N_EXT) :
+         collect(Float64, external_point)
     length(η₀) == N_EXT || throw(ArgumentError(
         "external_point has $(length(η₀)) entries but the model has $N_EXT external " *
         "coordinates"))

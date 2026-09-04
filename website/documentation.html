@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">21 modules · 378 documented entries · generated 3 September 2026</p>
+  <p class="lede">21 modules · 378 documented entries · generated 4 September 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -839,7 +839,7 @@ zero&#40;DensePolynomial&#123;T&#125;, coeff_shape, mset&#41; # tensor-valued</c
 <div class="doc doc-type" id="MultilinearMaps-MultilinearMap" data-doc-name="MultilinearMap" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L132" target="_blank" rel="noopener">MultilinearMap</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L144" target="_blank" rel="noopener">MultilinearMap</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>MultilinearMap&#123;ORD, F&#125;</code></pre>
@@ -1000,7 +1000,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_arity_description" data-doc-name="_arity_description" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L272" target="_blank" rel="noopener">_arity_description</a>(fixed, va)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L284" target="_blank" rel="noopener">_arity_description</a>(fixed, va)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_arity_description&#40;fixed, va&#41; -&gt; String</code></pre>
@@ -1011,7 +1011,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_build_multilinear_map" data-doc-name="_build_multilinear_map" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L580" target="_blank" rel="noopener">_build_multilinear_map</a>(f!, multiindex::NTuple{ORD, Int64}, multiplicity_external::Int64, fully_asymmetric::Union{Nothing, Bool}) where ORD</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L592" target="_blank" rel="noopener">_build_multilinear_map</a>(f!, multiindex::NTuple{ORD, Int64}, multiplicity_external::Int64, fully_asymmetric::Union{Nothing, Bool}) where ORD</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_build_multilinear_map&#40;f&#33;, multiindex, multiplicity_external, fully_asymmetric&#41;</code></pre>
@@ -1023,7 +1023,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_call_signature" data-doc-name="_call_signature" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L283" target="_blank" rel="noopener">_call_signature</a>(multiindex, multiplicity_external)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L295" target="_blank" rel="noopener">_call_signature</a>(multiindex, multiplicity_external)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_call_signature&#40;multiindex, multiplicity_external&#41; -&gt; String</code></pre>
@@ -1034,7 +1034,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_check_arity" data-doc-name="_check_arity" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L498" target="_blank" rel="noopener">_check_arity</a>(f!, deg, multiindex, multiplicity_external)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L510" target="_blank" rel="noopener">_check_arity</a>(f!, deg, multiindex, multiplicity_external)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_check_arity&#40;f&#33;, deg, multiindex, multiplicity_external&#41;</code></pre>
@@ -1046,7 +1046,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_counts_from_derivatives" data-doc-name="_counts_from_derivatives" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L544" target="_blank" rel="noopener">_counts_from_derivatives</a>(derivatives::NTuple{N, Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L556" target="_blank" rel="noopener">_counts_from_derivatives</a>(derivatives::NTuple{N, Int64}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_counts_from_derivatives&#40;derivatives&#41; -&gt; NTuple</code></pre>
@@ -1057,7 +1057,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_definition_site" data-doc-name="_definition_site" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L240" target="_blank" rel="noopener">_definition_site</a>(f!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L252" target="_blank" rel="noopener">_definition_site</a>(f!)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_definition_site&#40;f&#33;&#41; -&gt; String</code></pre>
@@ -1068,7 +1068,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_infer_degree" data-doc-name="_infer_degree" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L519" target="_blank" rel="noopener">_infer_degree</a>(f!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L531" target="_blank" rel="noopener">_infer_degree</a>(f!)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_infer_degree&#40;f&#33;&#41; -&gt; Int</code></pre>
@@ -1079,7 +1079,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_info_assumed" data-doc-name="_info_assumed" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L459" target="_blank" rel="noopener">_info_assumed</a>(f!, multiindex, multiplicity_external, mi_source, assumed_order, assumed_me, forcing)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L471" target="_blank" rel="noopener">_info_assumed</a>(f!, multiindex, multiplicity_external, mi_source, assumed_order, assumed_me, forcing)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_info_assumed&#40;f&#33;, multiindex, multiplicity_external, mi_source, assumed_order,
@@ -1092,7 +1092,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_method_arities" data-doc-name="_method_arities" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L255" target="_blank" rel="noopener">_method_arities</a>(f!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L267" target="_blank" rel="noopener">_method_arities</a>(f!)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_method_arities&#40;f&#33;&#41; -&gt; &#40;fixed, va&#41;</code></pre>
@@ -1103,7 +1103,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_msg_assumed_compact" data-doc-name="_msg_assumed_compact" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L416" target="_blank" rel="noopener">_msg_assumed_compact</a>(f!, multiindex, multiplicity_external, assumed)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L428" target="_blank" rel="noopener">_msg_assumed_compact</a>(f!, multiindex, multiplicity_external, assumed)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_msg_assumed_compact&#40;f&#33;, multiindex, multiplicity_external, assumed&#41; -&gt; String</code></pre>
@@ -1114,7 +1114,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_msg_assumed_forcing" data-doc-name="_msg_assumed_forcing" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L431" target="_blank" rel="noopener">_msg_assumed_forcing</a>(f!, multiindex, multiplicity_external)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L443" target="_blank" rel="noopener">_msg_assumed_forcing</a>(f!, multiindex, multiplicity_external)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_msg_assumed_forcing&#40;f&#33;, multiindex, multiplicity_external&#41; -&gt; String</code></pre>
@@ -1125,7 +1125,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_pad_to_order" data-doc-name="_pad_to_order" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L560" target="_blank" rel="noopener">_pad_to_order</a>(base::NTuple{N, Int64}, order::Int64) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L572" target="_blank" rel="noopener">_pad_to_order</a>(base::NTuple{N, Int64}, order::Int64) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_pad_to_order&#40;base, order&#41; -&gt; NTuple</code></pre>
@@ -1136,7 +1136,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-_symmetry_label" data-doc-name="_symmetry_label" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L299" target="_blank" rel="noopener">_symmetry_label</a>(multiindex, fully_asymmetric)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L311" target="_blank" rel="noopener">_symmetry_label</a>(multiindex, fully_asymmetric)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_symmetry_label&#40;multiindex, fully_asymmetric&#41; -&gt; String</code></pre>
@@ -1148,7 +1148,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-accumulate_qp!" data-doc-name="accumulate_qp!" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L99" target="_blank" rel="noopener">accumulate_qp!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L104" target="_blank" rel="noopener">accumulate_qp!</a>(Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>accumulate_qp&#33;&#40;Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -1159,7 +1159,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-assemble_element!" data-doc-name="assemble_element!" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L108" target="_blank" rel="noopener">assemble_element!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L114" target="_blank" rel="noopener">assemble_element!</a>(accum, Fe, element, t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>assemble_element&#33;&#40;accum, Fe, element, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -1170,8 +1170,8 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-evaluate_term!" data-doc-name="evaluate_term!" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L825" target="_blank" rel="noopener">evaluate_term!</a>(res, term::MultilinearMap{ORD}, xs, r) where ORD</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L825" target="_blank" rel="noopener">evaluate_term!</a>(res, t::FEMMultilinearMap{ORD}, xs, r) where ORD</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L837" target="_blank" rel="noopener">evaluate_term!</a>(res, term::MultilinearMap{ORD}, xs, r) where ORD</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L837" target="_blank" rel="noopener">evaluate_term!</a>(res, t::FEMMultilinearMap{ORD}, xs, r) where ORD</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>evaluate_term&#33;&#40;res, term, xs, r&#41;</code></pre>
@@ -1200,7 +1200,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-fem_elements" data-doc-name="fem_elements" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L61" target="_blank" rel="noopener">fem_elements</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L61" target="_blank" rel="noopener">fem_elements</a>(t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>fem_elements&#40;t::FEMMultilinearMap&#41; -&gt; iterator</code></pre>
@@ -1211,7 +1211,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-fem_getdetJdV" data-doc-name="fem_getdetJdV" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L116" target="_blank" rel="noopener">fem_getdetJdV</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L124" target="_blank" rel="noopener">fem_getdetJdV</a>(element, q, t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>fem_getdetJdV&#40;element, q, t::FEMMultilinearMap&#41; -&gt; Real</code></pre>
@@ -1222,7 +1222,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-fem_n_qp" data-doc-name="fem_n_qp" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L69" target="_blank" rel="noopener">fem_n_qp</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L70" target="_blank" rel="noopener">fem_n_qp</a>(t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>fem_n_qp&#40;t::FEMMultilinearMap&#41; -&gt; Int</code></pre>
@@ -1233,7 +1233,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-fem_ndofs_per_cell" data-doc-name="fem_ndofs_per_cell" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L76" target="_blank" rel="noopener">fem_ndofs_per_cell</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L78" target="_blank" rel="noopener">fem_ndofs_per_cell</a>(t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>fem_ndofs_per_cell&#40;t::FEMMultilinearMap&#41; -&gt; Int</code></pre>
@@ -1244,7 +1244,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-fem_qp_buffer" data-doc-name="fem_qp_buffer" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L124" target="_blank" rel="noopener">fem_qp_buffer</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L134" target="_blank" rel="noopener">fem_qp_buffer</a>(t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>fem_qp_buffer&#40;t::FEMMultilinearMap&#41;</code></pre>
@@ -1255,7 +1255,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-fem_reinit!" data-doc-name="fem_reinit!" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L83" target="_blank" rel="noopener">fem_reinit!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L86" target="_blank" rel="noopener">fem_reinit!</a>(element, t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>fem_reinit&#33;&#40;element, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -1266,7 +1266,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="MultilinearMaps-scatter_qp!" data-doc-name="scatter_qp!" data-doc-module="MultilinearMaps">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L91" target="_blank" rel="noopener">scatter_qp!</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/MultilinearMaps.jl#L95" target="_blank" rel="noopener">scatter_qp!</a>(∇W_col, W_global, element, t::FEMMultilinearMap)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>scatter_qp&#33;&#40;∇W_col, W_global, element, t::FEMMultilinearMap&#41; -&gt; nothing</code></pre>
@@ -1536,8 +1536,8 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="FullOrderModel-evaluate_nonlinear_terms!" data-doc-name="evaluate_nonlinear_terms!" data-doc-module="FullOrderModel">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L263" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors) where {ORD, ORDP1, N_NL}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L263" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors, r) where {ORD, ORDP1, N_NL}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L266" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors) where {ORD, ORDP1, N_NL}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L266" target="_blank" rel="noopener">evaluate_nonlinear_terms!</a>(res, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, order, state_vectors, r) where {ORD, ORDP1, N_NL}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>evaluate_nonlinear_terms&#33;&#40;res, model, order, state_vectors, r &#61; nothing&#41;</code></pre>
@@ -1563,8 +1563,8 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="FullOrderModel-linear_first_order_matrices" data-doc-name="linear_first_order_matrices" data-doc-module="FullOrderModel">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L296" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:(SparseMatrixCSC{T})}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L296" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:AbstractMatrix{T}}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L299" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:(SparseMatrixCSC{T})}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L299" target="_blank" rel="noopener">linear_first_order_matrices</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT&lt;:AbstractMatrix{T}}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>linear_first_order_matrices&#40;model::NthOrderModel&#41;</code></pre>
@@ -1591,8 +1591,8 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="FullOrderModel-show" data-doc-name="show" data-doc-module="FullOrderModel">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L209" target="_blank" rel="noopener">show</a>(io::IO, ::MIME{Symbol("text/plain")}, m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT}</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L209" target="_blank" rel="noopener">show</a>(io::IO, m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L212" target="_blank" rel="noopener">show</a>(io::IO, ::MIME{Symbol("text/plain")}, m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/FullOrderModel/FullOrderModel.jl#L212" target="_blank" rel="noopener">show</a>(io::IO, m::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T, MT}) where {ORD, ORDP1, N_NL, N_EXT, T, MT}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>Base.show&#40;io::IO, ::MIME&quot;text/plain&quot;, m::NthOrderModel&#41;</code></pre>
@@ -1791,7 +1791,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-type" id="SpectralDecomposition-Spectrum" data-doc-name="Spectrum" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L441" target="_blank" rel="noopener">Spectrum</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L443" target="_blank" rel="noopener">Spectrum</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>Spectrum&#123;T&#125;</code></pre>
@@ -1817,7 +1817,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-type" id="SpectralDecomposition-StructureModalDampingEigensolver" data-doc-name="StructureModalDampingEigensolver" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L214" target="_blank" rel="noopener">StructureModalDampingEigensolver</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L216" target="_blank" rel="noopener">StructureModalDampingEigensolver</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>StructureModalDampingEigensolver &lt;: AbstractEigensolver</code></pre>
@@ -1877,7 +1877,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-_structural_left_eigenmode_orders" data-doc-name="_structural_left_eigenmode_orders" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L359" target="_blank" rel="noopener">_structural_left_eigenmode_orders</a>(λ::AbstractVector, Y::AbstractArray{&lt;:Complex, 3}, mass::AbstractMatrix, damping::AbstractMatrix)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L361" target="_blank" rel="noopener">_structural_left_eigenmode_orders</a>(λ::AbstractVector, Y::AbstractArray{&lt;:Complex, 3}, mass::AbstractMatrix, damping::AbstractMatrix)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_structural_left_eigenmode_orders&#40;λ, Y, mass, damping&#41; -&gt; Array&#123;ComplexF64, 3&#125;</code></pre>
@@ -2035,7 +2035,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-left_eigenmode_orders_from_slice" data-doc-name="left_eigenmode_orders_from_slice" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L286" target="_blank" rel="noopener">left_eigenmode_orders_from_slice</a>(linear_terms::NTuple{ORDP1, AbstractMatrix}, left_slice::AbstractMatrix, eigenvalues::AbstractVector; apply) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L288" target="_blank" rel="noopener">left_eigenmode_orders_from_slice</a>(linear_terms::NTuple{ORDP1, AbstractMatrix}, left_slice::AbstractMatrix, eigenvalues::AbstractVector; apply) where ORDP1</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>left_eigenmode_orders_from_slice&#40;linear_terms, left_slice, eigenvalues&#41;
@@ -2080,7 +2080,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-master_by_sorting" data-doc-name="master_by_sorting" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L642" target="_blank" rel="noopener">master_by_sorting</a>(nev::Integer)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L645" target="_blank" rel="noopener">master_by_sorting</a>(nev::Integer)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>master_by_sorting&#40;nev::Integer&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -2092,7 +2092,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-master_by_target_frequency" data-doc-name="master_by_target_frequency" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L658" target="_blank" rel="noopener">master_by_target_frequency</a>(sp::Spectrum, target_frequencies::AbstractVector, tol::Float64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L661" target="_blank" rel="noopener">master_by_target_frequency</a>(sp::Spectrum, target_frequencies::AbstractVector, tol::Float64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>master_by_target_frequency&#40;sp::Spectrum, target_frequencies, tol&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -2116,7 +2116,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-normalise_biorthogonal!" data-doc-name="normalise_biorthogonal!" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L606" target="_blank" rel="noopener">normalise_biorthogonal!</a>(model::NthOrderModel, eigenmodes::Array{T}, left_eigenmodes::Array{T}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L609" target="_blank" rel="noopener">normalise_biorthogonal!</a>(model::NthOrderModel, eigenmodes::Array{T}, left_eigenmodes::Array{T}) where T</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>normalise_biorthogonal&#33;&#40;
@@ -2178,7 +2178,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-sort_by_magnitude!" data-doc-name="sort_by_magnitude!" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L552" target="_blank" rel="noopener">sort_by_magnitude!</a>(eigenvalues, eigenmodes)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L555" target="_blank" rel="noopener">sort_by_magnitude!</a>(eigenvalues, eigenmodes)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>sort_by_magnitude&#33;&#40;eigenvalues, eigenmodes&#41;</code></pre>
@@ -2189,7 +2189,7 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-sort_left_eigenmodes" data-doc-name="sort_left_eigenmodes" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L565" target="_blank" rel="noopener">sort_left_eigenmodes</a>(eigenvalues, left_eigenvalues, left_eigenmodes)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L568" target="_blank" rel="noopener">sort_left_eigenmodes</a>(eigenvalues, left_eigenvalues, left_eigenmodes)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>sort_left_eigenmodes&#40;eigenvalues, left_eigenvalues, left_eigenmodes&#41;</code></pre>
@@ -2200,9 +2200,9 @@ MultilinearMap&#40;f&#33;; multiindex &#61; &#40;2, 0&#41;, fully_asymmetric &#6
 <div class="doc doc-function" id="SpectralDecomposition-spectrum" data-doc-name="spectrum" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L399" target="_blank" rel="noopener">spectrum</a>(model::NthOrderModel, solver::StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L399" target="_blank" rel="noopener">spectrum</a>(stiffness::AbstractMatrix, mass::AbstractMatrix, solver::StructureModalDampingEigensolver; sorter!)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L399" target="_blank" rel="noopener">spectrum</a>(model::NthOrderModel; solver, sorter!, normaliser!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L401" target="_blank" rel="noopener">spectrum</a>(model::NthOrderModel, solver::StructureModalDampingEigensolver; sorter!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L401" target="_blank" rel="noopener">spectrum</a>(stiffness::AbstractMatrix, mass::AbstractMatrix, solver::StructureModalDampingEigensolver; sorter!)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/Eigensolvers.jl#L401" target="_blank" rel="noopener">spectrum</a>(model::NthOrderModel; solver, sorter!, normaliser!)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>spectrum&#40;model::NthOrderModel, solver::StructureModalDampingEigensolver; sorter&#33;&#41;</code></pre>
@@ -6415,7 +6415,7 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <div class="doc doc-function" id="RomIO-_real_roots" data-doc-name="_real_roots" data-doc-module="RomIO">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L304" target="_blank" rel="noopener">_real_roots</a>(p::Vector{Float64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L337" target="_blank" rel="noopener">_real_roots</a>(p::Vector{Float64})</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_real_roots&#40;p&#41; -&gt; Vector&#123;Float64&#125;</code></pre>
@@ -6427,13 +6427,14 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <div class="doc doc-function" id="RomIO-normal_form_branch" data-doc-name="normal_form_branch" data-doc-module="RomIO">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L137" target="_blank" rel="noopener">normal_form_branch</a>(R::ReducedDynamics{ROM, NVAR}; parameter, amplitudes, parameter_range, external_point) where {ROM, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L137" target="_blank" rel="noopener">normal_form_branch</a>(R::ReducedDynamics{ROM, NVAR}; parameter, amplitudes, parameter_range, external_point, sheet, jump) where {ROM, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>normal_form_branch&#40;R; parameter &#61; nothing,
 				   amplitudes &#61; range&#40;0, 3; length &#61; 600&#41;,
 				   parameter_range &#61; &#40;-Inf, Inf&#41;,
-				   external_point &#61; nothing&#41;
+				   external_point &#61; nothing,
+				   sheet &#61; :all, jump &#61; 1e-3&#41;
 	-&gt; &#40;; amplitude, frequency, parameter, stable&#41;</code></pre>
 <p>Periodic-orbit data for a reduced dynamics in <strong>complex normal form spanned by a single conjugate pair</strong>: the limit-cycle branch, or the backbone, as plain vectors ready to plot.</p>
 <h2>What it computes</h2>
@@ -6454,6 +6455,15 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <p>The other orientation is worse than merely inconvenient. Continuing in the parameter makes <code>ρ</code> the unknown, which is the direction whose series diverges over most of a typical sweep; in <code>examples/05_karman_vortex_street</code> that arrangement once drove an order-7 branch to <code>ρ &#61; 234</code> before it was abandoned for this one.</p>
 <h2>This function assumes a single conjugate pair in complex normal form</h2>
 <p><code>ROM ≠ 2</code> is rejected, and so is any first-row monomial with <code>a - b ≠ 1</code>. The second check is the important one: such a monomial keeps a residual <code>exp&#40;i&#40;a-b-1&#41;θ&#41;</code>, so <code>R₁/z₁</code> is not a function of <code>ρ</code> alone and the polar reduction above is invalid. Nothing about the resulting numbers would look wrong, which is why this is an error rather than a warning. A <code>:graph</code> style reduction will fail here by design.</p>
+<h2>One root per amplitude, or all of them</h2>
+<p><code>Re g&#40;ρ, ·&#41;</code> has as many roots as its degree in <code>η_k</code>, and a high-order reduction can put more than one of them inside a physically sensible window. They are different sheets: only the one growing out of the bifurcation is the continuation of the branch, and the others are the truncated series crossing zero again somewhere it has stopped converging.</p>
+<ul>
+<li><p><strong><code>sheet &#61; :all</code></strong> &#40;the default&#41; returns every real root in range, so an amplitude with several roots appears several times. Nothing is decided for you.</p>
+</li>
+<li><p><strong><code>sheet &#61; :primary</code></strong> follows the sheet the sweep starts on: at each amplitude it keeps the root nearest the previous one, seeded from <code>η &#61; 0</code>, and <strong>stops</strong> when the nearest root is farther than <code>jump</code>. That gap means the tracked sheet has ended and the next root belongs to a different one, so continuing would splice two branches into one curve. <code>jump</code> is in the parameter&#39;s own units; the default suits a coordinate of order <code>1e-2</code>.</p>
+</li>
+</ul>
+<p>Marching in <code>ρ</code> is what makes this reliable: the sheets are single-valued in amplitude even where they fold in the parameter, so no fold-handling is needed.</p>
 <h2>Arguments</h2>
 <ul>
 <li><p><code>amplitudes</code> — the <code>ρ</code> grid. Zero is fine and gives the linear behaviour.</p>
@@ -6462,9 +6472,11 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 </li>
 <li><p><code>external_point</code> — values of the <em>other</em> external coordinates, defaulting to zeros. In <code>parameter &#61; k</code> mode entry <code>k</code> is ignored, being what is solved for.</p>
 </li>
+<li><p><code>sheet</code>, <code>jump</code> — branch selection, above.</p>
+</li>
 </ul>
 <h2>Returns</h2>
-<p>Four vectors of equal length. In <code>parameter &#61; nothing</code> mode <code>parameter</code> is empty and the other three follow <code>amplitudes</code>; otherwise each entry is one <code>&#40;ρ, η&#41;</code> point of the branch, so an amplitude contributing several roots appears several times.</p>
+<p>Four vectors of equal length. In <code>parameter &#61; nothing</code> mode <code>parameter</code> is empty and the other three follow <code>amplitudes</code>; otherwise each entry is one <code>&#40;ρ, η&#41;</code> point of the branch.</p>
 <h2>Plotting</h2>
 <p>MORFE draws nothing. Load a Makie backend and plot the vectors:</p>
 <pre><code class="language-julia">using CairoMakie
@@ -6512,7 +6524,7 @@ lines&#40;b.parameter, b.amplitude; axis &#61; &#40;xlabel &#61; &quot;η&quot;,
   </div>
 </div>
   <div id="SymbolicsExtension" class="doc-module-h"><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/ext/MORFESymbolicsExt.jl#L1" target="_blank" rel="noopener">SymbolicsExtension</a></div>
-  <div class="doc-module-desc" data-module="SymbolicsExtension"><div class="markdown"><p>This module is an extension using Symbolics.jl to introduce  a clean and nice looking interface for definition and generating the NDOrdermodel and ExternalSystem</p>
+  <div class="doc-module-desc" data-module="SymbolicsExtension"><div class="markdown"><p>This module is an extension using Symbolics.jl to introduce  a clean and nice looking interface for defining and generating the NthOrderModel and ExternalSystem</p>
 </div></div>
 <div class="doc doc-function" id="SymbolicsExtension-_differential_equations_helper" data-doc-name="_differential_equations_helper" data-doc-module="SymbolicsExtension">
   <div class="doc-sig">

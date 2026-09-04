@@ -90,6 +90,65 @@ end
     @test isempty(br.stable)
 end
 
+# ż₁ = z₁(σ + c₁η + c₂η²) + a z₁|z₁|². Quadratic in η, so Re g = 0 has TWO roots per
+# amplitude: the sheet growing out of the bifurcation, and a far one the truncated series
+# manufactures. The numbers are the Kármán ROM's, where the far root sits at Re ≈ 11.
+function _two_sheets(σ = 0.004, c₁ = -212.0, c₂ = 2981.0, a = -0.111, ω = 16.86)
+    mset = MultiindexSet([SVector(1, 0, 0), SVector(0, 1, 0), SVector(1, 0, 1),
+        SVector(0, 1, 1), SVector(2, 1, 0), SVector(1, 2, 0),
+        SVector(1, 0, 2), SVector(0, 1, 2)])
+    C = zeros(ComplexF64, 3, 8)
+    C[1, 1] = σ + im * ω
+    C[2, 2] = σ - im * ω
+    C[1, 3] = c₁
+    C[2, 4] = c₁
+    C[1, 5] = a
+    C[2, 6] = a
+    C[1, 7] = c₂
+    C[2, 8] = c₂
+    return ReducedDynamics(DensePolynomial(C, mset), 1)
+end
+
+@testset "sheet = :primary keeps one root per amplitude" begin
+    R = _two_sheets()
+    amps = collect(0:0.05:1.0)
+    both = normal_form_branch(R; parameter = 1, amplitudes = amps,
+        parameter_range = (-0.01, 0.1))
+    one = normal_form_branch(R; parameter = 1, sheet = :primary, amplitudes = amps,
+        parameter_range = (-0.01, 0.1))
+
+    @test length(both.amplitude) == 2 * length(amps)   # both sheets
+    @test length(one.amplitude) == length(amps)       # one of them
+    @test one.amplitude == amps
+    # It is the sheet born at the bifurcation, not the far one at η ≈ 0.071.
+    @test all(<(1e-2), one.parameter)
+    @test one.parameter[1]≈1.9e-5 atol=1e-6
+    # and every kept point really is a root of the full problem
+    @test issubset(Set(one.parameter), Set(both.parameter))
+end
+
+@testset "sheet = :primary stops at a gap instead of jumping" begin
+    # Narrowing the window drops the tracked root at ρ ≈ 1.40. Only the far sheet is left
+    # in range after that, and splicing the two into one curve is exactly the failure this
+    # guards against, so the branch must end there.
+    R = _two_sheets()
+    amps = collect(0:0.05:3.0)
+    one = normal_form_branch(R; parameter = 1, sheet = :primary, amplitudes = amps,
+        parameter_range = (-0.001, 0.1))
+    both = normal_form_branch(R; parameter = 1, amplitudes = amps,
+        parameter_range = (-0.001, 0.1))
+
+    @test 1.2 < one.amplitude[end] < 1.5
+    @test one.amplitude[end] < amps[end]              # it stopped early
+    @test both.amplitude[end] == amps[end]             # :all did not
+    @test maximum(one.parameter) < 1e-2               # never crossed to the far sheet
+end
+
+@testset "sheet rejects an unknown symbol" begin
+    @test_throws ArgumentError normal_form_branch(_two_sheets(); parameter = 1,
+        sheet = :nearest)
+end
+
 @testset "graded truncation agrees with a truncated model" begin
     # The solve is graded, so restricting R and re-running must equal running the full R
     # when the extra monomials are above the retained degree. Add a quintic to have
@@ -105,8 +164,9 @@ end
 
     amps = collect(0:0.5:2)
     cubic = normal_form_branch(restrict_ReducedDynamics_to_degree(R, 3); amplitudes = amps)
-    @test cubic.frequency ≈ _stuart_landau(σ, ω, a, b) |>
-                            R3 -> normal_form_branch(R3; amplitudes = amps).frequency atol=1e-12
+    @test cubic.frequency ≈
+          _stuart_landau(σ, ω, a, b) |>
+          R3 -> normal_form_branch(R3; amplitudes = amps).frequency atol=1e-12
     # and the quintic genuinely mattered, so the test is not vacuous
     @test !isapprox(normal_form_branch(R; amplitudes = amps).frequency, cubic.frequency;
         atol = 1e-8)

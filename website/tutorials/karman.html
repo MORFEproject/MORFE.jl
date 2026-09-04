@@ -332,12 +332,12 @@ document.addEventListener('DOMContentLoaded', function () {
           fold to chase: a fold in $\rho$ against Re is just a monotone $\eta'(\rho)$.
         </p>
         <p>
-          Two things the caller owns. <code class="nolink">parameter_range</code> keeps the sweep
-          physical: the $\eta'$-polynomial has roots far outside the expansion neighbourhood,
-          at order 3 a second one at $\eta' \approx 0.071$, which is Re $\approx 11$. And every
-          real root inside the window is returned, so where a high-order polynomial has more than
-          one, choosing the sheet is a modelling decision rather than something the solver should
-          guess.
+          Two keywords carry the modelling decisions. <code class="nolink">parameter_range</code>
+          keeps the sweep physical: the $\eta'$-polynomial also has roots far outside the
+          expansion neighbourhood, at order 3 a second one at $\eta' \approx 0.071$, which is
+          Re $\approx 11$. And <code class="nolink">sheet = :primary</code> follows the branch
+          out of the Hopf point rather than returning every root, which from order 9 includes a
+          second sheet at large amplitude.
         </p>
       </div>
     </div>
@@ -401,24 +401,20 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">D</span> <span class="op">=</span> <span class="var">case</span>.<span class="var">fom</span>.<span class="var">reference_length</span>      <span class="cm"># 0.1 m, the reference length in ν = D/Re</span>
 <span class="fn">strouhal</span>(<span class="var">Ω</span>) <span class="op">=</span> <span class="var">Ω</span> <span class="op">*</span> <span class="var">D</span> <span class="op">/</span> (<span class="num">2</span><span class="var">π</span> <span class="op">*</span> <span class="var">NSE</span>.<span class="var">U_MEAN</span>)
 
+<span class="var">curves</span> <span class="op">=</span> <span class="fn">map</span>(<span class="num">3</span>:<span class="num">2</span>:<span class="var">order</span>) <span class="kw">do</span> <span class="var">N</span>
+    <span class="var">b</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(<a class="doc-link" href="../documentation.html#ParametrisationObjects-restrict_ReducedDynamics_to_degree"><span class="fn">restrict_ReducedDynamics_to_degree</span></a>(<span class="var">R</span>, <span class="var">N</span>); <span class="var">sweep</span>...)
+    <span class="var">P</span> <span class="op">=</span> <span class="var">MORFE</span>.<span class="var">Polynomials</span>.<a class="doc-link" href="../documentation.html#Polynomials-restrict_polynomial_to_degree"><span class="fn">restrict_polynomial_to_degree</span></a>(<span class="var">L</span>, <span class="var">N</span>)
+    (; <span class="var">N</span>, <span class="var">b</span>.<span class="var">amplitude</span>, <span class="var">b</span>.<span class="var">frequency</span>, <span class="var">eta</span> <span class="op">=</span> <span class="var">b</span>.<span class="var">parameter</span>, <span class="var">Re</span> <span class="op">=</span> <span class="var">to_Re</span>.(<span class="var">b</span>.<span class="var">parameter</span>),
+        <span class="var">St</span> <span class="op">=</span> <span class="var">strouhal</span>.(<span class="var">b</span>.<span class="var">frequency</span>), <span class="var">lift</span> <span class="op">=</span> <span class="var">max_lift</span>.(<span class="fn">Ref</span>(<span class="var">P</span>), <span class="var">b</span>.<span class="var">amplitude</span>, <span class="var">b</span>.<span class="var">parameter</span>))
+<span class="kw">end</span>
+
 <span class="var">fig</span> <span class="op">=</span> <span class="fn">Figure</span>(<span class="var">size</span> <span class="op">=</span> (<span class="num">900</span>, <span class="num">360</span>))
 <span class="var">ax_lift</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">1</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">&quot;Re&quot;</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">&quot;max |lift|&quot;</span>)
 <span class="var">ax_st</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">2</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">&quot;Re&quot;</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">&quot;Strouhal number&quot;</span>)
-<span class="var">rows</span> <span class="op">=</span> <span class="var">NTuple</span>{<span class="num">7</span>, <span class="var">Float64</span>}[]
-
-<span class="kw">for</span> <span class="var">N</span> <span class="kw">in</span> <span class="num">3</span>:<span class="num">2</span>:<span class="var">order</span>
-    <span class="var">b</span> <span class="op">=</span> <span class="fn">primary_sheet</span>(<a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(
-        <a class="doc-link" href="../documentation.html#ParametrisationObjects-restrict_ReducedDynamics_to_degree"><span class="fn">restrict_ReducedDynamics_to_degree</span></a>(<span class="var">R</span>, <span class="var">N</span>); <span class="var">sweep</span>...))
-    <span class="var">P</span> <span class="op">=</span> <span class="var">MORFE</span>.<span class="var">Polynomials</span>.<a class="doc-link" href="../documentation.html#Polynomials-restrict_polynomial_to_degree"><span class="fn">restrict_polynomial_to_degree</span></a>(<span class="var">L</span>, <span class="var">N</span>)
-    <span class="var">Re</span> <span class="op">=</span> <span class="var">to_Re</span>.(<span class="var">b</span>.<span class="var">parameter</span>)
-    <span class="var">lift</span> <span class="op">=</span> [<span class="fn">max_lift</span>(<span class="var">P</span>, <span class="var">ρ</span>, <span class="var">η</span>) <span class="kw">for</span> (<span class="var">ρ</span>, <span class="var">η</span>) <span class="kw">in</span> <span class="fn">zip</span>(<span class="var">b</span>.<span class="var">amplitude</span>, <span class="var">b</span>.<span class="var">parameter</span>)]
-    <span class="var">St</span> <span class="op">=</span> <span class="var">strouhal</span>.(<span class="var">b</span>.<span class="var">frequency</span>)
-    <span class="fn">lines!</span>(<span class="var">ax_lift</span>, <span class="var">Re</span>, <span class="var">lift</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">&quot;order $N&quot;</span>)
-    <span class="fn">lines!</span>(<span class="var">ax_st</span>, <span class="var">Re</span>, <span class="var">St</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">&quot;order $N&quot;</span>)
-    <span class="fn">append!</span>(<span class="var">rows</span>, <span class="fn">zip</span>(<span class="fn">fill</span>(<span class="fn">Float64</span>(<span class="var">N</span>), <span class="fn">length</span>(<span class="var">Re</span>)), <span class="var">b</span>.<span class="var">parameter</span>, <span class="var">Re</span>, <span class="var">b</span>.<span class="var">amplitude</span>,
-        <span class="var">b</span>.<span class="var">frequency</span>, <span class="var">St</span>, <span class="var">lift</span>))
+<span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="var">curves</span>
+    <span class="fn">lines!</span>(<span class="var">ax_lift</span>, <span class="var">c</span>.<span class="var">Re</span>, <span class="var">c</span>.<span class="var">lift</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">&quot;order $(c.N)&quot;</span>)
+    <span class="fn">lines!</span>(<span class="var">ax_st</span>, <span class="var">c</span>.<span class="var">Re</span>, <span class="var">c</span>.<span class="var">St</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">&quot;order $(c.N)&quot;</span>)
 <span class="kw">end</span>
-
 <span class="fn">axislegend</span>(<span class="var">ax_lift</span>; <span class="var">position</span> <span class="op">=</span> <span class="sym">:lt</span>)
 <span class="var">fig</span></pre>
         <div class="adm tip">
@@ -461,7 +457,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <span class="fn">open</span>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;results&quot;</span>, <span class="str">&quot;data&quot;</span>, <span class="str">&quot;branch.csv&quot;</span>), <span class="str">&quot;w&quot;</span>) <span class="kw">do</span> <span class="var">io</span>
     <span class="fn">println</span>(<span class="var">io</span>, <span class="str">&quot;order,eta,Re,rho,omega,St,max_abs_lift&quot;</span>)
-    <span class="fn">foreach</span>(<span class="var">r</span> <span class="op">-&gt;</span> <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">Int</span>(<span class="var">r</span>[<span class="num">1</span>]), <span class="str">&quot;,&quot;</span>, <span class="fn">join</span>(<span class="var">r</span>[<span class="num">2</span>:<span class="kw">end</span>], <span class="str">&quot;,&quot;</span>)), <span class="var">rows</span>)
+    <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="var">curves</span>, <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">c</span>.<span class="var">Re</span>)
+        <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">join</span>((<span class="var">c</span>.<span class="var">N</span>, <span class="var">c</span>.<span class="var">eta</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">Re</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">amplitude</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">frequency</span>[<span class="var">i</span>],
+            <span class="var">c</span>.<span class="var">St</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">lift</span>[<span class="var">i</span>]), <span class="str">&quot;,&quot;</span>))
+    <span class="kw">end</span>
 <span class="kw">end</span></pre>
       </div>
     </div>
