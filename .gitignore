@@ -52,10 +52,13 @@ graphify-out/
 # developer rather than a user, so it never reaches the index by accident.
 notes/
 
-# Examples kept out of the package repository: they carry their own Project/Manifest,
-# meshes and result archives, and are developed independently of the library.
-examples/02_clamped_beam_gridap/
-examples/06_dielectric_elastomer_actuator/
+# Examples are kept out of the package repository entirely: they carry their own
+# Project/Manifest, meshes and result archives, and are developed independently of the
+# library. The three the website publishes live in MORFEproject/MORFEExamples, which owns
+# one shared environment and one Jupyter kernel for all of them; the rest stay here on
+# disk as working copies but out of the index.
+# Tag `examples-before-untrack` is the last commit that tracked this tree.
+/examples/
 
 # Developer-only documents. Named individually rather than by a blanket *.md,
 # which would swallow README.md and the example documentation that users read.

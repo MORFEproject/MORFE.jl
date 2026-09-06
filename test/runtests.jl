@@ -94,28 +94,41 @@ should_run(group) = GROUP == "all" || GROUP == group
 end
 
 if GROUP == "examples"
+    # `examples/` is no longer tracked: the examples the website publishes live in the
+    # MORFEExamples repository, and the rest are untracked working copies. These smoke
+    # tests therefore run only where a working copy is present, and skip otherwise --
+    # the same treatment MORFEFerrite gives its untracked Joukowski sources.
+    const _internals = normpath(joinpath(@__DIR__, "..", "examples", "internals"))
+
     @testset "Examples smoke tests" begin
         @testset "internals" begin
-            include(joinpath(
-                @__DIR__, "..", "examples", "internals", "demo_polynomials.jl"))
-            include(joinpath(@__DIR__, "..", "examples", "internals",
-                "demo_multiindices_factorisations.jl"))
-            # Writes its lattice figures to a scratch directory rather than the
-            # example's own results/, so the test run leaves no artefacts behind.
-            mktempdir() do tmp
-                withenv("MORFE_LATTICE_OUT" => tmp) do
-                    include(joinpath(@__DIR__, "..", "examples", "internals",
-                        "multiindex_sets", "main.jl"))
+            for demo in ("demo_polynomials.jl", "demo_multiindices_factorisations.jl")
+                path = joinpath(_internals, demo)
+                if isfile(path)
+                    include(path)
+                else
+                    @info "Skipping $demo: no examples/ working copy in this checkout"
+                    @test_skip isfile(path)
                 end
-                @test length(readdir(tmp)) == 4
             end
-            mktempdir() do tmp
-                withenv("MORFE_FOM_OUT" => tmp) do
-                    include(joinpath(@__DIR__, "..", "examples", "internals",
-                        "full_order_model", "main.jl"))
-                end
+            # Both drivers write their figures to a scratch directory rather than the
+            # example's own results/, so the test run leaves no artefacts behind.
+            for (driver, out_var, n_figures) in (
+                ("multiindex_sets", "MORFE_LATTICE_OUT", 4),
                 # four figures plus the website card's thumbnail
-                @test length(readdir(tmp)) == 5
+                ("full_order_model", "MORFE_FOM_OUT", 5))
+                path = joinpath(_internals, driver, "main.jl")
+                if !isfile(path)
+                    @info "Skipping $driver/main.jl: no examples/ working copy in this checkout"
+                    @test_skip isfile(path)
+                    continue
+                end
+                mktempdir() do tmp
+                    withenv(out_var => tmp) do
+                        include(path)
+                    end
+                    @test length(readdir(tmp)) == n_figures
+                end
             end
             @test true
         end

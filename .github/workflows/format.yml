@@ -10,7 +10,7 @@ name: Format
 # Run the identical check locally — same environment, therefore the same output:
 #
 #   julia --project=.github/format -e 'using Pkg; Pkg.instantiate()'
-#   julia --project=.github/format -e 'using JuliaFormatter; format(["src", "ext", "test", "examples"])'
+#   julia --project=.github/format -e 'using JuliaFormatter; format(["src", "ext", "test"])'
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
         run: |
           julia --project=.github/format -e '
             using JuliaFormatter
-            ok = format(["src", "ext", "test", "examples"]; verbose = true)'
+            ok = format(["src", "ext", "test"]; verbose = true)'
 
       - name: Commit changes
         if: github.event_name == 'push'

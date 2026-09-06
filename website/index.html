@@ -424,13 +424,13 @@ body.home-page .foot { margin-top: 0; }
       <div class="code-wrap">
         <div class="code-head">
           <div class="dots"><span></span><span></span><span></span></div>
-          <span class="file">clamped_beam.ipynb</span>
+          <span class="file">from_a_mesh_to_a_rom.ipynb</span>
           <span style="margin-left:auto; color:var(--ink-3); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;">current common API</span>
         </div>
 <pre class="code"><span class="kw">using</span> <span class="var">MORFE</span>, <span class="var">MORFEFerrite</span>
 <span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> <span class="var">MORFEFerrite</span>.<span class="var">StructuralSVK</span>
 
-<span class="var">order</span> <span class="op">=</span> <span class="num">3</span>
+<span class="var">order</span> <span class="op">=</span> <span class="num">9</span>
 <span class="var">case</span> <span class="op">=</span> <span class="fn">SVK.mechanical_model</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
     <span class="var">material</span> <span class="op">=</span> <span class="fn">SVK.SVKMaterial</span>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
     <span class="var">damping</span> <span class="op">=</span> <span class="fn">SVK.RayleighDamping</span>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),

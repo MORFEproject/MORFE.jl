@@ -87,7 +87,7 @@ fluid backend (`FluidNavierStokes`) — live in the optional companion package
 Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")
 ```
 
-Its [clamped-beam notebook](https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/examples/01_clamped_beam_ferrite/clamped_beam.ipynb)
+The [clamped-beam notebook](https://github.com/MORFEproject/MORFEExamples/blob/main/from_a_mesh_to_a_rom/from_a_mesh_to_a_rom.ipynb)
 is the shortest path from a mesh to a ROM.
 
 ---
@@ -102,9 +102,13 @@ is the shortest path from a mesh to a ROM.
 | [Publications](https://morfeproject.github.io/MORFE.jl/publications.html) | Method papers and citation info |
 | [Team](https://morfeproject.github.io/MORFE.jl/team.html) | Developers, contributors and institutions |
 
-Runnable low-level demos live in [`examples/`](examples/README.md); the FEM-backed examples, which
-carry their own meshes and environments, live in
-[MORFEFerrite.jl/examples](https://github.com/MORFEproject/MORFEFerrite.jl/tree/main/examples).
+Every runnable example lives in [MORFEExamples](https://github.com/MORFEproject/MORFEExamples),
+which carries one shared Julia environment and one Jupyter kernel for all of them: `julia setup.jl`
+there is the only setup step. Three of its examples need nothing but MORFE
+([multiindex sets](https://github.com/MORFEproject/MORFEExamples/tree/main/monomials_and_multiindices),
+[full-order models](https://github.com/MORFEproject/MORFEExamples/tree/main/building_a_full-order_model),
+[symbolic models](https://github.com/MORFEproject/MORFEExamples/tree/main/symbolic_full-order_model));
+the two that solve a finite-element model also use MORFEFerrite.
 
 ---
 
