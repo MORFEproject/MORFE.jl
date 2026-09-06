@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <p class="lede">Build a reduced order model of a clamped beam with geometric nonlinearity. 
         This case is conservative because there is no damping or forcing.</p>
 
-    <div class="fig">
+    <div class="fig" id="fig-01">
       <iframe src="assets/structural_svk/beam_mesh.html"
         style="aspect-ratio: 900/420;"
         title="Gray clamped beam mesh overlapped by its opaque blue first bending mode"></iframe>
@@ -178,31 +178,27 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">04</div>
       <div class="body">
-        <h3 id="step-backbone">Read the backbone off $R$</h3>
+        <h3 id="step-backbone">Obtain the backbone</h3>
         <p>
-          In normal form the orbit is a circle $z_1 = \rho e^{i\Omega t}$. Every surviving monomial
-          has $a - b = 1$, so substituting it gives every term of $R_1$ the same factor $e^{i\theta}$
-          and the phase drops out. Matching
-          $\dot z_1 = (\dot\rho + i\rho\dot\theta)e^{i\theta}$ against it separates amplitude from
-          phase:
+        Because the system is conservative, the master eigenvalues form a purely imaginary complex conjugate pair: $\lambda_1 = \overline{\lambda_2} = -\lambda_2$. Master coordinate $z_1$ has dynamics $\dot{z}_1 = R_1(z_1, z_2)$. Complex normal form produces dynamics in polar coordinates, $z_1 = \rho e^{i \theta}$:
         </p>
         <div class="math-block" style="font-size:15px;">
-          $$\dot\rho = \mathrm{Re}\,R_1(\rho, \rho)
-            \qquad\qquad \Omega = \frac{\mathrm{Im}\,R_1(\rho, \rho)}{\rho}$$
+        $$
+        \dot\rho = \operatorname{Re} R_1(\rho, \rho) \qquad\qquad \dot\theta = \operatorname{Im} R_1(\rho, \rho) / \rho
+        $$
         </div>
         <p>
-          The beam is conservative, so $\mathrm{Re}\,R_1 \equiv 0$: every amplitude is a periodic
-          orbit, and $\Omega$ is an explicit polynomial in $\rho$. That polynomial is the backbone, and
+          The beam is conservative, so $\dot\rho = 0$: every amplitude is a periodic
+          orbit, and $\Omega = \dot\theta$ is an explicit polynomial in $\rho$. The function
           <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><code>normal_form_branch</code></a>
-          evaluates it.
+          traces the backbone $\Omega(\rho)$.
         </p>
         <p>
-          $\rho$ is a coordinate on the manifold, not a length.
+          $\rho$ is a reduced coordinate, not a physical quantity.
           <a class="doc-link" href="../documentation.html#RomIO-observable_polynomial"><code>observable_polynomial</code></a>
           projects <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a> onto one degree of freedom to recover a physical displacement, and
           <a class="doc-link" href="../documentation.html#RomIO-cycle_amplitude"><code>cycle_amplitude</code></a>
-          reads its half peak-to-peak excursion over one cycle. Node 289 sits at mid-span on the top
-          surface, where the first bending mode peaks.
+          reads its amplitude over a cycle. <a class="inline" href="#fig-01">FIG · 01</a> highlights the y displacement of node 289.
         </p>
 <pre class="code"><span class="var">u</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-observable_polynomial"><span class="fn">observable_polynomial</span></a>(<span class="var">W</span>, <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-probe_dof"><span class="fn">SVK.probe_dof</span></a>(<span class="var">case</span>, <span class="num">289</span>, <span class="num">2</span>)) <span class="cm"># y displacement at mid-span</span>
 
@@ -217,22 +213,23 @@ document.addEventListener('DOMContentLoaded', function () {
         <span class="var">a</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-cycle_amplitude"><span class="fn">cycle_amplitude</span></a>.(<span class="fn">Ref</span>(<span class="var">P</span>), <span class="var">b</span>.<span class="var">amplitude</span>) <span class="op">./</span> <span class="var">thickness</span>)
 <span class="kw">end</span></pre>
 
-        <div class="fig">
-          <iframe src="assets/structural_svk/backbone.html"
-            title="Order 3, 5, 7 and 9 analytical backbone curves"
-            loading="lazy"></iframe>
-          <div class="fig-cap"><span class="lab">FIG · 02</span>Backbone curves at orders 3, 5, 7, and 9,
-            drawn from the <code>backbone.csv</code> this notebook writes.
-            Δω is the change in frequency from
-          the linear eigenfrequency. The first panel displays the y displacement of node 289 as a percentage
-          of the beam thickness. The second panel displays the modal coordinate z₁.</div>
-        </div>
-        <div class="adm note">
+        <!-- <div class="adm note">
           <div class="adm-head">The backbone is analytical</div>
           <div class="adm-body"><p>In single mode complex normal form, ω is an explicit function of |z₁|.
             The backbone curve is therefore analytical, and there is no need for continuation or time integration.</p></div>
-        </div>
+        </div> -->
       </div>
+    </div>
+
+    <div class="fig">
+      <iframe src="assets/structural_svk/backbone.html"
+        title="Order 3, 5, 7 and 9 analytical backbone curves"
+        loading="lazy"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 02</span>Backbone curves at orders 3, 5, 7, and 9,
+        drawn from the <code>backbone.csv</code> this notebook writes.
+        Δω is the change in frequency from
+        the linear eigenfrequency. The first panel displays the y displacement of node 289 as a percentage
+        of the beam thickness. The second panel displays the modal coordinate z₁.</div>
     </div>
 
     <div class="step">
@@ -240,10 +237,10 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-plot">Plot it</h3>
         <p>
-          The beam stiffens as it swings: at a displacement of about three quarters of its thickness
-          the frequency has risen roughly 13&nbsp;% above the linear eigenfrequency. Plotting the four
+          The backbone stiffens: at a displacement of about half of its thickness,
+          the frequency has risen roughly 6%. Plotting four
           truncations together shows where the expansion stops converging, which is the honest way to
-          read the useful range of a ROM. They agree near the origin and separate as the amplitude grows.
+          read the useful range of a ROM.
         </p>
 <pre class="code"><span class="kw">using</span> CairoMakie
 <span class="var">fig</span> <span class="op">=</span> <span class="fn">Figure</span>(<span class="var">size</span> <span class="op">=</span> (<span class="num">520</span>, <span class="num">380</span>))
@@ -262,19 +259,14 @@ document.addEventListener('DOMContentLoaded', function () {
           MORFE's common saver,
           <a class="doc-link" href="../documentation.html#RomIO-save_rom"><code>save_rom</code></a>, writes
           <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>,
-          <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a>,
-          their coefficient table and a summary to <code>results</code>.
-          <code>drop_below = 0.0</code> keeps every coefficient: the degree-9 resonant term is of order
-          <code>1e-17</code>, and the default cut of <code>1e-14</code> would discard the very row the
-          reference is blessed on.
+          <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a> and a summary to the results directory.
+          <!--The two CSVs alongside it are the backbone computed above and the component of <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a> for the y displacement of node 289. -->
         </p>
-        <p>
-          The two CSVs alongside it are the backbone computed above and the probe row of <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>
-          it came from. The first is the data FIG&nbsp;02 draws; the second is what makes that figure
-          reproducible, since <code>W.jls</code> is not committed.
-        </p>
+<pre class="code">
+<a class="doc-link" href="../documentation.html#RomIO-save_rom"><span class="fn">MORFE.save_rom</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>; <span class="var">drop_below</span> <span class="op">=</span> <span class="num">0.0</span>)
+</pre>
+<!--
 <pre class="code"><a class="doc-link" href="../documentation.html#RomIO-save_rom"><span class="fn">MORFE.save_rom</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>; <span class="var">drop_below</span> <span class="op">=</span> <span class="num">0.0</span>)
-
 <span class="fn">open</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>, <span class="str">"data"</span>, <span class="str">"backbone.csv"</span>), <span class="str">"w"</span>) <span class="kw">do</span> <span class="var">io</span>
     <span class="fn">println</span>(<span class="var">io</span>, <span class="str">"order,r,omega,omega_ratio,amplitude,amplitude_ratio"</span>)
     <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="var">curves</span>, <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">c</span>.<span class="var">amplitude</span>)
@@ -282,14 +274,15 @@ document.addEventListener('DOMContentLoaded', function () {
             <span class="var">thickness</span> <span class="op">*</span> <span class="var">c</span>.<span class="var">a</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">a</span>[<span class="var">i</span>]), <span class="str">","</span>))
     <span class="kw">end</span>
 <span class="kw">end</span>
-
 <span class="fn">open</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>, <span class="str">"data"</span>, <span class="str">"W_probe_coefficients.csv"</span>), <span class="str">"w"</span>) <span class="kw">do</span> <span class="var">io</span>
     <span class="fn">println</span>(<span class="var">io</span>, <span class="str">"exp_1,exp_2,W_y_re,W_y_im"</span>)
     <span class="kw">for</span> (<span class="var">e</span>, <span class="var">c</span>) <span class="kw">in</span> <span class="fn">zip</span>(<span class="fn">MORFE.Polynomials.multiindex_set</span>(<span class="var">u</span>).<span class="var">exponents</span>,
         <span class="fn">MORFE.Polynomials.coefficients</span>(<span class="var">u</span>))
         <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">join</span>((<span class="var">e</span>[<span class="num">1</span>], <span class="var">e</span>[<span class="num">2</span>], <span class="fn">real</span>(<span class="var">c</span>), <span class="fn">imag</span>(<span class="var">c</span>)), <span class="str">","</span>))
     <span class="kw">end</span>
-<span class="kw">end</span></pre>
+<span class="kw">end</span> 
+</pre>
+-->
       </div>
     </div>
 
@@ -325,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <li><a href="#step-case">01 · State the case</a></li>
       <li><a href="#step-build">02 · Build the model</a></li>
       <li><a href="#step-parametrise">03 · Parametrise</a></li>
-      <li><a href="#step-backbone">04 · Read the backbone</a></li>
+      <li><a href="#step-backbone">04 · Obtain the backbone</a></li>
       <li><a href="#step-plot">05 · Plot it</a></li>
       <li><a href="#step-save">06 · Save</a></li>
     </ul>

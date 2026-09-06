@@ -3,8 +3,8 @@
 
 The backbone curves are *not* computed here.  They are read from
 `backbone.v1.csv`, a committed copy of `results/data/backbone.csv` written by
-`examples/01_clamped_beam_ferrite/clamped_beam.ipynb`, which is the same
-arrangement the Karman tutorial uses for `branch.v1.csv`.  This script renders;
+MORFEExamples' `from_a_mesh_to_a_rom/from_a_mesh_to_a_rom.ipynb`, which is the
+same arrangement the Karman tutorial uses for `branch.v1.csv`.  This script renders;
 the example does the physics.  Orders 3, 5, 7 and 9 are nested truncations of
 that notebook's single order-9 solve, not four separate runs.
 
@@ -28,15 +28,17 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[3]
-FERRITE = next(
+# The examples live in the sibling MORFEExamples checkout, under one shared Julia
+# environment at its root — there is no per-example Project.toml to activate.
+EXAMPLES = next(
     p
     for p in (
-        REPO.parent / "MORFEFerrite" / "MORFEFerrite.jl",
-        REPO.parent / "MORFEFerrite.jl",
+        REPO.parent / "MORFEExamples",
+        REPO.parent / "MORFEExamples" / "MORFEExamples",
     )
     if p.is_dir()
 )
-EXAMPLE = FERRITE / "examples" / "01_clamped_beam_ferrite"
+EXAMPLE = EXAMPLES / "from_a_mesh_to_a_rom"
 MESH = EXAMPLE / "clamped_clamped_beam.msh"
 BACKBONE_CSV = HERE / "backbone.v1.csv"
 
@@ -175,7 +177,7 @@ end
     result = subprocess.run(
         [
             "julia",
-            f"--project={EXAMPLE}",
+            f"--project={EXAMPLES}",
             "--startup-file=no",
             "-e",
             code,

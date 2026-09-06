@@ -2,7 +2,7 @@
 """Generate branch_vs_Re.html, the Kármán limit-cycle branch in two switchable panels.
 
 Reads `branch.v1.csv`, the committed copy of the order-9 `results/data/branch.csv` that
-`examples/12_karman_hopf/karman_hopf.ipynb` writes, and emits one self-contained asset in
+MORFEExamples' `karman_vortex_street/karman_vortex_street.ipynb` writes, and emits one self-contained asset in
 the shell every other tutorial figure uses: a bar of panel buttons, a framed stage, a legend
 of clickable order labels, a note, and a readout tinted by the curve it belongs to. The two
 panels, peak lift and Strouhal number, share the same x-axis and the same four curves, so

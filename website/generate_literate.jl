@@ -18,33 +18,32 @@ Pkg.instantiate()
 using Literate, Markdown
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
-const FERRITE_ROOT = let
-	cands = [joinpath(ROOT, "..", "MORFEFerrite", "MORFEFerrite.jl"),
-		joinpath(ROOT, "..", "MORFEFerrite.jl")]
+# Every runnable example lives in the sibling MORFEExamples checkout; the package
+# repositories carry none.
+const EXAMPLES_ROOT = let
+	cands = [joinpath(ROOT, "..", "MORFEExamples"),
+		joinpath(ROOT, "..", "MORFEExamples", "MORFEExamples")]
 	i = findfirst(isdir, cands)
-	i === nothing ? error("MORFEFerrite.jl checkout not found next to MORFE.jl") :
+	i === nothing ? error("MORFEExamples checkout not found next to MORFE.jl") :
 	normpath(cands[i])
 end
 const OUTDIR = joinpath(@__DIR__, "tutorials", "literate")
-const GH_MORFE = "https://github.com/MORFEproject/MORFE.jl"
-const GH_FERRITE = "https://github.com/MORFEproject/MORFEFerrite.jl"
+const GH_EXAMPLES = "https://github.com/MORFEproject/MORFEExamples"
 
 # id, title, source main.jl, GitHub folder, custom tutorial page (site-relative
 # to tutorials/) — `nothing` while the custom page does not exist yet.
+#
+# Only the two script-driven examples appear here. The others are notebooks, which
+# their pages link directly, so a Literate rendering would have no source to read.
 const EXAMPLES = [
 	(id = "full_order_model", title = "Building a full-order model",
-		src = joinpath(ROOT, "examples", "internals", "full_order_model", "main.jl"),
-		gh = "$GH_MORFE/tree/main/examples/internals/full_order_model",
+		src = joinpath(EXAMPLES_ROOT, "building_a_full-order_model", "main.jl"),
+		gh = "$GH_EXAMPLES/tree/main/building_a_full-order_model",
 		custom = "full_order_model.html"),
 	(id = "multiindex_sets", title = "Constructing MultiindexSets",
-		src = joinpath(ROOT, "examples", "internals", "multiindex_sets", "main.jl"),
-		gh = "$GH_MORFE/tree/main/examples/internals/multiindex_sets",
+		src = joinpath(EXAMPLES_ROOT, "monomials_and_multiindices", "main.jl"),
+		gh = "$GH_EXAMPLES/tree/main/monomials_and_multiindices",
 		custom = "multiindex_sets.html"),
-	(id = "05_karman_vortex_street", title = "Kármán vortex street — FluidNavierStokes",
-		src = joinpath(FERRITE_ROOT, "examples", "05_karman_vortex_street", "main.jl"),
-		gh = "$GH_FERRITE/tree/main/examples/05_karman_vortex_street", custom = "karman.html"),
-	# The symbolic tutorial is a notebook example (09_symbolic_two_mass_oscillator), not a
-	# Literate `main.jl`: its page links the notebook directly, so there is no entry here.
 ]
 
 # ── Preprocessing: a LEADING triple-quoted docstring becomes `#` markdown, so
@@ -55,6 +54,14 @@ function docstring_to_comments(code::String)
 	body = m.captures[1]
 	prose = join(("# " * rstrip(l) for l in split(body, '\n')), "\n")
 	return prose * "\n\n" * code[(m.offset+lastindex(m.match)):end]
+end
+
+# ── A source already written in Literate style opens with `# # Its Title`. The page
+# shell emits that title as the <h1> itself, so keeping the source's heading would
+# render it twice.
+function drop_leading_h1(code::String)
+	m = match(r"\A\s*#[ \t]+#[ \t]+[^\n]*\n(?:[ \t]*#[ \t]*\r?\n)?"s, code)
+	return m === nothing ? code : code[(m.offset+lastindex(m.match)):end]
 end
 
 # ── Standardized page shell (self-contained, matches the site's dark look).
@@ -108,7 +115,7 @@ mkpath(OUTDIR)
 mktempdir() do tmp
 	for ex in EXAMPLES
 		isfile(ex.src) || (println("  ⚠ skipping $(ex.id): $(ex.src) not found"); continue)
-		pre = docstring_to_comments(read(ex.src, String))
+		pre = drop_leading_h1(docstring_to_comments(read(ex.src, String)))
 		srcfile = joinpath(tmp, ex.id * ".jl")
 		write(srcfile, pre)
 		Literate.markdown(srcfile, tmp; flavor = Literate.CommonMarkFlavor(),

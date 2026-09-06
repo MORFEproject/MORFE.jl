@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Render karman.html's code blocks from the notebook's code cells, so the two cannot drift.
 
-The tutorial page quotes `examples/12_karman_hopf/karman_hopf.ipynb`. Keeping the two in
-step by hand does not work: the page silently fell behind the notebook more than once. This
-script is the single direction of truth. Every `<pre class="code">` in the page carries a
+The tutorial page quotes MORFEExamples' `karman_vortex_street/karman_vortex_street.ipynb`.
+Keeping the two in step by hand does not work: the page silently fell behind the notebook
+more than once. This script is the single direction of truth. Every `<pre class="code">` in
+the page carries a
 `<!-- nbcode:N -->` marker naming the notebook code cell it shows, and this rewrites each
 one from that cell, syntax-highlighted, with the documentation links reapplied.
 
@@ -24,9 +25,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PAGE = HERE.parents[1] / "karman.html"
 REPO = HERE.parents[3]          # …/MORFE_jl
-FERRITE = next(p for p in (REPO.parent / "MORFEFerrite" / "MORFEFerrite.jl",
-                           REPO.parent / "MORFEFerrite.jl") if p.is_dir())
-NB = FERRITE / "examples" / "12_karman_hopf" / "karman_hopf.ipynb"
+EXAMPLES = next(p for p in (REPO.parent / "MORFEExamples",
+                            REPO.parent / "MORFEExamples" / "MORFEExamples") if p.is_dir())
+NB = EXAMPLES / "karman_vortex_street" / "karman_vortex_street.ipynb"
 
 # Names that get a documentation link inside the code. MORFEFerrite has no docs site of its
 # own beyond the generated page, so its symbols point there too.
@@ -120,7 +121,7 @@ def main() -> int:
         print(f"karman.html is up to date ({len(cells)} code blocks)")
         return 0
     if check:
-        print("karman.html is OUT OF DATE with karman_hopf.ipynb", file=sys.stderr)
+        print(f"karman.html is OUT OF DATE with {NB.name}", file=sys.stderr)
         return 1
     PAGE.write_text(new)
     print(f"rewrote {len(cells)} code blocks in {PAGE.name} from {NB.name}")
