@@ -94,8 +94,13 @@ function save_rom(dir::AbstractString, W::Parametrisation, R::ReducedDynamics;
                 "r′ with r = Q r′, Q in data/external_basis.jls")
         end
         println(io, "julia_version: ", VERSION)
+        # Resolve MORFE's own checkout, not the caller's working directory. Examples
+        # live in their own repository now, so a bare `git rev-parse` here would record
+        # the example repository's commit under a field that promises MORFE's.
         commit = try
-            readchomp(`git rev-parse --short HEAD`)
+            root = pkgdir(@__MODULE__)
+            root === nothing ? "unknown" :
+            readchomp(`git -C $root rev-parse --short HEAD`)
         catch
             "unknown"
         end

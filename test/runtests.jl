@@ -115,7 +115,7 @@ if GROUP == "examples"
             # example's own results/, so the test run leaves no artefacts behind.
             for (driver, out_var, n_figures) in (
                 ("multiindex_sets", "MORFE_LATTICE_OUT", 4),
-                # four figures plus the website card's thumbnail
+            # four figures plus the website card's thumbnail
                 ("full_order_model", "MORFE_FOM_OUT", 5))
                 path = joinpath(_internals, driver, "main.jl")
                 if !isfile(path)
