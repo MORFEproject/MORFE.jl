@@ -21,7 +21,8 @@ using ..ParametrisationMethod: Parametrisation, ReducedDynamics
 using ..FullOrderModel: NthOrderModel, evaluate_nonlinear_terms!
 using ..ExternalSystems: to_physical_external
 
-export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
+export InvarianceErrorWorkspace, invariance_error_residual!,
+       invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Analytic JVP of the last derivative block W[:,ORD,:]
@@ -141,6 +142,86 @@ function _invariance_error_at!(
     return rz
 end
 
+"""
+	InvarianceErrorWorkspace(model, W[, T = ComplexF64])
+
+Reusable storage for [`invariance_error_residual!`](@ref).  Construct one workspace and
+reuse it when evaluating many points, for example along a phase orbit.  The workspace
+contains only numerical scratch arrays; it does not retain a reduced coordinate or an
+external-parameter value.
+"""
+struct InvarianceErrorWorkspace{T, VT <: AbstractVector{T}, MT <: AbstractMatrix{T}}
+    nonlinear::VT
+    full_order::VT
+    powers::MT
+    maximum_nonlinear_degree::Int
+end
+
+function InvarianceErrorWorkspace(
+        model::NthOrderModel,
+        W::Parametrisation{ORD, NVAR},
+        ::Type{T} = ComplexF64
+) where {ORD, NVAR, T}
+    FOM = model.n_fom
+    maximum_degree = maximum(t.deg for t in model.nonlinear_terms; init = 0)
+    maximum_exponent = maximum(W.poly.max_exponents)
+    return InvarianceErrorWorkspace(
+        zeros(T, FOM),
+        zeros(T, FOM),
+        zeros(T, NVAR, maximum_exponent + 1),
+        maximum_degree
+    )
+end
+
+"""
+	invariance_error_residual!(E, workspace, model, W, R, z;
+	                           r_external = nothing)
+
+Evaluate the vector invariance defect at the reduced coordinate `z`, without allocating
+the large full-order scratch arrays on each call.  If `r_external` is supplied, it must
+equal the external-coordinate tail of `z`; this explicit check prevents evaluating the
+manifold and the full-order model at different parameter values.
+
+The returned value is `E`.  Positive or negative signs of the defect are an internal
+convention; its norm and modal projections are invariant to that convention.
+"""
+function invariance_error_residual!(
+        E::AbstractVector{T},
+        workspace::InvarianceErrorWorkspace{T},
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
+        W::Parametrisation{ORD, NVAR},
+        R::ReducedDynamics,
+        z::AbstractVector;
+        r_external = nothing
+) where {T, ORD, ORDP1, N_NL, N_EXT, NVAR}
+    length(E) == model.n_fom || throw(DimensionMismatch(
+        "E has length $(length(E)); expected $(model.n_fom)"))
+    length(z) == NVAR || throw(DimensionMismatch(
+        "z has length $(length(z)); expected $NVAR"))
+
+    if !isnothing(r_external)
+        length(r_external) == N_EXT || throw(DimensionMismatch(
+            "r_external has length $(length(r_external)); expected $N_EXT"))
+        tail = view(z, (NVAR - N_EXT + 1):NVAR)
+        all(tail .== r_external) || throw(ArgumentError(
+            "r_external must equal the external-coordinate tail of z"))
+    end
+
+    _invariance_error_at!(
+        E,
+        workspace.nonlinear,
+        workspace.full_order,
+        workspace.powers,
+        model,
+        workspace.maximum_nonlinear_degree,
+        W,
+        R,
+        z,
+        r_external
+    )
+    return E
+end
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Sample reduced coordinates (in-place)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -234,14 +315,14 @@ in reduced coordinates.
 External coordinates are fixed to zero unless `r_external` is provided.
 """
 function invariance_error_norms(
-        model::NthOrderModel{ORD, ORDP1, N_NL},
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics;
         n_samples::Int = 1000,
         amplitude::Real = 1.0,
         r_external = nothing,
         rng::AbstractRNG = Random.default_rng()
-) where {ORD, ORDP1, N_NL, NVAR}
+) where {ORD, ORDP1, N_NL, N_EXT, NVAR}
     FOM = model.n_fom
     ROM = Base.size(R)
     Tc = ComplexF64
@@ -257,10 +338,18 @@ function invariance_error_norms(
 
     pointwise = Vector{Float64}(undef, n_samples)
 
+    if !isnothing(r_external)
+        length(r_external) == N_EXT || throw(DimensionMismatch(
+            "r_external has length $(length(r_external)); expected $N_EXT"))
+    end
+
     for s in 1:n_samples
         fill!(z, zero(Tc))
         for j in 1:ROM
             z[j] = complex(σ * randn(rng), σ * randn(rng))
+        end
+        if !isnothing(r_external)
+            copyto!(view(z, (NVAR - N_EXT + 1):NVAR), r_external)
         end
         _invariance_error_at!(
             E, buf_nl, buf_fom, pw_buf, model, max_deg, W, R, z, r_external)
@@ -283,6 +372,8 @@ end
 	invariance_error_convergence(model, W, R;
 								 n_samples = 1000,
 								 r_magnitudes = [0.0],
+								 r_external = nothing,
+								 master_amplitude = 1.0,
 								 rng = Random.default_rng())
 	→ Vector of NamedTuples, one per entry in `r_magnitudes`
 
@@ -301,6 +392,12 @@ on a sphere of radius `|r|`.  Each result NamedTuple contains:
 					   (saturated points auto-trimmed)
 
 Use `plot_invariance_convergence` to visualise the result.
+
+To validate a physical parameter point, pass its exact reduced external coordinate as
+`r_external`.  In this mode the external tail is fixed for the entire point cloud and
+`master_amplitude` scales only the randomly sampled master coordinates.  The manifold,
+reduced dynamics, and full-order model are all evaluated at that same external point.
+`r_magnitudes` must remain `[0.0]` in fixed-target mode.
 """
 function invariance_error_convergence(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
@@ -308,11 +405,109 @@ function invariance_error_convergence(
         R::ReducedDynamics;
         n_samples::Int = 1000,
         r_magnitudes::AbstractVector{<:Real} = [0.0],
+        r_external = nothing,
+        master_amplitude::Real = 1.0,
         rng::AbstractRNG = Random.default_rng()
 ) where {ORD, ORDP1, N_NL, N_EXT, NVAR}
+    if !isnothing(r_external)
+        length(r_external) == N_EXT || throw(DimensionMismatch(
+            "r_external has length $(length(r_external)); expected $N_EXT"))
+        length(r_magnitudes) == 1 && iszero(only(r_magnitudes)) || throw(ArgumentError(
+            "r_magnitudes must be [0.0] when r_external fixes the target point"))
+        master_amplitude > 0 || throw(ArgumentError("master_amplitude must be positive"))
+        return [_convergence_fixed_external(
+            model, W, R, n_samples, Float64(master_amplitude), r_external, rng)]
+    end
+    master_amplitude == 1 || throw(ArgumentError(
+        "master_amplitude is only meaningful with a fixed r_external"))
     return map(r_magnitudes) do r_mag
         _convergence_one_level(model, W, R, n_samples, Float64(r_mag), rng)
     end
+end
+
+function _convergence_fixed_external(
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
+        W::Parametrisation{ORD, NVAR},
+        R::ReducedDynamics,
+        n_samples::Int,
+        master_amplitude::Float64,
+        r_external,
+        rng::AbstractRNG
+) where {ORD, ORDP1, N_NL, N_EXT, NVAR}
+    FOM = model.n_fom
+    ROM = Base.size(R)
+    Tc = ComplexF64
+    max_order = sum(W.poly.multiindex_set.exponents[end])
+    max_deg = maximum(t.deg for t in model.nonlinear_terms; init = 0)
+    max_exp = maximum(W.poly.max_exponents)
+    external = Tc.(r_external)
+
+    E = zeros(Tc, FOM)
+    buf_nl = zeros(Tc, FOM)
+    buf_fom = zeros(Tc, FOM)
+    delta_x = zeros(Tc, FOM)
+    pw_buf = zeros(Tc, NVAR, max_exp + 1)
+
+    z_samples = Matrix{Tc}(undef, NVAR, n_samples)
+    for sample in 1:n_samples
+        z = view(z_samples, :, sample)
+        fill!(z, zero(Tc))
+        for j in 1:ROM
+            z[j] = master_amplitude * complex(randn(rng), randn(rng))
+        end
+        copyto!(view(z, (ROM + 1):NVAR), external)
+    end
+
+    # Frozen external coordinates do not contribute to the local modal
+    # superharmonic used for the dynamic-stiffness error estimate.
+    re_s = Vector{Float64}(undef, n_samples)
+    im_s = Vector{Float64}(undef, n_samples)
+    for sample in 1:n_samples
+        z = view(z_samples, :, sample)
+        rz = evaluate(R.poly, z)
+        z_master = view(z, 1:ROM)
+        rz_master = view(rz, 1:ROM)
+        dz2 = real(dot(z_master, z_master))
+        s = iszero(dz2) ? zero(Tc) : Tc(dot(z_master, rz_master) / dz2)
+        re_s[sample] = real(s)
+        im_s[sample] = imag(s)
+    end
+    s_bar = complex(median(re_s), median(im_s))
+
+    L_bar = Tc(s_bar^0) * model.linear_terms[1]
+    for k in 2:length(model.linear_terms)
+        L_bar = L_bar + Tc(s_bar^(k - 1)) * model.linear_terms[k]
+    end
+    lu_Lbar = lu(L_bar)
+
+    radii = Vector{Float64}(undef, n_samples)
+    radii_master = Vector{Float64}(undef, n_samples)
+    force_errors = Vector{Float64}(undef, n_samples)
+    state_errors = Vector{Float64}(undef, n_samples)
+    for sample in 1:n_samples
+        z = view(z_samples, :, sample)
+        radii[sample] = norm(z)
+        radii_master[sample] = norm(view(z, 1:ROM))
+        _invariance_error_at!(
+            E, buf_nl, buf_fom, pw_buf, model, max_deg, W, R, z, external)
+        force_errors[sample] = norm(E)
+        ldiv!(delta_x, lu_Lbar, E)
+        state_errors[sample] = norm(delta_x)
+    end
+
+    convergence_rate, _ = _log_log_regression(radii_master, force_errors)
+    return (
+        radii = radii,
+        radii_master = radii_master,
+        force_errors = force_errors,
+        state_errors = state_errors,
+        s_bar = s_bar,
+        max_order = max_order,
+        r_magnitude = norm(external),
+        r_external = external,
+        master_amplitude = master_amplitude,
+        convergence_rate = convergence_rate
+    )
 end
 
 function _convergence_one_level(

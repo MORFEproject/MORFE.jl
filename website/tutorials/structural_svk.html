@@ -118,8 +118,9 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-case">State the case</h3>
         <p>
-          Set the expansion order: <code>order = 3</code> for a quick run;
-          <code>order = 9</code> to reproduce the reference.
+          Set the expansion order. The cohomological solve is <em>graded</em>, so a degree-<code>N</code>
+          coefficient never depends on a higher degree: orders 3, 5 and 7 are exact truncations of
+          this one order-9 solve rather than three more runs.
           <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><code>mechanical_model</code></a>
           reads the mesh, the elastic material properties,
           damping, and boundary information. Pass the finite-element and quadrature orders to
@@ -131,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
           the Gmsh file, for the two clamped beam ends. 
           If your mesh uses a different physical-group name, pass that name instead.
         </p>
-<pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span> <span class="cm"># Change to 9 for the reference calculation.</span>
+<pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">9</span>
 <span class="var">case</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><span class="fn">SVK.mechanical_model</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
     <span class="var">material</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-SVKMaterial"><span class="fn">SVK.SVKMaterial</span></a>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
     <span class="var">damping</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-RayleighDamping"><span class="fn">SVK.RayleighDamping</span></a>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
@@ -171,35 +172,124 @@ document.addEventListener('DOMContentLoaded', function () {
 <pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
     <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>))
 <span class="var">R</span> <span class="cm"># print reduced dynamics</span></pre>
-
-        <div class="fig">
-          <iframe src="assets/structural_svk/backbone.html"
-            title="Order 3, 5, 7 and 9 analytical backbone curves"
-            loading="lazy"></iframe>
-          <div class="fig-cap"><span class="lab">FIG · 02</span>Backbone curves at orders 3, 5, 7, and 9. 
-            Δω is the change in frequency from
-          the linear eigenfrequency. The first panel displays the y displacement of node 289 as a percentage
-          of the beam thickness. The second panel displays the modal coordinate z₁.</div>
-        </div>
-        <div class="adm note">
-          <div class="adm-head">The backbone is analytical</div>
-          <div class="adm-body"><p>In single mode complex normal form, ω is an explicit function of |z₁|. 
-            The backbone curve is therefore analytical, and there is no need for continuation or time integration.</p></div>
-        </div>
       </div>
     </div>
 
     <div class="step">
       <div class="num">04</div>
       <div class="body">
-        <h3 id="step-save">Save the ROM (optional)</h3>
+        <h3 id="step-backbone">Read the backbone off $R$</h3>
         <p>
-          The ROM is already available in memory as <code>(W, R)</code>. This optional cell writes
-          <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>, <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a>, their coefficient table, and a summary to
-          <code>results</code> using MORFE's common saver,
-          <a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl" target="_blank" rel="noopener"><code>save_rom</code></a>.
+          In normal form the orbit is a circle $z_1 = \rho e^{i\Omega t}$. Every surviving monomial
+          has $a - b = 1$, so substituting it gives every term of $R_1$ the same factor $e^{i\theta}$
+          and the phase drops out. Matching
+          $\dot z_1 = (\dot\rho + i\rho\dot\theta)e^{i\theta}$ against it separates amplitude from
+          phase:
         </p>
-<pre class="code"><span class="fn">MORFE.save_rom</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>);</pre>
+        <div class="math-block" style="font-size:15px;">
+          $$\dot\rho = \mathrm{Re}\,R_1(\rho, \rho)
+            \qquad\qquad \Omega = \frac{\mathrm{Im}\,R_1(\rho, \rho)}{\rho}$$
+        </div>
+        <p>
+          The beam is conservative, so $\mathrm{Re}\,R_1 \equiv 0$: every amplitude is a periodic
+          orbit, and $\Omega$ is an explicit polynomial in $\rho$. That polynomial is the backbone, and
+          <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><code>normal_form_branch</code></a>
+          evaluates it.
+        </p>
+        <p>
+          $\rho$ is a coordinate on the manifold, not a length.
+          <a class="doc-link" href="../documentation.html#RomIO-observable_polynomial"><code>observable_polynomial</code></a>
+          projects <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a> onto one degree of freedom to recover a physical displacement, and
+          <a class="doc-link" href="../documentation.html#RomIO-cycle_amplitude"><code>cycle_amplitude</code></a>
+          reads its half peak-to-peak excursion over one cycle. Node 289 sits at mid-span on the top
+          surface, where the first bending mode peaks.
+        </p>
+<pre class="code"><span class="var">u</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-observable_polynomial"><span class="fn">observable_polynomial</span></a>(<span class="var">W</span>, <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-probe_dof"><span class="fn">SVK.probe_dof</span></a>(<span class="var">case</span>, <span class="num">289</span>, <span class="num">2</span>)) <span class="cm"># y displacement at mid-span</span>
+
+<span class="var">thickness</span> <span class="op">=</span> <span class="num">10.0</span>                  <span class="cm"># beam thickness, mesh length units</span>
+<span class="var">ρ</span> <span class="op">=</span> <span class="fn">range</span>(<span class="num">0</span>, <span class="num">85</span>; <span class="var">length</span> <span class="op">=</span> <span class="num">341</span>)    <span class="cm"># modal amplitude; ρ = 85 is ≈ 1.1 × thickness at the probe</span>
+<span class="var">ω₀</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(<span class="var">R</span>; <span class="var">amplitudes</span> <span class="op">=</span> [<span class="num">0.0</span>]).<span class="var">frequency</span>[<span class="num">1</span>]
+
+<span class="var">curves</span> <span class="op">=</span> <span class="fn">map</span>(<span class="num">3</span>:<span class="num">2</span>:<span class="var">order</span>) <span class="kw">do</span> <span class="var">N</span>
+    <span class="var">b</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(<a class="doc-link" href="../documentation.html#ParametrisationObjects-restrict_ReducedDynamics_to_degree"><span class="fn">restrict_ReducedDynamics_to_degree</span></a>(<span class="var">R</span>, <span class="var">N</span>); <span class="var">amplitudes</span> <span class="op">=</span> <span class="var">ρ</span>)
+    <span class="var">P</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Polynomials-restrict_polynomial_to_degree"><span class="fn">MORFE.Polynomials.restrict_polynomial_to_degree</span></a>(<span class="var">u</span>, <span class="var">N</span>)
+    (; <span class="var">N</span>, <span class="var">b</span>.<span class="var">amplitude</span>, <span class="var">b</span>.<span class="var">frequency</span>, <span class="var">dω</span> <span class="op">=</span> <span class="num">100</span> <span class="op">.*</span> (<span class="var">b</span>.<span class="var">frequency</span> <span class="op">./</span> <span class="var">ω₀</span> <span class="op">.-</span> <span class="num">1</span>),
+        <span class="var">a</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-cycle_amplitude"><span class="fn">cycle_amplitude</span></a>.(<span class="fn">Ref</span>(<span class="var">P</span>), <span class="var">b</span>.<span class="var">amplitude</span>) <span class="op">./</span> <span class="var">thickness</span>)
+<span class="kw">end</span></pre>
+
+        <div class="fig">
+          <iframe src="assets/structural_svk/backbone.html"
+            title="Order 3, 5, 7 and 9 analytical backbone curves"
+            loading="lazy"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 02</span>Backbone curves at orders 3, 5, 7, and 9,
+            drawn from the <code>backbone.csv</code> this notebook writes.
+            Δω is the change in frequency from
+          the linear eigenfrequency. The first panel displays the y displacement of node 289 as a percentage
+          of the beam thickness. The second panel displays the modal coordinate z₁.</div>
+        </div>
+        <div class="adm note">
+          <div class="adm-head">The backbone is analytical</div>
+          <div class="adm-body"><p>In single mode complex normal form, ω is an explicit function of |z₁|.
+            The backbone curve is therefore analytical, and there is no need for continuation or time integration.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">05</div>
+      <div class="body">
+        <h3 id="step-plot">Plot it</h3>
+        <p>
+          The beam stiffens as it swings: at a displacement of about three quarters of its thickness
+          the frequency has risen roughly 13&nbsp;% above the linear eigenfrequency. Plotting the four
+          truncations together shows where the expansion stops converging, which is the honest way to
+          read the useful range of a ROM. They agree near the origin and separate as the amplitude grows.
+        </p>
+<pre class="code"><span class="kw">using</span> CairoMakie
+<span class="var">fig</span> <span class="op">=</span> <span class="fn">Figure</span>(<span class="var">size</span> <span class="op">=</span> (<span class="num">520</span>, <span class="num">380</span>))
+<span class="var">ax</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">1</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">"Δω / ω₀  [%]"</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">"displacement / thickness  [%]"</span>)
+<span class="fn">foreach</span>(<span class="var">c</span> <span class="op">-&gt;</span> <span class="fn">lines!</span>(<span class="var">ax</span>, <span class="var">c</span>.<span class="var">dω</span>, <span class="num">100</span> <span class="op">.*</span> <span class="var">c</span>.<span class="var">a</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">"order $(c.N)"</span>), <span class="var">curves</span>)
+<span class="fn">axislegend</span>(<span class="var">ax</span>; <span class="var">position</span> <span class="op">=</span> <span class="sym">:lt</span>)
+<span class="var">fig</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">06</div>
+      <div class="body">
+        <h3 id="step-save">Save the ROM and the backbone</h3>
+        <p>
+          MORFE's common saver,
+          <a class="doc-link" href="../documentation.html#RomIO-save_rom"><code>save_rom</code></a>, writes
+          <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>,
+          <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a>,
+          their coefficient table and a summary to <code>results</code>.
+          <code>drop_below = 0.0</code> keeps every coefficient: the degree-9 resonant term is of order
+          <code>1e-17</code>, and the default cut of <code>1e-14</code> would discard the very row the
+          reference is blessed on.
+        </p>
+        <p>
+          The two CSVs alongside it are the backbone computed above and the probe row of <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>
+          it came from. The first is the data FIG&nbsp;02 draws; the second is what makes that figure
+          reproducible, since <code>W.jls</code> is not committed.
+        </p>
+<pre class="code"><a class="doc-link" href="../documentation.html#RomIO-save_rom"><span class="fn">MORFE.save_rom</span></a>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>), <span class="var">W</span>, <span class="var">R</span>; <span class="var">drop_below</span> <span class="op">=</span> <span class="num">0.0</span>)
+
+<span class="fn">open</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>, <span class="str">"data"</span>, <span class="str">"backbone.csv"</span>), <span class="str">"w"</span>) <span class="kw">do</span> <span class="var">io</span>
+    <span class="fn">println</span>(<span class="var">io</span>, <span class="str">"order,r,omega,omega_ratio,amplitude,amplitude_ratio"</span>)
+    <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="var">curves</span>, <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">c</span>.<span class="var">amplitude</span>)
+        <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">join</span>((<span class="var">c</span>.<span class="var">N</span>, <span class="var">c</span>.<span class="var">amplitude</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">frequency</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">frequency</span>[<span class="var">i</span>] <span class="op">/</span> <span class="var">ω₀</span>,
+            <span class="var">thickness</span> <span class="op">*</span> <span class="var">c</span>.<span class="var">a</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">a</span>[<span class="var">i</span>]), <span class="str">","</span>))
+    <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="fn">open</span>(<span class="fn">joinpath</span>(<span class="var">@__DIR__</span>, <span class="str">"results"</span>, <span class="str">"data"</span>, <span class="str">"W_probe_coefficients.csv"</span>), <span class="str">"w"</span>) <span class="kw">do</span> <span class="var">io</span>
+    <span class="fn">println</span>(<span class="var">io</span>, <span class="str">"exp_1,exp_2,W_y_re,W_y_im"</span>)
+    <span class="kw">for</span> (<span class="var">e</span>, <span class="var">c</span>) <span class="kw">in</span> <span class="fn">zip</span>(<span class="fn">MORFE.Polynomials.multiindex_set</span>(<span class="var">u</span>).<span class="var">exponents</span>,
+        <span class="fn">MORFE.Polynomials.coefficients</span>(<span class="var">u</span>))
+        <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">join</span>((<span class="var">e</span>[<span class="num">1</span>], <span class="var">e</span>[<span class="num">2</span>], <span class="fn">real</span>(<span class="var">c</span>), <span class="fn">imag</span>(<span class="var">c</span>)), <span class="str">","</span>))
+    <span class="kw">end</span>
+<span class="kw">end</span></pre>
       </div>
     </div>
 
@@ -235,7 +325,9 @@ document.addEventListener('DOMContentLoaded', function () {
       <li><a href="#step-case">01 · State the case</a></li>
       <li><a href="#step-build">02 · Build the model</a></li>
       <li><a href="#step-parametrise">03 · Parametrise</a></li>
-      <li><a href="#step-save">04 · Save (optional)</a></li>
+      <li><a href="#step-backbone">04 · Read the backbone</a></li>
+      <li><a href="#step-plot">05 · Plot it</a></li>
+      <li><a href="#step-save">06 · Save</a></li>
     </ul>
     <h5 style="margin-top:32px;">Links</h5>
     <ul>

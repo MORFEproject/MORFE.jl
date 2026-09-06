@@ -20,6 +20,7 @@ using Test
 using LinearAlgebra
 using SparseArrays
 using StaticArrays
+using Random: MersenneTwister, randn
 using MORFE
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -196,16 +197,13 @@ end
         # as an O(ε) residual instead — four orders shallower.
         model = _ec_make_model(A_coupled, _EC_F)
         FOM = model.n_fom
-        max_deg = maximum(t.deg for t in model.nonlinear_terms; init = 0)
         E = zeros(ComplexF64, FOM)
-        buf_nl = zeros(ComplexF64, FOM)
-        buf_fom = zeros(ComplexF64, FOM)
-        pw = zeros(ComplexF64, _EC_NVAR, maximum(W_coupled.poly.max_exponents) + 1)
+        workspace = InvarianceErrorWorkspace(model, W_coupled)
 
         residual = function (ε)
             z = ComplexF64[0, 0, ε, ε]
-            MORFE.InvarianceError._invariance_error_at!(
-                E, buf_nl, buf_fom, pw, model, max_deg, W_coupled, R_coupled, z)
+            invariance_error_residual!(
+                E, workspace, model, W_coupled, R_coupled, z)
             return norm(E)
         end
 
@@ -215,6 +213,80 @@ end
         # And in absolute terms the residual must be far below the O(ε) an unfed
         # coupling would leave behind.
         @test r2 < 1e-8 * 1e-3
+    end
+
+    @testset "fixed-target invariance cloud uses one external point everywhere" begin
+        model = _ec_make_model(A_coupled, _EC_F)
+        target = ComplexF64[2e-3, -1e-3]
+        amplitude = 3e-3
+        n_samples = 24
+        seed = 0x51a7
+
+        result = only(invariance_error_convergence(
+            model, W_coupled, R_coupled;
+            n_samples,
+            r_external = target,
+            master_amplitude = amplitude,
+            rng = MersenneTwister(seed)
+        ))
+
+        # Reproduce the small cloud explicitly and evaluate it through the public
+        # single-point API.  This catches the former asymmetric evaluation in which
+        # the FOM saw the target but W and R still saw zero external coordinates.
+        workspace = InvarianceErrorWorkspace(model, W_coupled)
+        E = zeros(ComplexF64, model.n_fom)
+        rng = MersenneTwister(seed)
+        expected = zeros(n_samples)
+        for sample in 1:n_samples
+            z = ComplexF64[
+                amplitude * complex(randn(rng), randn(rng)),
+                amplitude * complex(randn(rng), randn(rng)),
+                target...
+            ]
+            invariance_error_residual!(
+                E, workspace, model, W_coupled, R_coupled, z;
+                r_external = target
+            )
+            expected[sample] = norm(E)
+        end
+
+        @test result.force_errors == expected
+        @test result.r_external == target
+        @test result.master_amplitude == amplitude
+        @test result.radii .^ 2 ≈ result.radii_master .^ 2 .+ norm(target)^2
+        @test all(isfinite, result.state_errors)
+
+        @test_throws DimensionMismatch invariance_error_convergence(
+            model, W_coupled, R_coupled; r_external = target[1:1])
+        @test_throws ArgumentError invariance_error_convergence(
+            model, W_coupled, R_coupled;
+            r_external = target, r_magnitudes = [0.1])
+        @test_throws ArgumentError invariance_error_convergence(
+            model, W_coupled, R_coupled; master_amplitude = 0.5)
+
+        z_bad = ComplexF64[0, 0, 0, 0]
+        @test_throws ArgumentError invariance_error_residual!(
+            E, workspace, model, W_coupled, R_coupled, z_bad;
+            r_external = target)
+    end
+
+    @testset "legacy convergence path is unchanged" begin
+        model = _ec_make_model(A_coupled, _EC_F)
+        legacy = invariance_error_convergence(
+            model, W_coupled, R_coupled;
+            n_samples = 20,
+            r_magnitudes = [0.0, 1e-3],
+            rng = MersenneTwister(0x91)
+        )
+        explicit_defaults = invariance_error_convergence(
+            model, W_coupled, R_coupled;
+            n_samples = 20,
+            r_magnitudes = [0.0, 1e-3],
+            r_external = nothing,
+            master_amplitude = 1.0,
+            rng = MersenneTwister(0x91)
+        )
+        @test legacy == explicit_defaults
     end
 
     @testset "external rows of R carry the prescribed external dynamics" begin

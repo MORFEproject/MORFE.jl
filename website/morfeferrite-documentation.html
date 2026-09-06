@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Companion Packages</span><span class="sep">/</span><span>MORFEFerrite.jl</span></div>
   <h1>MORFEFerrite.jl Code Documentation</h1>
-  <p class="lede">8 modules · 164 documented entries · generated 2 September 2026</p>
+  <p class="lede">8 modules · 165 documented entries · generated 6 September 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -1216,7 +1216,7 @@ mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet,
 <div class="doc doc-function" id="StructuralSVK-print_mode_table" data-doc-name="print_mode_table" data-doc-module="StructuralSVK">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L42" target="_blank" rel="noopener">print_mode_table</a>(eigenvalues::AbstractVector; master, io)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L63" target="_blank" rel="noopener">print_mode_table</a>(eigenvalues::AbstractVector; master, io)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>print_mode_table&#40;eigenvalues; master &#61; Int&#91;&#93;, io &#61; stdout&#41;</code></pre>
@@ -1232,6 +1232,20 @@ mechanical_model&#40;mesh_path::AbstractString; material, damping, dirichlet,
   <div class="doc-body">
 <div class="markdown"><pre><code>print_resonances&#40;mset, resonance_set, master_eigenvalues; io &#61; stdout&#41;</code></pre>
 <p>Print the monomials flagged as resonant for each inner target and any diagnostic outer targets. Inner targets are labelled with <code>master_eigenvalues</code>; because this function is not passed the outer eigenvalues, outer target labels use <code>0</code> as a placeholder. Inner resonances are the terms retained in the reduced dynamics <code>R</code>; outer flags diagnose off-manifold solves and do not add rows to <code>R</code>.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="StructuralSVK-probe_dof" data-doc-name="probe_dof" data-doc-module="StructuralSVK">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/StructuralSVK/postprocess.jl#L42" target="_blank" rel="noopener">probe_dof</a>(m::MORFEFerrite.StructuralSVK.AssembledMechanicalModel, node::Integer, direction::Integer)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>probe_dof&#40;m::AssembledMechanicalModel, node, direction&#41; -&gt; Int</code></pre>
+<p>Free-DOF index of <code>direction</code> &#40;1 &#61; x, 2 &#61; y, 3 &#61; z&#41; at mesh <code>node</code>: the row of <code>K</code>, <code>M</code> and of the parametrisation <code>W</code> that carries that node&#39;s displacement.</p>
+<p>This is the bridge between a physical quantity named the way a person names it &#40;&quot;the transverse displacement at mid-span&quot;&#41; and the integer <code>MORFE.observable_polynomial</code> wants:</p>
+<pre><code class="language-julia">u &#61; observable_polynomial&#40;W, SVK.probe_dof&#40;case, 289, 2&#41;&#41;</code></pre>
+<p>Throws if the node is constrained, since a constrained DOF has no row. Wraps <a class="doc-ref" href="#Common-free_dofs_at_nodes"><code>Common.free_dofs_at_nodes</code></a> for the single-node case.</p>
 </div>
   </div>
 </div>
@@ -1830,7 +1844,7 @@ m.B&#91;2&#93;   # B₁, the singular mass</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-close_under_conjugation" data-doc-name="close_under_conjugation" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L227" target="_blank" rel="noopener">close_under_conjugation</a>(eig; rtol)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L249" target="_blank" rel="noopener">close_under_conjugation</a>(eig; rtol)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>close_under_conjugation&#40;eig; rtol &#61; 1e-4&#41;
@@ -1945,7 +1959,7 @@ m.B&#91;2&#93;   # B₁, the singular mass</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-export_lift_csv" data-doc-name="export_lift_csv" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L133" target="_blank" rel="noopener">export_lift_csv</a>(out::IO, data_dir::AbstractString, mset, L0, L_coeffs)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L134" target="_blank" rel="noopener">export_lift_csv</a>(out::IO, data_dir::AbstractString, mset, L0, L_coeffs)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>export_lift_csv&#40;out, data_dir, mset, L0, L_coeffs&#41;</code></pre>
@@ -1956,7 +1970,7 @@ m.B&#91;2&#93;   # B₁, the singular mass</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-export_lift_polynomial" data-doc-name="export_lift_polynomial" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L112" target="_blank" rel="noopener">export_lift_polynomial</a>(out::IO, data_dir::AbstractString, W, l_free, L0)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L113" target="_blank" rel="noopener">export_lift_polynomial</a>(out::IO, data_dir::AbstractString, W, l_free, L0)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>export_lift_polynomial&#40;out, data_dir, W, l_free, L0&#41; -&gt; L_coeffs</code></pre>
@@ -1967,7 +1981,7 @@ m.B&#91;2&#93;   # B₁, the singular mass</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-export_reduced_dynamics" data-doc-name="export_reduced_dynamics" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L69" target="_blank" rel="noopener">export_reduced_dynamics</a>(out::IO, data_dir::AbstractString, R, master_eigenvalues; re0, ord, nvar)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L70" target="_blank" rel="noopener">export_reduced_dynamics</a>(out::IO, data_dir::AbstractString, R, master_eigenvalues; re0, ord, nvar)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>export_reduced_dynamics&#40;out, data_dir, R, master_eigenvalues; re0, ord, nvar&#41;</code></pre>
@@ -1978,7 +1992,7 @@ m.B&#91;2&#93;   # B₁, the singular mass</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-export_vtk_bundle" data-doc-name="export_vtk_bundle" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L164" target="_blank" rel="noopener">export_vtk_bundle</a>(data_dir::AbstractString, fom, s0_full, master_eigenvalues, all_eigenvalues, all_modes)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/observables.jl#L165" target="_blank" rel="noopener">export_vtk_bundle</a>(data_dir::AbstractString, fom, s0_full, master_eigenvalues, all_eigenvalues, all_modes)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>export_vtk_bundle&#40;data_dir, fom, s0_full, master_eigenvalues, all_eigenvalues, all_modes&#41;</code></pre>
@@ -2125,7 +2139,7 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 <div class="doc doc-function" id="FluidNavierStokes-left_eigenvector" data-doc-name="left_eigenvector" data-doc-module="FluidNavierStokes">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L276" target="_blank" rel="noopener">left_eigenvector</a>(A_lin::SparseArrays.AbstractSparseMatrix, B_mass::SparseArrays.AbstractSparseMatrix, λ::Number, φ::AbstractVector; normalisation, scale)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L298" target="_blank" rel="noopener">left_eigenvector</a>(A_lin::SparseArrays.AbstractSparseMatrix, B_mass::SparseArrays.AbstractSparseMatrix, λ::Number, φ::AbstractVector; normalisation, scale)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>left_eigenvector&#40;A_lin, B_mass, λ, φ; normalisation, scale&#41;
@@ -2162,6 +2176,7 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 <p>Project the lift weights onto the parametrisation: <code>L_α &#61; lᵀ W_α</code>, one complex coefficient per monomial, plus the monomial set they are indexed by.</p>
 <p>The product is <strong>bilinear, not sesquilinear</strong> — <code>transpose</code>, not <code>adjoint</code>. <code>W</code>&#39;s coefficients are complex because the reduced coordinates are, but <code>l_free</code> is a real functional of the flow; conjugating it would silently give the lift of the conjugate manifold.</p>
 <p>Evaluating the resulting polynomial at <code>&#40;z, z̄, η′&#41;</code> reproduces the perturbation lift without touching a FOM-sized vector, which is what lets the Python post-processing work from CSV alone.</p>
+<p>The projection itself is <code>MORFE.observable_polynomial</code>; this wrapper only names it for the flow and keeps the <code>&#40;coefficients, mset&#41;</code> pair the exporters here expect.</p>
 </div>
   </div>
 </div>
@@ -2462,6 +2477,7 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
   <div class="doc-sig">
     <span class="badge f">function</span>
     <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L76" target="_blank" rel="noopener">solve_hopf_eigenproblem</a>(A_lin::SparseArrays.AbstractSparseMatrix, B_mass::SparseArrays.AbstractSparseMatrix; nev, sigma_re, sigma_im, target_freq, normalisation, scale, tol, maxiter, ncv, close_conjugates, conjugate_rtol, verbose)</code>
+    <code><a href="https://github.com/MORFEproject/MORFEFerrite.jl/blob/main/src/FluidNavierStokes/eigensolver.jl#L76" target="_blank" rel="noopener">solve_hopf_eigenproblem</a>(B::Tuple{Vararg{SparseArrays.AbstractSparseMatrix}}; kwargs...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_hopf_eigenproblem&#40;A_lin, B_mass; nev, sigma_re, sigma_im,
@@ -2470,8 +2486,9 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 						scale &#61; 1.0, tol &#61; 0.0, maxiter &#61; 3000,
 						ncv &#61; nothing, close_conjugates &#61; true,
 						conjugate_rtol &#61; 1e-4, verbose &#61; true&#41;
+solve_hopf_eigenproblem&#40;B::Tuple; kwargs...&#41;
 	-&gt; &#40;; eigenvalues, right_modes, hopf_index, conjugate_index&#41;</code></pre>
-<p>Compute eigenvalues of <code>A_lin y &#61; λ B_mass y</code> by shift-invert ARPACK, close the result under conjugation, and point at the Hopf pair.</p>
+<p>Compute eigenvalues of <code>A_lin y &#61; λ B_mass y</code> by shift-invert ARPACK, close the result under conjugation, and point at the Hopf pair. The second form takes an assembled model&#39;s <code>B &#61; &#40;B₀, B₁&#41;</code> and applies the descriptor system&#39;s own sign; prefer it.</p>
 <p><code>sigma_re</code> offsets the shift from the imaginary axis; <code>sigma_im</code> targets a frequency band. Neither affects which mode is selected — only the factorisation. <code>tol</code>, <code>maxiter</code>, and <code>ncv</code> are forwarded to ARPACK. Their defaults preserve the historical solver configuration.</p>
 <p>The Hopf mode is the eigenvalue with the smallest <code>|Re λ|</code> among those with <code>Im λ &gt; 0</code>. That heuristic is reliable <strong>near</strong> <code>Re_c</code>, where the shedding mode IS the least damped; away from it another oscillatory mode can sit closer to the imaginary axis and be picked silently, so pass <code>target_freq</code> &#40;rad/s&#41; to pin the frequency instead.</p>
 <h2>The two gauge choices, both explicit</h2>
@@ -2492,6 +2509,9 @@ h₀_vec &#61; -D .* &#40;K_visc_rect * s₀_full&#41;</code></pre>
 </ul>
 <p><code>close_conjugates &#61; false</code> returns exactly what ARPACK produced. Pass it when a caller must post-process the raw modes before closing — for instance one that phase-aligns a tracked eigenvector and needs the synthesised partner to inherit that phase. <code>conjugate_rtol</code> is forwarded as <code><a class="doc-ref" href="#FluidNavierStokes-close_under_conjugation">close_under_conjugation</a></code>&#39;s <code>rtol</code>; it is relative because ARPACK&#39;s numerical zero is ~1e-7 of a mode&#39;s magnitude, not machine epsilon.</p>
 <p>Returns a <code>NamedTuple</code> so the fields are named at every call site: <code>eigenvalues</code> is a <code>Vector&#123;ComplexF64&#125;</code> in ARPACK order with any synthesised conjugates appended, <code>right_modes</code> is the matching <code>n × length&#40;eigenvalues&#41;</code> matrix, and <code>hopf_index</code> / <code>conjugate_index</code> locate the Hopf pair within them.</p>
+</div><div class="markdown"><pre><code>solve_hopf_eigenproblem&#40;B::Tuple; kwargs...&#41;</code></pre>
+<p>Solve the eigenproblem of an assembled model&#39;s linear operators, <code>B &#61; &#40;B₀, B₁&#41;</code> as <a class="doc-ref" href="#FluidNavierStokes-AssembledFluidModel"><code>AssembledFluidModel</code></a> stores them.</p>
+<p>The descriptor system is <code>B₁ẋ &#43; B₀x &#61; F</code>, so its eigenproblem is <code>-B₀y &#61; λB₁y</code>: the sign belongs to the equation, not to the caller. Spelling it out at every call site &#40;<code><a class="doc-ref" href="#FluidNavierStokes-solve_hopf_eigenproblem">solve_hopf_eigenproblem&#40;-case.B&#91;1&#93;, case.B&#91;2&#93;; ...&#41;</a></code>&#41; is an easy sign to get wrong and gives no error when it is, only a spectrum reflected about the imaginary axis, so this method takes the tuple whole. Every keyword is forwarded unchanged.</p>
 </div>
   </div>
 </div>

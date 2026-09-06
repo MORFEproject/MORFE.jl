@@ -54,7 +54,7 @@ def main():
         rho, re_ = float(s["rho"][i]), float(s["Re"][i])
         pts = ",".join(f"[{re_:.4f},{rho * math.cos(t):.5f},{rho * math.sin(t):.5f}]"
                        for t in th)
-        cycles.append(f"{{re:{re_:.4f},p:[{pts}]}}")
+        cycles.append(f"{{re:{re_:.4f},rho:{rho:.5f},p:[{pts}]}}")
 
     rho_max = float(s["rho"][idx].max())
     # The steady branch spans the whole frame: solid where the base flow is stable, dashed
@@ -90,6 +90,10 @@ svg.scene.drag {{ cursor:grabbing; }}
 #hint {{ position:absolute; left:10px; bottom:8px; color:#4e4e5c; font-size:10.5px;
   pointer-events:none; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }}
 #note {{ color:var(--ink3); font-size:11.5px; min-height:1.3em; }}
+.tip {{ position:absolute; pointer-events:none; display:none; background:#14141c;
+  border:1px solid var(--hair); border-radius:5px; padding:6px 9px; font-size:11.5px;
+  color:var(--ink); white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; z-index:5; }}
 code {{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink2); }}
 @media(max-width:560px) {{
   #wrap {{ padding:4px 6px; gap:3px; }}
@@ -107,7 +111,7 @@ code {{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink
   <span class="key"><i class="swatch dot"></i>Hopf point</span>
   <button id="reset">reset view</button>
 </div>
-<div id="stage"><div id="hint">drag to orbit</div></div>
+<div id="stage"><div id="hint">drag to orbit</div><div id="tip" class="tip"></div></div>
 <div id="note">Each ring is one limit cycle, <code>z₁ = ρ·exp(iΩt)</code>, drawn at its own
   Reynolds number.</div>
 </div>
@@ -119,11 +123,23 @@ var MONO = 'ui-monospace,SFMono-Regular,Menlo,monospace';
 var HOME = {{yaw:-0.62, pitch:0.30}};
 var cam = {{yaw:HOME.yaw, pitch:HOME.pitch}};
 var stage = document.getElementById('stage');
+var tip = document.getElementById('tip');
+var SCREEN = [];              // projected cycles, refilled by draw(), read by the probe
 
 function el(name, attrs) {{
   var n = document.createElementNS(NS, name);
   for (var k in attrs) n.setAttribute(k, attrs[k]);
   return n;
+}}
+
+// Blend a curve colour toward the tooltip background, so a readout is tinted by the curve
+// it belongs to: `amount` near 0 is almost the background, near 1 the colour itself.
+function mix(hex, amount) {{
+  var bg = [20, 20, 28];
+  var rgb = [1, 3, 5].map(function(i) {{ return parseInt(hex.slice(i, i + 2), 16); }});
+  return 'rgb(' + rgb.map(function(v, i) {{
+    return Math.round(bg[i] + (v - bg[i]) * amount);
+  }}).join(',') + ')';
 }}
 
 // Orthographic yaw/pitch projection. Re is normalised by its own span, but Re z1 and
@@ -232,11 +248,14 @@ function draw() {{
     {{stroke:'{GRAY}','stroke-width':1.8,fill:'none'}})}});
   items.push({{z: depth((RE_C+RE_HI)/2,0,0), node: poly([[RE_C,0,0],[RE_HI,0,0]],
     {{stroke:'{GRAY}','stroke-width':1.8,fill:'none','stroke-dasharray':'6 4'}})}});
+  SCREEN = [];
   CYCLES.forEach(function(c, k) {{
     var t = k/(CYCLES.length-1);
     items.push({{z: depth(c.re,0,0), node: poly(c.p, {{
       stroke:'{PURPLE}', 'stroke-width':1.5, fill:'none',
       opacity:(0.5 + 0.5*t).toFixed(2)}})}});
+    SCREEN.push({{re:c.re, rho:c.rho,
+      xy: c.p.map(function(q) {{ return P(q[0],q[1],q[2]); }})}});
   }});
   items.sort(function(a,b) {{ return a.z - b.z; }});
   items.forEach(function(it) {{ svg.appendChild(it.node); }});
@@ -250,7 +269,41 @@ function draw() {{
   t.textContent = 'Re_c ≈ ' + RE_C.toFixed(2);
   svg.appendChild(t);
 
+  svg.appendChild(el('circle', {{id:'probe-dot', r:4, fill:'{PURPLE}', stroke:'{STAGE}',
+    'stroke-width':1.2, visibility:'hidden'}}));
+
   stage.appendChild(svg);
+}}
+
+function hideProbe() {{
+  tip.style.display = 'none';
+  var dot = stage.querySelector('#probe-dot');
+  if (dot) dot.setAttribute('visibility', 'hidden');
+}}
+function updateProbe(ev) {{
+  var rect = stage.getBoundingClientRect();
+  var svg = stage.querySelector('svg.scene');
+  if (!svg) return;
+  var x = ev.clientX - rect.left, y = ev.clientY - rect.top;
+  var best = null, dist = 400;      // 20 px, squared
+  SCREEN.forEach(function(c) {{
+    c.xy.forEach(function(q) {{
+      var d = (q[0]-x)*(q[0]-x) + (q[1]-y)*(q[1]-y);
+      if (d < dist) {{ dist = d; best = {{c:c, q:q}}; }}
+    }});
+  }});
+  if (!best) {{ hideProbe(); return; }}
+  var dot = stage.querySelector('#probe-dot');
+  dot.setAttribute('cx', best.q[0].toFixed(1));
+  dot.setAttribute('cy', best.q[1].toFixed(1));
+  dot.setAttribute('visibility', 'visible');
+  tip.innerHTML = 'Re ' + best.c.re.toFixed(2) + '<br>ρ ' + best.c.rho.toFixed(3);
+  tip.style.display = 'block';
+  tip.style.background = mix('{PURPLE}', .18);
+  tip.style.borderColor = mix('{PURPLE}', .62);
+  tip.style.left = Math.min(Math.max(4, x + 12), rect.width - tip.offsetWidth - 4) + 'px';
+  tip.style.top = Math.min(Math.max(4, y - tip.offsetHeight - 10),
+                           rect.height - tip.offsetHeight - 4) + 'px';
 }}
 
 var drag = null;
@@ -259,10 +312,10 @@ function grab(on) {{
   if (s) s.classList.toggle('drag', on);
 }}
 stage.addEventListener('pointerdown', function(ev) {{
-  drag = {{x:ev.clientX, y:ev.clientY}}; grab(true);
+  drag = {{x:ev.clientX, y:ev.clientY}}; hideProbe(); grab(true);
 }});
 stage.addEventListener('pointermove', function(ev) {{
-  if (!drag) return;
+  if (!drag) {{ updateProbe(ev); return; }}
   cam.yaw += (ev.clientX - drag.x) * 0.008;
   cam.pitch = Math.max(-1.45, Math.min(1.45, cam.pitch + (ev.clientY - drag.y) * 0.006));
   drag = {{x:ev.clientX, y:ev.clientY}};
@@ -271,6 +324,7 @@ stage.addEventListener('pointermove', function(ev) {{
 ['pointerup','pointerleave','pointercancel'].forEach(function(e) {{
   stage.addEventListener(e, function() {{ drag = null; grab(false); }});
 }});
+stage.addEventListener('pointerleave', hideProbe);
 document.getElementById('reset').addEventListener('click', function() {{
   cam.yaw = HOME.yaw; cam.pitch = HOME.pitch; draw();
 }});

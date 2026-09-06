@@ -50,11 +50,13 @@ should_run(group) = GROUP == "all" || GROUP == group
     if should_run("rom_io")
         @testset "RomIO" begin
             include("Export/test_rom_io.jl")
+            include("Export/test_observables.jl")
             include("Export/test_normal_form_branch.jl")
         end
         @testset "RomComparison" begin
             include("Validation/test_rom_comparison.jl")
         end
+        include("Validation/test_invariance_error.jl")
     end
     if should_run("spectral_decomposition")
         @testset "SpectralDecomposition" begin

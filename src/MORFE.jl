@@ -123,11 +123,13 @@ export solve_single_monomial!, solve_parametrisation
 export make_bk_problem
 
 # Validation
-export invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
+export InvarianceErrorWorkspace, invariance_error_residual!,
+       invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
 export compare_rom_coefficients
 
-# ROM persistence
-export save_rom, read_rom_coefficients, write_rom_coefficients_csv, normal_form_branch
+# ROM persistence and post-processing
+export save_rom, read_rom_coefficients, write_rom_coefficients_csv, normal_form_branch,
+       observable_polynomial, cycle_amplitude
 
 # MORFESymbolicsExt
 export model_from_symbolics, externalsystem_from_symbolics

@@ -22,11 +22,13 @@ module RomIO
 
 using LinearAlgebra: eigvals
 using Serialization
+using ..Polynomials: DensePolynomial, evaluate
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics, coefficients,
                                multiindex_set
 using ..ExternalSystems: external_basis
 
-export save_rom, read_rom_coefficients, write_rom_coefficients_csv, normal_form_branch
+export save_rom, read_rom_coefficients, write_rom_coefficients_csv, normal_form_branch,
+       observable_polynomial, cycle_amplitude
 
 """
 	write_rom_coefficients_csv(path, exponents, coefficients; drop_below = 1e-14)
@@ -132,6 +134,104 @@ function read_rom_coefficients(csv::AbstractString)
         end
     end
     return exponents, coefficients
+end
+
+"""
+	observable_polynomial(W, i::Int)            -> DensePolynomial
+	observable_polynomial(W, l::AbstractVector) -> DensePolynomial
+
+Project a `Parametrisation` onto a single scalar observable, giving a polynomial in the
+reduced coordinates `(z₁, z̄₁, η…)` alone.
+
+`i` picks one degree of freedom of the state; `l` applies a linear functional `lᵀ u` over all
+of them, which is how an integrated quantity (a lift coefficient, a reaction force) is
+obtained. Both read the **displacement level** of `W`, `coefficients(W)[:, 1, :]`; the higher
+derivative levels describe the same manifold and carry no extra positional information.
+
+The point is size. `W` is `(FOM, ORD, L)` and FOM is the full model, so evaluating it once per
+phase sample over an amplitude sweep is out of the question; the projection is done once, on
+the coefficients, and every later evaluation costs `L` terms. The product is bilinear, not
+sesquilinear: `transpose`, never `adjoint`. `z̄₁` is already carried by its own exponent, so
+conjugating here would conjugate it twice.
+
+Truncate the result with [`restrict_polynomial_to_degree`](@ref) to get one observable per
+expansion order out of a single solve, exactly as
+[`restrict_ReducedDynamics_to_degree`](@ref) does for the dynamics.
+
+```julia
+u = observable_polynomial(W, dof)              # transverse displacement at one node
+a = cycle_amplitude.(Ref(u), branch.amplitude) # its amplitude along a branch
+```
+
+See also [`cycle_amplitude`](@ref), [`normal_form_branch`](@ref).
+"""
+function observable_polynomial(W::Parametrisation, i::Integer)
+    C = coefficients(W)
+    1 <= i <= size(C, 1) || throw(ArgumentError(
+        "observable index $i is not in 1:$(size(C, 1)); the state has $(size(C, 1)) " *
+        "degrees of freedom"))
+    return DensePolynomial(Vector(@view(C[i, 1, :])), multiindex_set(W))
+end
+
+function observable_polynomial(W::Parametrisation, l::AbstractVector)
+    C = coefficients(W)
+    length(l) == size(C, 1) || throw(ArgumentError(
+        "functional has $(length(l)) entries but the state has $(size(C, 1)) degrees of " *
+        "freedom"))
+    return DensePolynomial(vec(transpose(@view(C[:, 1, :])) * l), multiindex_set(W))
+end
+
+"""
+	cycle_amplitude(P, ρ, external = (); n_phase = 4096) -> Float64
+
+Amplitude of the scalar observable `P` on the periodic orbit of radius `ρ`: **half the
+peak-to-peak** excursion of
+
+	real P(ρ·exp(iφ), ρ·exp(-iφ), external…)
+
+over one phase cycle, sampled at `n_phase` points.
+
+`P` is a scalar polynomial in the reduced coordinates, as returned by
+[`observable_polynomial`](@ref). `external` supplies the external coordinates, and must have
+`NVAR - 2` entries; an autonomous ROM needs none.
+
+## Why half peak-to-peak, and why over phase
+
+The orbit is `z₁ = ρ·exp(iφ)` traversed once, so a sweep over `φ` is a sweep over the period,
+and this is the physical peak amplitude of the oscillation. Taking the excursion rather than
+the value at one phase matters as soon as the manifold is curved: harmonics beyond the first
+make the orbit asymmetric, and a single-phase reading picks an arbitrary point on it.
+
+Because it is an extremum over a full cycle, the result is **invariant to the eigenvector
+gauge**. Rescaling the master eigenvector by `exp(iψ)` multiplies the coefficient of `z₁^a
+z̄₁^b` by `exp(i(a-b)ψ)`, which is a rigid shift `φ → φ + ψ` of the sampled signal and leaves
+its extrema alone. Raw `W` coefficients are not comparable between runs when the eigensolver
+picks a different phase; this quantity is, which makes it the right thing to bless in a
+reference.
+
+`n_phase` defaults to the resolution the MORFE website's backbone figures use. The signal is
+band-limited by the expansion order, so far fewer samples serve for plotting: the error in an
+extremum falls as `n_phase^-2`.
+
+See also [`observable_polynomial`](@ref), [`normal_form_branch`](@ref).
+"""
+function cycle_amplitude(P::DensePolynomial{T, NVAR, 1}, ρ::Real, external = ();
+        n_phase::Int = 4096) where {T, NVAR}
+    n_phase >= 2 || throw(ArgumentError("n_phase must be at least 2, got $n_phase"))
+    length(external) == NVAR - 2 || throw(ArgumentError(
+        "cycle_amplitude needs $(NVAR - 2) external coordinate(s) for a polynomial in " *
+        "$NVAR variables, got $(length(external))"))
+    vals = ComplexF64[zero(ComplexF64), zero(ComplexF64), (complex(η) for η in external)...]
+    lo, hi = Inf, -Inf
+    for k in 0:(n_phase - 1)
+        z = ρ * cis(2π * k / n_phase)
+        vals[1] = z
+        vals[2] = conj(z)
+        v = real(evaluate(P, vals))
+        lo = min(lo, v)
+        hi = max(hi, v)
+    end
+    return (hi - lo) / 2
 end
 
 """

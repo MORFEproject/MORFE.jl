@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """Build the self-contained StructuralSVK tutorial assets.
 
-The plotted data comes from one order-9 conservative ROM.  Orders 3, 5, 7,
-and 9 are nested truncations of that same R polynomial and of the same W row
-at Ferrite node 289, transverse direction y.
+The backbone curves are *not* computed here.  They are read from
+`backbone.v1.csv`, a committed copy of `results/data/backbone.csv` written by
+`examples/01_clamped_beam_ferrite/clamped_beam.ipynb`, which is the same
+arrangement the Karman tutorial uses for `branch.v1.csv`.  This script renders;
+the example does the physics.  Orders 3, 5, 7 and 9 are nested truncations of
+that notebook's single order-9 solve, not four separate runs.
+
+The mesh figure still asks Julia for the first mode shape, since a mode vector
+is FOM-sized and has no business in a committed CSV.
 
 Run from the MORFE repository root:
 
@@ -31,8 +37,8 @@ FERRITE = next(
     if p.is_dir()
 )
 EXAMPLE = FERRITE / "examples" / "01_clamped_beam_ferrite"
-REFERENCE = EXAMPLE / "reference_data"
 MESH = EXAMPLE / "clamped_clamped_beam.msh"
+BACKBONE_CSV = HERE / "backbone.v1.csv"
 
 PROBE_NODE = 289
 PROBE_XYZ = (500.0, 10.0 / 3.0, 24.0)
@@ -40,8 +46,9 @@ PROBE_GLOBAL_DOF = 2468
 PROBE_FREE_DOF = 2405
 ORDERS = (3, 5, 7, 9)
 COLORS = {3: "#4063d8", 5: "#389826", 7: "#cb3c33", 9: "#9558b2"}
-N_RADIUS = 341
-R_MAX = 85.0
+# Recorded in the JSON as provenance, and asserted against the CSV where the CSV
+# can show them.  N_PHASE is `cycle_amplitude`'s default, which is what the
+# notebook uses; nothing here can check it, so it is written down instead.
 N_PHASE = 4096
 TRANSVERSE_THICKNESS = 10.0
 MODE_MAX_Y = 10.0 * TRANSVERSE_THICKNESS
@@ -108,15 +115,36 @@ def boundary_faces(hexes):
     return [faces[key] for key, count in counts.items() if count == 1]
 
 
-def read_complex_csv(path: Path, prefix: str):
-    rows = []
+def read_backbone_csv(path: Path):
+    """The example's `backbone.csv`, grouped by expansion order.
+
+    Columns: order, r, omega, omega_ratio, amplitude, amplitude_ratio.  `r` is the
+    modal amplitude in the eigenvector gauge; `amplitude` is the half peak-to-peak
+    transverse displacement at the probe node, in mesh length units.
+
+    Point values are trimmed to 14 significant digits, which halves the size of the
+    inlined JSON and is still far below a pixel.  `omega0` is returned separately and
+    untrimmed, because it is quoted as the linear eigenfrequency rather than plotted.
+    """
+    curves = defaultdict(list)
+    omega0 = None
     with path.open(newline="") as io:
         for row in csv.DictReader(io):
-            a, b = int(row["exp_1"]), int(row["exp_2"])
-            rows.append(
-                (a, b, complex(float(row[f"{prefix}_re"]), float(row[f"{prefix}_im"])))
+            if float(row["r"]) == 0.0:
+                exact = float(row["omega"])
+                assert omega0 is None or omega0 == exact, "orders disagree at r = 0"
+                omega0 = exact
+            curves[int(row["order"])].append(
+                {
+                    "r": round(float(row["r"]), 12),
+                    "amplitude": float(f'{float(row["amplitude"]):.14g}'),
+                    "amplitude_ratio": float(f'{float(row["amplitude_ratio"]):.14g}'),
+                    "omega": float(f'{float(row["omega"]):.14g}'),
+                    "omega_ratio": float(f'{float(row["omega_ratio"]):.14g}'),
+                }
             )
-    return rows
+    assert omega0 is not None, "no zero-amplitude row: the linear frequency is unknown"
+    return curves, omega0
 
 
 def extract_first_mode():
@@ -173,114 +201,63 @@ end
     return mode
 
 
-def physical_amplitude(terms, order: int, radius: float, phase_basis):
-    if radius == 0.0:
-        return 0.0
-    harmonics = defaultdict(complex)
-    for a, b, coefficient in terms:
-        degree = a + b
-        if degree <= order:
-            harmonics[a - b] += coefficient * radius**degree
-    values = [0.0] * N_PHASE
-    for harmonic, coefficient in harmonics.items():
-        cosines, sines = phase_basis[harmonic]
-        re, im = coefficient.real, coefficient.imag
-        for i in range(N_PHASE):
-            values[i] += re * cosines[i] - im * sines[i]
-    return 0.5 * (max(values) - min(values))
+def backbone_home_limits(points):
+    """Where the order-9 curve reaches `HOME_FREQUENCY_CHANGE`, and how tall it is there.
 
-
-def backbone_home_limits(resonant, w_terms, omega0, phase_basis):
-    def signed_frequency_change(radius):
-        omega = sum(
-            coefficient.imag * radius ** (degree - 1)
-            for degree, coefficient in resonant.items()
-            if degree <= 9
-        )
-        return 100.0 * (omega / omega0 - 1.0) - HOME_FREQUENCY_CHANGE
-
-    lo = 0.0
-    flo = signed_frequency_change(lo)
-    bracket = None
-    for i in range(1, N_RADIUS):
-        hi = R_MAX * i / (N_RADIUS - 1)
-        fhi = signed_frequency_change(hi)
+    This is the home viewport, not a result: it just stops the default view before the
+    orders have visibly separated.  The crossing is interpolated between the two samples
+    that bracket it, so it inherits the CSV's radius spacing rather than the exact
+    polynomial root the closed-form version used to bisect for.  The two agree to about
+    five digits, which is far finer than a pixel.
+    """
+    for lo, hi in zip(points, points[1:]):
+        flo = 100.0 * (lo["omega_ratio"] - 1.0) - HOME_FREQUENCY_CHANGE
+        fhi = 100.0 * (hi["omega_ratio"] - 1.0) - HOME_FREQUENCY_CHANGE
         if flo <= 0.0 <= fhi:
-            bracket = (lo, hi)
-            break
-        lo, flo = hi, fhi
-    assert bracket is not None
-
-    lo, hi = bracket
-    for _ in range(80):
-        mid = 0.5 * (lo + hi)
-        if signed_frequency_change(mid) < 0.0:
-            lo = mid
-        else:
-            hi = mid
-    radius = 0.5 * (lo + hi)
-    physical = (
-        100.0
-        * physical_amplitude(w_terms, 9, radius, phase_basis)
-        / TRANSVERSE_THICKNESS
+            weight = 0.0 if fhi == flo else -flo / (fhi - flo)
+            radius = lo["r"] + weight * (hi["r"] - lo["r"])
+            ratio = lo["amplitude_ratio"] + weight * (
+                hi["amplitude_ratio"] - lo["amplitude_ratio"]
+            )
+            physical = 100.0 * ratio
+            assert math.isclose(radius, 59.9418323, rel_tol=1e-3)
+            assert math.isclose(physical, 73.2501101, rel_tol=1e-3)
+            return {"modal": radius, "physical": physical}
+    raise AssertionError(
+        f"the order-9 curve never reaches {HOME_FREQUENCY_CHANGE}% frequency change"
     )
-    assert abs(signed_frequency_change(radius)) < 1e-10
-    assert math.isclose(radius, 59.9418323, rel_tol=2e-9)
-    assert math.isclose(physical, 73.2501101, rel_tol=2e-9)
-    return {"modal": radius, "physical": physical}
 
 
 def build_backbone_data():
-    r_terms = read_complex_csv(REFERENCE / "R_coefficients_ref.csv", "R1")
-    w_terms = read_complex_csv(
-        REFERENCE / "W_node289_y_coefficients_ref.csv", "W_y"
-    )
-    resonant = {(a + b): c for a, b, c in r_terms if a == b + 1}
-    assert tuple(sorted(resonant)) == (1, 3, 5, 7, 9)
-    assert len(w_terms) == sum(degree + 1 for degree in range(1, 10)) == 54
-    omega0 = resonant[1].imag
-    assert omega0 > 0.0
-    assert max(abs(c.real) for c in resonant.values()) < 1e-16
+    curves_raw, omega0 = read_backbone_csv(BACKBONE_CSV)
+    assert tuple(sorted(curves_raw)) == ORDERS, sorted(curves_raw)
 
-    phase_basis = {
-        harmonic: (
-            [math.cos(harmonic * 2.0 * math.pi * i / N_PHASE) for i in range(N_PHASE)],
-            [math.sin(harmonic * 2.0 * math.pi * i / N_PHASE) for i in range(N_PHASE)],
-        )
-        for harmonic in range(-9, 10)
-    }
-    home = backbone_home_limits(resonant, w_terms, omega0, phase_basis)
-    radii = [R_MAX * i / (N_RADIUS - 1) for i in range(N_RADIUS)]
-    curves = {}
+    # Every order is sampled on the same radius grid, because they come from one solve.
+    radii = [q["r"] for q in curves_raw[ORDERS[0]]]
     for order in ORDERS:
-        points = []
-        for radius in radii:
-            omega = sum(
-                coefficient.imag * radius ** (degree - 1)
-                for degree, coefficient in resonant.items()
-                if degree <= order
-            )
-            amplitude = physical_amplitude(w_terms, order, radius, phase_basis)
-            points.append(
-                {
-                    "r": round(radius, 12),
-                    "amplitude": float(f"{amplitude:.14g}"),
-                    "amplitude_ratio": float(
-                        f"{amplitude / TRANSVERSE_THICKNESS:.14g}"
-                    ),
-                    "omega": float(f"{omega:.14g}"),
-                    "omega_ratio": float(f"{omega / omega0:.14g}"),
-                }
-            )
-        curves[str(order)] = {"color": COLORS[order], "points": points}
+        assert [q["r"] for q in curves_raw[order]] == radii, f"order {order} radius grid"
+    assert radii[0] == 0.0 and radii == sorted(radii)
+
+    # At zero amplitude every truncation is the linear frequency, so the orders must
+    # agree there exactly.  A mismatch would mean the CSV mixed runs.
+    assert omega0 > 0.0
+    for order in ORDERS:
+        assert curves_raw[order][0]["omega_ratio"] == 1.0
+        assert curves_raw[order][0]["amplitude"] == 0.0
+
+    home = backbone_home_limits(curves_raw[9])
+    curves = {
+        str(order): {"color": COLORS[order], "points": curves_raw[order]}
+        for order in ORDERS
+    }
 
     data = {
         "schema": "morfe.structural_svk.backbone.v1",
         "source": "one conservative order-9 complex-normal-form ROM",
         "orders": list(ORDERS),
         "omega0": omega0,
-        "radius_range": [0.0, R_MAX],
-        "radius_samples": N_RADIUS,
+        "radius_range": [radii[0], radii[-1]],
+        "radius_samples": len(radii),
         "phase_samples": N_PHASE,
         "probe": {
             "node": PROBE_NODE,
@@ -311,9 +288,8 @@ button{margin-left:auto;font:inherit;font-size:12px;padding:4px 10px;border-radi
 #note{color:var(--ink3);font-size:11.5px;min-height:1.3em}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink2)}
 @media(max-width:560px){#wrap{padding:4px 6px;gap:3px}#bar{min-height:20px;gap:7px;flex-wrap:nowrap}.key{font-size:0;gap:0}.swatch{width:10px;height:6px}button{padding:2px 6px;font-size:0;white-space:nowrap}button::after{content:'reset';font-size:9px}#note{display:none}}
 </style></head><body><div id="wrap">
-<div id="bar"><span class="key" title="reference mesh" aria-label="reference mesh"><i class="swatch gray"></i>reference</span><span class="key" title="clamped ends" aria-label="clamped ends"><i class="swatch purple"></i>clamped</span><span class="key" title="first mode" aria-label="first mode"><i class="swatch blue"></i>mode 1</span><span class="key" title="node 289 y-displacement" aria-label="node 289 y-displacement"><i class="swatch green"></i>node 289 · y</span><button id="reset">reset view</button></div>
+<div id="bar"><span class="key" title="reference mesh" aria-label="reference mesh"><i class="swatch gray"></i>reference</span><span class="key" title="clamped ends" aria-label="clamped ends"><i class="swatch purple"></i>clamped</span><span class="key" title="first mode" aria-label="first mode"><i class="swatch blue"></i>mode 1</span><span class="key" title="node 289 y-displacement" aria-label="node 289 y-displacement"><i class="swatch green"></i>y displacement of node 289</span><button id="reset">reset view</button></div>
 <div id="stage"><canvas id="mesh" aria-label="Rotatable gray reference mesh and opaque blue first bending mode of the clamped beam"></canvas></div>
-<div id="note">Drag to rotate · mode displayed at <code>max |u<sub>y</sub>| / t<sub>y</sub> = 10</code></div>
 </div><script>
 const NODES=__NODES__,MODE=__MODE__,FACES=__FACES__,PROBE=289,NODE_IDS=Object.keys(NODES).map(Number);
 const cv=document.getElementById('mesh'),ctx=cv.getContext('2d');let yaw=-.34,pitch=.42,drag=false,last=[0,0];

@@ -349,8 +349,8 @@ document.addEventListener('DOMContentLoaded', function () {
         whole orbit: in the reduced coordinates the limit cycle is the circle
         $z_1 = \rho e^{i\Omega t}$. Drawn against Re they form a paraboloid growing out of
         the base flow at $\mathrm{Re}_c$; the grey axis is the steady flow, dashed where it
-        has gone unstable. Drag to orbit. The flat amplitude plots below are this figure
-        seen edge on.</div>
+        has gone unstable. Drag to orbit. The flat panels below are this figure seen
+        edge on.</div>
     </div>
 
 
@@ -425,14 +425,15 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div class="fig">
-      <iframe src="assets/karman/lift_vs_Re.html" title="Maximum lift along the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
-      <div class="fig-cap"><span class="lab">FIG · 03</span> Maximum lift along the limit cycle vs Re, per truncation order. The horizontal line is the steady base flow (solid = stable, dashed = unstable); branches grow from it at $\mathrm{Re}_c$. Orders coincide near $\mathrm{Re}_c$ and separate with distance.</div>
-    </div>
-
-
-    <div class="fig">
-      <iframe src="assets/karman/strouhal_vs_Re.html" title="Strouhal number of the limit cycle vs Reynolds number, truncation orders 3, 5, 7, 9" loading="lazy"></iframe>
-      <div class="fig-cap"><span class="lab">FIG · 04</span> Strouhal number $\mathrm{St} = \Omega D / 2\pi U$ along the same branch. It leaves the Hopf point at the linear value 0.268 and rises as the cycle grows, a frequency shift no linear spectrum can give.</div>
+      <iframe src="assets/karman/branch_vs_Re.html" style="aspect-ratio: 900/560;"
+        title="Peak lift and Strouhal number of the Kármán limit cycle against Reynolds number, at truncation orders 3, 5, 7 and 9" loading="lazy"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 03</span> The branch against Re, at each
+        truncation order. The first panel is the peak lift over one cycle, with the steady base
+        flow as the horizontal line, solid where it is stable and dashed past $\mathrm{Re}_c$
+        where the branches grow out of it. The second is the Strouhal number
+        $\mathrm{St} = \Omega D / 2\pi U$, which leaves the Hopf point at the linear value
+        0.268 and rises as the cycle grows, a frequency shift no linear spectrum can give.
+        The orders coincide near $\mathrm{Re}_c$ and separate with distance from it.</div>
     </div>
 
     <div class="adm warn">

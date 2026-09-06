@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">21 modules · 378 documented entries · generated 4 September 2026</p>
+  <p class="lede">21 modules · 382 documented entries · generated 6 September 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -6313,10 +6313,21 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <pre><code>∂W/∂z · R&#40;z&#41; &#61; F&#40;W&#40;z&#41;&#41;</code></pre>
 <p>by evaluating both sides on random points <code>z</code> on the manifold and computing the relative residual.  Results are plotted as convergence curves against the polynomial order and returned as structured data for further analysis.</p>
 </div></div>
+<div class="doc doc-type" id="InvarianceError-InvarianceErrorWorkspace" data-doc-name="InvarianceErrorWorkspace" data-doc-module="InvarianceError">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L145" target="_blank" rel="noopener">InvarianceErrorWorkspace</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>InvarianceErrorWorkspace&#40;model, W&#91;, T &#61; ComplexF64&#93;&#41;</code></pre>
+<p>Reusable storage for <a class="doc-ref" href="#InvarianceError-invariance_error_residual!"><code>invariance_error_residual&#33;</code></a>.  Construct one workspace and reuse it when evaluating many points, for example along a phase orbit.  The workspace contains only numerical scratch arrays; it does not retain a reduced coordinate or an external-parameter value.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="InvarianceError-_jvp_last_block!" data-doc-name="_jvp_last_block!" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L30" target="_blank" rel="noopener">_jvp_last_block!</a>(result::AbstractVector, W_poly::DensePolynomial{T, NVAR, N, A} where {N, A&lt;:AbstractArray{T, N}}, z::AbstractVector, v::AbstractVector, pw_buf::AbstractMatrix) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L31" target="_blank" rel="noopener">_jvp_last_block!</a>(result::AbstractVector, W_poly::DensePolynomial{T, NVAR, N, A} where {N, A&lt;:AbstractArray{T, N}}, z::AbstractVector, v::AbstractVector, pw_buf::AbstractMatrix) where {T, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_jvp_last_block&#33;&#40;result, W_poly, z, v, pw_buf&#41;</code></pre>
@@ -6327,7 +6338,7 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <div class="doc doc-function" id="InvarianceError-_log_log_regression" data-doc-name="_log_log_regression" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L170" target="_blank" rel="noopener">_log_log_regression</a>(radii, errors; min_points)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L251" target="_blank" rel="noopener">_log_log_regression</a>(radii, errors; min_points)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_log_log_regression&#40;radii, errors; min_points&#61;5&#41; → &#40;slope, intercept&#41;</code></pre>
@@ -6339,12 +6350,14 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <div class="doc doc-function" id="InvarianceError-invariance_error_convergence" data-doc-name="invariance_error_convergence" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L282" target="_blank" rel="noopener">invariance_error_convergence</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, r_magnitudes, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L371" target="_blank" rel="noopener">invariance_error_convergence</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, r_magnitudes, r_external, master_amplitude, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>invariance_error_convergence&#40;model, W, R;
 							 n_samples &#61; 1000,
 							 r_magnitudes &#61; &#91;0.0&#93;,
+							 r_external &#61; nothing,
+							 master_amplitude &#61; 1.0,
 							 rng &#61; Random.default_rng&#40;&#41;&#41;
 → Vector of NamedTuples, one per entry in &#96;r_magnitudes&#96;</code></pre>
 <p>For each forcing magnitude <code>|r|</code> in <code>r_magnitudes</code>, draw <code>n_samples</code> points with master-mode coordinates from <code>N&#40;0,1&#41;</code> and external coordinates sampled uniformly on a sphere of radius <code>|r|</code>.  Each result NamedTuple contains:</p>
@@ -6368,13 +6381,14 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 </ul>
 <pre><code>				   &#40;saturated points auto-trimmed&#41;</code></pre>
 <p>Use <code><a class="doc-ref" href="#InvarianceError-plot_invariance_convergence">plot_invariance_convergence</a></code> to visualise the result.</p>
+<p>To validate a physical parameter point, pass its exact reduced external coordinate as <code>r_external</code>.  In this mode the external tail is fixed for the entire point cloud and <code>master_amplitude</code> scales only the randomly sampled master coordinates.  The manifold, reduced dynamics, and full-order model are all evaluated at that same external point. <code>r_magnitudes</code> must remain <code>&#91;0.0&#93;</code> in fixed-target mode.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="InvarianceError-invariance_error_norms" data-doc-name="invariance_error_norms" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L221" target="_blank" rel="noopener">invariance_error_norms</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {N_EXT, T}, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, amplitude, r_external, rng) where {ORD, ORDP1, N_NL, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L302" target="_blank" rel="noopener">invariance_error_norms</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, amplitude, r_external, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>invariance_error_norms&#40;model, W, R;
@@ -6388,10 +6402,23 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="InvarianceError-invariance_error_residual!" data-doc-name="invariance_error_residual!" data-doc-module="InvarianceError">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L176" target="_blank" rel="noopener">invariance_error_residual!</a>(E::AbstractVector{T}, workspace::InvarianceErrorWorkspace{T, VT, MT} where {VT&lt;:AbstractVector{T}, MT&lt;:AbstractMatrix{T}}, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics, z::AbstractVector; r_external) where {T, ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>invariance_error_residual&#33;&#40;E, workspace, model, W, R, z;
+                           r_external &#61; nothing&#41;</code></pre>
+<p>Evaluate the vector invariance defect at the reduced coordinate <code>z</code>, without allocating the large full-order scratch arrays on each call.  If <code>r_external</code> is supplied, it must equal the external-coordinate tail of <code>z</code>; this explicit check prevents evaluating the manifold and the full-order model at different parameter values.</p>
+<p>The returned value is <code>E</code>.  Positive or negative signs of the defect are an internal convention; its norm and modal projections are invariant to that convention.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="InvarianceError-plot_invariance_convergence" data-doc-name="plot_invariance_convergence" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L401" target="_blank" rel="noopener">plot_invariance_convergence</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L596" target="_blank" rel="noopener">plot_invariance_convergence</a>(args...; kwargs...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>plot_invariance_convergence&#40;results; kwargs...&#41;</code></pre>
@@ -6415,7 +6442,7 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 <div class="doc doc-function" id="RomIO-_real_roots" data-doc-name="_real_roots" data-doc-module="RomIO">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L337" target="_blank" rel="noopener">_real_roots</a>(p::Vector{Float64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L438" target="_blank" rel="noopener">_real_roots</a>(p::Vector{Float64})</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_real_roots&#40;p&#41; -&gt; Vector&#123;Float64&#125;</code></pre>
@@ -6424,10 +6451,30 @@ W, R &#61; parametrise&#40;model, spectral, 7;
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="RomIO-cycle_amplitude" data-doc-name="cycle_amplitude" data-doc-module="RomIO">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L184" target="_blank" rel="noopener">cycle_amplitude</a>(P::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, ρ::Real; ...) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L184" target="_blank" rel="noopener">cycle_amplitude</a>(P::DensePolynomial{T, NVAR, 1, A} where A&lt;:AbstractVector{T}, ρ::Real, external; n_phase) where {T, NVAR}</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>cycle_amplitude&#40;P, ρ, external &#61; &#40;&#41;; n_phase &#61; 4096&#41; -&gt; Float64</code></pre>
+<p>Amplitude of the scalar observable <code>P</code> on the periodic orbit of radius <code>ρ</code>: <strong>half the peak-to-peak</strong> excursion of</p>
+<pre><code>real P&#40;ρ·exp&#40;iφ&#41;, ρ·exp&#40;-iφ&#41;, external…&#41;</code></pre>
+<p>over one phase cycle, sampled at <code>n_phase</code> points.</p>
+<p><code>P</code> is a scalar polynomial in the reduced coordinates, as returned by <a class="doc-ref" href="#RomIO-observable_polynomial"><code>observable_polynomial</code></a>. <code>external</code> supplies the external coordinates, and must have <code>NVAR - 2</code> entries; an autonomous ROM needs none.</p>
+<h2>Why half peak-to-peak, and why over phase</h2>
+<p>The orbit is <code>z₁ &#61; ρ·exp&#40;iφ&#41;</code> traversed once, so a sweep over <code>φ</code> is a sweep over the period, and this is the physical peak amplitude of the oscillation. Taking the excursion rather than the value at one phase matters as soon as the manifold is curved: harmonics beyond the first make the orbit asymmetric, and a single-phase reading picks an arbitrary point on it.</p>
+<p>Because it is an extremum over a full cycle, the result is <strong>invariant to the eigenvector gauge</strong>. Rescaling the master eigenvector by <code>exp&#40;iψ&#41;</code> multiplies the coefficient of <code>z₁^a z̄₁^b</code> by <code>exp&#40;i&#40;a-b&#41;ψ&#41;</code>, which is a rigid shift <code>φ → φ &#43; ψ</code> of the sampled signal and leaves its extrema alone. Raw <code>W</code> coefficients are not comparable between runs when the eigensolver picks a different phase; this quantity is, which makes it the right thing to bless in a reference.</p>
+<p><code>n_phase</code> defaults to the resolution the MORFE website&#39;s backbone figures use. The signal is band-limited by the expansion order, so far fewer samples serve for plotting: the error in an extremum falls as <code>n_phase^-2</code>.</p>
+<p>See also <a class="doc-ref" href="#RomIO-observable_polynomial"><code>observable_polynomial</code></a>, <a class="doc-ref" href="#RomIO-normal_form_branch"><code>normal_form_branch</code></a>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="RomIO-normal_form_branch" data-doc-name="normal_form_branch" data-doc-module="RomIO">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L137" target="_blank" rel="noopener">normal_form_branch</a>(R::ReducedDynamics{ROM, NVAR}; parameter, amplitudes, parameter_range, external_point, sheet, jump) where {ROM, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L237" target="_blank" rel="noopener">normal_form_branch</a>(R::ReducedDynamics{ROM, NVAR}; parameter, amplitudes, parameter_range, external_point, sheet, jump) where {ROM, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>normal_form_branch&#40;R; parameter &#61; nothing,
@@ -6488,10 +6535,29 @@ lines&#40;b.parameter, b.amplitude; axis &#61; &#40;xlabel &#61; &quot;η&quot;,
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="RomIO-observable_polynomial" data-doc-name="observable_polynomial" data-doc-module="RomIO">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L139" target="_blank" rel="noopener">observable_polynomial</a>(W::Parametrisation, i::Integer)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L139" target="_blank" rel="noopener">observable_polynomial</a>(W::Parametrisation, l::AbstractVector)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>observable_polynomial&#40;W, i::Int&#41;            -&gt; DensePolynomial
+observable_polynomial&#40;W, l::AbstractVector&#41; -&gt; DensePolynomial</code></pre>
+<p>Project a <code><a class="doc-ref" href="#ParametrisationObjects-Parametrisation">Parametrisation</a></code> onto a single scalar observable, giving a polynomial in the reduced coordinates <code>&#40;z₁, z̄₁, η…&#41;</code> alone.</p>
+<p><code>i</code> picks one degree of freedom of the state; <code>l</code> applies a linear functional <code>lᵀ u</code> over all of them, which is how an integrated quantity &#40;a lift coefficient, a reaction force&#41; is obtained. Both read the <strong>displacement level</strong> of <code>W</code>, <code>coefficients&#40;W&#41;&#91;:, 1, :&#93;</code>; the higher derivative levels describe the same manifold and carry no extra positional information.</p>
+<p>The point is size. <code>W</code> is <code>&#40;FOM, ORD, L&#41;</code> and FOM is the full model, so evaluating it once per phase sample over an amplitude sweep is out of the question; the projection is done once, on the coefficients, and every later evaluation costs <code>L</code> terms. The product is bilinear, not sesquilinear: <code>transpose</code>, never <code>adjoint</code>. <code>z̄₁</code> is already carried by its own exponent, so conjugating here would conjugate it twice.</p>
+<p>Truncate the result with <a class="doc-ref" href="#Polynomials-restrict_polynomial_to_degree"><code>restrict_polynomial_to_degree</code></a> to get one observable per expansion order out of a single solve, exactly as <a class="doc-ref" href="#ParametrisationObjects-restrict_ReducedDynamics_to_degree"><code>restrict_ReducedDynamics_to_degree</code></a> does for the dynamics.</p>
+<pre><code class="language-julia">u &#61; observable_polynomial&#40;W, dof&#41;              # transverse displacement at one node
+a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitude along a branch</code></pre>
+<p>See also <a class="doc-ref" href="#RomIO-cycle_amplitude"><code>cycle_amplitude</code></a>, <a class="doc-ref" href="#RomIO-normal_form_branch"><code>normal_form_branch</code></a>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="RomIO-read_rom_coefficients" data-doc-name="read_rom_coefficients" data-doc-module="RomIO">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L106" target="_blank" rel="noopener">read_rom_coefficients</a>(csv::AbstractString)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L108" target="_blank" rel="noopener">read_rom_coefficients</a>(csv::AbstractString)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>read_rom_coefficients&#40;csv&#41; -&gt; &#40;exponents::Matrix&#123;Int&#125;, coefficients::Matrix&#123;ComplexF64&#125;&#41;</code></pre>
@@ -6502,7 +6568,7 @@ lines&#40;b.parameter, b.amplitude; axis &#61; &#40;xlabel &#61; &quot;η&quot;,
 <div class="doc doc-function" id="RomIO-save_rom" data-doc-name="save_rom" data-doc-module="RomIO">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L57" target="_blank" rel="noopener">save_rom</a>(dir::AbstractString, W::Parametrisation, R::ReducedDynamics; external_system, metadata, drop_below)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L59" target="_blank" rel="noopener">save_rom</a>(dir::AbstractString, W::Parametrisation, R::ReducedDynamics; external_system, metadata, drop_below)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>save_rom&#40;dir, W, R; external_system &#61; nothing,
@@ -6515,7 +6581,7 @@ lines&#40;b.parameter, b.amplitude; axis &#61; &#40;xlabel &#61; &quot;η&quot;,
 <div class="doc doc-function" id="RomIO-write_rom_coefficients_csv" data-doc-name="write_rom_coefficients_csv" data-doc-module="RomIO">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L31" target="_blank" rel="noopener">write_rom_coefficients_csv</a>(path::AbstractString, exponents, coefficients::AbstractMatrix; drop_below)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Export/RomIO.jl#L33" target="_blank" rel="noopener">write_rom_coefficients_csv</a>(path::AbstractString, exponents, coefficients::AbstractMatrix; drop_below)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>write_rom_coefficients_csv&#40;path, exponents, coefficients; drop_below &#61; 1e-14&#41;</code></pre>
