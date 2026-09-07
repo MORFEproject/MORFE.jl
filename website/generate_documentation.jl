@@ -21,29 +21,32 @@ if !isdefined(Main, :MORFE_DOC_CONFIG)
         github_repo = "https://github.com/MORFEproject/MORFE.jl",
         github_base = "https://github.com/MORFEproject/MORFE.jl/blob/main",
         companion = false,
-        modules = [
-            (MORFE.Multiindices, "Multiindices"),
-            (MORFE.Polynomials, "Polynomials"),
-            (MORFE.MultilinearMaps, "MultilinearMaps"),
-            (MORFE.ExternalSystems, "ExternalSystems"),
-            (MORFE.FullOrderModel, "FullOrderModel"),
-            (MORFE.SpectralDecomposition, "SpectralDecomposition"),
-            (MORFE.Realification, "Realification"),
-            (MORFE.Resonance, "Resonance"),
-            (MORFE.InvarianceEquation, "InvarianceEquation"),
-            (MORFE.MasterModeOrthogonality, "MasterModeOrthogonality"),
-            (MORFE.ParametrisationObjects, "ParametrisationObjects"),
-            (MORFE.MultilinearTerms, "MultilinearTerms"),
-            (MORFE.LowerOrderCouplings, "LowerOrderCouplings"),
-            (MORFE.BorderedLinearSolvers, "BorderedLinearSolvers"),
-            (MORFE.CohomologicalEquations, "CohomologicalEquations"),
-            (MORFE.ParametrisationSolver, "ParametrisationSolver"),
-            (MORFE.ParametrisationMethod, "ParametrisationMethod"),
-            (MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
-            (MORFE.InvarianceError, "InvarianceError"),
-            (MORFE.RomIO, "RomIO"),
-            (SymbolicsExt, "SymbolicsExtension")
-        ]
+        modules = sort(
+            [
+                (MORFE.Multiindices, "Multiindices"),
+                (MORFE.Polynomials, "Polynomials"),
+                (MORFE.MultilinearMaps, "MultilinearMaps"),
+                (MORFE.ExternalSystems, "ExternalSystems"),
+                (MORFE.FullOrderModel, "FullOrderModel"),
+                (MORFE.SpectralDecomposition, "SpectralDecomposition"),
+                (MORFE.Realification, "Realification"),
+                (MORFE.Resonance, "Resonance"),
+                (MORFE.InvarianceEquation, "InvarianceEquation"),
+                (MORFE.MasterModeOrthogonality, "MasterModeOrthogonality"),
+                (MORFE.ParametrisationObjects, "ParametrisationObjects"),
+                (MORFE.MultilinearTerms, "MultilinearTerms"),
+                (MORFE.LowerOrderCouplings, "LowerOrderCouplings"),
+                (MORFE.BorderedLinearSolvers, "BorderedLinearSolvers"),
+                (MORFE.CohomologicalEquations, "CohomologicalEquations"),
+                (MORFE.ParametrisationSolver, "ParametrisationSolver"),
+                (MORFE.ParametrisationMethod, "ParametrisationMethod"),
+                (MORFE.BifurcationKitInterface, "BifurcationKitInterface"),
+                (MORFE.InvarianceError, "InvarianceError"),
+                (MORFE.RomIO, "RomIO"),
+                (MORFE.RomComparison, "RomComparison"),
+                (SymbolicsExt, "SymbolicsExtension")
+            ],
+            by = x -> x[2])
     )
 end
 
