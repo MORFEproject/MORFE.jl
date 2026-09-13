@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
         animated on the actual FE mesh from the VTK output. The steady wake destabilises at $\mathrm{Re}_c \approx 49$ and the pattern travels
         downstream at the shedding frequency $\omega_0 \approx 16.86$ rad/s.</div>
     </div>
-
+    <!--
     <div class="adm tip">
       <div class="adm-head">Reproduce this page</div>
       <div class="adm-body">
@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
         checks the result against a blessed reference, and the figures come from its own run.</p>
       </div>
     </div>
+    -->
 
     <h2 id="goal">What this tutorial covers</h2>
     <ul>
@@ -126,49 +127,25 @@ document.addEventListener('DOMContentLoaded', function () {
       <li>Reading the physics off the reduced dynamics $R$ with <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>.</li>
       <li>Tracing the limit-cycle branch, and the lift along it, straight off the ROM.</li>
     </ul>
-    <p>
-      The fluid backend builds the full-order model for you. To assemble one by hand, see
-      <a class="inline" href="full_order_model.html">Building a full-order model</a>.
-    </p>
-    <div class="adm note">
-      <div class="adm-head">Prerequisites</div>
-      <div class="adm-body">
-        <p>Follow the <a class="inline" href="installation.html">installation guide</a> to install
-        MORFE and MORFEFerrite. The example carries its own environment and a committed mesh, so
-        nothing has to be generated first.</p>
-      </div>
-    </div>
 
-    <h2 id="model">Defining the full-order model</h2>
+    <h2 id="model">The full-order model</h2>
     <p>
-      The cylinder flow is a first-order ($N=1$)
-      ODE: linearising the incompressible Navier–Stokes equations about the steady base flow
-      and subtracting it leaves the perturbation $\mathbf x = [u';p']$ at the origin, obeying a
-      differential–algebraic system: pressure carries no time derivative, so the mass matrix $\mathbf{B_1}$
+      The cylinder flow is a first-order
+      ODE. Linearising the incompressible Navier–Stokes equations about the steady base flow
+      and subtracting it leaves the perturbation $\mathbf x = [u;p]$ at the origin, obeying a
+      differential–algebraic system. Pressure carries no time derivative, so the mass matrix $\mathbf{B_1}$
       is singular.
     </p>
     <div class="math-block" style="font-size:15px;">
       $$\mathbf B_1\,\dot{\mathbf x} + \mathbf B_0\,\mathbf x
         = \mathbf F(\mathbf x,\mathbf r)
         = \underbrace{\mathbf T_1(\mathbf x,\mathbf x)}_{\text{convection}}
-        \,\, + \! \underbrace{\mathbf T_2(\mathbf x,\mathbf r)}_{\text{viscous coupling}}
-         + \!\! \underbrace{\mathbf T_3(\mathbf r)}_{\text{base-flow forcing}}$$
+        \,\, + \! \underbrace{\mathbf T_2(\mathbf x,r)}_{\text{viscous coupling}}
+         + \!\! \underbrace{\mathbf T_3(r)}_{\text{base-flow forcing}}$$
     </div>
     <p>
-      The right-hand side is a sum of <strong>multilinear maps</strong> $\mathbf T_j$: the
-      quadratic convection $-(u'\!\cdot\!\nabla)u'$, plus two terms carrying the Reynolds
-      dependence. $\mathbf B_1$ is the velocity mass matrix, $\mathbf B_0$ the Jacobian of
-      the steady operator at the base flow.
-    </p>
-    <p>
-      The external variable $\mathbf r = \eta' = 1/\mathrm{Re} - 1/\mathrm{Re}_0$ is
-      <strong>frozen</strong>: $\dot{\mathbf r} = 0$. Because $\nu = D/\mathrm{Re}$ enters
-      linearly, one reduction is parametric in Re: it describes a neighbourhood of the
-      expansion point, not a single operating condition.
-    </p>
-    <p>
-      MORFE sees only $\mathbf B_k$, the callbacks evaluating $\mathbf T_j$, and the
-      eigenvectors, not a mesh or element format. One backend call assembles all of it.
+        The ROM is parametric in the Reynolds number $\mathrm{Re}$ and expands about a base Reynolds $\mathrm{Re}_0$. The external variable $r = 1/\mathrm{Re} - 1/\mathrm{Re}_0$ is
+      <strong>frozen</strong> in time: $\dot{r} = 0$.
     </p>
 
     <h2 id="setup">Setup</h2>
@@ -190,20 +167,13 @@ document.addEventListener('DOMContentLoaded', function () {
         <p>
           Set the expansion order: <code class="nolink">3</code> for a quick run,
           <code class="nolink">9</code> to reproduce the reference. The solve is graded, so
-          order 3 reproduces the order-9 coefficients it shares exactly.
-        </p>
-        <p>
-          <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><code>fluid_model</code></a> reads the mesh and assembles the P2/P1 Taylor–Hood spaces,
-          the Newton solve for the base flow $u_0$, and the operators linearised about it.
+          higher order expansions preserve lower order terms.
+          <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><code>fluid_model</code></a> reads the mesh, assembles the FEM,
+          and solves for the steady flow at $\mathrm{Re}_0 = 49.03$.
         </p>
 <!-- nbcode:2 -->
 <pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">3</span>  <span class="cm"># Change to 9 for the reference calculation.</span>
 <span class="var">case</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-fluid_model"><span class="fn">fluid_model</span></a>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;cylinder_flow.msh&quot;</span>); <span class="var">Re</span> <span class="op">=</span> <span class="num">49.03</span>)</pre>
-        <p>
-          $\mathrm{Re}_0 = 49.03$ is the expansion point, just above critical. DPIM expands
-          about a fixed point, so an unconverged Newton solve poisons every coefficient.
-          The call reports its residual per iteration.
-        </p>
     </div>
 
     </div>
@@ -214,10 +184,9 @@ document.addEventListener('DOMContentLoaded', function () {
         <h3 id="step-modes">Select the Hopf pair</h3>
         <p>
           The master modes span the manifold's tangent space: here the Hopf pair, the
-          least-damped conjugate eigenpair of $-\mathbf B_0\, y = \lambda\, \mathbf B_1\, y$.
+          least-damped conjugate eigenpair of $\mathbf (B_0 + \lambda\, \mathbf B_1) y = \mathbf{0}$.
           Choosing them is a modelling decision, made here rather than by the backend.
-          <code>case.B</code> is the pair $(\mathbf B_0, \mathbf B_1)$; the descriptor system
-          carries the sign, so the eigensolve takes the tuple whole.
+          <code>case.B</code> is the pair $(\mathbf B_0, \mathbf B_1)$.
         </p>
 <!-- nbcode:3 -->
 <pre class="code"><span class="var">spectrum</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-solve_hopf_eigenproblem"><span class="fn">solve_hopf_eigenproblem</span></a>(<span class="var">case</span>.<span class="var">B</span>;
@@ -228,8 +197,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">master</span>] <span class="cm"># print the Hopf pair</span></pre>
         <p>
           At $\mathrm{Re}_0 = 49.03$ the pair sits just right of the imaginary axis: marginally
-          unstable, shedding at $\omega_0 = 16.86$ rad/s (St ≈ 0.27). With $\eta'$ the reduced
-          coordinates are $(z_1, \bar z_1, \eta')$.
+          unstable, shedding at $\omega_0 = 16.86$ rad/s (St ≈ 0.27). With $r$ the reduced
+          coordinates are $(z_1, \bar z_1, r)$.
         </p>
     </div>
 
@@ -241,9 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <h3 id="step-build">Build the MORFE model</h3>
         <p>
           <a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-build_model"><code>build_model</code></a> turns the case and its spectrum into the physics-independent
-          model and spectral data that <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> consumes. It computes the left
-          eigenvectors and conjugates a pair's partner rather than solving for it, so the
-          conjugate symmetry holds by construction.
+          model and spectral data, to be used by MORFE.jl famous <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> function.
         </p>
 <!-- nbcode:4 -->
 <pre class="code">(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>, <span class="var">spectrum</span>;
@@ -251,8 +218,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">meta</span>.<span class="var">conjugate_permutation</span> <span class="cm"># print the conjugate permutation</span></pre>
         <p>
           <code class="nolink">scale</code> is a mode gauge applied to both eigenvector sides.
-          It changes what $W$ and $R$ mean, and coefficients from two gauges are not comparable,
-          so it is written at the call site. <code class="nolink">meta.conjugate_permutation</code>
+          It changes the scales of $W$ and $R$. 
+          <code class="nolink">meta.conjugate_permutation</code>
           comes back <code class="nolink">[2, 1, 3]</code>.
         </p>
     </div>
@@ -264,8 +231,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-parametrise">Parametrise the invariant manifold</h3>
         <p>
-          This is where the 57 860 degrees of freedom collapse. Normal-form style keeps only
-          the resonant monomials, and for a Hopf pair that leaves a single complex equation:
+          Normal-form style keeps only the resonant monomials, and for a Hopf pair that leaves a single complex equation:
           the Stuart–Landau equation governing the shedding amplitude.
         </p>
 <!-- nbcode:5 -->
@@ -275,19 +241,11 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">R</span> <span class="cm"># print reduced dynamics</span></pre>
         <div class="math-block" style="font-size:14.5px;">
           $$\dot z_1 = \underbrace{(0.0040 + 16.86\,i)}_{\lambda_1}\,z_1
-          + \underbrace{(-212.0 - 59.1\,i)}_{c_{101}}\,z_1\eta'
+          + \underbrace{(-212.0 - 59.1\,i)}_{c_{101}}\,z_1r
           + \underbrace{(-0.111 + 0.071\,i)}_{c_{210}}\,z_1|z_1|^2 + \cdots$$
         </div>
         <p>
-          $\lambda_1$ is the linear behaviour of the wake: its real part the growth rate, its
-          imaginary part the shedding frequency $\omega_0$. $c_{101}$ tilts that growth rate as
-          the Reynolds number moves. Setting it to zero,
-          $\mathrm{Re}(\lambda_1) + \mathrm{Re}(c_{101})\,\eta' = 0$, locates the bifurcation
-          at $\mathrm{Re}_c \approx 48.98$. And $\mathrm{Re}(c_{210}) < 0$, so the cubic term
-          bleeds energy out of a growing oscillation: the amplitude saturates instead of running
-          away. That sign is what makes the bifurcation <strong>supercritical</strong>, and it
-          is why a stable vortex street appears smoothly from $\mathrm{Re}_c$ rather than
-          jumping into existence.
+          $\mathrm{Re}(\lambda_1)$ is the linear growth rate, and $\mathrm{Im}(\lambda_1)$ is the linear frequency of the vortex shedding. At cubic order, $\mathrm{Re}(c_{210}) < 0$ makes the Hopf bifurcation <strong>supercritical</strong>, which explains why a stable vortex street appears smoothly from $\mathrm{Re}_c$ towards larger Reynolds numbers.
         </p>
       </div>
     </div>
@@ -298,20 +256,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-branch">Read the bifurcation diagram off $R$</h3>
         <p>
-          In normal form the limit cycle is a circle $z_1 = \rho e^{i\Omega t}$. Every surviving
-          monomial has $a - b = 1$, so substituting it gives every term of $R_1$ the same factor
-          $e^{i\theta}$ and the phase drops out. Matching
-          $\dot z_1 = (\dot\rho + i\rho\dot\theta)e^{i\theta}$ against it separates amplitude
-          from phase:
-        </p>
-        <div class="math-block" style="font-size:15px;">
-          $$\dot\rho = \mathrm{Re}\,R_1(\rho, \rho, \eta')
-            \qquad\qquad \Omega = \frac{\mathrm{Im}\,R_1(\rho, \rho, \eta')}{\rho}$$
-        </div>
-        <p>
-          A limit cycle is a nonzero root of $\mathrm{Re}\,R_1(\rho, \rho, \eta') = 0$, and
-          $\Omega$ read there is its frequency. The whole bifurcation diagram is the roots of a
-          scalar polynomial.
+          The first reduced cordinate has dynamics $\dot{z}_1 = R_1(z_1, \overline{z}_1, r)$. We write $z_1$ in polar coordinates $z_1 = \rho e^{i\Omega t}$ such that $\rho$ is the amplitude of the shedding and $\Omega$ its frequency. Complex normal form then yields $\dot\rho = \mathrm{Re}\,R_1(\rho, \rho, r)$ and $\Omega = \mathrm{Im}\,R_1(\rho, \rho, r) / \rho$.
         </p>
 <!-- nbcode:6 -->
 <pre class="code"><span class="var">Re₀</span> <span class="op">=</span> <span class="num">49.03</span>
@@ -324,15 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">branch</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(<span class="var">R</span>; <span class="var">sweep</span>...)
 <span class="var">Re_c</span> <span class="op">=</span> <span class="fn">to_Re</span>(<span class="var">branch</span>.<span class="var">parameter</span>[<span class="num">1</span>]) <span class="cm"># the ρ = 0 end of the branch is the Hopf point</span></pre>
         <p>
-          That polynomial is in $\eta'$ at fixed $\rho$, not the other way round, so each amplitude
-          costs one companion-matrix root-solve. There is no continuation, no step size and no
-          fold to chase: a fold in $\rho$ against Re is just a monotone $\eta'(\rho)$.
-        </p>
-        <p>
-          Two keywords carry the modelling decisions. <code class="nolink">parameter_range</code>
-          keeps the sweep physical: the $\eta'$-polynomial also has roots far outside the
-          expansion neighbourhood, at order 3 a second one at $\eta' \approx 0.071$, which is
-          Re $\approx 11$. And <code class="nolink">sheet = :primary</code> follows the branch
+          <code class="nolink">sheet = :primary</code> follows the branch
           out of the Hopf point rather than returning every root, which from order 9 includes a
           second sheet at large amplitude.
         </p>
@@ -357,13 +294,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-lift">A physical observable: the lift</h3>
         <p>
-          $\rho$ is measured in the normal-form coordinate, whose scale is the mode gauge set in
-          step 03, so it is not a quantity anyone measures. Physical observables are projections
-          of $W$, and cost no full-order work once the manifold is known.
-        </p>
-        <p>
           The lift is the pressure traction on the cylinder. Pushed through $W$ it becomes a
-          polynomial in $(z_1, \bar z_1, \eta')$, evaluated around the circular orbit.
+          polynomial in $(z_1, \bar z_1, r)$, evaluated around the circular orbit.
         </p>
 <!-- nbcode:7 -->
 <pre class="code"><span class="var">l_free</span>, <span class="var">L0</span> <span class="op">=</span> <span class="var">NSE</span>.<a class="doc-link" href="../morfeferrite-documentation.html#FluidNavierStokes-lift_functional"><span class="fn">lift_functional</span></a>(<span class="var">case</span>)
@@ -442,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="step">
       <div class="num">08</div>
       <div class="body">
-        <h3 id="step-save">Save the ROM and the branch (optional)</h3>
+        <h3 id="step-save">Save the ROM and the branch</h3>
         <p>
           The common saver writes $W$, $R$, their coefficient table and a run summary to the
           example's <code class="nolink">results</code> directory. The table is what the example's
@@ -463,24 +395,6 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
-    <hr style="margin: 56px 0;"/>
-
-    <h2 id="recap">Recap</h2>
-    <ul>
-      <li>One call assembles the mesh, the base flow and the linearised operators; <code>case.B</code> holds $(\mathbf B_0, \mathbf B_1)$.</li>
-      <li>The eigensolve returns its spectrum closed under conjugation, so the Hopf pair can be taken straight from it.</li>
-      <li>Anything entering (multi)linearly can ride along as an external coordinate: here $\eta'$, which makes the ROM parametric in Re.</li>
-      <li>The resonance style decides what survives in $\dot z = R(z)$; normal form keeps the minimal resonant core.</li>
-      <li>The branch comes off $R$ alone, through <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><code>normal_form_branch</code></a>; physical quantities are projections of $W$.</li>
-    </ul>
-
-    <h2 id="next">Where to next?</h2>
-    <ul>
-      <li><a class="inline" href="structural_svk.html">From a mesh to a ROM</a>: the same calls on a structural problem.</li>
-      <li><a class="inline" href="full_order_model.html">Building a full-order model</a>: assemble the model by hand, without a FEM backend.</li>
-      <li><a class="inline" href="../documentation.html">Code documentation</a>: <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a>, <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><code>NthOrderModel</code></a>, multilinear maps, resonance sets.</li>
-    </ul>
-
     <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
       <div style="flex:1; min-width:240px;">
         <div class="kicker">Run it yourself</div>
@@ -491,11 +405,6 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
-    <div style="margin-top:48px; padding-top:24px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--ink-3);">
-      <a href="index.html">← Tutorials</a>
-      <a href="full_order_model.html">Building a full-order model →</a>
-    </div>
-
   </main>
 
   <aside class="docs-toc">
@@ -503,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <ul id="toc-list">
       <li><a href="#overview" class="active">Overview</a></li>
       <li><a href="#goal">What this tutorial covers</a></li>
-      <li><a href="#model">Defining the full-order model</a></li>
+      <li><a href="#model">The full-order model</a></li>
       <li><a href="#setup">Setup</a></li>
       <li><a href="#step-case">01 · State the case</a></li>
       <li><a href="#step-modes">02 · Select the Hopf pair</a></li>
@@ -512,9 +421,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <li><a href="#step-branch">05 · Bifurcation diagram</a></li>
       <li><a href="#step-lift">06 · The lift</a></li>
       <li><a href="#step-orders">07 · Order convergence</a></li>
-      <li><a href="#step-save">08 · Save (optional)</a></li>
-      <li><a href="#recap">Recap</a></li>
-      <li><a href="#next">Where to next?</a></li>
+      <li><a href="#step-save">08 · Save</a></li>
     </ul>
     <h5 style="margin-top:32px;">Links</h5>
     <ul>

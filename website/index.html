@@ -155,7 +155,8 @@ body.home-page .foot { margin-top: 0; }
 .code-head .dots span:nth-child(1) { background: #ff5f56; }
 .code-head .dots span:nth-child(2) { background: #ffbd2e; }
 .code-head .dots span:nth-child(3) { background: #27c93f; }
-.code-head .file { color: var(--ink-2); }
+.code-head .file { color: var(--ink-2); border-bottom: 1px solid transparent; transition: color .15s, border-color .15s; }
+.code-head a.file:hover { color: #fff; border-bottom-color: var(--jl-purple); }
 .code-wrap .code { border: none; border-radius: 0; margin: 0; }
 .backbone-teaser {
   min-height: 330px;
@@ -424,7 +425,7 @@ body.home-page .foot { margin-top: 0; }
       <div class="code-wrap">
         <div class="code-head">
           <div class="dots"><span></span><span></span><span></span></div>
-          <span class="file">from_a_mesh_to_a_rom.ipynb</span>
+          <a class="file" href="tutorials/structural_svk.html" title="From a mesh to a ROM — tutorial">from_a_mesh_to_a_rom.ipynb</a>
           <span style="margin-left:auto; color:var(--ink-3); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;">current common API</span>
         </div>
 <pre class="code"><span class="kw">using</span> <span class="var">MORFE</span>, <span class="var">MORFEFerrite</span>
