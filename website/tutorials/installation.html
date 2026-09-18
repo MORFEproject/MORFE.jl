@@ -19,6 +19,7 @@
 }
 .copy-btn:hover { color: var(--ink); border-color: var(--ink-3); }
 .copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,.4); }
+.fig img { display: block; width: 100%; height: auto; }
 </style>
 </head>
 <body class="docs-page">
@@ -55,18 +56,49 @@ Pkg.add(url = "https://github.com/MORFEproject/MORFE.jl.git")</pre>
 <pre class="code">using Pkg
 Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")</pre>
 
-    <h2 id="example-checkout">Run an example checkout</h2>
+    <h2 id="example-checkout">Run the example notebooks</h2>
     <p>
-      To run a notebook from a cloned MORFEFerrite repository, use the repository source
-      instead of installing MORFEFerrite from GitHub. From the repository root, initialise
-      the example environment once:
+      The runnable notebooks are not part of this package: they live in
+      <a class="inline" href="https://github.com/MORFEproject/MORFEExamples" target="_blank" rel="noopener">MORFEExamples</a>,
+      where all five tutorials share one Julia environment and one Jupyter kernel. Clone it and run
+      the setup script once from the repository root:
     </p>
-<pre class="code">julia --project=examples/01_clamped_beam_ferrite -e \
-  'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'</pre>
+<pre class="code">git clone https://github.com/MORFEproject/MORFEExamples.git
+cd MORFEExamples
+julia setup.jl</pre>
     <p>
-      This develops MORFEFerrite from the current checkout while resolving MORFE from the
-      Julia registry. The example's generated <code>Manifest.toml</code> remains local.
+      <code>setup.jl</code> activates the repository's own environment, installs MORFE and
+      MORFEFerrite from their GitHub main branches (the notebooks use post-processing functions the
+      registered release does not carry yet) together with IJulia, CairoMakie, Symbolics and the
+      rest, and registers a Jupyter kernel named <code>MORFEExamples</code> pointing at that
+      environment. It only needs to run
+      once; the generated <code>Manifest.toml</code> stays local to your machine.
     </p>
+    <p>
+      Then open any notebook and select the <code>MORFEExamples</code> kernel. The notebooks are
+      committed with their outputs cleared, so running one is the first step.
+    </p>
+
+    <div class="fig">
+      <img src="assets/installation/jupyter-kernel.jpg" loading="lazy"
+        alt="VS Code with a MORFEExamples notebook open: the kernel picker in the top right reads MORFEExamples 1.10, and the status bar reads Julia env: MORFEExamples" />
+      <div class="fig-cap"><span class="lab">FIG · 01</span>Choosing the kernel in VS Code. The
+        picker sits in the top right of the notebook; the status bar confirms the active Julia
+        environment.</div>
+    </div>
+
+    <div class="adm note">
+      <div class="adm-head">New to Julia</div>
+      <div class="adm-body">
+        <p>Install <a class="inline" href="https://julialang.org/downloads/" target="_blank" rel="noopener">Julia</a>
+          and <a class="inline" href="https://code.visualstudio.com/download" target="_blank" rel="noopener">VS Code</a>,
+          then add the <strong>Julia</strong> extension from JuliaLang. On Windows, check that
+          <em>Julia: Executable Path</em> in the extension settings points at the Julia executable on
+          your <code>C:</code> drive. Open the <code>MORFEExamples</code> folder in VS Code, run
+          <code>julia setup.jl</code> in its terminal, then open a notebook and pick the
+          <code>MORFEExamples</code> kernel.</p>
+      </div>
+    </div>
 
     <div class="adm note">
       <div class="adm-head">Next step</div>
@@ -80,7 +112,7 @@ Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")</pre>
       <li><a href="#standard-installation">Standard installation</a></li>
       <li><a href="#development-version">Development version</a></li>
       <li><a href="#fem-backends">FEM tutorials</a></li>
-      <li><a href="#example-checkout">Example checkout</a></li>
+      <li><a href="#example-checkout">Example notebooks</a></li>
     </ul>
   </aside>
 </div>
