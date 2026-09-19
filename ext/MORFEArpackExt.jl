@@ -147,8 +147,11 @@ function MORFE.SpectralDecomposition.eigensolve(
 ) where {T}
     ω2, ϕ = eigs(stiffness, mass; nev = solver.nev, which = :LM, sigma = 0.0, check = 1)
     any(x -> abs(imag(x)) > 1e-12 * abs(real(x)), ω2) && error("Eigenvalues not real.")
-    ω2 = real.(ω2)
-    ϕ = real.(ϕ)
+    # Shift-invert returns the nev eigenvalues nearest σ = 0 without promising their
+    # order; sort them so that mode k is the k-th lowest frequency.
+    idx = sortperm(real.(ω2))
+    ω2 = real.(ω2[idx])
+    ϕ = real.(ϕ[:, idx])
 
     FOM = size(ϕ, 1)
     CT = Complex{T}

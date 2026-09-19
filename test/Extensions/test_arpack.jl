@@ -50,6 +50,13 @@ end
     λo, _ = eigensolve(M, K, over)
     @test all(iszero, imag.(λo))
 
+    # Sorted by frequency whatever order the stiffness entries come in, and each
+    # mode shape follows its eigenvalue: ω = 1, 2, 3 live at entries 3, 5, 2.
+    Kp = spdiagm(0 => [25.0, 9.0, 1.0, 16.0, 4.0])
+    λp, Yp = eigensolve(M, Kp, StructureModalDampingEigensolver(3, 0.0, 0.0))
+    @test abs.(λp[1:2:end]) ≈ [1.0, 2.0, 3.0]
+    @test [argmax(abs.(Yp[:, 1, 2k - 1])) for k in 1:3] == [3, 5, 2]
+
     C = under.α * M + under.β * K
     ep = spectrum(NthOrderModel((K, C, M)), under; sorter! = (args...) -> nothing)
     @test size(ep.left_eigenmodes_orders) == size(ep.eigenmodes)

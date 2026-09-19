@@ -227,7 +227,8 @@ The steps are:
 2) calculate: \$\\xi_k=0.5(\\frac{\\alpha}{\\omega_k} + \\beta * \\omega_k)\$
 3) calculate eigenvalues: \$\\lambda_k = -\\xi_k*\\omega_k \\sqrt{1-\\xi_k^2}\$
 
-Calculates only the first `nev` eigenvectors.
+Calculates only the first `nev` eigenvectors, sorted by increasing ``\\omega_k``: mode
+`k` occupies the adjacent conjugate entries `2k-1, 2k`.
 
 # Fields
 
