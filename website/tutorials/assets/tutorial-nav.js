@@ -5,6 +5,7 @@
   var active = nav.getAttribute('data-active') || 'index.html';
   var tutorials = [
     { href: 'structural_svk.html', label: 'From a mesh to a ROM' },
+    { href: 'mems_micromirror.html', label: 'Dual-axis MEMS micromirror' },
     { href: 'karman.html', label: 'Kármán vortex street' },
     { href: 'full_order_model.html', label: 'Building a full-order model' },
     { href: 'symbolics_ext.html', label: 'Symbolic full-order model' },

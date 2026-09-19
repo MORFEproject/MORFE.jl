@@ -45,6 +45,16 @@ const OVERRIDES = Dict(
         # docstring is the one that documents `master`, `outer` and `expansion_order`.
         "build_model" => "$(COMPANION_DOC_HREF)#FluidNavierStokes-build_model"
     ),
+    "mems_micromirror.html" => Dict(
+        "build_model" => "$(COMPANION_DOC_HREF)#Common-build_model",
+        "mechanical_model" => "$(COMPANION_DOC_HREF)#StructuralSVK-mechanical_model",
+        # `spectrum` is documented by both MORFE and StructuralSVK; this page calls the
+        # structural method, whose docstring states the default eigensolver.
+        "SVK.spectrum" => "$(COMPANION_DOC_HREF)#StructuralSVK-spectrum",
+        "W" => "$(DOC_HREF)#ParametrisationObjects-Parametrisation",
+        "R" => "$(DOC_HREF)#ParametrisationObjects-ReducedDynamics",
+        "MORFEFerrite" => COMPANION_DOC_HREF
+    ),
     "structural_svk.html" => Dict(
         "build_model" => "$(COMPANION_DOC_HREF)#Common-build_model",
         "mechanical_model" => "$(COMPANION_DOC_HREF)#StructuralSVK-mechanical_model",

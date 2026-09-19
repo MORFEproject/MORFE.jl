@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dual-axis MEMS micromirror — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
+<style>
+.pre-wrap { position: relative; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 3px 9px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(255,255,255,0.06); color: var(--ink-3);
+  border: 1px solid var(--hair); border-radius: 4px;
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.6;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--ink); border-color: var(--ink-3); }
+.copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.4); background: rgba(56,152,38,0.08); }
+.fig iframe { display:block; width:100%; aspect-ratio: 900/560; border:0; background:#07070b; }
+/* vertical rhythm — space between successive ideas */
+.docs-main .step .body > p,
+.docs-main .step .body > pre,
+.docs-main .step .body > .pre-wrap,
+.docs-main .step .body > ul,
+.docs-main .step .body > .adm,
+.docs-main .step .body > .fig,
+.docs-main .step .body > .math-block { margin-top: 22px; }
+.docs-main .math-block { margin: 24px 0; }
+/* looser spacing in the top-level intro / recap lists */
+.docs-main > ul > li, .docs-main > ol > li { margin-bottom: 11px; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.docs-main pre').forEach(function (pre) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pre-wrap';
+    wrap.style.position = 'relative';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(pre.innerText).then(function () {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    wrap.appendChild(btn);
+  });
+});
+</script>
+</head>
+<body class="docs-page">
+
+
+<div class="site">
+
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav>
+<script src="../assets/nav.js"></script>
+
+<div class="docs-shell">
+
+  <aside id="tutorial-nav" class="docs-side tutorial-side" data-active="mems_micromirror.html"></aside>
+  <script src="assets/tutorial-nav.js"></script>
+
+  <main class="docs-main">
+
+    <div class="crumbs">
+      <a href="../documentation.html">MORFE.jl</a>
+      <span class="sep">/</span>
+      <a href="index.html">Tutorials</a>
+      <span class="sep">/</span>
+      <span>Structural ROMs</span>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <span class="tag"><span class="tag-dot" style="background:var(--jl-purple)"></span> STRUCTURES</span>
+      <span class="tag" style="color:var(--ink-3);">110K DOFS</span>
+    </div>
+
+    <h1 id="overview">Dual-axis MEMS micromirror</h1>
+    <p style="margin:6px 0 14px;"><a class="btn" href="https://github.com/MORFEproject/MORFEExamples/blob/main/dual_axis_mems_micromirror/dual_axis_mems_micromirror.ipynb" target="_blank" rel="noopener" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Open the notebook ↗</a></p>
+    <p class="lede">Build a single-mode ROM of a dual-axis MEMS micromirror and compute how its
+        frequency changes with the tilt of the mirror. The model is conservative.</p>
+
+    <div class="fig" id="fig-01">
+      <iframe src="assets/mems_micromirror/clamp.html"
+        title="Boundary surfaces of the micromirror mesh, the clamped face in purple"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 01</span>The device layer: a mirror in three
+        rings joined by torsion bars. Surface 8, bonded to the handle wafer, is clamped (purple).
+        <strong>110451 free DOFs.</strong> <strong>Hover a face to read its surface number.</strong></div>
+    </div>
+
+    <h2 id="setup">Setup</h2>
+    <p>
+      Follow the <a class="inline" href="installation.html">installation guide</a>, then load the
+      packages. <code>paraview.jl</code> holds the ParaView writers used below.
+    </p>
+<!-- nbcode:1 -->
+<pre class="code"><span class="kw">using</span> <span class="var">MORFE</span>, <span class="var">MORFEFerrite</span>
+<span class="kw">using</span> <span class="var">LinearAlgebra</span>, <span class="var">Printf</span>
+<span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> <span class="var">MORFEFerrite</span>.<span class="var">StructuralSVK</span> <span class="cm"># for Saint-Venant-Kirchhoff hyperelasticity</span>
+<span class="kw">const</span> <span class="var">Ferrite</span> <span class="op">=</span> <span class="var">SVK</span>.<span class="var">Ferrite</span>            <span class="cm"># finite-element backend, for the ParaView output</span>
+<span class="fn">include</span>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;paraview.jl&quot;</span>));</pre>
+
+    <div class="step">
+      <div class="num">01</div>
+      <div class="body">
+        <h3 id="step-clamp">Choose the clamp</h3>
+        <p>
+          Every boundary surface of the mesh is a facet group <code>surface_&lt;id&gt;</code>.
+          List the surfaces to clamp in <code>clamped</code>; their numbers are in
+          <a class="inline" href="#fig-01">FIG · 01</a>. The default, surface 8, is bonded to the handle wafer.
+        </p>
+<!-- nbcode:2 -->
+<pre class="code"><span class="var">clamped</span> <span class="op">=</span> [<span class="num">8</span>] <span class="cm"># surface numbers, read in ParaView</span>
+
+<span class="var">grid</span> <span class="op">=</span> <span class="var">SVK</span>.<span class="var">FerriteGmsh</span>.<span class="fn">togrid</span>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;micromirror_device_layer.msh&quot;</span>))
+<span class="var">Ferrite</span>.<span class="fn">addfacetset!</span>(<span class="var">grid</span>, <span class="str">&quot;Dirichlet&quot;</span>,
+    <span class="fn">union</span>((<span class="var">Ferrite</span>.<span class="fn">getfacetset</span>(<span class="var">grid</span>, <span class="str">&quot;surface_$s&quot;</span>) <span class="kw">for</span> <span class="var">s</span> <span class="kw">in</span> <span class="var">clamped</span>)...))
+
+<span class="var">pv_dir</span> <span class="op">=</span> <span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;results&quot;</span>, <span class="str">&quot;paraview&quot;</span>)
+<span class="fn">mkpath</span>(<span class="var">pv_dir</span>)
+<span class="fn">write_surfaces</span>(<span class="var">pv_dir</span>, <span class="var">grid</span>, <span class="var">clamped</span>) <span class="cm"># print the surface numbers</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">02</div>
+      <div class="body">
+        <h3 id="step-case">State the case</h3>
+        <p>
+          <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><code>mechanical_model</code></a> fixes every displacement on the clamped facets. The silicon
+          is a cubic crystal, <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-CubicCrystal"><code>CubicCrystal</code></a>, with the die edges along ⟨110⟩. There is no damping.
+        </p>
+<!-- nbcode:3 -->
+<pre class="code"><span class="var">case</span> <span class="op">=</span> <span class="var">SVK</span>.<a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><span class="fn">mechanical_model</span></a>(<span class="var">grid</span>;
+    <span class="var">material</span> <span class="op">=</span> <span class="var">SVK</span>.<a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-CubicCrystal"><span class="fn">CubicCrystal</span></a>(<span class="var">c11</span> <span class="op">=</span> <span class="num">165.7e3</span>, <span class="var">c12</span> <span class="op">=</span> <span class="num">63.9e3</span>, <span class="var">c44</span> <span class="op">=</span> <span class="num">79.6e3</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.329e-9</span>,
+        <span class="var">rotation</span> <span class="op">=</span> <span class="var">π</span> <span class="op">/</span> <span class="num">4</span>),
+    <span class="var">damping</span> <span class="op">=</span> <span class="var">SVK</span>.<a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-RayleighDamping"><span class="fn">RayleighDamping</span></a>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
+    <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">&quot;Dirichlet&quot;</span>)
+<span class="var">case</span>.<span class="var">info</span>.<span class="var">n_dofs</span> <span class="cm"># print the number of free degrees of freedom</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">03</div>
+      <div class="body">
+        <h3 id="step-modes">Look at the modes</h3>
+        <p>
+          <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-spectrum"><code>SVK.spectrum</code></a> computes the modes once, and <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><code>build_model</code></a> reuses them.
+        </p>
+<!-- nbcode:4 -->
+<pre class="code"><span class="var">nev</span> <span class="op">=</span> <span class="num">10</span>
+<span class="var">sp</span> <span class="op">=</span> <span class="var">SVK</span>.<a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-spectrum"><span class="fn">spectrum</span></a>(<span class="var">case</span>; <span class="var">nev</span>);</pre>
+        <p>
+          The table lists each mode's frequency and how much it tilts the mirror
+          (<a class="inline" href="#step-backbone">step 06</a>).
+        </p>
+<!-- nbcode:5 -->
+<pre class="code"><span class="var">coords</span> <span class="op">=</span> <span class="var">Ferrite</span>.<span class="var">get_node_coordinate</span>.(<span class="var">Ferrite</span>.<span class="fn">getnodes</span>(<span class="var">grid</span>))
+<span class="var">mirror</span> <span class="op">=</span> <span class="fn">findall</span>(<span class="var">x</span> <span class="op">-&gt;</span> <span class="fn">abs</span>(<span class="var">x</span>[<span class="num">3</span>]) <span class="op">&lt;</span> <span class="num">1e-6</span> <span class="op">&amp;&amp;</span> <span class="fn">hypot</span>(<span class="var">x</span>[<span class="num">1</span>], <span class="var">x</span>[<span class="num">2</span>]) <span class="op">&lt;</span> <span class="num">480</span>, <span class="var">coords</span>)
+<span class="var">fit</span> <span class="op">=</span> <span class="fn">pinv</span>([<span class="fn">ones</span>(<span class="fn">length</span>(<span class="var">mirror</span>)) <span class="var">getindex</span>.(<span class="var">coords</span>[<span class="var">mirror</span>], <span class="num">1</span>) <span class="var">getindex</span>.(<span class="var">coords</span>[<span class="var">mirror</span>], <span class="num">2</span>)])
+<span class="var">rows</span> <span class="op">=</span> [<span class="var">SVK</span>.<a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-probe_dof"><span class="fn">probe_dof</span></a>(<span class="var">case</span>, <span class="var">n</span>, <span class="num">3</span>) <span class="kw">for</span> <span class="var">n</span> <span class="kw">in</span> <span class="var">mirror</span>] <span class="cm"># free-DOF rows of u_z on the mirror face</span>
+<span class="fn">functional</span>(<span class="var">c</span>) <span class="op">=</span> (<span class="var">l</span> <span class="op">=</span> <span class="fn">zeros</span>(<span class="var">case</span>.<span class="var">info</span>.<span class="var">n_dofs</span>); <span class="var">l</span>[<span class="var">rows</span>] .<span class="op">=</span> <span class="var">c</span>; <span class="var">l</span>)
+<span class="var">θx</span>, <span class="var">θy</span> <span class="op">=</span> <span class="fn">functional</span>(<span class="var">fit</span>[<span class="num">3</span>, :]), <span class="fn">functional</span>(<span class="op">-</span><span class="var">fit</span>[<span class="num">2</span>, :])
+
+<span class="var">modes</span> <span class="op">=</span> <span class="fn">map</span>(<span class="num">1</span>:<span class="var">nev</span>) <span class="kw">do</span> <span class="var">p</span>
+    <span class="var">ϕ</span> <span class="op">=</span> <span class="fn">mode_shape</span>(<span class="var">sp</span>, <span class="var">p</span>)
+    (; <span class="var">p</span>, <span class="var">frequency</span> <span class="op">=</span> <span class="fn">abs</span>(<span class="fn">imag</span>(<span class="var">sp</span>.<span class="var">eigenvalues</span>[<span class="num">2</span><span class="var">p</span> <span class="op">-</span> <span class="num">1</span>])) <span class="op">/</span> <span class="num">2</span><span class="var">π</span>,
+        <span class="var">tilt_x</span> <span class="op">=</span> <span class="num">500</span><span class="fn">abs</span>(<span class="var">θx</span> <span class="var">⋅</span> <span class="var">ϕ</span>), <span class="var">tilt_y</span> <span class="op">=</span> <span class="num">500</span><span class="fn">abs</span>(<span class="var">θy</span> <span class="var">⋅</span> <span class="var">ϕ</span>))
+<span class="kw">end</span>
+<span class="fn">println</span>(<span class="str">&quot; p   frequency   mirror tilt x   mirror tilt y&quot;</span>)
+<span class="fn">foreach</span>(<span class="var">m</span> <span class="op">-&gt;</span> @<span class="fn">printf</span>(<span class="str">&quot;%2d  %10.4f  %14.3f  %14.3f\n&quot;</span>, <span class="var">m</span>...), <span class="var">modes</span>)
+<span class="fn">write_modes</span>(<span class="var">pv_dir</span>, <span class="var">case</span>, <span class="var">sp</span>)</pre>
+        <div class="fig" id="fig-02">
+          <iframe src="assets/mems_micromirror/modes.html"
+            title="The first ten vibration modes of the micromirror, animated"
+            loading="lazy"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 02</span>The first ten modes. Modes 2 and 4
+            tilt the mirror about $x$, modes 3, 8 and 10 about $y$.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">04</div>
+      <div class="body">
+        <h3 id="step-build">Build a physics-independent model for MORFE</h3>
+        <p>
+          <code>master = [p]</code> selects mode 3, the lowest mode that tilts the mirror about $y$.
+          The rest is as in <a class="inline" href="structural_svk.html">From a mesh to a ROM</a>.
+        </p>
+<!-- nbcode:6 -->
+<pre class="code"><span class="var">p</span> <span class="op">=</span> <span class="num">3</span> <span class="cm"># master mode, read off the table and ParaView</span>
+<span class="var">order</span> <span class="op">=</span> <span class="num">5</span>
+(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="var">p</span>], <span class="var">spectrum</span> <span class="op">=</span> <span class="var">sp</span>, <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
+<span class="var">meta</span>.<span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">meta</span>.<span class="var">master_indices</span>] <span class="cm"># print master eigenvalues</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">05</div>
+      <div class="body">
+        <h3 id="step-parametrise">Compute the invariant manifold</h3>
+        <p>
+          As in <a class="inline" href="structural_svk.html">From a mesh to a ROM</a>, with <code>tol_relative = 0.05</code>: a resonance threshold relative to
+          each eigenvalue.
+        </p>
+<!-- nbcode:7 -->
+<pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><span class="fn">parametrise</span></a>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
+    <span class="var">resonance</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Resonance-ResonanceConfig"><span class="fn">ResonanceConfig</span></a>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol_relative</span> <span class="op">=</span> <span class="num">0.05</span>))
+<span class="var">R</span> <span class="cm"># print reduced dynamics</span></pre>
+        <div class="adm note">
+          <div class="adm-head">Near-resonant modes</div>
+          <div class="adm-body"><p><a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> warns that some monomials are
+            near-resonant with modes 6 and 7, near three times the frequency of mode 3, and with
+            modes 9 and 10, near four times it. A single-mode ROM cannot exchange energy with them.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">06</div>
+      <div class="body">
+        <h3 id="step-backbone">Obtain the backbone</h3>
+        <p>
+          <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><code>normal_form_branch</code></a> reads the backbone off <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a>, as in
+          <a class="inline" href="structural_svk.html#step-backbone">From a mesh to a ROM</a>.
+        </p>
+        <p>
+          The observable is the mirror tilt $\theta$. A plane fitted to $u_z$ on the mirror face has
+          slope $\sin\theta$ about the rotation axis (<a class="inline" href="#fig-03">FIG · 03</a>).
+          <a class="doc-link" href="../documentation.html#RomIO-observable_polynomial"><code>observable_polynomial</code></a> projects <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a> onto that slope,
+          <a class="doc-link" href="../documentation.html#RomIO-cycle_amplitude"><code>cycle_amplitude</code></a> takes its amplitude, and <code>asind</code> turns it into degrees.
+        </p>
+        <div class="fig" id="fig-03">
+          <iframe src="assets/mems_micromirror/tilt.html"
+            title="How the mirror tilt is computed: fitted nodes, least-squares plane and tilt angle"
+            loading="lazy"></iframe>
+          <div class="fig-cap"><span class="lab">FIG · 03</span>The mirror face in mode 3, tilt
+            exaggerated: fitted nodes (dots), least-squares plane (purple), rotation axis (green) and
+            tilt $\theta$ (red).</div>
+        </div>
+<!-- nbcode:8 -->
+<pre class="code"><span class="var">θ</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-observable_polynomial"><span class="fn">observable_polynomial</span></a>(<span class="var">W</span>, <span class="var">modes</span>[<span class="var">p</span>].<span class="var">tilt_x</span> <span class="var">≥</span> <span class="var">modes</span>[<span class="var">p</span>].<span class="var">tilt_y</span> ? <span class="var">θx</span> : <span class="var">θy</span>) <span class="cm"># sine of the mirror tilt</span>
+<span class="var">θ₁</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-cycle_amplitude"><span class="fn">cycle_amplitude</span></a>(<span class="var">MORFE</span>.<span class="var">Polynomials</span>.<a class="doc-link" href="../documentation.html#Polynomials-restrict_polynomial_to_degree"><span class="fn">restrict_polynomial_to_degree</span></a>(<span class="var">θ</span>, <span class="num">1</span>), <span class="num">1.0</span>) <span class="cm"># its linear part per unit ρ</span>
+<span class="var">ρ</span> <span class="op">=</span> <span class="fn">range</span>(<span class="num">0</span>, <span class="fn">sind</span>(<span class="num">10</span>) <span class="op">/</span> <span class="var">θ₁</span>; <span class="var">length</span> <span class="op">=</span> <span class="num">301</span>) <span class="cm"># modal amplitude, up to a linear tilt of 10°</span>
+<span class="var">ω₀</span> <span class="op">=</span> <span class="fn">abs</span>(<span class="fn">imag</span>(<span class="var">meta</span>.<span class="var">spectrum</span>.<span class="var">eigenvalues</span>[<span class="var">meta</span>.<span class="var">master_indices</span>[<span class="num">1</span>]])) <span class="cm"># linear eigenfrequency</span>
+
+<span class="var">curves</span> <span class="op">=</span> <span class="fn">map</span>(<span class="num">3</span>:<span class="num">2</span>:<span class="var">order</span>) <span class="kw">do</span> <span class="var">N</span>
+    <span class="var">b</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#RomIO-normal_form_branch"><span class="fn">normal_form_branch</span></a>(<a class="doc-link" href="../documentation.html#ParametrisationObjects-restrict_ReducedDynamics_to_degree"><span class="fn">restrict_ReducedDynamics_to_degree</span></a>(<span class="var">R</span>, <span class="var">N</span>); <span class="var">amplitudes</span> <span class="op">=</span> <span class="var">ρ</span>)
+    <span class="var">P</span> <span class="op">=</span> <span class="var">MORFE</span>.<span class="var">Polynomials</span>.<a class="doc-link" href="../documentation.html#Polynomials-restrict_polynomial_to_degree"><span class="fn">restrict_polynomial_to_degree</span></a>(<span class="var">θ</span>, <span class="var">N</span>)
+    (; <span class="var">N</span>, <span class="var">b</span>.<span class="var">amplitude</span>, <span class="var">b</span>.<span class="var">frequency</span>, <span class="var">ratio</span> <span class="op">=</span> <span class="var">b</span>.<span class="var">frequency</span> .<span class="op">/</span> <span class="var">ω₀</span>,
+        <span class="var">tilt</span> <span class="op">=</span> <span class="var">asind</span>.(<span class="var">cycle_amplitude</span>.(<span class="fn">Ref</span>(<span class="var">P</span>), <span class="var">b</span>.<span class="var">amplitude</span>))) <span class="cm"># mirror tilt in degrees</span>
+<span class="kw">end</span></pre>
+      </div>
+    </div>
+
+    <div class="fig" id="fig-04">
+      <iframe src="assets/mems_micromirror/backbone.html"
+        title="Order 3 and 5 backbone curves of the micromirror"
+        loading="lazy"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 04</span>Backbones at orders 3 and 5: the
+        frequency change Δω from $\omega_0$, in percent, against the mirror tilt or the modal
+        amplitude $\rho$. <strong>Hover a curve to read its values.</strong></div>
+    </div>
+
+    <div class="step">
+      <div class="num">07</div>
+      <div class="body">
+        <h3 id="step-plot">Plot it</h3>
+        <p>
+          The mirror stiffens: at a tilt of 10°, Δω ≈ 0.085 %. Orders 3 and 5 nearly coincide up to 5°.
+        </p>
+<!-- nbcode:9 -->
+<pre class="code"><span class="kw">using</span> <span class="var">CairoMakie</span>
+<span class="var">fig</span> <span class="op">=</span> <span class="fn">Figure</span>(<span class="var">size</span> <span class="op">=</span> (<span class="num">520</span>, <span class="num">380</span>))
+<span class="var">ax</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">1</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">&quot;Δω [%]&quot;</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">&quot;mirror tilt [°]&quot;</span>)
+<span class="fn">foreach</span>(<span class="var">c</span> <span class="op">-&gt;</span> <span class="fn">lines!</span>(<span class="var">ax</span>, <span class="num">100</span> .<span class="op">*</span> (<span class="var">c</span>.<span class="var">ratio</span> .<span class="op">-</span> <span class="num">1</span>), <span class="var">c</span>.<span class="var">tilt</span>; <span class="var">label</span> <span class="op">=</span> <span class="str">&quot;order $(c.N)&quot;</span>), <span class="var">curves</span>)
+<span class="fn">axislegend</span>(<span class="var">ax</span>; <span class="var">position</span> <span class="op">=</span> <span class="sym">:lt</span>)
+<span class="var">fig</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">08</div>
+      <div class="body">
+        <h3 id="step-save">Save the ROM and the backbone</h3>
+        <p>
+          <a class="doc-link" href="../documentation.html#RomIO-save_rom"><code>save_rom</code></a> writes <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>, <a class="doc-link" href="../documentation.html#ParametrisationObjects-ReducedDynamics"><code>R</code></a> and a summary; two CSVs hold
+          the backbone and the tilt row of <a class="doc-link" href="../documentation.html#ParametrisationObjects-Parametrisation"><code>W</code></a>.
+        </p>
+<!-- nbcode:10 -->
+<pre class="code"><span class="var">MORFE</span>.<a class="doc-link" href="../documentation.html#RomIO-save_rom"><span class="fn">save_rom</span></a>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;results&quot;</span>), <span class="var">W</span>, <span class="var">R</span>; <span class="var">drop_below</span> <span class="op">=</span> <span class="num">0.0</span>)
+
+<span class="fn">open</span>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;results&quot;</span>, <span class="str">&quot;data&quot;</span>, <span class="str">&quot;backbone.csv&quot;</span>), <span class="str">&quot;w&quot;</span>) <span class="kw">do</span> <span class="var">io</span>
+    <span class="fn">println</span>(<span class="var">io</span>, <span class="str">&quot;order,r,omega,omega_ratio,tilt_deg&quot;</span>)
+    <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="var">curves</span>, <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">c</span>.<span class="var">amplitude</span>)
+        <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">join</span>((<span class="var">c</span>.<span class="var">N</span>, <span class="var">c</span>.<span class="var">amplitude</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">frequency</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">ratio</span>[<span class="var">i</span>], <span class="var">c</span>.<span class="var">tilt</span>[<span class="var">i</span>]), <span class="str">&quot;,&quot;</span>))
+    <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="fn">open</span>(<span class="fn">joinpath</span>(@<span class="var">__DIR__</span>, <span class="str">&quot;results&quot;</span>, <span class="str">&quot;data&quot;</span>, <span class="str">&quot;W_tilt_coefficients.csv&quot;</span>), <span class="str">&quot;w&quot;</span>) <span class="kw">do</span> <span class="var">io</span>
+    <span class="fn">println</span>(<span class="var">io</span>, <span class="str">&quot;exp_1,exp_2,W_tilt_re,W_tilt_im&quot;</span>)
+    <span class="kw">for</span> (<span class="var">e</span>, <span class="var">c</span>) <span class="kw">in</span> <span class="fn">zip</span>(<span class="var">MORFE</span>.<span class="var">Polynomials</span>.<span class="fn">multiindex_set</span>(<span class="var">θ</span>).<span class="var">exponents</span>,
+        <span class="var">MORFE</span>.<span class="var">Polynomials</span>.<span class="fn">coefficients</span>(<span class="var">θ</span>))
+        <span class="fn">println</span>(<span class="var">io</span>, <span class="fn">join</span>((<span class="var">e</span>[<span class="num">1</span>], <span class="var">e</span>[<span class="num">2</span>], <span class="fn">real</span>(<span class="var">c</span>), <span class="fn">imag</span>(<span class="var">c</span>)), <span class="str">&quot;,&quot;</span>))
+    <span class="kw">end</span>
+<span class="kw">end</span></pre>
+      </div>
+    </div>
+
+    <div class="adm note">
+      <div class="adm-head">Look at it in ParaView</div>
+      <div class="adm-body">
+      <p>The notebook writes <code>surfaces.vtu</code>, <code>surface_labels.vtu</code> and
+        <code>modes.pvd</code> to <code>results/paraview</code>. In <code>modes.pvd</code> the time
+        value is the mode number.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:240px;">
+        <div class="kicker">Run it yourself</div>
+        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">The full pipeline ships in <a href="https://github.com/MORFEproject/MORFEExamples/blob/main/dual_axis_mems_micromirror/dual_axis_mems_micromirror.ipynb" target="_blank" rel="noopener"><code>dual_axis_mems_micromirror/dual_axis_mems_micromirror.ipynb</code></a>.</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEExamples/tree/main/dual_axis_mems_micromirror" target="_blank" rel="noopener">The example<span class="arrow">→</span></a>
+      </div>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc">
+    <h5>On this page</h5>
+    <ul id="toc-list">
+      <li><a href="#overview" class="active">Overview</a></li>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#step-clamp">01 · Choose the clamp</a></li>
+      <li><a href="#step-case">02 · State the case</a></li>
+      <li><a href="#step-modes">03 · Look at the modes</a></li>
+      <li><a href="#step-build">04 · Build the model</a></li>
+      <li><a href="#step-parametrise">05 · Parametrise</a></li>
+      <li><a href="#step-backbone">06 · Obtain the backbone</a></li>
+      <li><a href="#step-plot">07 · Plot it</a></li>
+      <li><a href="#step-save">08 · Save</a></li>
+    </ul>
+    <h5 style="margin-top:32px;">Links</h5>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFEExamples/tree/main/dual_axis_mems_micromirror" target="_blank" rel="noopener">Example folder ↗</a></li>
+      <li><a href="structural_svk.html">From a mesh to a ROM</a></li>
+      <li><a href="../morfeferrite-documentation.html#StructuralSVK">StructuralSVK docs</a></li>
+      <li><a href="../documentation.html#ParametrisationMethod">ParametrisationMethod docs</a></li>
+    </ul>
+  </aside>
+
+</div>
+<footer id="site-footer" class="foot" data-base="../"></footer>
+<script src="../assets/footer.js"></script>
+</div>
+
+<script>
+(function () {
+  const links = document.querySelectorAll('#toc-list a');
+  const targets = [...links].map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  function onScroll() {
+    let active = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const r = targets[i].getBoundingClientRect();
+      if (r.top < 140) active = i;
+    }
+    links.forEach(l => l.classList.remove('active'));
+    if (links[active]) links[active].classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+</body>
+</html>
