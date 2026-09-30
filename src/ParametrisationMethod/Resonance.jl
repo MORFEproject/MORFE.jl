@@ -22,10 +22,10 @@ Four constructors are provided:
 
 - **`resonance_set_from_graph_style`**: every monomial of total degree ≥ 2 is
   automatically resonant with all master modes (inner resonances); outer resonances are
-  flagged by eigenvalue proximity.  Use for non-autonomous SSMs with harmonic forcing.
+  flagged by eigenvalue proximity.  Use for non-autonomous Invariant Manifolds (e.g. SSMs) with harmonic forcing.
 
 - **`resonance_set_from_complex_normal_form_style`**: inner resonances determined by
-  eigenvalue proximity to `master_eigenvalues`; suitable for autonomous SSMs with
+  eigenvalue proximity to `master_eigenvalues`; suitable for autonomous Invariant Manifolds (e.g. NNMs) with
   complex conjugate reduced variables.
 
 - **`resonance_set_from_real_normal_form_style`**: like CNF but conjugate pairs share
@@ -41,28 +41,28 @@ using Printf: @sprintf
 using ..Multiindices: MultiindexSet, find_in_set
 using ..FullOrderModel: NthOrderModel
 using ..SpectralDecomposition: Spectrum, SpectralData, outer_bundle, indices,
-                               outer_conjugate_permutation, physical_mode
+	outer_conjugate_permutation, physical_mode
 using ..ExternalSystems: external_basis
 
 export ResonanceSet,
-       build_resonance_set,
-       resonance_set_from_graph_style,
-       resonance_set_from_complex_normal_form_style,
-       resonance_set_from_real_normal_form_style,
-       resonance_set_from_condition_number_estimate,
-       empty_resonance_set,
-       set_resonance!,
-       is_resonant,
-       n_internal,
-       resonant_targets,
-       resonant_multiindices,
-       EigenvalueCondition,
-       RealEigenvalueCondition,
-       ConditionNumberEstimateCondition,
-       GraphInternal,
-       NormalFormInternal,
-       ResonanceConfig,
-       resolve_tolerances
+	build_resonance_set,
+	resonance_set_from_graph_style,
+	resonance_set_from_complex_normal_form_style,
+	resonance_set_from_real_normal_form_style,
+	resonance_set_from_condition_number_estimate,
+	empty_resonance_set,
+	set_resonance!,
+	is_resonant,
+	n_internal,
+	resonant_targets,
+	resonant_multiindices,
+	EigenvalueCondition,
+	RealEigenvalueCondition,
+	ConditionNumberEstimateCondition,
+	GraphInternal,
+	NormalFormInternal,
+	ResonanceConfig,
+	resolve_tolerances
 
 # ======================================================================
 # ResonanceSet
@@ -94,22 +94,22 @@ Use one of the `resonance_set_from_*` constructors rather than building this dir
   border can absorb; it signals that the master set is too small.
 """
 struct ResonanceSet{ROM, N_EXT, M <: AbstractMatrix{Bool}}
-    multiindices::MultiindexSet               # NVAR = ROM + N_EXT, enforced at construction
-    inner_resonances::M                       # (ROM, NMON)
-    outer_resonances::Union{Nothing, M}       # (n_out, NMON) or nothing
+	multiindices::MultiindexSet               # NVAR = ROM + N_EXT, enforced at construction
+	inner_resonances::M                       # (ROM, NMON)
+	outer_resonances::Union{Nothing, M}       # (n_out, NMON) or nothing
 
-    function ResonanceSet{ROM, N_EXT, M}(
-            multiindices::MultiindexSet{NVAR},
-            inner::M,
-            outer::Union{Nothing, M}) where {ROM, N_EXT, NVAR, M <: AbstractMatrix{Bool}}
-        @assert NVAR == ROM + N_EXT "NVAR=$NVAR but ROM=$ROM + N_EXT=$N_EXT = $(ROM+N_EXT)"
-        NMON = length(multiindices)
-        @assert size(inner) == (ROM, NMON) "inner_resonances size $(size(inner)) ≠ ($ROM, $NMON)"
-        if outer !== nothing
-            @assert size(outer, 2) == NMON "outer_resonances column count $(size(outer,2)) ≠ $NMON"
-        end
-        new{ROM, N_EXT, M}(multiindices, inner, outer)
-    end
+	function ResonanceSet{ROM, N_EXT, M}(
+		multiindices::MultiindexSet{NVAR},
+		inner::M,
+		outer::Union{Nothing, M}) where {ROM, N_EXT, NVAR, M <: AbstractMatrix{Bool}}
+		@assert NVAR == ROM + N_EXT "NVAR=$NVAR but ROM=$ROM + N_EXT=$N_EXT = $(ROM+N_EXT)"
+		NMON = length(multiindices)
+		@assert size(inner) == (ROM, NMON) "inner_resonances size $(size(inner)) ≠ ($ROM, $NMON)"
+		if outer !== nothing
+			@assert size(outer, 2) == NMON "outer_resonances column count $(size(outer,2)) ≠ $NMON"
+		end
+		new{ROM, N_EXT, M}(multiindices, inner, outer)
+	end
 end
 
 """
@@ -126,12 +126,12 @@ Construct a `ResonanceSet` with all resonance flags set to `false`.
 `n_internal` = number of master modes (ROM); `n_outer` = number of outer targets (0 = none).
 """
 function empty_resonance_set(
-        multiindices::MultiindexSet{NVAR}, n_int::Int, n_out::Int = 0) where {NVAR}
-    N_EXT = NVAR - n_int
-    NMON = length(multiindices)
-    inner = falses(n_int, NMON)
-    outer = n_out > 0 ? falses(n_out, NMON) : nothing
-    ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
+	multiindices::MultiindexSet{NVAR}, n_int::Int, n_out::Int = 0) where {NVAR}
+	N_EXT = NVAR - n_int
+	NMON = length(multiindices)
+	inner = falses(n_int, NMON)
+	outer = n_out > 0 ? falses(n_out, NMON) : nothing
+	ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
 end
 
 """
@@ -143,19 +143,19 @@ Set the resonance flag for target `target` and monomial `idx` (or multiindex vec
 `outer_resonances`.  Returns `rs` for chaining.  Warns if `mi` is not found.
 """
 function set_resonance!(rs::ResonanceSet{ROM}, target::Int,
-        idx::Int, value::Bool) where {ROM}
-    if target ≤ ROM
-        rs.inner_resonances[target, idx] = value
-    else
-        rs.outer_resonances[target - ROM, idx] = value
-    end
-    return rs
+	idx::Int, value::Bool) where {ROM}
+	if target ≤ ROM
+		rs.inner_resonances[target, idx] = value
+	else
+		rs.outer_resonances[target-ROM, idx] = value
+	end
+	return rs
 end
 function set_resonance!(rs::ResonanceSet{ROM}, target::Int,
-        mi::Vector{Int}, value::Bool) where {ROM}
-    idx = find_in_set(rs.multiindices, mi)
-    idx === nothing && @warn "Multiindex $mi not found" && return rs
-    return set_resonance!(rs, target, idx, value)
+	mi::Vector{Int}, value::Bool) where {ROM}
+	idx = find_in_set(rs.multiindices, mi)
+	idx === nothing && @warn "Multiindex $mi not found" && return rs
+	return set_resonance!(rs, target, idx, value)
 end
 
 """
@@ -167,18 +167,18 @@ with target `target`.  Targets `1:ROM` query `inner_resonances`; targets `> ROM`
 `outer_resonances` (returns `false` when outer is `nothing`).
 """
 function is_resonant(rs::ResonanceSet{ROM}, idx::Int, target::Int)::Bool where {ROM}
-    if target ≤ ROM
-        return rs.inner_resonances[target, idx]
-    elseif rs.outer_resonances !== nothing
-        return rs.outer_resonances[target - ROM, idx]
-    else
-        return false
-    end
+	if target ≤ ROM
+		return rs.inner_resonances[target, idx]
+	elseif rs.outer_resonances !== nothing
+		return rs.outer_resonances[target-ROM, idx]
+	else
+		return false
+	end
 end
 function is_resonant(rs::ResonanceSet{ROM}, mi::Vector{Int}, target::Int) where {ROM}
-    idx = find_in_set(rs.multiindices, mi)
-    idx === nothing && return false
-    return is_resonant(rs, idx, target)
+	idx = find_in_set(rs.multiindices, mi)
+	idx === nothing && return false
+	return is_resonant(rs, idx, target)
 end
 
 """
@@ -190,13 +190,13 @@ position `idx` (or exponent vector `mi`).  Concatenates inner and outer rows.
 Returns `nothing` when `mi` is not in the multiindex set.
 """
 function resonant_targets(rs::ResonanceSet, idx::Int)
-    rs.outer_resonances === nothing && return rs.inner_resonances[:, idx]
-    return vcat(rs.inner_resonances[:, idx], rs.outer_resonances[:, idx])
+	rs.outer_resonances === nothing && return rs.inner_resonances[:, idx]
+	return vcat(rs.inner_resonances[:, idx], rs.outer_resonances[:, idx])
 end
 function resonant_targets(rs::ResonanceSet, mi::Vector{Int})
-    idx = find_in_set(rs.multiindices, mi)
-    idx === nothing && return nothing
-    return resonant_targets(rs, idx)
+	idx = find_in_set(rs.multiindices, mi)
+	idx === nothing && return nothing
+	return resonant_targets(rs, idx)
 end
 
 """
@@ -206,11 +206,11 @@ Return the positions of all monomials resonant with `target`.
 Targets `1:ROM` query `inner_resonances`; targets `> ROM` query `outer_resonances`.
 """
 function resonant_multiindices(rs::ResonanceSet{ROM}, target::Int) where {ROM}
-    if target ≤ ROM
-        return findall(rs.inner_resonances[target, :])
-    end
-    rs.outer_resonances === nothing && return Int[]
-    return findall(rs.outer_resonances[target - ROM, :])
+	if target ≤ ROM
+		return findall(rs.inner_resonances[target, :])
+	end
+	rs.outer_resonances === nothing && return Int[]
+	return findall(rs.outer_resonances[target-ROM, :])
 end
 
 # ======================================================================
@@ -252,26 +252,26 @@ with exponent vector `mi`.
 - `NormalFormInternal`: no-op.
 """
 function apply_internal_resonances!(::AbstractMatrix{Bool}, ::NormalFormInternal,
-        ::AbstractVector{Int}, ::Int, ::Int)
-    return
+	::AbstractVector{Int}, ::Int, ::Int)
+	return
 end
 function apply_internal_resonances!(mat::AbstractMatrix{Bool}, ::GraphInternal,
-        mi::AbstractVector{Int}, n_int::Int, k::Int)
-    deg = sum(mi)
-    if deg == 1
-        pos = findfirst(!iszero, mi)
-        if pos ≤ n_int
-            mat[pos, k] = true
-        else
-            for j in 1:n_int
-                mat[j, k] = true
-            end
-        end
-    elseif deg > 1
-        for j in 1:n_int
-            mat[j, k] = true
-        end
-    end
+	mi::AbstractVector{Int}, n_int::Int, k::Int)
+	deg = sum(mi)
+	if deg == 1
+		pos = findfirst(!iszero, mi)
+		if pos ≤ n_int
+			mat[pos, k] = true
+		else
+			for j in 1:n_int
+				mat[j, k] = true
+			end
+		end
+	elseif deg > 1
+		for j in 1:n_int
+			mat[j, k] = true
+		end
+	end
 end
 
 # ======================================================================
@@ -306,12 +306,12 @@ Flags a monomial as resonant when `|λⱼ - s| < tol`.
   typically `1:n`.  Kept explicit so several conditions can cover disjoint targets.
 """
 struct EigenvalueCondition <: OuterResonanceCondition
-    eigenvalues::Vector{<:Number}
-    tol::Union{Float64, Vector{Vector{Float64}}}
-    target_indices::Vector{Int}
-    function EigenvalueCondition(eig, tol, target_indices = 1:length(eig))
-        new(eig, tol, collect(target_indices))
-    end
+	eigenvalues::Vector{<:Number}
+	tol::Union{Float64, Vector{Vector{Float64}}}
+	target_indices::Vector{Int}
+	function EigenvalueCondition(eig, tol, target_indices = 1:length(eig))
+		new(eig, tol, collect(target_indices))
+	end
 end
 
 """
@@ -331,13 +331,13 @@ so that conjugate eigenvalue pairs share the resonance flag.
 - `target_indices::Vector{Int}` — which local targets this condition applies to.
 """
 struct RealEigenvalueCondition <: OuterResonanceCondition
-    eigenvalues::Vector{<:Number}
-    conjugacy_map::Vector{Int}
-    tol::Union{Float64, Vector{Vector{Float64}}}
-    target_indices::Vector{Int}
-    function RealEigenvalueCondition(eig, conj, tol, target_indices = 1:length(eig))
-        new(eig, conj, tol, collect(target_indices))
-    end
+	eigenvalues::Vector{<:Number}
+	conjugacy_map::Vector{Int}
+	tol::Union{Float64, Vector{Vector{Float64}}}
+	target_indices::Vector{Int}
+	function RealEigenvalueCondition(eig, conj, tol, target_indices = 1:length(eig))
+		new(eig, conj, tol, collect(target_indices))
+	end
 end
 
 """
@@ -365,60 +365,60 @@ raw distance tolerance.
   as in [`RealEigenvalueCondition`](@ref); `nothing` when pairing is not wanted.
 """
 struct ConditionNumberEstimateCondition <: OuterResonanceCondition
-    eigenvalues::Vector{<:Number}
-    spectral_radius::Float64
-    condition_numbers::Vector{Float64}
-    max_cond::Float64
-    target_indices::Vector{Int}
-    conjugacy_map::Union{Nothing, Vector{Int}}
-    function ConditionNumberEstimateCondition(
-            eig, spectral_radius, eigenvalue_condition_number,
-            max_cond, target_indices, conj = nothing)
-        new(eig, spectral_radius, eigenvalue_condition_number,
-            max_cond, collect(target_indices), conj)
-    end
+	eigenvalues::Vector{<:Number}
+	spectral_radius::Float64
+	condition_numbers::Vector{Float64}
+	max_cond::Float64
+	target_indices::Vector{Int}
+	conjugacy_map::Union{Nothing, Vector{Int}}
+	function ConditionNumberEstimateCondition(
+		eig, spectral_radius, eigenvalue_condition_number,
+		max_cond, target_indices, conj = nothing)
+		new(eig, spectral_radius, eigenvalue_condition_number,
+			max_cond, collect(target_indices), conj)
+	end
 end
 
 @inline _local_index(cond::OuterResonanceCondition, target::Int) = findfirst(==(target), cond.target_indices)
 
 function is_resonant(cond::EigenvalueCondition, target::Int, s::Number, k::Int)::Bool
-    local_idx = _local_index(cond, target)
-    local_idx === nothing && return false
-    eig = cond.eigenvalues[local_idx]
-    tol = cond.tol
-    return tol isa Float64 ? abs(eig - s) < tol : abs(eig - s) < tol[k][local_idx]
+	local_idx = _local_index(cond, target)
+	local_idx === nothing && return false
+	eig = cond.eigenvalues[local_idx]
+	tol = cond.tol
+	return tol isa Float64 ? abs(eig - s) < tol : abs(eig - s) < tol[k][local_idx]
 end
 
 function is_resonant(cond::RealEigenvalueCondition, target::Int, s::Number, k::Int)::Bool
-    local_idx = _local_index(cond, target)
-    local_idx === nothing && return false
-    local_conj = cond.conjugacy_map[local_idx]
-    eig1 = cond.eigenvalues[local_idx]
-    eig2 = cond.eigenvalues[local_conj]
-    tol = cond.tol
-    if tol isa Float64
-        return (abs(eig1 - s) < tol) || (abs(eig2 - s) < tol)
-    else
-        return (abs(eig1 - s) < tol[k][local_idx]) || (abs(eig2 - s) < tol[k][local_conj])
-    end
+	local_idx = _local_index(cond, target)
+	local_idx === nothing && return false
+	local_conj = cond.conjugacy_map[local_idx]
+	eig1 = cond.eigenvalues[local_idx]
+	eig2 = cond.eigenvalues[local_conj]
+	tol = cond.tol
+	if tol isa Float64
+		return (abs(eig1 - s) < tol) || (abs(eig2 - s) < tol)
+	else
+		return (abs(eig1 - s) < tol[k][local_idx]) || (abs(eig2 - s) < tol[k][local_conj])
+	end
 end
 
 function is_resonant(cond::ConditionNumberEstimateCondition, target::Int, s::Number,
-        ::Int)::Bool
-    local_idx = _local_index(cond, target)
-    local_idx === nothing && return false
-    eig = cond.eigenvalues[local_idx]
-    κ = cond.condition_numbers[local_idx]
-    ρ = cond.spectral_radius
-    mc = cond.max_cond
-    if cond.conjugacy_map === nothing
-        return abs(eig - s) * mc < ρ * κ
-    else
-        local_conj = cond.conjugacy_map[local_idx]
-        eig_c = cond.eigenvalues[local_conj]
-        κ_c = cond.condition_numbers[local_conj]
-        return (abs(eig - s) * mc < ρ * κ) || (abs(eig_c - s) * mc < ρ * κ_c)
-    end
+	::Int)::Bool
+	local_idx = _local_index(cond, target)
+	local_idx === nothing && return false
+	eig = cond.eigenvalues[local_idx]
+	κ = cond.condition_numbers[local_idx]
+	ρ = cond.spectral_radius
+	mc = cond.max_cond
+	if cond.conjugacy_map === nothing
+		return abs(eig - s) * mc < ρ * κ
+	else
+		local_conj = cond.conjugacy_map[local_idx]
+		eig_c = cond.eigenvalues[local_conj]
+		κ_c = cond.condition_numbers[local_conj]
+		return (abs(eig - s) * mc < ρ * κ) || (abs(eig_c - s) * mc < ρ * κ_c)
+	end
 end
 
 # ======================================================================
@@ -427,7 +427,7 @@ end
 
 # Compute superharmonics s_k = ⟨super_eigenvalues, α_k⟩ for all monomials.
 function _superharmonics(super_eigenvalues, multiindices::MultiindexSet)
-    [sum(super_eigenvalues .* mi) for mi in multiindices.exponents]
+	[sum(super_eigenvalues .* mi) for mi in multiindices.exponents]
 end
 
 """
@@ -437,43 +437,43 @@ Build the `n_int × NMON` inner resonance matrix.
 applies an eigenvalue-proximity check on the master eigenvalues.
 """
 function _build_inner_matrix(
-        strategy::InternalResonance,
-        inner_cond::Union{Nothing, OuterResonanceCondition},
-        super_eigenvalues, multiindices::MultiindexSet, n_int::Int)
-    exps = multiindices.exponents
-    NMON = length(exps)
-    mat = falses(n_int, NMON)
-    s_vec = _superharmonics(super_eigenvalues, multiindices)
-    for k in 1:NMON
-        mi = exps[k]
-        s = s_vec[k]
-        apply_internal_resonances!(mat, strategy, mi, n_int, k)
-        if inner_cond !== nothing
-            for r in 1:n_int
-                is_resonant(inner_cond, r, s, k) && (mat[r, k] = true)
-            end
-        end
-    end
-    return mat
+	strategy::InternalResonance,
+	inner_cond::Union{Nothing, OuterResonanceCondition},
+	super_eigenvalues, multiindices::MultiindexSet, n_int::Int)
+	exps = multiindices.exponents
+	NMON = length(exps)
+	mat = falses(n_int, NMON)
+	s_vec = _superharmonics(super_eigenvalues, multiindices)
+	for k in 1:NMON
+		mi = exps[k]
+		s = s_vec[k]
+		apply_internal_resonances!(mat, strategy, mi, n_int, k)
+		if inner_cond !== nothing
+			for r in 1:n_int
+				is_resonant(inner_cond, r, s, k) && (mat[r, k] = true)
+			end
+		end
+	end
+	return mat
 end
 
 """
 Build the `n_out × NMON` outer resonance matrix using `outer_cond`.
 """
 function _build_outer_matrix(
-        outer_cond::OuterResonanceCondition,
-        super_eigenvalues, multiindices::MultiindexSet, n_out::Int)
-    exps = multiindices.exponents
-    NMON = length(exps)
-    mat = falses(n_out, NMON)
-    s_vec = _superharmonics(super_eigenvalues, multiindices)
-    for k in 1:NMON
-        s = s_vec[k]
-        for j in 1:n_out
-            is_resonant(outer_cond, j, s, k) && (mat[j, k] = true)
-        end
-    end
-    return mat
+	outer_cond::OuterResonanceCondition,
+	super_eigenvalues, multiindices::MultiindexSet, n_out::Int)
+	exps = multiindices.exponents
+	NMON = length(exps)
+	mat = falses(n_out, NMON)
+	s_vec = _superharmonics(super_eigenvalues, multiindices)
+	for k in 1:NMON
+		s = s_vec[k]
+		for j in 1:n_out
+			is_resonant(outer_cond, j, s, k) && (mat[j, k] = true)
+		end
+	end
+	return mat
 end
 
 # ======================================================================
@@ -495,24 +495,24 @@ proximity `|λⱼ - s| < tol`.
   Pass `ComplexF64[]` when there are no outer targets.
 """
 function resonance_set_from_graph_style(
-        multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::AbstractVector{<:Number},
-        external_eigenvalues::AbstractVector{<:Number},
-        outer_eigenvalues::AbstractVector{<:Number},
-        tol::Union{Float64, Vector{Vector{Float64}}}) where {NVAR}
-    n_int = length(master_eigenvalues)
-    n_out = length(outer_eigenvalues)
-    N_EXT = NVAR - n_int
-    _super = vcat(master_eigenvalues, external_eigenvalues)
-    @assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
-    inner = _build_inner_matrix(GraphInternal(), nothing, _super, multiindices, n_int)
-    outer = if n_out > 0
-        outer_cond = EigenvalueCondition(outer_eigenvalues, tol, 1:n_out)
-        _build_outer_matrix(outer_cond, _super, multiindices, n_out)
-    else
-        nothing
-    end
-    return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
+	multiindices::MultiindexSet{NVAR},
+	master_eigenvalues::AbstractVector{<:Number},
+	external_eigenvalues::AbstractVector{<:Number},
+	outer_eigenvalues::AbstractVector{<:Number},
+	tol::Union{Float64, Vector{Vector{Float64}}}) where {NVAR}
+	n_int = length(master_eigenvalues)
+	n_out = length(outer_eigenvalues)
+	N_EXT = NVAR - n_int
+	_super = vcat(master_eigenvalues, external_eigenvalues)
+	@assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
+	inner = _build_inner_matrix(GraphInternal(), nothing, _super, multiindices, n_int)
+	outer = if n_out > 0
+		outer_cond = EigenvalueCondition(outer_eigenvalues, tol, 1:n_out)
+		_build_outer_matrix(outer_cond, _super, multiindices, n_out)
+	else
+		nothing
+	end
+	return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
 end
 
 """
@@ -524,33 +524,33 @@ Build a `ResonanceSet` using the **complex normal form style**: inner resonances
 flagged by `|λᵣ - s| < tol` for each master mode `r`; outer resonances (if any)
 flagged by proximity to `outer_eigenvalues`.
 
-Suitable for autonomous SSMs with complex conjugate reduced variables; add
+Suitable for autonomous Invariant Manifolds (e.g. NNMs) with complex conjugate reduced variables; add
 `external_eigenvalues` for non-autonomous systems where the multiindex includes
 forcing directions.
 """
 function resonance_set_from_complex_normal_form_style(
-        multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::AbstractVector{<:Number},
-        tol::Union{Float64, Vector{Vector{Float64}}};
-        external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
-        outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
-        outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
-    n_int = length(master_eigenvalues)
-    n_out = length(outer_eigenvalues)
-    N_EXT = NVAR - n_int
-    _super = vcat(master_eigenvalues, external_eigenvalues)
-    @assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
-    otol = _resolve_outer_tol(tol, outer_tol, n_out, n_int)
-    inner_cond = EigenvalueCondition(master_eigenvalues, tol, 1:n_int)
-    inner = _build_inner_matrix(
-        NormalFormInternal(), inner_cond, _super, multiindices, n_int)
-    outer = if n_out > 0
-        outer_cond = EigenvalueCondition(outer_eigenvalues, otol, 1:n_out)
-        _build_outer_matrix(outer_cond, _super, multiindices, n_out)
-    else
-        nothing
-    end
-    return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
+	multiindices::MultiindexSet{NVAR},
+	master_eigenvalues::AbstractVector{<:Number},
+	tol::Union{Float64, Vector{Vector{Float64}}};
+	external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+	outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+	outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
+	n_int = length(master_eigenvalues)
+	n_out = length(outer_eigenvalues)
+	N_EXT = NVAR - n_int
+	_super = vcat(master_eigenvalues, external_eigenvalues)
+	@assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
+	otol = _resolve_outer_tol(tol, outer_tol, n_out, n_int)
+	inner_cond = EigenvalueCondition(master_eigenvalues, tol, 1:n_int)
+	inner = _build_inner_matrix(
+		NormalFormInternal(), inner_cond, _super, multiindices, n_int)
+	outer = if n_out > 0
+		outer_cond = EigenvalueCondition(outer_eigenvalues, otol, 1:n_out)
+		_build_outer_matrix(outer_cond, _super, multiindices, n_out)
+	else
+		nothing
+	end
+	return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
 end
 
 """
@@ -570,15 +570,15 @@ applies to any number of targets) and impossible for a per-target vector — hen
 error, which tells the caller what to pass instead of failing deep inside `is_resonant`.
 """
 function _resolve_outer_tol(tol, outer_tol, n_out::Int, n_int::Int)
-    n_out == 0 && return tol
-    outer_tol !== nothing && return outer_tol
-    tol isa Float64 && return tol
-    throw(ArgumentError("""
-        A per-target `tol` is indexed by the target number *within its own block*, so a
-        vector sized for the $n_int inner targets cannot also serve the $n_out outer targets.
-        Pass `outer_tol` as well: a scalar, or a per-monomial vector whose entries have
-        $n_out elements (e.g. `[[rel * abs(λ_outer[j]) for j in 1:$n_out] for _ in 1:NMON]`).
-        """))
+	n_out == 0 && return tol
+	outer_tol !== nothing && return outer_tol
+	tol isa Float64 && return tol
+	throw(ArgumentError("""
+		A per-target `tol` is indexed by the target number *within its own block*, so a
+		vector sized for the $n_int inner targets cannot also serve the $n_out outer targets.
+		Pass `outer_tol` as well: a scalar, or a per-monomial vector whose entries have
+		$n_out elements (e.g. `[[rel * abs(λ_outer[j]) for j in 1:$n_out] for _ in 1:NMON]`).
+		"""))
 end
 
 """
@@ -595,33 +595,33 @@ the first `n_int` cover inner targets, the remainder cover outer targets (re-ind
 locally).  `conjugacy_map[i]` is the local index of the conjugate of target `i`.
 """
 function resonance_set_from_real_normal_form_style(
-        multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::AbstractVector{<:Number},
-        conjugacy_map::Vector{Int},
-        tol::Union{Float64, Vector{Vector{Float64}}};
-        external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
-        outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
-        outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
-    n_int = length(master_eigenvalues)
-    n_out = length(outer_eigenvalues)
-    N_EXT = NVAR - n_int
-    _super = vcat(master_eigenvalues, external_eigenvalues)
-    @assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
-    @assert length(conjugacy_map) == n_int + n_out "conjugacy_map length ≠ n_int + n_out"
-    otol = _resolve_outer_tol(tol, outer_tol, n_out, n_int)
-    inner_conj = conjugacy_map[1:n_int]
-    inner_cond = RealEigenvalueCondition(master_eigenvalues, inner_conj, tol, 1:n_int)
-    inner = _build_inner_matrix(
-        NormalFormInternal(), inner_cond, _super, multiindices, n_int)
-    outer = if n_out > 0
-        # re-index outer conjugacy map entries to local 1:n_out
-        outer_conj = conjugacy_map[(n_int + 1):end] .- n_int
-        outer_cond = RealEigenvalueCondition(outer_eigenvalues, outer_conj, otol, 1:n_out)
-        _build_outer_matrix(outer_cond, _super, multiindices, n_out)
-    else
-        nothing
-    end
-    return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
+	multiindices::MultiindexSet{NVAR},
+	master_eigenvalues::AbstractVector{<:Number},
+	conjugacy_map::Vector{Int},
+	tol::Union{Float64, Vector{Vector{Float64}}};
+	external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+	outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+	outer_tol::Union{Nothing, Float64, Vector{Vector{Float64}}} = nothing) where {NVAR}
+	n_int = length(master_eigenvalues)
+	n_out = length(outer_eigenvalues)
+	N_EXT = NVAR - n_int
+	_super = vcat(master_eigenvalues, external_eigenvalues)
+	@assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
+	@assert length(conjugacy_map) == n_int + n_out "conjugacy_map length ≠ n_int + n_out"
+	otol = _resolve_outer_tol(tol, outer_tol, n_out, n_int)
+	inner_conj = conjugacy_map[1:n_int]
+	inner_cond = RealEigenvalueCondition(master_eigenvalues, inner_conj, tol, 1:n_int)
+	inner = _build_inner_matrix(
+		NormalFormInternal(), inner_cond, _super, multiindices, n_int)
+	outer = if n_out > 0
+		# re-index outer conjugacy map entries to local 1:n_out
+		outer_conj = conjugacy_map[(n_int+1):end] .- n_int
+		outer_cond = RealEigenvalueCondition(outer_eigenvalues, outer_conj, otol, 1:n_out)
+		_build_outer_matrix(outer_cond, _super, multiindices, n_out)
+	else
+		nothing
+	end
+	return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
 end
 
 """
@@ -642,39 +642,39 @@ the master modes, the remainder for the outer modes.
 are populated (default: all).
 """
 function resonance_set_from_condition_number_estimate(
-        multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::AbstractVector{<:Number},
-        spectral_radius::Float64,
-        target_condition_numbers::Vector{Float64},
-        max_cond::Float64;
-        external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
-        outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
-        inner_target_indices::Union{Nothing, UnitRange{Int}, Vector{Int}} = nothing,
-        outer_target_indices::Union{Nothing, UnitRange{Int}, Vector{Int}} = nothing,
-        conjugacy_map::Union{Nothing, Vector{Int}} = nothing) where {NVAR}
-    n_int = length(master_eigenvalues)
-    n_out = length(outer_eigenvalues)
-    N_EXT = NVAR - n_int
-    _super = vcat(master_eigenvalues, external_eigenvalues)
-    @assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
-    @assert length(target_condition_numbers) == n_int + n_out
-    inner_κ = target_condition_numbers[1:n_int]
-    outer_κ = target_condition_numbers[(n_int + 1):end]
-    eff_inner = inner_target_indices === nothing ? (1:n_int) : inner_target_indices
-    inner_cond = ConditionNumberEstimateCondition(
-        master_eigenvalues, spectral_radius, inner_κ, max_cond, collect(eff_inner),
-        conjugacy_map)
-    inner = _build_inner_matrix(
-        NormalFormInternal(), inner_cond, _super, multiindices, n_int)
-    outer = if n_out > 0
-        eff_outer = outer_target_indices === nothing ? (1:n_out) : outer_target_indices
-        outer_cond = ConditionNumberEstimateCondition(
-            outer_eigenvalues, spectral_radius, outer_κ, max_cond, collect(eff_outer), nothing)
-        _build_outer_matrix(outer_cond, _super, multiindices, n_out)
-    else
-        nothing
-    end
-    return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
+	multiindices::MultiindexSet{NVAR},
+	master_eigenvalues::AbstractVector{<:Number},
+	spectral_radius::Float64,
+	target_condition_numbers::Vector{Float64},
+	max_cond::Float64;
+	external_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+	outer_eigenvalues::AbstractVector{<:Number} = ComplexF64[],
+	inner_target_indices::Union{Nothing, UnitRange{Int}, Vector{Int}} = nothing,
+	outer_target_indices::Union{Nothing, UnitRange{Int}, Vector{Int}} = nothing,
+	conjugacy_map::Union{Nothing, Vector{Int}} = nothing) where {NVAR}
+	n_int = length(master_eigenvalues)
+	n_out = length(outer_eigenvalues)
+	N_EXT = NVAR - n_int
+	_super = vcat(master_eigenvalues, external_eigenvalues)
+	@assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
+	@assert length(target_condition_numbers) == n_int + n_out
+	inner_κ = target_condition_numbers[1:n_int]
+	outer_κ = target_condition_numbers[(n_int+1):end]
+	eff_inner = inner_target_indices === nothing ? (1:n_int) : inner_target_indices
+	inner_cond = ConditionNumberEstimateCondition(
+		master_eigenvalues, spectral_radius, inner_κ, max_cond, collect(eff_inner),
+		conjugacy_map)
+	inner = _build_inner_matrix(
+		NormalFormInternal(), inner_cond, _super, multiindices, n_int)
+	outer = if n_out > 0
+		eff_outer = outer_target_indices === nothing ? (1:n_out) : outer_target_indices
+		outer_cond = ConditionNumberEstimateCondition(
+			outer_eigenvalues, spectral_radius, outer_κ, max_cond, collect(eff_outer), nothing)
+		_build_outer_matrix(outer_cond, _super, multiindices, n_out)
+	else
+		nothing
+	end
+	return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
 end
 
 """
@@ -685,28 +685,28 @@ Advanced overload that accepts a pre-built `OuterResonanceCondition` for the out
 `n_out` is inferred as `maximum(outer_condition.target_indices)` (or 0 if empty).
 """
 function resonance_set_from_graph_style(
-        multiindices::MultiindexSet{NVAR},
-        master_eigenvalues::AbstractVector{<:Number},
-        external_eigenvalues::AbstractVector{<:Number},
-        outer_condition::OuterResonanceCondition) where {NVAR}
-    n_int = length(master_eigenvalues)
-    n_out = isempty(outer_condition.target_indices) ? 0 :
-            maximum(outer_condition.target_indices)
-    N_EXT = NVAR - n_int
-    _super = vcat(master_eigenvalues, external_eigenvalues)
-    @assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
-    inner = _build_inner_matrix(GraphInternal(), nothing, _super, multiindices, n_int)
-    outer = n_out > 0 ?
-            _build_outer_matrix(outer_condition, _super, multiindices, n_out) : nothing
-    return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
+	multiindices::MultiindexSet{NVAR},
+	master_eigenvalues::AbstractVector{<:Number},
+	external_eigenvalues::AbstractVector{<:Number},
+	outer_condition::OuterResonanceCondition) where {NVAR}
+	n_int = length(master_eigenvalues)
+	n_out = isempty(outer_condition.target_indices) ? 0 :
+			maximum(outer_condition.target_indices)
+	N_EXT = NVAR - n_int
+	_super = vcat(master_eigenvalues, external_eigenvalues)
+	@assert length(_super) == NVAR "length(master) + length(external) ≠ NVAR"
+	inner = _build_inner_matrix(GraphInternal(), nothing, _super, multiindices, n_int)
+	outer = n_out > 0 ?
+			_build_outer_matrix(outer_condition, _super, multiindices, n_out) : nothing
+	return ResonanceSet{n_int, N_EXT, BitMatrix}(multiindices, inner, outer)
 end
 
 function Base.show(io::IO, rs::ResonanceSet{ROM, N_EXT, M}) where {ROM, N_EXT, M}
-    n_out = rs.outer_resonances === nothing ? 0 : size(rs.outer_resonances, 1)
-    print(io, "ResonanceSet{ROM=", ROM, ",N_EXT=", N_EXT, "} with ",
-        length(rs.multiindices), " multiindices, ",
-        count(rs.inner_resonances), " inner resonances",
-        n_out > 0 ? ", $(count(rs.outer_resonances)) outer resonances" : "")
+	n_out = rs.outer_resonances === nothing ? 0 : size(rs.outer_resonances, 1)
+	print(io, "ResonanceSet{ROM=", ROM, ",N_EXT=", N_EXT, "} with ",
+		length(rs.multiindices), " multiindices, ",
+		count(rs.inner_resonances), " inner resonances",
+		n_out > 0 ? ", $(count(rs.outer_resonances)) outer resonances" : "")
 end
 
 # =============================================================================
@@ -768,61 +768,61 @@ way to tell "the user asked for this tolerance" from "nobody said anything", so 
 guards that cry wolf get ignored. `nothing` is the only honest "unspecified".
 """
 struct ResonanceConfig
-    style::Symbol
-    tol::Union{Nothing, Real, AbstractVector}
-    tol_relative::Union{Nothing, Real}
-    conjugacy_map::Union{Nothing, Vector{Int}}
-    outer_targets::Bool
-    warn_outer::Bool
-    eigenvalue_projection::Symbol
+	style::Symbol
+	tol::Union{Nothing, Real, AbstractVector}
+	tol_relative::Union{Nothing, Real}
+	conjugacy_map::Union{Nothing, Vector{Int}}
+	outer_targets::Bool
+	warn_outer::Bool
+	eigenvalue_projection::Symbol
 
-    function ResonanceConfig(; style::Symbol = :graph,
-            tol::Union{Nothing, Real, AbstractVector} = nothing,
-            tol_relative::Union{Nothing, Real} = nothing,
-            conjugacy_map::Union{Nothing, Vector{Int}} = nothing,
-            outer_targets::Bool = false,
-            warn_outer::Bool = true,
-            eigenvalue_projection::Symbol = :full)
-        style in (:graph, :complex_normal_form, :real_normal_form) || throw(ArgumentError(
-            "unknown resonance style :$style; choose :graph, :complex_normal_form or " *
-            ":real_normal_form"))
-        eigenvalue_projection in (:full, :imaginary_part_only) || throw(ArgumentError(
-            "unknown eigenvalue_projection :$eigenvalue_projection; choose :full or " *
-            ":imaginary_part_only"))
-        if style === :real_normal_form && conjugacy_map === nothing
-            throw(ArgumentError(
-                ":real_normal_form pairs conjugate targets, so it requires `conjugacy_map`"))
-        end
-        if style !== :real_normal_form && conjugacy_map !== nothing
-            throw(ArgumentError(
-                "`conjugacy_map` is only read by :real_normal_form, but style is :$style. " *
-                "It would be silently ignored, so it is rejected instead."))
-        end
-        if tol isa Real && tol <= 0
-            throw(ArgumentError("resonance tol must be positive, got $tol"))
-        end
-        if tol_relative !== nothing && tol_relative <= 0
-            throw(ArgumentError("tol_relative must be positive, got $tol_relative"))
-        end
-        # NOTE: `tol_relative` together with `outer_targets` is deliberately NOT rejected.
-        # It used to be impossible because one per-target tolerance vector was handed to
-        # both target families; `outer_tol` now sizes them separately, so the combination
-        # is both legal and the physically obvious reading of "relative detuning".
-        return new(style, tol, tol_relative, conjugacy_map, outer_targets, warn_outer,
-            eigenvalue_projection)
-    end
+	function ResonanceConfig(; style::Symbol = :graph,
+		tol::Union{Nothing, Real, AbstractVector} = nothing,
+		tol_relative::Union{Nothing, Real} = nothing,
+		conjugacy_map::Union{Nothing, Vector{Int}} = nothing,
+		outer_targets::Bool = false,
+		warn_outer::Bool = true,
+		eigenvalue_projection::Symbol = :full)
+		style in (:graph, :complex_normal_form, :real_normal_form) || throw(ArgumentError(
+			"unknown resonance style :$style; choose :graph, :complex_normal_form or " *
+			":real_normal_form"))
+		eigenvalue_projection in (:full, :imaginary_part_only) || throw(ArgumentError(
+			"unknown eigenvalue_projection :$eigenvalue_projection; choose :full or " *
+			":imaginary_part_only"))
+		if style === :real_normal_form && conjugacy_map === nothing
+			throw(ArgumentError(
+				":real_normal_form pairs conjugate targets, so it requires `conjugacy_map`"))
+		end
+		if style !== :real_normal_form && conjugacy_map !== nothing
+			throw(ArgumentError(
+				"`conjugacy_map` is only read by :real_normal_form, but style is :$style. " *
+				"It would be silently ignored, so it is rejected instead."))
+		end
+		if tol isa Real && tol <= 0
+			throw(ArgumentError("resonance tol must be positive, got $tol"))
+		end
+		if tol_relative !== nothing && tol_relative <= 0
+			throw(ArgumentError("tol_relative must be positive, got $tol_relative"))
+		end
+		# NOTE: `tol_relative` together with `outer_targets` is deliberately NOT rejected.
+		# It used to be impossible because one per-target tolerance vector was handed to
+		# both target families; `outer_tol` now sizes them separately, so the combination
+		# is both legal and the physically obvious reading of "relative detuning".
+		return new(style, tol, tol_relative, conjugacy_map, outer_targets, warn_outer,
+			eigenvalue_projection)
+	end
 end
 
 function Base.show(io::IO, c::ResonanceConfig)
-    print(io, "ResonanceConfig(style = :", c.style)
-    c.tol === nothing || print(io, ", tol = ", c.tol)
-    c.tol_relative === nothing || print(io, ", tol_relative = ", c.tol_relative)
-    c.conjugacy_map === nothing || print(io, ", conjugacy_map = ", c.conjugacy_map)
-    c.outer_targets && print(io, ", outer_targets = true")
-    c.warn_outer || print(io, ", warn_outer = false")
-    c.eigenvalue_projection === :full ||
-        print(io, ", eigenvalue_projection = :", c.eigenvalue_projection)
-    print(io, ")")
+	print(io, "ResonanceConfig(style = :", c.style)
+	c.tol === nothing || print(io, ", tol = ", c.tol)
+	c.tol_relative === nothing || print(io, ", tol_relative = ", c.tol_relative)
+	c.conjugacy_map === nothing || print(io, ", conjugacy_map = ", c.conjugacy_map)
+	c.outer_targets && print(io, ", outer_targets = true")
+	c.warn_outer || print(io, ", warn_outer = false")
+	c.eigenvalue_projection === :full ||
+		print(io, ", eigenvalue_projection = :", c.eigenvalue_projection)
+	print(io, ")")
 end
 
 """
@@ -835,7 +835,7 @@ returning `Vector{ComplexF64}`; `:imaginary_part_only` returns the imaginary par
 A projected eigenvalue `i·Im(λ)` is carried by the real number `Im(λ)` — the two are
 isomorphic for this purpose, because for real `a, b`
 
-    |i·a − i·b| = |a − b|
+	|i·a − i·b| = |a − b|
 
 and the whole of detection is `abs(eig - s)`. So carrying the frequencies as `Float64`
 reproduces the pure-imaginary complex computation *exactly*, with no `i·Im`
@@ -852,15 +852,15 @@ signatures reject. The loops below are the same reason the caller used
 `Vector{ComplexF64}(…)` rather than `collect`.
 """
 function project_eigenvalues(λ::AbstractVector, projection::Symbol)
-    projection === :full && return Vector{ComplexF64}(λ)
-    if projection === :imaginary_part_only
-        out = Vector{Float64}(undef, length(λ))
-        @inbounds for (i, l) in enumerate(λ)
-            out[i] = imag(l)
-        end
-        return out
-    end
-    throw(ArgumentError("unknown eigenvalue_projection :$projection"))
+	projection === :full && return Vector{ComplexF64}(λ)
+	if projection === :imaginary_part_only
+		out = Vector{Float64}(undef, length(λ))
+		@inbounds for (i, l) in enumerate(λ)
+			out[i] = imag(l)
+		end
+		return out
+	end
+	throw(ArgumentError("unknown eigenvalue_projection :$projection"))
 end
 
 # Style default for an unspecified tolerance.
@@ -877,14 +877,14 @@ interpolation inside a loop body captures the loop variables and boxes them on e
 iteration, even when the branch is not taken and nothing is logged.
 """
 function _first_close_pair(eigenvalues::AbstractVector, tol::Float64, n::Int)
-    for i in 1:n, j in (i + 1):n
+	for i in 1:n, j in (i+1):n
 
-        gap = abs(eigenvalues[i] - eigenvalues[j])
-        if gap > 0 && tol >= gap
-            return i, j, gap
-        end
-    end
-    return 0, 0, 0.0
+		gap = abs(eigenvalues[i] - eigenvalues[j])
+		if gap > 0 && tol >= gap
+			return i, j, gap
+		end
+	end
+	return 0, 0, 0.0
 end
 
 """
@@ -902,48 +902,48 @@ With `tol_relative`, each family is sized for its **own** target count:
 which is why the two can now be combined at all.
 """
 function resolve_tolerances(config::ResonanceConfig,
-        master_eigenvalues::AbstractVector, outer_eigenvalues::AbstractVector,
-        n_monomials::Int)
-    n_int = length(master_eigenvalues)
-    n_out = length(outer_eigenvalues)
+	master_eigenvalues::AbstractVector, outer_eigenvalues::AbstractVector,
+	n_monomials::Int)
+	n_int = length(master_eigenvalues)
+	n_out = length(outer_eigenvalues)
 
-    if config.style === :graph &&
-       (config.tol !== nothing || config.tol_relative !== nothing)
-        @info "ResonanceConfig: style = :graph marks every monomial of degree ≥ 2 as " *
-              "resonant with all master modes, so the tolerance you set is not used for " *
-              "the inner block. It still applies to outer targets when `outer_targets = true`."
-    end
-    if config.outer_targets && n_out == 0
-        @info "ResonanceConfig: `outer_targets = true` but the spectral data carries no " *
-              "outer eigenvalues, so no off-manifold targets can be flagged."
-    end
+	if config.style === :graph &&
+	   (config.tol !== nothing || config.tol_relative !== nothing)
+		@info "ResonanceConfig: style = :graph marks every monomial of degree ≥ 2 as " *
+			  "resonant with all master modes, so the tolerance you set is not used for " *
+			  "the inner block. It still applies to outer targets when `outer_targets = true`."
+	end
+	if config.outer_targets && n_out == 0
+		@info "ResonanceConfig: `outer_targets = true` but the spectral data carries no " *
+			  "outer eigenvalues, so no off-manifold targets can be flagged."
+	end
 
-    if config.tol_relative !== nothing
-        rel = Float64(config.tol_relative)
-        inner = [[rel * abs(master_eigenvalues[r]) for r in 1:n_int] for _ in 1:n_monomials]
-        outer = [[rel * abs(outer_eigenvalues[j]) for j in 1:n_out] for _ in 1:n_monomials]
-        return inner, outer
-    end
+	if config.tol_relative !== nothing
+		rel = Float64(config.tol_relative)
+		inner = [[rel * abs(master_eigenvalues[r]) for r in 1:n_int] for _ in 1:n_monomials]
+		outer = [[rel * abs(outer_eigenvalues[j]) for j in 1:n_out] for _ in 1:n_monomials]
+		return inner, outer
+	end
 
-    tol = config.tol === nothing ? _default_tol(config.style) : config.tol
-    if tol isa Real
-        t = Float64(tol)
-        # A tolerance wider than the gaps between master eigenvalues makes essentially
-        # every monomial read as resonant, which is rarely what anyone means.
-        # The guard asks a yes/no question — "does ANY pair of master eigenvalues sit within
-        # `t` of each other?" — so it neither materialises the ROM(ROM-1)/2 distances nor
-        # reduces them to a minimum. The search is a separate function, and the logging
-        # happens outside it: an `@info` in the loop body interpolates the loop variables,
-        # which boxes them on every iteration even when nothing is logged.
-        i, j, gap = _first_close_pair(master_eigenvalues, t, n_int)
-        if i != 0
-            @info "ResonanceConfig: tol = $t is at least the spacing between master " *
-                  "eigenvalues $i and $j ($gap), so nearly every monomial will be " *
-                  "flagged resonant. Did you mean a smaller tolerance, or `tol_relative`?"
-        end
-        return t, t
-    end
-    return tol, nothing   # explicit per-target vector: outer_tol must be supplied upstream
+	tol = config.tol === nothing ? _default_tol(config.style) : config.tol
+	if tol isa Real
+		t = Float64(tol)
+		# A tolerance wider than the gaps between master eigenvalues makes essentially
+		# every monomial read as resonant, which is rarely what anyone means.
+		# The guard asks a yes/no question — "does ANY pair of master eigenvalues sit within
+		# `t` of each other?" — so it neither materialises the ROM(ROM-1)/2 distances nor
+		# reduces them to a minimum. The search is a separate function, and the logging
+		# happens outside it: an `@info` in the loop body interpolates the loop variables,
+		# which boxes them on every iteration even when nothing is logged.
+		i, j, gap = _first_close_pair(master_eigenvalues, t, n_int)
+		if i != 0
+			@info "ResonanceConfig: tol = $t is at least the spacing between master " *
+				  "eigenvalues $i and $j ($gap), so nearly every monomial will be " *
+				  "flagged resonant. Did you mean a smaller tolerance, or `tol_relative`?"
+		end
+		return t, t
+	end
+	return tol, nothing   # explicit per-target vector: outer_tol must be supplied upstream
 end
 
 """
@@ -959,55 +959,55 @@ outer objects via [`resolve_tolerances`](@ref), and warns about off-manifold
 near-resonances when `config.warn_outer` is set.
 """
 function build_resonance_set(model::NthOrderModel, mset::MultiindexSet,
-        spectral, config::ResonanceConfig)
-    # `Vector{ComplexF64}`, not `collect`: the master eigenvalues are an `SVector`, and
-    # `collect` would give a `SizedVector` that the constructors' signatures reject.
-    #
-    # The projection is applied HERE, before `resolve_tolerances`, so it governs both what
-    # detection compares and what `tol_relative` is relative to — with
-    # `:imaginary_part_only` that makes the threshold `tol_relative * |Im λ|`, measured on
-    # the same frequency scale the detection now uses. All three eigenvalue families are
-    # projected: master, external and outer, so the detection compares frequencies alone
-    # everywhere.
-    master_eigs = project_eigenvalues(spectral.master.eigenvalues,
-        config.eigenvalue_projection)
-    all_outer = project_eigenvalues(spectral.outer.eigenvalues,
-        config.eigenvalue_projection)
-    # The EMPTY cases must carry the projected element type too, or a `Float64[]` family
-    # meets a `ComplexF64[]` one and the superharmonic promotes back to complex — which
-    # would silently undo the projection for exactly the models that have no external
-    # system or no outer targets.
-    T = eltype(master_eigs)
-    external_eigs = model.external_system === nothing ? T[] :
-                    project_eigenvalues(Vector(model.external_system.eigenvalues),
-        config.eigenvalue_projection)
+	spectral, config::ResonanceConfig)
+	# `Vector{ComplexF64}`, not `collect`: the master eigenvalues are an `SVector`, and
+	# `collect` would give a `SizedVector` that the constructors' signatures reject.
+	#
+	# The projection is applied HERE, before `resolve_tolerances`, so it governs both what
+	# detection compares and what `tol_relative` is relative to — with
+	# `:imaginary_part_only` that makes the threshold `tol_relative * |Im λ|`, measured on
+	# the same frequency scale the detection now uses. All three eigenvalue families are
+	# projected: master, external and outer, so the detection compares frequencies alone
+	# everywhere.
+	master_eigs = project_eigenvalues(spectral.master.eigenvalues,
+		config.eigenvalue_projection)
+	all_outer = project_eigenvalues(spectral.outer.eigenvalues,
+		config.eigenvalue_projection)
+	# The EMPTY cases must carry the projected element type too, or a `Float64[]` family
+	# meets a `ComplexF64[]` one and the superharmonic promotes back to complex — which
+	# would silently undo the projection for exactly the models that have no external
+	# system or no outer targets.
+	T = eltype(master_eigs)
+	external_eigs = model.external_system === nothing ? T[] :
+					project_eigenvalues(Vector(model.external_system.eigenvalues),
+		config.eigenvalue_projection)
 
-    # Outer eigenvalues serve two distinct purposes: populating the diagnostic
-    # `outer_resonances` block (opt-in), and driving the off-manifold warning (on by
-    # default). Only the first puts them in the returned set.
-    target_outer = config.outer_targets ? all_outer : T[]
-    inner_tol, outer_tol = resolve_tolerances(
-        config, master_eigs, target_outer, length(mset))
+	# Outer eigenvalues serve two distinct purposes: populating the diagnostic
+	# `outer_resonances` block (opt-in), and driving the off-manifold warning (on by
+	# default). Only the first puts them in the returned set.
+	target_outer = config.outer_targets ? all_outer : T[]
+	inner_tol, outer_tol = resolve_tolerances(
+		config, master_eigs, target_outer, length(mset))
 
-    rset = if config.style === :graph
-        resonance_set_from_graph_style(
-            mset, master_eigs, external_eigs, target_outer,
-            outer_tol === nothing ? inner_tol : outer_tol)
-    elseif config.style === :complex_normal_form
-        resonance_set_from_complex_normal_form_style(
-            mset, master_eigs, inner_tol;
-            external_eigenvalues = external_eigs,
-            outer_eigenvalues = target_outer, outer_tol = outer_tol)
-    else
-        resonance_set_from_real_normal_form_style(
-            mset, master_eigs, config.conjugacy_map, inner_tol;
-            external_eigenvalues = external_eigs,
-            outer_eigenvalues = target_outer, outer_tol = outer_tol)
-    end
+	rset = if config.style === :graph
+		resonance_set_from_graph_style(
+			mset, master_eigs, external_eigs, target_outer,
+			outer_tol === nothing ? inner_tol : outer_tol)
+	elseif config.style === :complex_normal_form
+		resonance_set_from_complex_normal_form_style(
+			mset, master_eigs, inner_tol;
+			external_eigenvalues = external_eigs,
+			outer_eigenvalues = target_outer, outer_tol = outer_tol)
+	else
+		resonance_set_from_real_normal_form_style(
+			mset, master_eigs, config.conjugacy_map, inner_tol;
+			external_eigenvalues = external_eigs,
+			outer_eigenvalues = target_outer, outer_tol = outer_tol)
+	end
 
-    config.warn_outer && _warn_outer_resonances(
-        mset, master_eigs, all_outer, external_eigs, config, spectral)
-    return rset
+	config.warn_outer && _warn_outer_resonances(
+		mset, master_eigs, all_outer, external_eigs, config, spectral)
+	return rset
 end
 
 """
@@ -1040,13 +1040,13 @@ already-built outer block instead was rejected deliberately: under `:real_normal
 block ORs each target with its conjugate, which would silently change what gets reported.
 """
 function _warn_outer_resonances(mset::MultiindexSet, master_eigs, outer_eigs,
-        external_eigs, config::ResonanceConfig, spectral)
-    isempty(outer_eigs) && return nothing
-    tol = _outer_warn_tolerance(config, outer_eigs)
-    tol === nothing && return nothing
-    hits = _scan_outer_resonances(mset, master_eigs, outer_eigs, external_eigs, tol)
-    hits === nothing && return nothing
-    return _warn_flagged_outer_modes(mset, outer_eigs, hits, spectral)
+	external_eigs, config::ResonanceConfig, spectral)
+	isempty(outer_eigs) && return nothing
+	tol = _outer_warn_tolerance(config, outer_eigs)
+	tol === nothing && return nothing
+	hits = _scan_outer_resonances(mset, master_eigs, outer_eigs, external_eigs, tol)
+	hits === nothing && return nothing
+	return _warn_flagged_outer_modes(mset, outer_eigs, hits, spectral)
 end
 
 """
@@ -1065,16 +1065,16 @@ combined with the default `warn_outer = true` aborted the solve. It now returns 
 and the scan is skipped with a notice rather than taking the run down with it.
 """
 function _outer_warn_tolerance(config::ResonanceConfig, outer_eigenvalues::AbstractVector)
-    if config.tol_relative !== nothing
-        rel = Float64(config.tol_relative)
-        return [rel * abs(λ) for λ in outer_eigenvalues]
-    end
-    tol = config.tol === nothing ? _default_tol(config.style) : config.tol
-    tol isa Real && return Float64(tol)
-    @info "ResonanceConfig: `tol` is a per-target vector sized for the inner targets, so " *
-          "it cannot be indexed by an outer target. The off-manifold near-resonance scan " *
-          "is skipped — pass a scalar `tol` or `tol_relative` to re-enable it."
-    return nothing
+	if config.tol_relative !== nothing
+		rel = Float64(config.tol_relative)
+		return [rel * abs(λ) for λ in outer_eigenvalues]
+	end
+	tol = config.tol === nothing ? _default_tol(config.style) : config.tol
+	tol isa Real && return Float64(tol)
+	@info "ResonanceConfig: `tol` is a per-target vector sized for the inner targets, so " *
+		  "it cannot be indexed by an outer target. The off-manifold near-resonance scan " *
+		  "is skipped — pass a scalar `tol` or `tol_relative` to re-enable it."
+	return nothing
 end
 
 @inline _tol_at(tol::Float64, ::Int) = tol
@@ -1084,34 +1084,34 @@ end
 # eigenvalues, and no per-monomial temporary. `α` has NVAR = n_int + N_EXT entries, the
 # master ones first, exactly as `_superharmonics` contracts them.
 @inline function _superharmonic(master_eigs, external_eigs, α)
-    s = zero(ComplexF64)
-    n_int = length(master_eigs)
-    @inbounds for i in 1:n_int
-        s += master_eigs[i] * α[i]
-    end
-    @inbounds for i in eachindex(external_eigs)
-        s += external_eigs[i] * α[n_int + i]
-    end
-    return s
+	s = zero(ComplexF64)
+	n_int = length(master_eigs)
+	@inbounds for i in 1:n_int
+		s += master_eigs[i] * α[i]
+	end
+	@inbounds for i in eachindex(external_eigs)
+		s += external_eigs[i] * α[n_int+i]
+	end
+	return s
 end
 
 # Every (outer target, monomial) pair that is near-resonant, or `nothing` when there are
 # none. The result vector is created on the FIRST hit, so a quiet run allocates a constant
 # handful of bytes whatever the size of the monomial set or the outer spectrum.
 function _scan_outer_resonances(
-        mset::MultiindexSet, master_eigs, outer_eigs, external_eigs,
-        tol::Union{Float64, Vector{Float64}})
-    hits = nothing
-    exps = mset.exponents
-    @inbounds for k in eachindex(exps)
-        s = _superharmonic(master_eigs, external_eigs, exps[k])
-        for j in eachindex(outer_eigs)
-            abs(outer_eigs[j] - s) < _tol_at(tol, j) || continue
-            hits === nothing && (hits = Tuple{Int, Int}[])
-            push!(hits, (j, k))
-        end
-    end
-    return hits
+	mset::MultiindexSet, master_eigs, outer_eigs, external_eigs,
+	tol::Union{Float64, Vector{Float64}})
+	hits = nothing
+	exps = mset.exponents
+	@inbounds for k in eachindex(exps)
+		s = _superharmonic(master_eigs, external_eigs, exps[k])
+		for j in eachindex(outer_eigs)
+			abs(outer_eigs[j] - s) < _tol_at(tol, j) || continue
+			hits === nothing && (hits = Tuple{Int, Int}[])
+			push!(hits, (j, k))
+		end
+	end
+	return hits
 end
 
 # ── Reporting ───────────────────────────────────────────────────────────────
@@ -1133,51 +1133,51 @@ _outer_mode_number(::Any, ::Int) = nothing
 # with both spectrum entries and λ written as a ± bi; a self-paired (real) or unpaired
 # target is singular.
 function _outer_mode_description(spectral, rep::Int, partner::Int, outer_eigs)
-    entry = _outer_entry(spectral, rep)
-    p = _outer_mode_number(spectral, entry)
-    λ = outer_eigs[rep]
-    if partner != rep
-        entries = sort!([entry, _outer_entry(spectral, partner)])
-        # Under `:imaginary_part_only` the targets are REAL frequencies; rendering one
-        # as `re ± im·i` would print a bare `ω + 0.0i` and invite the reader to think
-        # the growth rate had been measured and found to be zero.
-        lam = λ isa Real ? @sprintf("±%.3ei (frequency only)", abs(λ)) :
-              @sprintf("%.3e ± %.3ei", real(λ), abs(imag(λ)))
-        head = p === nothing ? "an outer conjugate mode pair" :
-               "outer physical mode pair $p"
-        subject = p === nothing ? "those modes" : "mode $p"
-        return ("$head (spectrum entries $(join(entries, ", ")); λ = $lam)", subject)
-    end
-    lam = λ isa Real ? @sprintf("%.3ei (frequency only)", λ) :
-          @sprintf("%.3e %s %.3ei", real(λ), imag(λ) < 0 ? "-" : "+", abs(imag(λ)))
-    head = p === nothing ? "an outer mode" : "outer physical mode $p"
-    subject = p === nothing ? "that mode" : "mode $p"
-    return ("$head (spectrum entry $entry; λ = $lam)", subject)
+	entry = _outer_entry(spectral, rep)
+	p = _outer_mode_number(spectral, entry)
+	λ = outer_eigs[rep]
+	if partner != rep
+		entries = sort!([entry, _outer_entry(spectral, partner)])
+		# Under `:imaginary_part_only` the targets are REAL frequencies; rendering one
+		# as `re ± im·i` would print a bare `ω + 0.0i` and invite the reader to think
+		# the growth rate had been measured and found to be zero.
+		lam = λ isa Real ? @sprintf("±%.3ei (frequency only)", abs(λ)) :
+			  @sprintf("%.3e ± %.3ei", real(λ), abs(imag(λ)))
+		head = p === nothing ? "an outer conjugate mode pair" :
+			   "outer physical mode pair $p"
+		subject = p === nothing ? "those modes" : "mode $p"
+		return ("$head (spectrum entries $(join(entries, ", ")); λ = $lam)", subject)
+	end
+	lam = λ isa Real ? @sprintf("%.3ei (frequency only)", λ) :
+		  @sprintf("%.3e %s %.3ei", real(λ), imag(λ) < 0 ? "-" : "+", abs(imag(λ)))
+	head = p === nothing ? "an outer mode" : "outer physical mode $p"
+	subject = p === nothing ? "that mode" : "mode $p"
+	return ("$head (spectrum entry $entry; λ = $lam)", subject)
 end
 
 function _warn_flagged_outer_modes(mset::MultiindexSet, outer_eigs,
-        hits::Vector{Tuple{Int, Int}}, spectral)
-    σ = _outer_pairing(spectral)
-    paired = !(σ === nothing || isempty(σ))
-    # Group by the lower-numbered member of each conjugate pair, so both conjugates of a
-    # flagged mode land in the same bucket however the eigensolver ordered them.
-    groups = Dict{Int, Vector{Int}}()
-    for (j, k) in hits
-        rep = paired ? min(j, σ[j]) : j
-        push!(get!(() -> Int[], groups, rep), k)
-    end
-    for rep in sort!(collect(keys(groups)))
-        partner = paired ? σ[rep] : rep
-        cols = sort!(unique!(groups[rep]))
-        monomials = join((string(Tuple(mset.exponents[c])) for c in cols), ", ")
-        description, subject = _outer_mode_description(spectral, rep, partner, outer_eigs)
-        @warn """
-          Monomials are near-resonant with $description. That mode is not on the manifold, \
-          so its direction is solved through a near-singular operator and the ROM will lose \
-          accuracy there regardless of how the load is shaped. Offending monomial exponents: \
-          $monomials. Add $subject to the master set, detune the forcing, or add damping."""
-    end
-    return nothing
+	hits::Vector{Tuple{Int, Int}}, spectral)
+	σ = _outer_pairing(spectral)
+	paired = !(σ === nothing || isempty(σ))
+	# Group by the lower-numbered member of each conjugate pair, so both conjugates of a
+	# flagged mode land in the same bucket however the eigensolver ordered them.
+	groups = Dict{Int, Vector{Int}}()
+	for (j, k) in hits
+		rep = paired ? min(j, σ[j]) : j
+		push!(get!(() -> Int[], groups, rep), k)
+	end
+	for rep in sort!(collect(keys(groups)))
+		partner = paired ? σ[rep] : rep
+		cols = sort!(unique!(groups[rep]))
+		monomials = join((string(Tuple(mset.exponents[c])) for c in cols), ", ")
+		description, subject = _outer_mode_description(spectral, rep, partner, outer_eigs)
+		@warn """
+		  Monomials are near-resonant with $description. That mode is not on the manifold, \
+		  so its direction is solved through a near-singular operator and the ROM will lose \
+		  accuracy there regardless of how the load is shaped. Offending monomial exponents: \
+		  $monomials. Add $subject to the master set, detune the forcing, or add damping."""
+	end
+	return nothing
 end
 
 end # module

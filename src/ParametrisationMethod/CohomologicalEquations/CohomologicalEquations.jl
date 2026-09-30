@@ -2,7 +2,7 @@
 	CohomologicalEquations
 
 Solve the cohomological equations that arise in the parametrisation method for
-computing Spectral Submanifolds (SSMs) of high-dimensional dynamical systems.
+computing Direct Normal Forms, NNMs, Spectral Submanifolds (SSMs) and such Invariant Manifolds of high-dimensional dynamical systems.
 
 ---
 
@@ -98,44 +98,44 @@ symmetry, progress, and benchmarking belong to `ParametrisationSolver`.
 module CohomologicalEquations
 
 using ..Multiindices: MultiindexSet, indices_in_box_with_bounded_degree,
-                      build_exponent_index_map
+	build_exponent_index_map
 using ..Polynomials: DensePolynomial
 using ..ParametrisationObjects: validate_multiindex_set,
-                                Parametrisation, ReducedDynamics,
-                                create_parametrisation_method_objects,
-                                compute_higher_derivative_coefficients!,
-                                multiindex_set
+	Parametrisation, ReducedDynamics,
+	create_parametrisation_method_objects,
+	compute_higher_derivative_coefficients!,
+	multiindex_set
 using ..LowerOrderCouplings: compute_lower_order_couplings
 using ..InvarianceEquation: assemble_cohomological_matrix_and_rhs!,
-                            precompute_master_column_polynomials,
-                            precompute_external_column_polynomials,
-                            build_sparse_L_and_rhs!,
-                            precompute_sparse_L_template,
-                            precompute_sparse_bordered_template,
-                            scatter_L_into_bordered!,
-                            evaluate_column!,
-                            evaluate_external_rhs!
+	precompute_master_column_polynomials,
+	precompute_external_column_polynomials,
+	build_sparse_L_and_rhs!,
+	precompute_sparse_L_template,
+	precompute_sparse_bordered_template,
+	scatter_L_into_bordered!,
+	evaluate_column!,
+	evaluate_external_rhs!
 using ..MasterModeOrthogonality: assemble_orthogonality_matrix_and_rhs!,
-                                 precompute_orthogonality_operator_coefficients,
-                                 precompute_orthogonality_column_polynomials
+	precompute_orthogonality_operator_coefficients,
+	precompute_orthogonality_column_polynomials
 using ..FullOrderModel: NthOrderModel
 using ..MultilinearTerms: compute_multilinear_terms, compute_multilinear_terms!,
-                          MultilinearTermsCache
+	MultilinearTermsCache
 using ..Resonance: ResonanceSet, is_resonant
 using ..BorderedLinearSolvers: SparseLinearSolverState, _bordered_solve!,
-                               _configured_residual_tolerance,
-                               _throw_bordered_failure, _is_unrecoverable_failure
+	_configured_residual_tolerance,
+	_throw_bordered_failure, _is_unrecoverable_failure
 using LinearAlgebra
 using SparseArrays
 using StaticArrays: SVector, MVector
 include("SolveState.jl")
 
 export CohomologicalContext,
-       InvarianceOperators,
-       OrthogonalityOperators,
-       LowerOrderResources,
-       CohomologicalBuffers,
-       solve_single_monomial!
+	InvarianceOperators,
+	OrthogonalityOperators,
+	LowerOrderResources,
+	CohomologicalBuffers,
+	solve_single_monomial!
 
 """
 	_resonance_vector(resonance_set, monomial_idx, ::Val{ROM}) -> SVector{ROM, Bool}
@@ -145,16 +145,16 @@ modes are resonant with the monomial at position `monomial_idx` in the multiinde
 set.  Using `Val{ROM}` enables the compiler to emit a fully unrolled ntuple loop.
 """
 @inline function _resonance_vector(
-        resonance_set::ResonanceSet,
-        monomial_idx::Int,
-        ::Val{ROM}
+	resonance_set::ResonanceSet,
+	monomial_idx::Int,
+	::Val{ROM},
 ) where {ROM}
-    return SVector{ROM, Bool}(ntuple(r -> is_resonant(resonance_set, monomial_idx, r), Val(ROM)))
+	return SVector{ROM, Bool}(ntuple(r -> is_resonant(resonance_set, monomial_idx, r), Val(ROM)))
 end
 
 """Return the monomial superharmonic `sum(alpha[i] * lambda_diag[i])`."""
 @inline _superharmonic(multi, lambda_diag) = sum(multi[i] * lambda_diag[i]
-for i in eachindex(lambda_diag))
+												 for i in eachindex(lambda_diag))
 
 # Per-monomial preparation, assembly, solution, and finalisation follow. Causal
 # scheduling and all-solve entry points belong to `ParametrisationSolver`.
