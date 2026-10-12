@@ -118,44 +118,34 @@ end
 # -----------------------------------------------------------------------
 
 """
-	_accumulate_global_entries!(Fe_bufs, ∇W_qp, entries_by_deg, model, element, q, dΩ)
-
-Recursive type-stable dispatch over the degree-grouped entry tuple.  The base case
-(empty tuple) is a no-op.  Each recursive step processes the head degree group —
-Julia specialises a method per `DEG` so `Val(DEG)` in `ntuple` and the
-`accumulate_qp!` dispatch are resolved at compile time — then recurses on the tail.
-"""
-@inline _accumulate_global_entries!(_, _, ::Tuple{}, _, _, _, _) = nothing
-
-@inline function _accumulate_global_entries!(Fe_bufs, ∇W_qp,
-        entries_by_deg::Tuple{Vector{FEMGlobalEntry{DEG}}, Vararg},
-        model, element, q, dΩ) where {DEG}
-    for gentry in first(entries_by_deg)
-        t = model.nonlinear_terms[gentry.term_idx]
-        ∇W_args = ntuple(k -> ∇W_qp[gentry.local_factor_indices[k], q], Val(DEG))
-        accumulate_qp!(
-            Fe_bufs[gentry.term_idx], ∇W_args, gentry.multiplier, element, q, dΩ, t)
-    end
-    _accumulate_global_entries!(Fe_bufs, ∇W_qp, Base.tail(entries_by_deg),
-        model, element, q, dΩ)
-end
-
-"""
 	_replay_all_fem_splits!(result, model, W, global_split, global_∇W_qp, global_Fe_buffers)
 
 Execute the O4 combined element loop: traverse the mesh once, scatter all globally-unique
 W columns, then accumulate contributions from ALL me=0 FEM terms at each quadrature point.
 
 `fem_reinit!` and `scatter_qp!` are called at most once per unique `(element, W-column)`
-pair; `accumulate_qp!` dispatches per degree group via `_accumulate_global_entries!`.
+pair.
+
+`model.nonlinear_terms` is an `NTuple` of abstractly typed terms, so this method is only a
+function barrier. It gathers the participating terms into a tuple, whose concrete type the
+method below specialises on, once per monomial. Inside, the element loop, the loop over the
+terms and each term's quadrature loop ([`_accumulate_term_element!`](@ref)) dispatch at
+compile time; reading a term out of `model.nonlinear_terms` inside the loop would dispatch
+at run time and allocate, per element or per factorisation and quadrature point.
 """
 function _replay_all_fem_splits!(result, model, W,
         global_split::FEMGlobalSplit,
         global_∇W_qp, global_Fe_buffers)
-    driver = model.nonlinear_terms[global_split.driver_term_idx]
+    idx = Tuple(global_split.participating_term_indices)
+    terms = map(i -> model.nonlinear_terms[i], idx)
+    _replay_all_fem_splits!(result, model.nonlinear_terms[global_split.driver_term_idx],
+        terms, idx, W, global_split, global_∇W_qp, global_Fe_buffers)
+end
+
+function _replay_all_fem_splits!(result, driver::FEMMultilinearMap, terms::Tuple,
+        idx::Tuple, W, global_split::FEMGlobalSplit, global_∇W_qp, global_Fe_buffers)
     n_qp = fem_n_qp(driver)
     n_uniq = length(global_split.global_unique_cols)
-    participating = global_split.participating_term_indices
 
     for element in fem_elements(driver)
         fem_reinit!(element, driver)
@@ -165,21 +155,63 @@ function _replay_all_fem_splits!(result, model, W,
             scatter_qp!(@view(global_∇W_qp[i, 1:n_qp]), @view(W[:, order, col]), element, driver)
         end
 
-        for t_idx in participating
-            fill!(global_Fe_buffers[t_idx], zero(eltype(global_Fe_buffers[t_idx])))
-        end
+        _accumulate_terms_element!(result, global_Fe_buffers, global_∇W_qp,
+            global_split.entries_by_deg, idx, element, n_qp, driver, terms)
+    end
+end
 
-        for q in 1:n_qp
-            dΩ = fem_getdetJdV(element, q, driver)
-            _accumulate_global_entries!(global_Fe_buffers, global_∇W_qp,
-                global_split.entries_by_deg, model, element, q, dΩ)
-        end
+# Recursion over the participating terms, unrolled at compile time.
+@inline _accumulate_terms_element!(_, _, _, _, ::Tuple{}, _, _, _, ::Tuple{}) = nothing
 
-        for t_idx in participating
-            assemble_element!(result, global_Fe_buffers[t_idx], element,
-                model.nonlinear_terms[t_idx])
+@inline function _accumulate_terms_element!(result, Fe_buffers, ∇W_qp, entries_by_deg,
+        idx::Tuple, element, n_qp, driver, terms::Tuple)
+    _accumulate_term_element!(result, Fe_buffers[first(idx)], ∇W_qp, entries_by_deg,
+        first(idx), element, n_qp, driver, first(terms))
+    _accumulate_terms_element!(result, Fe_buffers, ∇W_qp, entries_by_deg,
+        Base.tail(idx), element, n_qp, driver, Base.tail(terms))
+end
+
+"""
+	_accumulate_term_element!(result, Fe, ∇W_qp, entries_by_deg, t_idx, element, n_qp, driver, t)
+
+Integrate term `t` (index `t_idx`) over one element and add it to `result`: every
+factorisation of the term at every quadrature point, with the gradients `scatter_qp!` left
+in `∇W_qp`. Specialised on the concrete type of `t`, which is what keeps the quadrature
+loop free of run-time dispatch. The integration weights come from the `driver` term, which
+owns the element loop.
+"""
+function _accumulate_term_element!(result, Fe, ∇W_qp, entries_by_deg, t_idx, element,
+        n_qp, driver, t)
+    fill!(Fe, zero(eltype(Fe)))
+    for q in 1:n_qp
+        dΩ = fem_getdetJdV(element, q, driver)
+        _accumulate_term_entries!(Fe, ∇W_qp, entries_by_deg, t_idx, element, q, dΩ, t)
+    end
+    assemble_element!(result, Fe, element, t)
+end
+
+"""
+	_accumulate_term_entries!(Fe, ∇W_qp, entries_by_deg, t_idx, element, q, dΩ, t)
+
+Add, at quadrature point `q`, every factorisation entry of term `t_idx` to `Fe`. Recurses
+over the degree-grouped entry tuple, so `Val(DEG)` in `ntuple` and the `accumulate_qp!`
+dispatch are resolved at compile time; groups of another degree than the term's are
+skipped. The base case (empty tuple) is a no-op.
+"""
+@inline _accumulate_term_entries!(_, _, ::Tuple{}, _, _, _, _, _) = nothing
+
+@inline function _accumulate_term_entries!(Fe, ∇W_qp,
+        entries_by_deg::Tuple{Vector{FEMGlobalEntry{DEG}}, Vararg}, t_idx, element, q, dΩ,
+        t) where {DEG}
+    if t.deg == DEG
+        for gentry in first(entries_by_deg)
+            gentry.term_idx == t_idx || continue
+            ∇W_args = ntuple(k -> ∇W_qp[gentry.local_factor_indices[k], q], Val(DEG))
+            accumulate_qp!(Fe, ∇W_args, gentry.multiplier, element, q, dΩ, t)
         end
     end
+    _accumulate_term_entries!(
+        Fe, ∇W_qp, Base.tail(entries_by_deg), t_idx, element, q, dΩ, t)
 end
 
 """
