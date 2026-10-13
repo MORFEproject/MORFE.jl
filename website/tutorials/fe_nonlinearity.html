@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Writing a finite element nonlinearity — MORFE.jl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<link rel="stylesheet" href="../assets/site.css" />
+<link rel="stylesheet" href="../assets/docs.css" />
+<style>
+.pre-wrap { position: relative; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 3px 9px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(255,255,255,0.06); color: var(--ink-3);
+  border: 1px solid var(--hair); border-radius: 4px;
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.6;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--ink); border-color: var(--ink-3); }
+.copy-btn.copied { color: var(--jl-green); border-color: rgba(56,152,38,0.4); background: rgba(56,152,38,0.08); }
+.fig iframe { display:block; width:100%; aspect-ratio: 900/560; border:0; background:#07070b; }
+/* vertical rhythm — space between successive ideas */
+.docs-main .step .body > p,
+.docs-main .step .body > pre,
+.docs-main .step .body > .pre-wrap,
+.docs-main .step .body > ul,
+.docs-main .step .body > .adm,
+.docs-main .step .body > .fig,
+.docs-main .step .body > .math-block { margin-top: 22px; }
+.docs-main .math-block { margin: 24px 0; }
+/* looser spacing in the top-level intro / recap lists */
+.docs-main > ul > li, .docs-main > ol > li { margin-bottom: 11px; }
+/* let wide code scroll instead of widening the step column */
+.step .body { min-width: 0; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.docs-main pre').forEach(function (pre) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pre-wrap';
+    wrap.style.position = 'relative';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(pre.innerText).then(function () {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    wrap.appendChild(btn);
+  });
+});
+</script>
+</head>
+<body class="docs-page">
+
+
+<div class="site">
+
+<nav id="site-nav" class="nav" data-base="../" data-active="tutorials/"></nav>
+<script src="../assets/nav.js"></script>
+
+<div class="docs-shell">
+
+  <aside id="tutorial-nav" class="docs-side tutorial-side" data-active="fe_nonlinearity.html"></aside>
+  <script src="assets/tutorial-nav.js"></script>
+
+  <main class="docs-main">
+
+    <div class="crumbs">
+      <a href="../documentation.html">MORFE.jl</a>
+      <span class="sep">/</span>
+      <a href="index.html">Tutorials</a>
+      <span class="sep">/</span>
+      <span>Finite element terms</span>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <span class="tag"><span class="tag-dot" style="background:var(--jl-blue)"></span> FINITE ELEMENTS</span>
+      <span class="tag" style="color:var(--ink-3);">~2 MIN COMPUTE</span>
+    </div>
+
+    <h1 id="overview">Writing a finite element nonlinearity</h1>
+    <p style="margin:6px 0 14px;"><a class="btn" href="https://github.com/MORFEproject/MORFEExamples/blob/main/writing_a_finite_element_nonlinearity/writing_a_finite_element_nonlinearity.ipynb" target="_blank" rel="noopener" style="display:inline-block; padding:7px 13px; border:1px solid var(--hair); border-radius:6px; text-decoration:none; font-size:13px; color:var(--ink);">Open the notebook ↗</a></p>
+    <p class="lede">MORFE never sees a mesh: it only evaluates the nonlinear terms on given vectors.
+      Write the geometric nonlinearity of the <a class="inline" href="structural_svk.html">clamped beam</a>
+      yourself with Ferrite, first as a closure, then through the element-level interface that lets
+      MORFE batch the mesh loop.</p>
+
+    <p>Both routes give the ROM of MORFEFerrite's built-in term to round-off. They differ in how often
+      they traverse the mesh: at order 9, 486 times for the closure and 28 times, once per solved
+      monomial, for the element-level interface.</p>
+
+    <h2 id="setup">Setup</h2>
+    <p>
+      Follow the <a class="inline" href="installation.html">installation guide</a>, then load MORFE,
+      MORFEFerrite and Ferrite.
+    </p>
+<pre class="code"><span class="kw">using</span> <span class="var">MORFE</span>, <a class="doc-link" href="../morfeferrite-documentation.html"><span class="var">MORFEFerrite</span></a>, <span class="var">Ferrite</span>
+<span class="kw">const</span> <span class="var">SVK</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK"><span class="var">MORFEFerrite.StructuralSVK</span></a> <span class="cm"># for Saint-Venant-Kirchhoff hyperelasticity</span></pre>
+
+    <div class="step">
+      <div class="num">01</div>
+      <div class="body">
+        <h3 id="step-linear">Borrow the mesh and the linear part</h3>
+        <p>
+          We write only the nonlinear terms. The mesh, the clamped ends, the stiffness and mass
+          matrices and the spectral data come from the structural backend, exactly as in
+          <a class="inline" href="structural_svk.html">From a mesh to a ROM</a>, and the backend's own
+          <code>model</code> stays as the reference our terms must reproduce. <code>case.info</code>
+          exposes the three Ferrite objects we need: the <code>DofHandler</code>, the
+          <code>CellValues</code> and the map from global to free degrees of freedom.
+        </p>
+        <p>
+          They are declared <code class="nolink">const</code> because the functions below read them as
+          globals: a non-constant global makes every call type-unstable and the assembly many times slower.
+        </p>
+<pre class="code"><span class="var">order</span> <span class="op">=</span> <span class="num">9</span>
+<span class="var">case</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-mechanical_model"><span class="fn">SVK.mechanical_model</span></a>(
+    <span class="fn">joinpath</span>(<span class="fn">@__DIR__</span>, <span class="str">".."</span>, <span class="str">"from_a_mesh_to_a_rom"</span>, <span class="str">"clamped_clamped_beam.msh"</span>);
+    <span class="var">material</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-SVKMaterial"><span class="fn">SVK.SVKMaterial</span></a>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
+    <span class="var">damping</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-RayleighDamping"><span class="fn">SVK.RayleighDamping</span></a>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
+    <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">"Dirichlet"</span>)
+(; <span class="var">model</span>, <span class="var">spectral</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
+
+<span class="kw">const</span> <span class="var">dh</span> <span class="op">=</span> <span class="var">case.info.dh</span>                <span class="cm"># degrees of freedom of every cell</span>
+<span class="kw">const</span> <span class="var">cv</span> <span class="op">=</span> <span class="var">case.info.cellvalues</span>        <span class="cm"># shape functions and quadrature rule</span>
+<span class="kw">const</span> <span class="var">free</span> <span class="op">=</span> <span class="var">case.info.free_to_local</span>   <span class="cm"># global dof =&gt; free dof, clamped ones absent</span>
+<span class="kw">const</span> <span class="var">λ</span>, <span class="var">μ</span> <span class="op">=</span> <span class="var">case.material</span>.<span class="var">λ</span>, <span class="var">case.material</span>.<span class="var">μ</span>
+<span class="var">model.n_fom</span> <span class="cm"># print number of free degrees of freedom</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">02</div>
+      <div class="body">
+        <h3 id="step-physics">Write the physics at one quadrature point</h3>
+        <p>
+          For a St. Venant–Kirchhoff material, the Green–Lagrange strain and the second and first
+          Piola–Kirchhoff stresses are
+        </p>
+        <div class="math-block" style="font-size:15px;">
+        $$\mathbf E = \boldsymbol\varepsilon(\mathbf u) + \tfrac12 \nabla\mathbf u^\top \nabla\mathbf u \,, \qquad \mathbf S = \lambda \operatorname{tr}(\mathbf E)\,\mathbf I + 2\mu\mathbf E \,, \qquad \mathbf P = (\mathbf I + \nabla\mathbf u)\,\mathbf S \,,$$
+        </div>
+        <p>
+          and the internal force, tested with a virtual displacement $\delta\mathbf u$, is
+          $\int_\Omega \mathbf P : \nabla\delta\mathbf u \, d\Omega$. The stiffness matrix already
+          holds the part of $\mathbf P$ linear in $\mathbf u$; the rest is quadratic and cubic:
+        </p>
+        <div class="math-block" style="font-size:15px;">
+        $$\mathbf P_2 = \mathbf S\bigl(\tfrac12\nabla\mathbf u^\top\nabla\mathbf u\bigr) + \nabla\mathbf u\,\mathbf S\bigl(\boldsymbol\varepsilon(\mathbf u)\bigr) \,, \qquad \mathbf P_3 = \nabla\mathbf u\,\mathbf S\bigl(\tfrac12\nabla\mathbf u^\top\nabla\mathbf u\bigr) \,.$$
+        </div>
+        <p>
+          MORFE evaluates each term on different coefficient vectors at once, so we <em>polarise</em>
+          it: <code class="nolink">P2(a, b)</code> and <code class="nolink">P3(a, b, c)</code> are
+          symmetric in the gradients and reduce to the expressions above when all gradients are equal.
+          The minus sign moves them to the right-hand side, where MORFE expects the nonlinear terms.
+          The gradients are complex and nothing may conjugate them: conjugation is not linear and
+          would break the method. The code writes <code class="nolink">transpose</code> explicitly; on
+          ordinary Julia matrices <code class="nolink">'</code> conjugates, although Tensors.jl defines it
+          as a plain transpose.
+        </p>
+<pre class="code"><span class="cm"># S as a function of a strain, the linear strain and the polarised ½∇uᵀ∇u</span>
+<span class="fn">σ</span>(<span class="var">E</span>) <span class="op">=</span> <span class="var">λ</span> <span class="op">*</span> <span class="fn">tr</span>(<span class="var">E</span>) <span class="op">*</span> <span class="fn">one</span>(<span class="var">E</span>) <span class="op">+</span> 2<span class="var">μ</span> <span class="op">*</span> <span class="var">E</span>
+<span class="fn">ε</span>(<span class="var">a</span>) <span class="op">=</span> <span class="fn">symmetric</span>(<span class="var">a</span>)
+<span class="fn">E2</span>(<span class="var">a</span>, <span class="var">b</span>) <span class="op">=</span> <span class="fn">symmetric</span>(<span class="fn">transpose</span>(<span class="var">a</span>) <span class="op">⋅</span> <span class="var">b</span> <span class="op">+</span> <span class="fn">transpose</span>(<span class="var">b</span>) <span class="op">⋅</span> <span class="var">a</span>) <span class="op">/</span> <span class="num">4</span>
+<span class="cm"># the quadratic and cubic parts of the first Piola–Kirchhoff stress, polarised</span>
+<span class="fn">P2</span>(<span class="var">a</span>, <span class="var">b</span>) <span class="op">=</span> <span class="op">-</span>(<span class="fn">σ</span>(<span class="fn">E2</span>(<span class="var">a</span>, <span class="var">b</span>)) <span class="op">+</span> (<span class="var">a</span> <span class="op">⋅</span> <span class="fn">σ</span>(<span class="fn">ε</span>(<span class="var">b</span>)) <span class="op">+</span> <span class="var">b</span> <span class="op">⋅</span> <span class="fn">σ</span>(<span class="fn">ε</span>(<span class="var">a</span>))) <span class="op">/</span> <span class="num">2</span>)
+<span class="fn">P3</span>(<span class="var">a</span>, <span class="var">b</span>, <span class="var">c</span>) <span class="op">=</span> <span class="op">-</span>(<span class="var">a</span> <span class="op">⋅</span> <span class="fn">σ</span>(<span class="fn">E2</span>(<span class="var">b</span>, <span class="var">c</span>)) <span class="op">+</span> <span class="var">b</span> <span class="op">⋅</span> <span class="fn">σ</span>(<span class="fn">E2</span>(<span class="var">a</span>, <span class="var">c</span>)) <span class="op">+</span> <span class="var">c</span> <span class="op">⋅</span> <span class="fn">σ</span>(<span class="fn">E2</span>(<span class="var">a</span>, <span class="var">b</span>))) <span class="op">/</span> <span class="num">3</span>;</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">03</div>
+      <div class="body">
+        <h3 id="step-closure">Route one: a closure</h3>
+        <p>
+          The simplest finite element term is a function <code class="nolink">f!(res, u1, u2)</code>
+          that adds $\mathbf T(\mathbf u_1, \mathbf u_2)$ to <code class="nolink">res</code>, like the
+          analytical terms of <a class="inline" href="full_order_model.html">Building a full-order model</a>.
+          Its body is an ordinary Ferrite assembly: for every cell, gather the cell values of each
+          argument, integrate $\nabla\delta\mathbf u : \mathbf P$ over the quadrature points and add
+          the cell vector to <code class="nolink">res</code>. Nothing in it belongs to MORFE, so any
+          finite element library fits the same mould.
+        </p>
+        <p>
+          <code class="nolink">multiindex = (2, 0)</code> says that the quadratic term takes two
+          displacements and no velocity, and <code class="nolink">fully_asymmetric = false</code>
+          declares it symmetric in them, so MORFE evaluates each unordered combination of coefficients
+          once. A counter records how often the mesh is traversed.
+        </p>
+<pre class="code"><span class="kw">const</span> <span class="var">ue</span> <span class="op">=</span> [<span class="fn">zeros</span>(<span class="var">ComplexF64</span>, <span class="fn">ndofs_per_cell</span>(<span class="var">dh</span>)) <span class="kw">for</span> <span class="var">_</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="num">3</span>] <span class="cm"># values of 3 arguments</span>
+<span class="kw">const</span> <span class="var">Fe</span> <span class="op">=</span> <span class="fn">zeros</span>(<span class="var">ComplexF64</span>, <span class="fn">ndofs_per_cell</span>(<span class="var">dh</span>))                <span class="cm"># cell vector</span>
+<span class="kw">const</span> <span class="var">passes</span> <span class="op">=</span> <span class="fn">Ref</span>(<span class="num">0</span>)                                           <span class="cm"># mesh traversals</span>
+
+<span class="kw">function</span> <span class="fn">gather!</span>(<span class="var">ue</span>, <span class="var">u</span>, <span class="var">cell</span>)
+    <span class="kw">for</span> (<span class="var">i</span>, <span class="var">d</span>) <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="fn">celldofs</span>(<span class="var">cell</span>))
+        <span class="var">j</span> <span class="op">=</span> <span class="fn">get</span>(<span class="var">free</span>, <span class="var">d</span>, <span class="num">0</span>)
+        <span class="var">ue</span>[<span class="var">i</span>] <span class="op">=</span> <span class="var">j</span> <span class="op">==</span> <span class="num">0</span> <span class="op">?</span> <span class="num">0</span> <span class="op">:</span> <span class="var">u</span>[<span class="var">j</span>]
+    <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">function</span> <span class="fn">scatter!</span>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>)
+    <span class="kw">for</span> (<span class="var">i</span>, <span class="var">d</span>) <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="fn">celldofs</span>(<span class="var">cell</span>))
+        <span class="var">j</span> <span class="op">=</span> <span class="fn">get</span>(<span class="var">free</span>, <span class="var">d</span>, <span class="num">0</span>)
+        <span class="var">j</span> <span class="op">==</span> <span class="num">0</span> <span class="op">||</span> (<span class="var">res</span>[<span class="var">j</span>] <span class="op">+</span><span class="op">=</span> <span class="var">Fe</span>[<span class="var">i</span>])
+    <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">function</span> <span class="fn">assemble!</span>(<span class="var">res</span>, <span class="var">P</span>, <span class="var">us</span><span class="op">:</span><span class="sym">:Vararg</span>{<span class="var">Any</span>, <span class="var">N</span>}) <span class="kw">where</span> {<span class="var">N</span>}
+    <span class="var">passes</span>[] <span class="op">+</span><span class="op">=</span> <span class="num">1</span>
+    <span class="kw">for</span> <span class="var">cell</span> <span class="kw">in</span> <span class="fn">CellIterator</span>(<span class="var">dh</span>)
+        <span class="fn">reinit!</span>(<span class="var">cv</span>, <span class="var">cell</span>)
+        <span class="kw">for</span> <span class="var">k</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="var">N</span>
+            <span class="fn">gather!</span>(<span class="var">ue</span>[<span class="var">k</span>], <span class="var">us</span>[<span class="var">k</span>], <span class="var">cell</span>)
+        <span class="kw">end</span>
+        <span class="fn">fill!</span>(<span class="var">Fe</span>, <span class="num">0</span>)
+        <span class="kw">for</span> <span class="var">q</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="fn">getnquadpoints</span>(<span class="var">cv</span>)
+            <span class="var">Pq</span> <span class="op">=</span> <span class="fn">P</span>(<span class="fn">ntuple</span>(<span class="var">k</span> <span class="op">-&gt;</span> <span class="fn">function_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">ue</span>[<span class="var">k</span>]), <span class="var">N</span>)<span class="op">...</span>)
+            <span class="var">dΩ</span> <span class="op">=</span> <span class="fn">getdetJdV</span>(<span class="var">cv</span>, <span class="var">q</span>)
+            <span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">Fe</span>)
+                <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> (<span class="fn">shape_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">Pq</span>) <span class="op">*</span> <span class="var">dΩ</span>
+            <span class="kw">end</span>
+        <span class="kw">end</span>
+        <span class="fn">scatter!</span>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>)
+    <span class="kw">end</span>
+    <span class="kw">return</span> <span class="var">res</span>
+<span class="kw">end</span>
+
+<span class="var">quadratic</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><span class="fn">MultilinearMap</span></a>((<span class="var">res</span>, <span class="var">u1</span>, <span class="var">u2</span>) <span class="op">-&gt;</span> <span class="fn">assemble!</span>(<span class="var">res</span>, <span class="var">P2</span>, <span class="var">u1</span>, <span class="var">u2</span>);
+    <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">2</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>, <span class="var">fully_asymmetric</span> <span class="op">=</span> <span class="var">false</span>)
+<span class="var">cubic</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><span class="fn">MultilinearMap</span></a>((<span class="var">res</span>, <span class="var">u1</span>, <span class="var">u2</span>, <span class="var">u3</span>) <span class="op">-&gt;</span> <span class="fn">assemble!</span>(<span class="var">res</span>, <span class="var">P3</span>, <span class="var">u1</span>, <span class="var">u2</span>, <span class="var">u3</span>);
+    <span class="var">multiindex</span> <span class="op">=</span> (<span class="num">3</span>, <span class="num">0</span>), <span class="var">multiplicity_external</span> <span class="op">=</span> <span class="num">0</span>, <span class="var">fully_asymmetric</span> <span class="op">=</span> <span class="var">false</span>)
+<span class="var">closure_model</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><span class="fn">NthOrderModel</span></a>(<span class="var">case.B</span>, (<span class="var">quadratic</span>, <span class="var">cubic</span>))</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">04</div>
+      <div class="body">
+        <h3 id="step-slow">Solve, and see why the closure is slow</h3>
+        <p>
+          <code>case.B</code> holds the backend's matrices $(\mathbf K, \mathbf C, \mathbf M)$, and the
+          spectral data depend only on them, so the new model reuses <code>spectral</code>. A first
+          solve at order 3 compiles everything, so the timed solve measures work rather than compilation.
+        </p>
+<pre class="code"><span class="var">resonance</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Resonance-ResonanceConfig"><span class="fn">ResonanceConfig</span></a>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>)
+<a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><span class="fn">parametrise</span></a>(<span class="var">closure_model</span>, <span class="var">spectral</span>, <span class="num">3</span>; <span class="var">resonance</span>);   <span class="cm"># compile</span>
+<span class="var">passes</span>[] <span class="op">=</span> <span class="num">0</span>
+<span class="var">t_closure</span> <span class="op">=</span> <span class="fn">@elapsed</span> (<span class="var">W_closure</span>, <span class="var">R_closure</span>) <span class="op">=</span>
+    <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><span class="fn">parametrise</span></a>(<span class="var">closure_model</span>, <span class="var">spectral</span>, <span class="var">order</span>; <span class="var">resonance</span>)
+(<span class="var">mesh_passes</span> <span class="op">=</span> <span class="var">passes</span>[], <span class="var">seconds</span> <span class="op">=</span> <span class="var">t_closure</span>) <span class="cm"># print mesh traversals and solve time</span></pre>
+        <p>
+          A coefficient of degree $p$ collects a contribution from every way of writing its monomial
+          as a product of lower-degree ones, its <em>factorisations</em>: the cubic term reaches
+          $z^5\bar z^4$ through the coefficients of $z$, $z^2\bar z^2$ and $z^2\bar z^2$, and through
+          every other triple of exponents that adds up to $(5, 4)$. MORFE calls the closure once per
+          factorisation, and every call traverses the whole mesh, gathers the same few coefficients
+          again and recomputes their gradients: 486 traversals for the 28 monomials of degree 2 to 9
+          that MORFE solves.
+        </p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">05</div>
+      <div class="body">
+        <h3 id="step-element">Route two: the element-level interface</h3>
+        <p>
+          Batching needs MORFE to run the mesh loop, so the term must describe one cell at a time. It
+          becomes a subtype of <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a>, carries the same four fields as a
+          <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>, and extends a handful of primitives:
+        </p>
+        <ul>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_elements"><code>fem_elements</code></a> and <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_reinit!"><code>fem_reinit!</code></a> iterate over the cells and prepare each one;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_n_qp"><code>fem_n_qp</code></a>, <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_ndofs_per_cell"><code>fem_ndofs_per_cell</code></a> and <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_getdetJdV"><code>fem_getdetJdV</code></a> give the quadrature points, the cell size and the integration weights;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> computes the gradient of one coefficient at every quadrature point of a cell;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> adds one factorisation at one quadrature point to the cell vector, where <code class="nolink">mult</code> counts the orderings of the factorisation;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> adds the cell vector to the global one;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_qp_buffer"><code>fem_qp_buffer</code></a> returns a buffer whose element type tells MORFE what <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> produces. Spell it out in full, <code class="nolink">Tensor{2, 3, ComplexF64, 9}</code>: without the last parameter the type is abstract, and every gradient stored in the buffer is boxed.</li>
+        </ul>
+        <p>
+          MORFE then traverses the mesh once per monomial for all terms together. In each cell it calls
+          <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> once per distinct coefficient, <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> once per
+          factorisation and quadrature point, and <a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> once per term. The
+          physics stays the same two lines; only the bookkeeping moves.
+        </p>
+<pre class="code"><span class="kw">struct</span> <span class="var">SVKTerm</span>{<span class="var">DEG</span>} <span class="op">&lt;</span><span class="op">:</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><span class="var">FEMMultilinearMap</span></a>{<span class="num">2</span>}
+    <span class="var">multiindex</span><span class="op">:</span><span class="sym">:NTuple</span>{<span class="num">2</span>, <span class="var">Int</span>}
+    <span class="var">multiplicity_external</span><span class="op">:</span><span class="sym">:Int</span>
+    <span class="var">deg</span><span class="op">:</span><span class="sym">:Int</span>
+    <span class="var">fully_asymmetric</span><span class="op">:</span><span class="sym">:Bool</span>
+<span class="kw">end</span>
+<span class="fn">SVKTerm</span>(<span class="var">deg</span>) <span class="op">=</span> <span class="var">SVKTerm</span>{<span class="var">deg</span>}((<span class="var">deg</span>, <span class="num">0</span>), <span class="num">0</span>, <span class="var">deg</span>, <span class="var">false</span>)
+<span class="fn">stress</span>(<span class="op">:</span><span class="sym">:SVKTerm</span>{<span class="num">2</span>}) <span class="op">=</span> <span class="var">P2</span>
+<span class="fn">stress</span>(<span class="op">:</span><span class="sym">:SVKTerm</span>{<span class="num">3</span>}) <span class="op">=</span> <span class="var">P3</span>
+
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_elements"><span class="fn">MORFE.fem_elements</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> (<span class="var">passes</span>[] <span class="op">+</span><span class="op">=</span> <span class="num">1</span>; <span class="fn">CellIterator</span>(<span class="var">dh</span>))
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_reinit!"><span class="fn">MORFE.fem_reinit!</span></a>(<span class="var">cell</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">reinit!</span>(<span class="var">cv</span>, <span class="var">cell</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_n_qp"><span class="fn">MORFE.fem_n_qp</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">getnquadpoints</span>(<span class="var">cv</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_ndofs_per_cell"><span class="fn">MORFE.fem_ndofs_per_cell</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">ndofs_per_cell</span>(<span class="var">dh</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_getdetJdV"><span class="fn">MORFE.fem_getdetJdV</span></a>(<span class="var">cell</span>, <span class="var">q</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">getdetJdV</span>(<span class="var">cv</span>, <span class="var">q</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_qp_buffer"><span class="fn">MORFE.fem_qp_buffer</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>{<span class="var">DEG</span>}) <span class="kw">where</span> {<span class="var">DEG</span>} <span class="op">=</span>
+    <span class="var">Matrix</span>{<span class="var">Tensor</span>{<span class="num">2</span>, <span class="num">3</span>, <span class="var">ComplexF64</span>, <span class="num">9</span>}}(<span class="var">undef</span>, <span class="var">DEG</span>, <span class="fn">getnquadpoints</span>(<span class="var">cv</span>))
+
+<span class="kw">function</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><span class="fn">MORFE.scatter_qp!</span></a>(∇<span class="var">u</span>, <span class="var">u</span>, <span class="var">cell</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>)
+    <span class="fn">gather!</span>(<span class="var">ue</span>[<span class="num">1</span>], <span class="var">u</span>, <span class="var">cell</span>)
+    <span class="kw">for</span> <span class="var">q</span> <span class="kw">in</span> <span class="fn">eachindex</span>(∇<span class="var">u</span>)
+        ∇<span class="var">u</span>[<span class="var">q</span>] <span class="op">=</span> <span class="fn">function_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">ue</span>[<span class="num">1</span>])
+    <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">function</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><span class="fn">MORFE.accumulate_qp!</span></a>(<span class="var">Fe</span>, ∇<span class="var">u</span>, <span class="var">mult</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span><span class="op">:</span><span class="sym">:SVKTerm</span>)
+    <span class="var">Pq</span> <span class="op">=</span> <span class="fn">stress</span>(<span class="var">t</span>)(∇<span class="var">u</span><span class="op">...</span>)
+    <span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">Fe</span>)
+        <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> <span class="var">mult</span> <span class="op">*</span> (<span class="fn">shape_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">Pq</span>) <span class="op">*</span> <span class="var">dΩ</span>
+    <span class="kw">end</span>
+<span class="kw">end</span>
+
+<a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><span class="fn">MORFE.assemble_element!</span></a>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">scatter!</span>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>)
+
+<span class="var">element_model</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#FullOrderModel-NthOrderModel"><span class="fn">NthOrderModel</span></a>(<span class="var">case.B</span>, (<span class="fn">SVKTerm</span>(<span class="num">2</span>), <span class="fn">SVKTerm</span>(<span class="num">3</span>)))</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">06</div>
+      <div class="body">
+        <h3 id="step-compare">Same ROM, fewer traversals</h3>
+        <p>
+          The same <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> call solves the new model, and <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_elements"><code>fem_elements</code></a>
+          now counts the traversals: 28 instead of 486.
+        </p>
+<pre class="code"><a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><span class="fn">parametrise</span></a>(<span class="var">element_model</span>, <span class="var">spectral</span>, <span class="num">3</span>; <span class="var">resonance</span>);   <span class="cm"># compile</span>
+<span class="var">passes</span>[] <span class="op">=</span> <span class="num">0</span>
+<span class="var">t_element</span> <span class="op">=</span> <span class="fn">@elapsed</span> (<span class="var">W_element</span>, <span class="var">R_element</span>) <span class="op">=</span>
+    <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><span class="fn">parametrise</span></a>(<span class="var">element_model</span>, <span class="var">spectral</span>, <span class="var">order</span>; <span class="var">resonance</span>)
+(<span class="var">mesh_passes</span> <span class="op">=</span> <span class="var">passes</span>[], <span class="var">seconds</span> <span class="op">=</span> <span class="var">t_element</span>) <span class="cm"># print mesh traversals and solve time</span></pre>
+        <p>
+          All three models share one <code>spectral</code>, so their eigenvectors, and with them the
+          gauge of every coefficient, are identical and the coefficients compare directly. The two
+          routes agree with each other, and with the backend's built-in term, to round-off.
+        </p>
+<pre class="code"><span class="var">W_ref</span>, <span class="var">R_ref</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><span class="fn">parametrise</span></a>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>; <span class="var">resonance</span>)
+<span class="fn">rel</span>(<span class="var">a</span>, <span class="var">b</span>) <span class="op">=</span> <span class="fn">maximum</span>(<span class="var">abs</span>, <span class="var">a.poly.coefficients</span> <span class="op">-</span> <span class="var">b.poly.coefficients</span>) <span class="op">/</span>
+            <span class="fn">maximum</span>(<span class="var">abs</span>, <span class="var">b.poly.coefficients</span>)
+(<span class="var">W_closure_vs_element</span> <span class="op">=</span> <span class="fn">rel</span>(<span class="var">W_closure</span>, <span class="var">W_element</span>),
+    <span class="var">W_element_vs_builtin</span> <span class="op">=</span> <span class="fn">rel</span>(<span class="var">W_element</span>, <span class="var">W_ref</span>),
+    <span class="var">R_element_vs_builtin</span> <span class="op">=</span> <span class="fn">rel</span>(<span class="var">R_element</span>, <span class="var">R_ref</span>)) <span class="cm"># print relative differences</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">07</div>
+      <div class="body">
+        <h3 id="step-cost">See where the time goes</h3>
+        <p>
+          Both solves also factorise one sparse matrix per monomial, at the same cost, so the total
+          solve times understate the difference. MORFE's benchmark mode times the right-hand side on its
+          own: <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><code>solve_parametrisation</code></a> with a <code class="nolink">benchmark_dir</code> writes
+          the time spent per degree. Timings are noisy, so each point keeps the fastest of three runs.
+        </p>
+<pre class="code"><span class="kw">using</span> <span class="var">MORFE.Resonance</span><span class="op">:</span> <a class="doc-link" href="../documentation.html#Resonance-build_resonance_set"><span class="var">build_resonance_set</span></a>
+
+<span class="kw">function</span> <span class="fn">rhs_cost_once</span>(<span class="var">m</span>, <span class="var">p</span>)
+    <span class="var">mset</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#ParametrisationMethod-build_multiindex_set"><span class="fn">build_multiindex_set</span></a>(<span class="var">p</span>, <span class="num">2</span>)
+    <span class="var">dir</span> <span class="op">=</span> <span class="fn">mktempdir</span>()
+    <span class="var">passes</span>[] <span class="op">=</span> <span class="num">0</span>
+    <span class="var">rset</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Resonance-build_resonance_set"><span class="fn">build_resonance_set</span></a>(<span class="var">m</span>, <span class="var">mset</span>, <span class="var">spectral</span>, <span class="var">resonance</span>)
+    <span class="var">quiet</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#ParametrisationSolver-ParametrisationOptions"><span class="fn">ParametrisationOptions</span></a>(<span class="var">show_progress</span> <span class="op">=</span> <span class="var">false</span>, <span class="var">verbose</span> <span class="op">=</span> <span class="var">false</span>)
+    <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><span class="fn">solve_parametrisation</span></a>(<span class="var">m</span>, <span class="var">mset</span>, <span class="var">spectral</span>, <span class="var">rset</span>; <span class="var">benchmark_dir</span> <span class="op">=</span> <span class="var">dir</span>, <span class="var">options</span> <span class="op">=</span> <span class="var">quiet</span>)
+    <span class="var">rows</span> <span class="op">=</span> <span class="fn">split</span>.(<span class="fn">readlines</span>(<span class="fn">joinpath</span>(<span class="var">dir</span>, <span class="str">"benchmark_per_order.csv"</span>))[<span class="num">2</span><span class="op">:</span><span class="kw">end</span>], ',')
+    <span class="kw">return</span> (<span class="var">passes</span> <span class="op">=</span> <span class="var">passes</span>[], <span class="var">seconds</span> <span class="op">=</span> <span class="fn">sum</span>(<span class="var">r</span> <span class="op">-&gt;</span> <span class="fn">parse</span>(<span class="var">Float64</span>, <span class="var">r</span>[<span class="num">3</span>]), <span class="var">rows</span>))
+<span class="kw">end</span>
+<span class="fn">rhs_cost</span>(<span class="var">m</span>, <span class="var">p</span>) <span class="op">=</span> <span class="fn">argmin</span>(<span class="var">c</span> <span class="op">-&gt;</span> <span class="var">c.seconds</span>, [<span class="fn">rhs_cost_once</span>(<span class="var">m</span>, <span class="var">p</span>) <span class="kw">for</span> <span class="var">_</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="num">3</span>]) <span class="cm"># least noisy of 3</span>
+
+<span class="var">orders</span> <span class="op">=</span> <span class="num">3</span><span class="op">:</span><span class="num">2</span><span class="op">:</span><span class="var">order</span>
+<span class="var">closure_cost</span> <span class="op">=</span> [<span class="fn">rhs_cost</span>(<span class="var">closure_model</span>, <span class="var">p</span>) <span class="kw">for</span> <span class="var">p</span> <span class="kw">in</span> <span class="var">orders</span>]
+<span class="var">element_cost</span> <span class="op">=</span> [<span class="fn">rhs_cost</span>(<span class="var">element_model</span>, <span class="var">p</span>) <span class="kw">for</span> <span class="var">p</span> <span class="kw">in</span> <span class="var">orders</span>]</pre>
+<pre class="code"><span class="kw">using</span> <span class="var">CairoMakie</span>
+<span class="var">fig</span> <span class="op">=</span> <span class="fn">Figure</span>(<span class="var">size</span> <span class="op">=</span> (<span class="num">720</span>, <span class="num">320</span>))
+<span class="var">ax1</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">1</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">"order"</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">"mesh traversals"</span>, <span class="var">xticks</span> <span class="op">=</span> <span class="var">orders</span>,
+    <span class="var">yscale</span> <span class="op">=</span> <span class="var">log10</span>, <span class="var">yticks</span> <span class="op">=</span> [<span class="num">3</span>, <span class="num">10</span>, <span class="num">30</span>, <span class="num">100</span>, <span class="num">300</span>])
+<span class="var">ax2</span> <span class="op">=</span> <span class="fn">Axis</span>(<span class="var">fig</span>[<span class="num">1</span>, <span class="num">2</span>]; <span class="var">xlabel</span> <span class="op">=</span> <span class="str">"order"</span>, <span class="var">ylabel</span> <span class="op">=</span> <span class="str">"right-hand-side time  [s]"</span>,
+    <span class="var">xticks</span> <span class="op">=</span> <span class="var">orders</span>)
+<span class="kw">for</span> (<span class="var">cost</span>, <span class="var">label</span>) <span class="kw">in</span> ((<span class="var">closure_cost</span>, <span class="str">"closure"</span>), (<span class="var">element_cost</span>, <span class="str">"element-level"</span>))
+    <span class="fn">scatterlines!</span>(<span class="var">ax1</span>, <span class="var">orders</span>, [<span class="var">c.passes</span> <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="var">cost</span>]; <span class="var">label</span>)
+    <span class="fn">scatterlines!</span>(<span class="var">ax2</span>, <span class="var">orders</span>, [<span class="var">c.seconds</span> <span class="kw">for</span> <span class="var">c</span> <span class="kw">in</span> <span class="var">cost</span>]; <span class="var">label</span>)
+<span class="kw">end</span>
+<span class="fn">axislegend</span>(<span class="var">ax1</span>; <span class="var">position</span> <span class="op">=</span> <span class="sym">:lt</span>)
+<span class="var">fig</span></pre>
+        <p>
+          The traversals of the closure grow with the number of factorisations, those of the
+          element-level term only with the number of monomials. The right-hand-side time falls by less,
+          because <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> still runs once per factorisation: batching shares the
+          traversal, the gathering and the gradients, not the physics. The gain therefore grows with the
+          order and with the number of reduced coordinates, and it is largest for cheap integrands.
+          MORFEFerrite's built-in kernel is costlier per call, so batching gains less with it
+          (<a class="inline" href="#fig-01">FIG · 01</a>, second button).
+        </p>
+
+      </div>
+    </div>
+
+    <div class="fig" id="fig-01">
+      <iframe src="assets/fe_nonlinearity/cost.html"
+        style="aspect-ratio: 900/500;"
+        title="Mesh traversals and right-hand-side time against the expansion order, closure against element-level interface"
+        loading="lazy"></iframe>
+      <div class="fig-cap"><span class="lab">FIG · 01</span>Cost of the right-hand side on the clamped beam
+        (<strong>4977 free DOFs</strong>, master mode 1) against the expansion order. Left: mesh traversals.
+        Right: right-hand-side time. <strong>Tutorial kernel</strong> draws the
+        <code class="nolink">rhs_cost.csv</code> this notebook writes; <strong>MORFEFerrite kernel</strong>
+        draws <code class="nolink">batching_speedup.csv</code>, written by the example's
+        <code class="nolink">benchmark.jl</code> for MORFEFerrite's built-in term. Apple M2 Pro, one thread.</div>
+    </div>
+
+    <div class="adm tip">
+      <div class="adm-head">Which route to choose</div>
+      <div class="adm-body">
+      <p>Start with a closure: it plugs any finite element code into MORFE with no MORFE-specific
+        code, and it is the quickest way to check a new physics. Move the same integrand to the
+        element-level interface once the right-hand side dominates the solve, typically at high orders
+        or with several master modes, where the factorisations multiply.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:48px; padding:28px; border:1px solid var(--hair); border-radius:6px; background:rgba(149,88,178,0.04); display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:240px;">
+        <div class="kicker">Run it yourself</div>
+        <p style="font-size:14px; color:var(--ink-2); margin:8px 0 0;">The whole tutorial ships in <a href="https://github.com/MORFEproject/MORFEExamples/blob/main/writing_a_finite_element_nonlinearity/writing_a_finite_element_nonlinearity.ipynb" target="_blank" rel="noopener"><code>writing_a_finite_element_nonlinearity.ipynb</code></a>; <code class="nolink">benchmark.jl</code> in the same folder times MORFEFerrite's built-in term.</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn btn-primary" href="https://github.com/MORFEproject/MORFEExamples/tree/main/writing_a_finite_element_nonlinearity" target="_blank" rel="noopener">The example<span class="arrow">→</span></a>
+      </div>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc">
+    <h5>On this page</h5>
+    <ul id="toc-list">
+      <li><a href="#overview" class="active">Overview</a></li>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#step-linear">01 · Linear part</a></li>
+      <li><a href="#step-physics">02 · Physics</a></li>
+      <li><a href="#step-closure">03 · Closure</a></li>
+      <li><a href="#step-slow">04 · Why it is slow</a></li>
+      <li><a href="#step-element">05 · Element-level interface</a></li>
+      <li><a href="#step-compare">06 · Compare</a></li>
+      <li><a href="#step-cost">07 · Where the time goes</a></li>
+    </ul>
+    <h5 style="margin-top:32px;">Links</h5>
+    <ul>
+      <li><a href="https://github.com/MORFEproject/MORFEExamples/tree/main/writing_a_finite_element_nonlinearity" target="_blank" rel="noopener">Example folder ↗</a></li>
+      <li><a href="../documentation.html#MultilinearMaps">MultilinearMaps docs</a></li>
+      <li><a href="../morfeferrite-documentation.html#StructuralSVK">StructuralSVK docs</a></li>
+      <li><a href="https://ferrite-fem.github.io/" target="_blank" rel="noopener">Ferrite.jl ↗</a></li>
+    </ul>
+  </aside>
+
+</div>
+<footer id="site-footer" class="foot" data-base="../"></footer>
+<script src="../assets/footer.js"></script>
+</div>
+
+<script>
+(function () {
+  const links = document.querySelectorAll('#toc-list a');
+  const targets = [...links].map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  function onScroll() {
+    let active = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const r = targets[i].getBoundingClientRect();
+      if (r.top < 140) active = i;
+    }
+    links.forEach(l => l.classList.remove('active'));
+    if (links[active]) links[active].classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+</body>
+</html>

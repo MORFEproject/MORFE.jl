@@ -1,0 +1,6 @@
+# Julia 1.12.6, Apple M2 Pro, 1 thread(s), N = 4977, master mode 1, minimum of 3 runs
+order,n_monomials,passes_closure,passes_batched,rhs_closure_s,rhs_batched_s,rhs_ratio,linear_solve_s
+3,9,7,4,0.0671,0.0623,1.08,0.6763
+5,20,45,10,0.4456,0.3906,1.14,1.5987
+7,35,169,18,1.9876,1.6298,1.22,2.5330
+9,54,486,28,5.7060,4.4333,1.29,4.1451
