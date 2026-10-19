@@ -100,6 +100,7 @@ function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
         # KLU may leave `common.status` looking successful after a failed unchecked
         # refactorisation of a bordered pattern. Requesting the checked, non-singular
         # path makes that failure observable before `ldiv!` can return NaNs.
+        _free_numeric(F)  # release the numeric factor before attempting a fresh factorisation
         klu_factor!(F; check = true, allowsingular = false)
     catch error
         _is_unrecoverable_failure(error) && rethrow()

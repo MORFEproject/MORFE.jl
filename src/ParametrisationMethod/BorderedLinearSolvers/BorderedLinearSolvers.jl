@@ -29,7 +29,7 @@ module BorderedLinearSolvers
 using LinearAlgebra
 using SparseArrays
 using SparseArrays.UMFPACK: UmfpackLU
-using KLU: KLUFactorization, klu, klu_factor!
+using KLU: KLUFactorization, klu, klu_factor!, _free_numeric
 
 using ..InvarianceEquation: precompute_sparse_bordered_template
 
