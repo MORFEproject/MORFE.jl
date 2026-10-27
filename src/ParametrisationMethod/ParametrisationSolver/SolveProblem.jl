@@ -51,7 +51,8 @@ function _execute_problem_schedule!(W, R, ctx, symmetry, model, cache, mset,
     if benchmark_dir !== nothing
         _execute_benchmarked_schedule!(
             W, R, ctx, symmetry, model, cache;
-            benchmark_dir, show_progress = options.show_progress)
+            benchmark_dir, grouping = options.grouping,
+            show_progress = options.show_progress)
     else
         observer = checkpoint_session === nothing ? _NO_SOLVE_OBSERVER :
                    _CheckpointSolveObserver(
@@ -138,9 +139,10 @@ linear-operator tuple is read from `model.linear_terms`.
   [`ParametrisationOptions`](@ref). Mathematical choices remain separate arguments.
 - `benchmark_dir` — `nothing` for the normal grouped/checkpoint-capable solve, or a directory
   in which the benchmark observer writes timing CSV files.
-  Benchmark mode uses the shared direct execution plan and therefore does not perform
-  factor grouping. It cannot be combined with checkpointing because benchmark timings do
-  not form resumable checkpoint commits.
+  Benchmark mode executes the same plan as the normal solve, including `options.grouping`,
+  and records per monomial whether the numeric factorisation was reused. It cannot be
+  combined with checkpointing because benchmark timings do not form resumable checkpoint
+  commits.
 
 ## Returns
 
@@ -156,11 +158,38 @@ function solve_parametrisation(
         benchmark_dir::Union{Nothing, AbstractString} = nothing,
         options::ParametrisationOptions = ParametrisationOptions()
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
-    checkpoint = options.checkpoint
-    benchmark_dir !== nothing && checkpoint !== nothing &&
+    benchmark_dir !== nothing && options.checkpoint !== nothing &&
         throw(ArgumentError(
             "benchmark_dir cannot be combined with checkpointing; benchmark execution " *
             "does not create resumable checkpoint commits"))
+    (; W, R, ctx, symmetry, ml_cache, sparse_solver, checkpoint_session) = _prepare_solve(
+        model, mset, spectral, resonance_set, initial_solution, conjugate_permutation,
+        options)
+    _execute_problem_schedule!(W, R, ctx, symmetry, model, ml_cache, mset,
+        sparse_solver, checkpoint_session, benchmark_dir, options)
+    return W, R
+end
+
+"""
+	_prepare_solve(model, mset, spectral, resonance_set, initial_solution,
+		conjugate_permutation, options)
+		-> (; W, R, ctx, symmetry, ml_cache, sparse_solver, checkpoint_session)
+
+Run every phase of [`solve_parametrisation`](@ref) before the monomial loop: input
+resolution, checkpoint opening and restoration, storage, shared resources, master
+operators, the degree-one external directions, and the complete context. Nothing of degree
+two or more is solved, so the result holds only order-one data.
+"""
+function _prepare_solve(
+        model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
+        mset::MultiindexSet{NVAR},
+        spectral::SpectralData{ORD, ROM},
+        resonance_set::ResonanceSet,
+        initial_solution,
+        conjugate_permutation,
+        options::ParametrisationOptions
+) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
+    checkpoint = options.checkpoint
     master_eigs, master_right_modes, master_left_modes,
     master_right_mode_derivatives, master_left_mode_blocks,
     conj_perm, dimensions = _prepare_problem_inputs(
@@ -215,10 +244,48 @@ function solve_parametrisation(
         orthogonality_J_coeffs, right_master_blocks,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
 
-    _execute_problem_schedule!(W, R, ctx, sym, model, ml_cache, mset,
-        sparse_solver, checkpoint_session, benchmark_dir, options)
+    return (; W, R, ctx, symmetry = sym, ml_cache, sparse_solver, checkpoint_session)
+end
 
-    return W, R
+"""
+	_bordered_matrices(model, mset, spectral, resonance_set, targets;
+		conjugate_permutation = :from_spectral, options) -> Dict
+
+Assemble the bordered matrices of the monomials `targets` (exponent vectors in `mset`) for
+benchmarking the sparse backends, without solving any monomial of degree two or more.
+
+A bordered matrix depends only on the monomial's superharmonic and resonance mask, both
+known from order-one data, so [`_prepare_solve`](@ref) and
+`_assemble_bordered_system!` suffice: the lower-order couplings and the nonlinear
+right-hand side, which would need the lower-degree coefficients, enter only the
+right-hand side and are left at zero. Returns a dictionary from each target to a copy of
+its matrix. Requires sparse full-order matrices.
+"""
+function _bordered_matrices(
+        model::NthOrderModel, mset::MultiindexSet{NVAR},
+        spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet, targets;
+        conjugate_permutation = :from_spectral,
+        options::ParametrisationOptions = ParametrisationOptions(
+            show_progress = false, verbose = false)
+) where {NVAR, ORD, ROM}
+    (; R, ctx, sparse_solver) = _prepare_solve(model, mset, spectral, resonance_set,
+        nothing, conjugate_permutation, options)
+    sparse_solver === nothing &&
+        throw(ArgumentError("bordered matrices require sparse full-order matrices"))
+    matrices = Dict{SVector{NVAR, Int}, typeof(sparse_solver.bordered)}()
+    for target in targets
+        exponent = SVector{NVAR, Int}(target)
+        index = get(ctx.lower_order.multiindex_dict, exponent, 0)
+        index == 0 && throw(ArgumentError("monomial $(Tuple(exponent)) is not in mset"))
+        for buffer in ctx.lower_order.buffer
+            fill!(buffer, zero(eltype(buffer)))
+        end
+        _assemble_bordered_system!(ctx, _superharmonic(exponent, ctx.lambda_diag),
+            _resonance_vector(ctx.resonance_set, index, Val(ROM)),
+            ctx.lower_order.buffer, view(R.poly.coefficients, (ROM + 1):NVAR, index))
+        matrices[exponent] = copy(sparse_solver.bordered)
+    end
+    return matrices
 end
 
 """

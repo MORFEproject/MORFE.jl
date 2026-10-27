@@ -17,7 +17,7 @@ sparse factorisation to `BorderedLinearSolvers`.
 | `Checkpointing.jl` | Validated, atomic checkpoint persistence and restoration |
 | `ConjugateSymmetry.jl` | Conjugate-pair bookkeeping and coefficient reconstruction |
 | `ProgressIndicator.jl` | Allocation-conscious terminal progress reporting |
-| `SolveSchedule.jl` | Causal jobs and exact structural factor groups |
+| `SolveSchedule.jl` | Causal jobs, data dependencies and exact structural factor groups |
 | `SolveExecution.jl` | Typed observers and plan execution |
 | `Benchmarking.jl` | Timing instrumentation and CSV reporting |
 | `SolutionStorage.jl` | Creation, reuse, initialisation, and checkpoint restoration of `W`/`R` |
@@ -53,7 +53,7 @@ using ..SpectralDecomposition: SpectralData, right_modes, left_modes,
                                full_conjugate_permutation
 using ..MultilinearTerms: compute_multilinear_terms!, build_multilinear_terms_cache,
                           MultilinearTermsCache
-using ..Resonance: ResonanceSet
+using ..Resonance: ResonanceSet, is_resonant
 using ..InvarianceEquation: precompute_master_column_polynomials,
                             precompute_external_column_polynomials,
                             precompute_sparse_L_template
@@ -64,7 +64,7 @@ using ..CohomologicalEquations: CohomologicalContext, InvarianceOperators,
                                 CohomologicalBuffers, solve_single_monomial!,
                                 _run_single_monomial!, _solve_monomial!,
                                 _NO_MONOMIAL_INSTRUMENTATION, _superharmonic,
-                                _resonance_vector
+                                _resonance_vector, _assemble_bordered_system!
 import ..CohomologicalEquations: _assemble_nonlinear_rhs!, _solve_prepared_system!,
                                  _monomial_metrics
 using ..BorderedLinearSolvers: SparseLinearSolverState, _backend_name

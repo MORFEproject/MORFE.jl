@@ -214,9 +214,11 @@ end
 	_execute_solve_plan!(plan, instrumentation, observer, W, R, ctx, sym, model,
 		ml_cache) -> nothing
 
-Execute a direct or grouped plan in causal degree order. The grouped overload factorises
-the first job in each group and passes `Val(true)` only to later jobs with a provably
-identical bordered matrix.
+Execute a direct or grouped plan in causal order. The grouped overloads factorise the
+first job in each group and pass `Val(true)` only to later jobs with a provably identical
+bordered matrix. Direct and degree-local plans complete degrees in increasing order; a
+cross-degree plan reports each degree complete after the group holding its last job, so
+degrees may complete out of order.
 """
 function _execute_solve_plan!(plan::_DirectSolvePlan, instrumentation, observer,
         W, R, ctx, sym, model, ml_cache)
@@ -263,6 +265,37 @@ function _execute_solve_plan!(plan::_GroupedSolvePlan, instrumentation, observer
     return nothing
 end
 
+function _execute_solve_plan!(plan::_CrossDegreeSolvePlan, instrumentation, observer,
+        W, R, ctx, sym, model, ml_cache)
+    mset = multiindex_set(W)
+    remaining = copy(plan.jobs_per_degree)
+    group_degrees = Int[]
+    for group in plan.groups
+        empty!(group_degrees)
+        for (position, job) in enumerate(group.jobs)
+            degree = sum(mset[job.index])
+            if position == 1
+                _execute_job!(instrumentation, observer, W, R, job, degree,
+                    ctx, sym, model, ml_cache, Val(false), group.superharmonic)
+            else
+                _execute_job!(instrumentation, observer, W, R, job, degree,
+                    ctx, sym, model, ml_cache, Val(true), group.superharmonic)
+            end
+            remaining[degree] -= 1
+            degree in group_degrees || push!(group_degrees, degree)
+        end
+        # A group may span several degrees, so its chunk is filed under the highest one.
+        # Degree markers follow the chunk, as in the degree-local executors, so a marker
+        # never precedes the coefficients it certifies.
+        _on_group_complete!(observer, maximum(group_degrees), group.jobs)
+        for degree in sort!(group_degrees)
+            remaining[degree] == 0 && _on_degree_complete!(observer, degree)
+        end
+    end
+    _finish_observer!(observer)
+    return nothing
+end
+
 """
 	_execute_solve_schedule!(W, R, context, symmetry, model, cache; ...) -> nothing
 
@@ -277,10 +310,9 @@ function _execute_solve_schedule!(
         observer::_AbstractSolveObserver = _NO_SOLVE_OBSERVER,
         instrumentation = _NO_MONOMIAL_INSTRUMENTATION
 ) where {ORD, NVAR, T, ROM}
-    plan = _build_solve_plan(ctx, sym, multiindex_set(W), grouping, Val(ROM))
-    n_jobs = plan isa _DirectSolvePlan ? length(plan.jobs) : plan.n_jobs
+    plan = _build_solve_plan(ctx, R, sym, multiindex_set(W), grouping, Val(ROM))
     progress = _ProgressSolveObserver(
-        _make_progress(n_jobs, show_progress, model.max_nl_degree), 0)
+        _make_progress(_plan_job_count(plan), show_progress, model.max_nl_degree), 0)
     observers = _compose_observers(progress, observer)
     _execute_solve_plan!(plan, instrumentation, observers,
         W, R, ctx, sym, model, ml_cache)

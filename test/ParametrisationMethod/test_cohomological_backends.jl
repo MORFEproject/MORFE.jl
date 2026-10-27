@@ -1,6 +1,7 @@
 using Test
 using LinearAlgebra
 using SparseArrays
+using Random: MersenneTwister
 using StaticArrays: SVector
 
 using MORFE
@@ -14,6 +15,24 @@ function _checkpoint_test_cubic!(res, x1, x2, x3)
 end
 function MORFE.checkpoint_fingerprint_data(::typeof(_checkpoint_test_cubic!))
     ("checkpoint-test-cubic", 1)
+end
+
+# A cubic term for the first-order saddle-point fixture of the automatic-backend test.
+cubic_saddle = MultilinearMap((res, x1, x2, x3) -> (@. res += -x1 * x2 * x3), (3,))
+
+# Parameter-dependent terms for the cross-degree fixture: a stiffness change linear in the
+# external state, and a static load proportional to it.
+const _CROSS_DEGREE_K1 = [1.0 0.2; 0.2 0.5]
+const _CROSS_DEGREE_G = [0.3 -0.1; -0.2 0.4]
+function _cross_degree_stiffness!(res, x, r)
+    res .+= r[1] .* (_CROSS_DEGREE_K1 * x) .+ r[2] .* x
+end
+_cross_degree_load!(res, r) = (res .+= _CROSS_DEGREE_G * r)
+function MORFE.checkpoint_fingerprint_data(::typeof(_cross_degree_stiffness!))
+    ("cross-degree-stiffness", 1)
+end
+function MORFE.checkpoint_fingerprint_data(::typeof(_cross_degree_load!))
+    ("cross-degree-load", 1)
 end
 
 @testset "Cohomological sparse backends and durable checkpoints" begin
@@ -100,7 +119,7 @@ end
         @test all(job.conjugate_target != pair.conjugate_target for job in rebuilt)
         @test any(job.conjugate_target == 0 for job in rebuilt)
         @test_throws ArgumentError PS._build_solve_plan(
-            nothing, nothing, nothing, :invalid, Val(1))
+            nothing, nothing, nothing, nothing, :invalid, Val(1))
     end
 
     @testset "missing external-dynamics coefficient is rejected" begin
@@ -384,8 +403,11 @@ end
                 order = readlines(joinpath(directory, "benchmark_per_order.csv"))
                 @test split(first(mono), ',') == ["order", "monomial_idx", "exponents",
                     "rhs_time_s", "rhs_alloc_bytes", "solve_time_s",
-                    "solve_alloc_bytes", "monomial_total_time_s", "cumul_time_s"]
-                @test length(split(first(order), ',')) == 9
+                    "solve_alloc_bytes", "factor_reused", "monomial_total_time_s",
+                    "cumul_time_s"]
+                @test length(split(first(order), ',')) == 10
+                # The direct plan factorises every monomial.
+                @test all(split(row, ',')[8] == "false" for row in mono[2:end])
                 solved_rows = length(mono) - 1
                 solved_from_orders = sum(parse(Int, split(row, ',')[2])
                 for row in order[2:end])
@@ -408,6 +430,191 @@ end
                 benchmark_dir = joinpath(directory, "benchmark"),
                 options = conflicting)
             @test !ispath(checkpoint.path)
+        end
+    end
+
+    @testset "automatic sparse backend" begin
+        # UMFPACK's symbolic analysis decides: its symmetric strategy (symmetric pattern,
+        # nonzero diagonal) selects UMFPACK, its unsymmetric strategy KLU.
+        border(A, r) = (n = size(A, 1);
+            [A sparse(ones(ComplexF64, n, r));
+             sparse(ones(ComplexF64, r, n)) sparse(
+                 ComplexF64(1)I, r, r)])
+        m = 30
+        line = spdiagm(-1 => fill(-1.0, m - 1), 0 => fill(2.0, m), 1 => fill(-1.0, m - 1))
+        laplacian = ComplexF64.(kron(sparse(I, m, m), line) + kron(line, sparse(I, m, m)))
+        @test BLS._auto_suitesparse_backend(border(laplacian, 2)) == :umfpack
+        coupling = sparse(ComplexF64.(rand(MersenneTwister(1), 0:1, m^2 ÷ 4, m^2)))
+        saddle = [laplacian transpose(coupling);
+                  coupling spzeros(ComplexF64, m^2 ÷ 4, m^2 ÷ 4)]
+        @test BLS._auto_suitesparse_backend(border(saddle, 2)) == :klu
+        @test BLS._auto_suitesparse_backend(spzeros(ComplexF64, 3, 2)) == :klu
+
+        # The solver state applies the choice to the operators it is built from.
+        state(model, options) = PS._make_sparse_solver(
+            typeof(first(model.linear_terms)), model.linear_terms,
+            size(first(model.linear_terms), 1), 2, options)
+        @test state(sparse_model, ParametrisationOptions()).backend isa BLS.UMFPACKBackend
+        @test state(sparse_model, quiet(backend = :klu)).backend isa BLS.KLUBackend
+        saddle_model = NthOrderModel(
+            (sparse(real(saddle)), sparse(1.0I, size(saddle)...)), (cubic_saddle,))
+        @test state(saddle_model, ParametrisationOptions()).backend isa BLS.KLUBackend
+    end
+
+    @testset "bordered matrices from order-one data" begin
+        mset = all_multiindices_up_to(2, 3; min_degree = 1)
+        rset = MORFE.Resonance.build_resonance_set(sparse_model, mset, sd, resonance)
+        targets = [SVector(2, 0), SVector(2, 1)]
+        matrices = PS._bordered_matrices(sparse_model, mset, sd, rset, targets)
+        FOM, ROM = size(B0, 1), 2
+        regular, resonant = matrices[SVector(2, 0)], matrices[SVector(2, 1)]
+        # One constant pattern, whatever the monomial.
+        @test size(regular) == size(resonant) == (FOM + ROM, FOM + ROM)
+        @test regular.colptr == resonant.colptr && regular.rowval == resonant.rowval
+        # z² is resonant with no master mode, so its border columns stay empty; z² z̄ is
+        # resonant with exactly one, whose column C(s) is filled.
+        border(M) = [norm(M[1:FOM, FOM + r]) for r in 1:ROM]
+        @test all(iszero, border(regular))
+        @test count(!iszero, border(resonant)) == 1
+        @test_throws ArgumentError PS._bordered_matrices(
+            sparse_model, mset, sd, rset, [SVector(4, 0)])
+        @test_throws ArgumentError PS._bordered_matrices(
+            dense_model, mset, sd, rset, targets)
+    end
+
+    @testset "cross-degree factor reuse" begin
+        @test ParametrisationOptions(grouping = :across_degrees).grouping ==
+              :across_degrees
+        @test_throws ArgumentError ParametrisationOptions(grouping = :across_degree)
+
+        # Equal keys run back to back when the dependencies allow, split when they do not,
+        # and a cycle is reported instead of looping.
+        @test PS._schedule_key_runs([1, 2, 1, 2, 1], [1, 2],
+            [Int[], Int[], [1], [2, 3], [3]]) == [[1, 3, 5], [2, 4]]
+        split_dependencies = [Int[], Int[], [2], Int[]]
+        split_runs = PS._schedule_key_runs([1, 2, 1, 2], [1, 2], split_dependencies)
+        @test split_runs == [[1], [2, 4], [3]]
+        @test PS._respects_dependencies(reduce(vcat, split_runs), split_dependencies)
+        @test !PS._respects_dependencies([1, 3, 2, 4], split_dependencies)
+        @test PS._schedule_key_runs([1, 1], [1], [[2], [1]]) === nothing
+
+        cubic = MultilinearMap(_checkpoint_test_cubic!, (3, 0))
+        stiffness = MultilinearMap(_cross_degree_stiffness!, (1, 0), 1)
+        load = MultilinearMap(_cross_degree_load!, (0, 0), 1)
+        degree = 4
+        mset = all_multiindices_up_to(4, degree; min_degree = 1)
+        nonlinear = [α for α in mset.exponents if sum(α) >= 2]
+
+        function fixture(external_system)
+            terms = (cubic, stiffness, load)
+            dense = NthOrderModel((B0, B1, B2), terms, external_system)
+            sparse_model = NthOrderModel(map(sparse, (B0, B1, B2)), terms, external_system)
+            spectral = SpectralData(dense,
+                spectrum(dense; solver = DefaultEigensolver());
+                master = master_by_sorting(2))
+            return dense, sparse_model, spectral
+        end
+
+        # Solve in benchmark mode, which records whether each solve factorised.
+        function measured_solve(model, spectral, permutation, grouping, backend)
+            rset = MORFE.Resonance.build_resonance_set(model, mset, spectral, resonance)
+            options = ParametrisationOptions(;
+                backend, grouping, show_progress = false, verbose = false)
+            return mktempdir() do directory
+                W, R = solve_parametrisation(model, mset, spectral, rset;
+                    conjugate_permutation = permutation,
+                    benchmark_dir = directory, options)
+                rows = readlines(joinpath(directory, "benchmark_per_monomial.csv"))[2:end]
+                n_factorised = count(row -> split(row, ',')[8] == "false", rows)
+                (; W = W.poly.coefficients, R = R.poly.coefficients,
+                    n_jobs = length(rows), n_factorised)
+            end
+        end
+
+        # Two frozen parameters: every monomial differing only in its parameter exponents
+        # has the same bordered matrix. Within a degree that leaves one factorisation per
+        # (degree, master exponents); across degrees, one per master exponents.
+        frozen_dense, frozen_sparse, frozen_sd = fixture(ExternalSystem((0.0, 0.0)))
+        for permutation in (nothing, [2, 1, 3, 4])
+            primaries = permutation === nothing ? nonlinear :
+                        [α for α in nonlinear if α[1] >= α[2]]
+            expected = Dict(
+                :off => length(primaries),
+                :on => length(unique((sum(α), α[1], α[2]) for α in primaries)),
+                :across_degrees => length(unique((α[1], α[2]) for α in primaries)))
+            for (model, backend) in ((frozen_sparse, :klu), (frozen_sparse, :umfpack),
+                (frozen_dense, :auto))
+                direct = measured_solve(model, frozen_sd, permutation, :off, backend)
+                for grouping in (:off, :on, :across_degrees)
+                    result = measured_solve(
+                        model, frozen_sd, permutation, grouping, backend)
+                    @test result.n_jobs == length(primaries)
+                    @test result.n_factorised == expected[grouping]
+                    # Zero eigenvalues add exact zeros to the superharmonic, so every
+                    # schedule assembles bit-identical matrices.
+                    @test result.W == direct.W
+                    @test result.R == direct.R
+                end
+            end
+        end
+
+        # `r₁` is driven by the frozen `θ` (Λ₁₂ ≠ 0, distinct eigenvalues): the monomial
+        # (…, m, k) reads (…, m + 1, k − 1), which belongs to a later key. The scheduler
+        # must interleave the keys, and a key-major order would read unsolved data.
+        coupled_polynomial = let ms = all_multiindices_up_to(2, 1; min_degree = 1)
+            A = ComplexF64[-0.5 1.0; 0.0 0.0]
+            coefficients = zeros(ComplexF64, 2, length(ms))
+            for (j, α) in enumerate(ms.exponents)
+                column = findfirst(==(1), α)
+                column === nothing || (coefficients[:, j] = A[:, column])
+            end
+            MORFE.Polynomials.DensePolynomial(coefficients, ms)
+        end
+        _, coupled_sparse, coupled_sd = fixture(ExternalSystem(coupled_polynomial))
+        coupled_direct = measured_solve(coupled_sparse, coupled_sd, nothing, :off, :klu)
+        for grouping in (:on, :across_degrees)
+            result = measured_solve(coupled_sparse, coupled_sd, nothing, grouping, :klu)
+            @test result.n_factorised == result.n_jobs
+            @test result.W == coupled_direct.W
+            @test result.R == coupled_direct.R
+        end
+
+        # A cross-degree checkpoint resumes from any subset of committed groups, even
+        # though its chunks and degree markers are written out of degree order.
+        mktempdir() do directory
+            path = joinpath(directory, "cross-degree")
+            checkpoint = CheckpointOptions(path;
+                problem_id = "cross-degree", granularity = :factor_group)
+            options = quiet(grouping = :across_degrees, checkpoint = checkpoint)
+            solve_frozen() = parametrise(frozen_sparse, frozen_sd, degree;
+                resonance, options)
+            W0, R0 = solve_frozen()
+            manifest_path = joinpath(path, "manifest.toml")
+            manifest = _CheckpointTOML.parsefile(manifest_path)
+            @test manifest["completed_degrees"] == collect(1:degree)
+            chunks = manifest["chunks"]
+            @test length(chunks) > 2
+            # Drop two groups that span several degrees, and the markers of every degree
+            # they touched; the resumed run must solve those groups again and re-mark
+            # their degrees.
+            chunk_degrees(chunk) = Set(sum(W0.poly.multiindex_set[i])
+            for i in chunk["indices"])
+            dropped = filter(chunk -> length(chunk_degrees(chunk)) > 1, chunks)[1:2]
+            reopened = union((chunk_degrees(chunk) for chunk in dropped)...)
+            @test length(reopened) > 1
+            for chunk in dropped
+                rm(joinpath(path, "chunks", chunk["file"]))
+            end
+            manifest["chunks"] = filter(chunk -> !(chunk in dropped), chunks)
+            manifest["completed_degrees"] = setdiff(1:degree, reopened)
+            open(manifest_path, "w") do io
+                _CheckpointTOML.print(io, manifest; sorted = true)
+            end
+            W1, R1 = solve_frozen()
+            @test relerr(W1.poly.coefficients, W0.poly.coefficients) <= 1e-12
+            @test relerr(R1.poly.coefficients, R0.poly.coefficients) <= 1e-12
+            @test _CheckpointTOML.parsefile(manifest_path)["completed_degrees"] ==
+                  collect(1:degree)
         end
     end
 end

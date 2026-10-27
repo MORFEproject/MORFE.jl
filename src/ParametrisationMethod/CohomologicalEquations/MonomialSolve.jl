@@ -156,32 +156,30 @@ function solve_single_monomial!(W, R, idx::Int, ctx, sym, model, ml_cache,
 end
 
 """
-	_solve_monomial!(ctx, index, multiindex, s, resonance,
-		lower_order_couplings, external_dynamics)
+	_assemble_bordered_system!(ctx, s, resonance, lower_order_couplings,
+		external_dynamics) -> nothing
 
-**Sparse path** (dispatched when `MT <: SparseMatrixCSC`). Writes the bordered matrix
-into the constant-pattern template held by `ctx.sparse_solver` and solves it with at most
-one new numeric factorisation. When `reuse_factor == Val(true)`, the existing factorisation
-is reused because the caller has established exact matrix identity.
+**Sparse path.** Write the bordered matrix of a monomial with superharmonic `s` and
+resonance mask `resonance` into the constant-pattern template `ctx.sparse_solver.bordered`,
+and its right-hand side into `ctx.buffers.rhs[1:FOM+ROM]`, without factorising anything.
+
+The matrix depends only on `s` and `resonance`; the couplings, the external dynamics and
+`ctx.buffers.ml_result` enter only the right-hand side. Benchmarks therefore assemble the
+matrix of any monomial from order-one data alone (`ParametrisationSolver._bordered_matrices`).
 
 The `(1,1)` block is evaluated by the untouched `build_sparse_L_and_rhs!` Horner pass
 on its own workspace — it needs the transient intermediates `L[j](s)` to accumulate
 the lower-order RHS — and is then scattered into the template. The border blocks are
 staged in `ctx.buffers.orthogonality_rows` by the same assembly routine the dense
 path uses, then scattered into their strided positions in `nzval`.
-
-Results are written into `ctx.buffers.rhs[1:FOM+ROM]`.
 """
-function _solve_monomial!(
+function _assemble_bordered_system!(
         ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
-        index::Int,
-        multiindex,
         s,
         resonance::SVector{ROM, Bool},
         lower_order_couplings,
-        external_dynamics,
-        reuse_factor::Val{REUSE} = Val(false)
-) where {T, ORD, ORDP1, NVAR, FOM, LT, MT <: SparseMatrixCSC, ROM, REUSE}
+        external_dynamics
+) where {T, ORD, ORDP1, NVAR, FOM, LT, MT <: SparseMatrixCSC, ROM}
     ss = ctx.sparse_solver::SparseLinearSolverState{T}
     M = ss.bordered
     Mnz = M.nzval
@@ -235,6 +233,34 @@ function _solve_monomial!(
             Mnz[base + r - 1] = orth[r, FOM + q]
         end
     end
+    return nothing
+end
+
+"""
+	_solve_monomial!(ctx, index, multiindex, s, resonance,
+		lower_order_couplings, external_dynamics)
+
+**Sparse path** (dispatched when `MT <: SparseMatrixCSC`). Assembles the bordered system
+with [`_assemble_bordered_system!`](@ref) and solves it with at most one new numeric
+factorisation. When `reuse_factor == Val(true)`, the existing factorisation is reused
+because the caller has established exact matrix identity.
+
+Results are written into `ctx.buffers.rhs[1:FOM+ROM]`.
+"""
+function _solve_monomial!(
+        ctx::CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT},
+        index::Int,
+        multiindex,
+        s,
+        resonance::SVector{ROM, Bool},
+        lower_order_couplings,
+        external_dynamics,
+        reuse_factor::Val{REUSE} = Val(false)
+) where {T, ORD, ORDP1, NVAR, FOM, LT, MT <: SparseMatrixCSC, ROM, REUSE}
+    ss = ctx.sparse_solver::SparseLinearSolverState{T}
+    n_sys = FOM + ROM
+    _assemble_bordered_system!(
+        ctx, s, resonance, lower_order_couplings, external_dynamics)
 
     # ── 5. One factorisation, one solve ───────────────────────────────────────
     _bordered_solve!(

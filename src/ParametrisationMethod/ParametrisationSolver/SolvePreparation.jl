@@ -15,7 +15,8 @@ function _make_sparse_solver(
 )
     L_template, L_mappings = precompute_sparse_L_template(linear_terms)
     T = eltype(L_template)
-    return SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM; options)
+    return SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM; options,
+        linear_terms)
 end
 function _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int,
         options::ParametrisationOptions)

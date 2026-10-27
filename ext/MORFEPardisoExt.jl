@@ -74,8 +74,7 @@ function MORFE.BorderedLinearSolvers._try_build_pardiso_solver()
         end
     end
     if ps === nothing
-        @warn "Neither MKL Pardiso nor open-source Pardiso is available. " *
-              "Falling back to KLU (SuiteSparse) for the sparse cohomological solve."
+        @warn "Neither MKL Pardiso nor open-source Pardiso is available."
     end
     return ps
 end
@@ -139,8 +138,8 @@ function MORFE.BorderedLinearSolvers._pardiso_factorise_solve!(
           The bordered solve is being driven through Pardiso's low-level phase API with
           matrix type $(Pardiso.get_matrixtype(ps)). A large residual here points at the
           configuration rather than the model — most likely the CSC/CSR transpose flag
-          (iparm[12]) or the matrix type. Load MORFE without Pardiso to fall back to
-          KLU, which is exercised by the test suite.""")
+          (iparm[12]) or the matrix type. Use `backend = :auto` or `:klu` instead, which
+          the test suite exercises.""")
     end
     return x
 end

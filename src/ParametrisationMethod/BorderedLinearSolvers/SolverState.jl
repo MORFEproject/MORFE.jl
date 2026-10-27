@@ -62,7 +62,8 @@ then block-copied into the `(1,1)` block of `bordered`, column by column.
 
 Backend selection follows the caller's parametrisation options: `:klu` forces KLU,
 `:umfpack` forces SuiteSparse UMFPACK, `:pardiso` requires the extension, and `:auto`
-prefers an available Pardiso implementation before falling back to KLU. KLU and UMFPACK
+chooses between UMFPACK and KLU with [`_auto_suitesparse_backend`](@ref). Pardiso runs
+only on request: it has not been benchmarked on MORFE's bordered systems. KLU and UMFPACK
 reuse cached symbolic analysis while redoing numeric factorisation whenever the bordered
 matrix changes. KLU uses `klu_factor!`, not the exported `klu!`: the latter freezes the
 pivot sequence.
@@ -115,22 +116,88 @@ mutable struct SparseLinearSolverState{T, B <: AbstractSparseBackend, RT <: Real
     refinement_count::Int
 end
 
+# UMFPACK Info index (zero-based) and value, from umfpack.h: the strategy the symbolic
+# analysis chose, and the code of the symmetric strategy.
+const _UMFPACK_STRATEGY_USED = 18
+const _UMFPACK_STRATEGY_SYMMETRIC = 3
+
+"""
+	_auto_suitesparse_backend(matrix) -> Symbol
+
+Choose `:umfpack` or `:klu` for `backend = :auto`.
+
+UMFPACK's symbolic analysis, which needs no numeric factorisation and takes milliseconds,
+chooses a strategy on its own. It takes the symmetric strategy when the pattern is symmetric
+and the diagonal nonzero, as in stiffness-dominated structural models. It takes the
+unsymmetric strategy otherwise, for instance when incompressible flow leaves a zero pressure
+block. Under the symmetric strategy UMFPACK's multifrontal BLAS-3 kernels factorise the
+bordered matrices of volumetric finite element models several times faster than KLU, and
+the gap grows with the mesh. Under the unsymmetric strategy UMFPACK's column ordering fills
+far more than KLU's, and KLU is several times faster.
+
+The function therefore returns `:umfpack` exactly when UMFPACK chooses its symmetric
+strategy for `matrix`, and `:klu` otherwise, including when the analysis fails. The choice
+depends only on the matrix, never on timings, so solves stay bit-for-bit reproducible.
+UMFPACK itself still decides its strategy for every factorisation: nothing is imposed.
+"""
+function _auto_suitesparse_backend(matrix::SparseMatrixCSC)
+    symmetric = try
+        factorisation = UMFPACK.UmfpackLU(matrix)
+        UMFPACK.umfpack_symbolic!(factorisation, nothing)
+        factorisation.info[_UMFPACK_STRATEGY_USED + 1] == _UMFPACK_STRATEGY_SYMMETRIC
+    catch error
+        _is_unrecoverable_failure(error) && rethrow()
+        false
+    end
+    return symmetric ? :umfpack : :klu
+end
+
+"""
+	_representative_bordered(bordered, L_template, L_mappings, linear_terms) -> matrix
+
+A copy of the bordered template filled with `L(0) = B₀` in its `(1,1)` block, zero borders,
+and the identity in its corner, which is the matrix of a monomial with no resonant master
+mode at zero superharmonic. [`_auto_suitesparse_backend`](@ref) reads its structure before
+any monomial is assembled.
+"""
+function _representative_bordered(bordered::SparseMatrixCSC, L_template::SparseMatrixCSC,
+        L_mappings::Vector{Vector{Int}}, linear_terms)
+    L = copy(L_template)
+    fill!(L.nzval, zero(eltype(L)))
+    stiffness = first(linear_terms)
+    for (entry, position) in enumerate(L_mappings[1])
+        L.nzval[position] += nonzeros(stiffness)[entry]
+    end
+    matrix = copy(bordered)
+    fill!(matrix.nzval, zero(eltype(matrix)))
+    scatter_L_into_bordered!(matrix, L)
+    FOM = size(L, 1)
+    for q in 1:(size(matrix, 1) - FOM)
+        matrix.nzval[matrix.colptr[FOM + q] + FOM + q - 1] = one(eltype(matrix))
+    end
+    return matrix
+end
+
 """
     SparseLinearSolverState{T}(L_template, L_mappings, FOM, ROM;
-        options = nothing) -> SparseLinearSolverState
+        options = nothing, linear_terms = nothing) -> SparseLinearSolverState
 
 Initialise the sparse solver state and constant-pattern bordered template. Backend
-selection, residual verification, and refinement storage follow `options`.
+selection, residual verification, and refinement storage follow `options`. For
+`backend = :auto`, `linear_terms` (the operators `B₀, …, B_ORD`) let
+[`_auto_suitesparse_backend`](@ref) choose between UMFPACK and KLU; without them, `:auto`
+falls back to KLU. Pardiso runs only with `backend = :pardiso`.
 """
 function SparseLinearSolverState{T}(
         L_template::SparseMatrixCSC{T},
         L_mappings::Vector{Vector{Int}},
         FOM::Int,
         ROM::Int;
-        options = nothing
+        options = nothing,
+        linear_terms = nothing
 ) where {T}
     requested = options === nothing ? :auto : options.backend
-    ps = requested in (:auto, :pardiso) ? _try_build_pardiso_solver() : nothing
+    ps = requested == :pardiso ? _try_build_pardiso_solver() : nothing
     requested == :pardiso && ps === nothing &&
         error(
             "ParametrisationOptions requested Pardiso, but no Pardiso backend is active")
@@ -139,7 +206,10 @@ function SparseLinearSolverState{T}(
     RT = typeof(real(zero(T)))
     residual_tolerance = _configured_residual_tolerance(T, options)
     verify = !isnothing(residual_tolerance)
-    backend = requested == :umfpack ? UMFPACKBackend{verify}() :
+    suitesparse = requested == :auto && linear_terms !== nothing ?
+                  _auto_suitesparse_backend(_representative_bordered(
+        bordered, L_template, L_mappings, linear_terms)) : requested
+    backend = suitesparse == :umfpack ? UMFPACKBackend{verify}() :
               ps === nothing ? KLUBackend{verify}() :
               PardisoBackend{typeof(ps), verify}(ps)
     state = SparseLinearSolverState{T, typeof(backend), RT}(

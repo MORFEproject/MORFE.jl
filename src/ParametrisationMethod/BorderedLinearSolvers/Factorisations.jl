@@ -87,6 +87,15 @@ factorisations use KLU's checked path because stored zeros in the constant borde
 an unchecked status appear successful even when the numeric factor is singular. A failed
 cached factor has its native storage released immediately and is retried once from a fresh
 symbolic analysis.
+
+## Releasing the previous numeric factor
+
+`klu_factor!` overwrites the factorisation's numeric handle without freeing the factor it
+replaces; KLU.jl expects it to be called once, and `klu!` to refactor in place. Called once
+per monomial on the cached factorisation, it therefore leaked one complete LU factor per
+monomial in native memory the garbage collector cannot see: about 10 M nonzeros, a few
+hundred MB, on a 54,586-dof Navier–Stokes model, enough to exhaust a 16 GB machine within
+one solve. The previous numeric factor is therefore freed before every refactorisation.
 """
 function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     if ss.fact === nothing
@@ -97,6 +106,7 @@ function _refactorise_klu!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     end
     F = _cached_klu_factor(ss, A)
     try
+        _free_numeric(F)
         # KLU may leave `common.status` looking successful after a failed unchecked
         # refactorisation of a bordered pattern. Requesting the checked, non-singular
         # path makes that failure observable before `ldiv!` can return NaNs.

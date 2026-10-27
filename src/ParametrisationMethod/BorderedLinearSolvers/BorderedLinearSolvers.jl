@@ -9,7 +9,9 @@ verification, iterative refinement, and Pardiso extension hooks. It deliberately
 assemble cohomological equations, schedule monomials, manage symmetry, or persist
 checkpoints.
 
-The supported sparse backends are KLU, UMFPACK, and extension-provided Pardiso. A cached
+The supported sparse backends are KLU, UMFPACK, and extension-provided Pardiso. Automatic
+selection lets UMFPACK's symbolic analysis decide between UMFPACK and KLU (see
+[`_auto_suitesparse_backend`](@ref)); Pardiso runs only with `backend = :pardiso`. A cached
 factorisation is retained only after a successful factorisation; failed cached KLU and
 UMFPACK updates receive one fresh symbolic analysis before failure is reported. Failed KLU
 native storage is released before that recovery analysis begins.
@@ -28,18 +30,21 @@ module BorderedLinearSolvers
 
 using LinearAlgebra
 using SparseArrays
+using SparseArrays: UMFPACK
 using SparseArrays.UMFPACK: UmfpackLU
-using KLU: KLUFactorization, klu, klu_factor!
+# `_free_numeric` is KLU.jl-internal; see `_refactorise_klu!` for why it is needed.
+using KLU: KLUFactorization, klu, klu_factor!, _free_numeric
 
-using ..InvarianceEquation: precompute_sparse_bordered_template
+using ..InvarianceEquation: precompute_sparse_bordered_template, scatter_L_into_bordered!
 
 const _PARDISO_INACTIVE = "Pardiso solver object present but MORFEPardisoExt not active — internal error."
 
 """
 	_try_build_pardiso_solver() -> solver or nothing
 
-Extension hook implemented by `MORFEPardisoExt`. Return a configured Pardiso solver when
-the extension is active, or `nothing` so automatic selection can fall back to KLU.
+Extension hook implemented by `MORFEPardisoExt`, called only for `backend = :pardiso`.
+Return a configured Pardiso solver when the extension is active, or `nothing`, in which
+case the solver state raises an error.
 """
 _try_build_pardiso_solver(::Vararg{Any}) = nothing
 

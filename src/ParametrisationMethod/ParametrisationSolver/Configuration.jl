@@ -86,21 +86,30 @@ direct keywords of `parametrise`. Mathematical choices (`resonance` and
 # Solver options
 
 - `backend::Symbol = :auto` — linear solver for the bordered cohomological systems:
-  - `:auto` uses dense LU for dense full-order matrices; for sparse matrices it uses
-	Pardiso when a Pardiso extension is active and otherwise KLU;
+  - `:auto` uses dense LU for dense full-order matrices. For sparse matrices it runs
+	UMFPACK's symbolic analysis once on the bordered pattern and uses UMFPACK when UMFPACK
+	picks its symmetric strategy (stiffness-dominated structural models), KLU otherwise
+	(for instance incompressible flow with a zero pressure block). The choice depends
+	only on the model, so solves stay reproducible;
   - `:klu` requires sparse full-order matrices and forces KLU;
   - `:umfpack` requires sparse full-order matrices and forces Julia's built-in
 	SuiteSparse UMFPACK solver;
   - `:pardiso` requires sparse full-order matrices and an active Pardiso extension,
-	otherwise construction of the solver fails.
+	otherwise construction of the solver fails. `:auto` never chooses Pardiso, which has
+	not been benchmarked on MORFE's bordered systems.
 - `grouping::Symbol = :auto` — exact reuse of a factorisation by monomials whose
   cohomological matrices are structurally identical:
-  - `:auto` groups only when repeated or zero eigenvalues make reuse possible and grouping
-	actually reduces the number of factorisations;
-  - `:on` always builds and processes the exact structural groups;
+  - `:auto` groups within each total degree only when repeated or zero eigenvalues make
+	reuse possible and grouping actually reduces the number of factorisations;
+  - `:on` always builds and processes the exact structural groups within each degree;
+  - `:across_degrees` also lets a group span degrees: it reorders the solve so that
+	monomials with equal keys run consecutively whenever their data dependencies allow.
+	With frozen parameters, all monomials that differ only in their parameter exponents
+	then share one factorisation;
   - `:off` solves directly in graded-lexicographic order without grouping.
   Grouping is exact; it never clusters approximately equal eigenvalues. Each group uses
-  its first monomial's superharmonic consistently for every member.
+  its first monomial's superharmonic consistently for every member. A grouped order that
+  would read a coefficient before it is final falls back to the direct order.
 - `residual_check::Symbol = :off` — `:backward_error` verifies every bordered solve;
   `:off` skips this additional check.
 - `residual_tolerance::Union{Nothing, Real} = nothing` — positive backward-error limit.
@@ -179,8 +188,8 @@ function ParametrisationOptions(;
         setup_io::IO = stderr)
     backend in (:auto, :klu, :umfpack, :pardiso) || throw(ArgumentError(
         "backend must be :auto, :klu, :umfpack, or :pardiso"))
-    grouping in (:auto, :off, :on) || throw(ArgumentError(
-        "grouping must be :auto, :off, or :on"))
+    grouping in (:auto, :off, :on, :across_degrees) || throw(ArgumentError(
+        "grouping must be :auto, :off, :on, or :across_degrees"))
     residual_check in (:backward_error, :off) || throw(ArgumentError(
         "residual_check must be :backward_error or :off"))
     isnothing(residual_tolerance) || residual_tolerance > 0 ||
