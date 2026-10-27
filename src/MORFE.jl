@@ -72,7 +72,8 @@ export external_basis, external_argument_vectors, to_physical_external
 # e.g. MORFEFerrite's StructuralSVK / FluidNavierStokes)
 export fem_elements, fem_n_qp, fem_ndofs_per_cell,
        scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
-       fem_reinit!
+       fem_reinit!, fem_element_loop, fem_flux_zero, flux_qp, contract_qp!,
+       accumulate_terms_qp!
 
 # FullOrderModel
 export FullOrderModel, NthOrderModel,

@@ -32,108 +32,89 @@ function _collect_entries(::GroupwiseSymmetric, t, mset, rem, deg, cands)
 end
 
 """
-	_build_fem_cached_split(::Val{DEG}, ::Val{ME}, cs) -> FEMCachedSplit{DEG, ME}
+	_cached_splits(t, mset, exp, candidates, ROM) -> Vector{CachedSplit}
 
-Convert a `CachedSplit` to a `FEMCachedSplit{DEG, ME}` for the FEM-batched replay path.
-Deduplicates `(derivative_order, W_col_idx)` pairs across all entries and remaps
-each entry's factor slots to local indices into the `unique_cols` table.
-`DEG` is the internal degree and `ME` the external multiplicity, carried as a type
-parameter so `_replay_fem_split!` can append the external arguments with a
-compile-time-known count.
-Called once at cache-build time; produces zero allocations in the hot path.
+The splits of term `t` at the monomial `exp`: one when the term has no external factor,
+otherwise one per assignment of external variables to its external slots, each holding the
+factorisations of the remaining exponent. Empty when the term degree exceeds the monomial
+degree.
 """
-function _build_fem_cached_split(::Val{DEG}, ::Val{ME}, cs::CachedSplit) where {DEG, ME}
-    # 1. Enumerate unique (derivative_order, W_col_idx) pairs across all entries.
-    unique_cols = Tuple{Int, Int}[]
-    col_to_local = Dict{Tuple{Int, Int}, Int}()
-    for entry in cs.entries
-        for k in 1:DEG
-            oc = (cs.orders[k], entry.factor_indices[k])
-            if !haskey(col_to_local, oc)
-                push!(unique_cols, oc)
-                col_to_local[oc] = length(unique_cols)
-            end
-        end
+function _cached_splits(t, mset, exp::SVector{NVAR}, candidates, ROM) where {NVAR}
+    t.deg > sum(exp) && return CachedSplit[]
+    me = t.multiplicity_external
+    deg = t.deg - me
+    sym = symmetry_type(t)
+    orders = _orders_for_cache(sym, t, deg)
+    function make_split(ext_count, ext_idx, rem)
+        entries = _collect_entries(sym, t, mset, rem, deg, candidates)
+        return CachedSplit(ext_count, ext_idx, sym isa FullyAsymmetric, orders, entries)
     end
-    # 2. Map each entry's factor slots to local indices in unique_cols.
-    fem_entries = [FEMFactorisationEntry{DEG}(
-                       entry.multiplier,
-                       ntuple(k -> col_to_local[(cs.orders[k], entry.factor_indices[k])], Val(DEG))
-                   )
-                   for entry in cs.entries]
-    return FEMCachedSplit{DEG, ME}(
-        cs.ext_count, cs.args_ext_indices, unique_cols, fem_entries)
+    me == 0 && return [make_split(1, Int[], exp)]
+    external_exp = SVector(ntuple(i -> exp[ROM + i], NVAR - ROM))
+    return [make_split(ext_count, collect(Int, ext_idx),
+                exp - SVector(ntuple(i -> i <= ROM ? 0 : ext_exp[i - ROM], Val(NVAR))))
+            for (ext_idx, ext_exp, ext_count) in bounded_index_tuples(me, external_exp)]
 end
 
 """
-	_build_global_fem_split(model, fem_splits_l, fem_term_indices) -> FEMGlobalSplit
+	_fem_groups(fem_terms) -> Vector{Vector{Int}}
 
-Build the O4 combined-element-loop bookkeeping for one monomial, merging all me=0
-FEM terms into a single `FEMGlobalSplit`.
-
-- Deduplicates `(order, col)` pairs across all me=0 FEM splits into a global table.
-- Remaps each `FEMFactorisationEntry`'s local indices to global table indices.
-- Groups entries by degree into a typed `Tuple` for type-stable compile-time dispatch.
-- Returns an empty `FEMGlobalSplit{Tuple{}}` when no me=0 FEM terms are present.
+The indices into `fem_terms` of each group of terms with `isequal` `fem_element_loop`
+labels, in order of first appearance.
 """
-function _build_global_fem_split(model, fem_splits_l, fem_term_indices)
-    isempty(fem_term_indices) && return FEMGlobalSplit{Tuple{}}([], (), 0, Int[])
-
-    # --- Step 1: deduplicate (order, col) pairs across all me=0 FEM terms ---
-    global_unique_cols = Tuple{Int, Int}[]
-    col_to_global = Dict{Tuple{Int, Int}, Int}()
-
-    for t_idx in fem_term_indices
-        t = model.nonlinear_terms[t_idx]
-        t.multiplicity_external == 0 || continue
-        for fem_split in fem_splits_l[t_idx]
-            isempty(fem_split.args_ext_indices) || continue   # skip me>0 splits
-            for oc in fem_split.unique_cols
-                if !haskey(col_to_global, oc)
-                    push!(global_unique_cols, oc)
-                    col_to_global[oc] = length(global_unique_cols)
-                end
-            end
-        end
+function _fem_groups(fem_terms)
+    labels = map(fem_element_loop, fem_terms)
+    groups = Vector{Int}[]
+    for i in eachindex(labels)
+        g = findfirst(group -> isequal(labels[first(group)], labels[i]), groups)
+        g === nothing ? push!(groups, [i]) : push!(groups[g], i)
     end
+    return groups
+end
 
-    isempty(global_unique_cols) && return FEMGlobalSplit{Tuple{}}([], (), 0, Int[])
+"""
+	_fem_monomial(fem_terms, fem_splits) -> (cols, entries)
 
-    # --- Step 2: remap FEMFactorisationEntry indices into global table, group by DEG ---
-    entries_dict = Dict{Int, Vector{Any}}()   # DEG => Vector{FEMGlobalEntry{DEG}}
-
-    for t_idx in fem_term_indices
-        t = model.nonlinear_terms[t_idx]
-        t.multiplicity_external == 0 || continue
-        DEG = t.deg
-        for fem_split in fem_splits_l[t_idx]
-            isempty(fem_split.args_ext_indices) || continue
-            for fem_entry in fem_split.fem_entries
-                global_inds = ntuple(Val(DEG)) do k
-                    col_to_global[fem_split.unique_cols[fem_entry.local_factor_indices[k]]]
-                end
-                gentry = FEMGlobalEntry{DEG}(t_idx, fem_entry.multiplier, global_inds)
-                if !haskey(entries_dict, DEG)
-                    entries_dict[DEG] = Any[]
-                end
-                push!(entries_dict[DEG], gentry)
-            end
-        end
+Pair every FEM term of one element loop with every factorisation of each of its splits at
+one monomial, for the single-pass assembly. `cols` lists the distinct
+`(derivative order, W column)` pairs that the factorisations read, across the terms, so each
+is scattered to the quadrature points once per element. `entries` holds, per term of
+`fem_terms`, a `Vector{FEMEntry}` indexing into `cols`; its type depends only on the terms,
+so it is the same at every monomial.
+"""
+function _fem_monomial(fem_terms::Tuple, fem_splits)
+    cols = Tuple{Int, Int}[]
+    rows = Dict{Tuple{Int, Int}, Int}()
+    row(col) = get!(() -> (push!(cols, col); length(cols)), rows, col)
+    entries = ntuple(length(fem_terms)) do i
+        ME = fem_terms[i].multiplicity_external
+        DEG = fem_terms[i].deg - ME
+        FEMEntry{DEG, ME}[FEMEntry{DEG, ME}(s.ext_count * e.multiplier,
+                              ntuple(k -> row((s.orders[k], e.factor_indices[k])), DEG),
+                              ntuple(k -> s.args_ext_indices[k], ME))
+                          for s in fem_splits[i] for e in s.entries]
     end
+    return cols, entries
+end
 
-    # --- Step 3: build typed vectors per DEG and collect into a Tuple ---
-    degs = sort!(collect(keys(entries_dict)))
-    entries_by_deg = Tuple(
-        [FEMGlobalEntry{d}(e.term_idx, e.multiplier, e.local_factor_indices)
-         for e in entries_dict[d]] for d in degs)
+"""
+	_fem_group(terms, cols, entries, T) -> FEMGroup
 
-    # --- Step 4: collect participating term indices ---
-    participating = sort!(unique!(Int[e.term_idx
-                                      for entries in values(entries_dict)
-                                      for e in entries]))
-
-    driver_term_idx = fem_term_indices[1]
-    return FEMGlobalSplit(global_unique_cols, entries_by_deg, driver_term_idx, participating)
+The [`FEMGroup`](@ref) of `terms`, which share one element loop, with buffers sized to it.
+Its terms must agree on the quadrature points and the DOFs per element, the only part of
+the shared loop MORFE can check; an `ArgumentError` is thrown otherwise.
+"""
+function _fem_group(terms, cols, entries, T)
+    driver = first(terms)
+    n_qp = fem_n_qp(driver)
+    n_dofs = fem_ndofs_per_cell(driver)
+    all(t -> fem_n_qp(t) == n_qp && fem_ndofs_per_cell(t) == n_dofs, terms) ||
+        throw(ArgumentError("FEM terms with equal `fem_element_loop` share one element " *
+                            "loop, so they must all have $n_qp quadrature points and " *
+                            "$n_dofs DOFs per element"))
+    qp_buffer = Matrix{eltype(fem_qp_buffer(driver))}(
+        undef, maximum(length, cols; init = 0), n_qp)
+    return FEMGroup(terms, cols, entries, qp_buffer, zeros(T, n_dofs))
 end
 
 """
@@ -145,6 +126,10 @@ Valid as long as the multiindex set is unchanged.
 When `skip_bits[l]` is `true` the cache entry for monomial `l` is left empty.
 This is safe for monomials that will never be replayed (linear monomials, conjugate
 secondaries): those entries are guarded by the same `skip_bits` check in the solve loop.
+
+FEM terms are grouped by `fem_element_loop`. Each group runs on the element loop of its
+first term, which scatters, weights and assembles for all of them, so they must agree on
+the quadrature points and the DOFs per element; an `ArgumentError` is thrown otherwise.
 """
 function build_multilinear_terms_cache(
         model::NthOrderModel{ORD}, parametrisation::Parametrisation{ORD, NVAR}) where {
@@ -158,88 +143,29 @@ function build_multilinear_terms_cache(
         skip_bits::BitVector) where {ORD, NVAR}
     mset = parametrisation.poly.multiindex_set
     L = length(mset)
-    n_terms = length(model.nonlinear_terms)
-    external_system_size = parametrisation.external_system_size
-    ROM = NVAR - external_system_size
+    terms = model.nonlinear_terms
+    ROM = NVAR - parametrisation.external_system_size
+    is_fem = [t isa FEMMultilinearMap for t in terms]
+    fem_terms = Tuple(t for t in terms if t isa FEMMultilinearMap)
+    members = _fem_groups(fem_terms)
+    group_terms = [Tuple(fem_terms[i] for i in m) for m in members]
 
-    all_splits = Vector{Vector{Vector{CachedSplit}}}(undef, L)
-    all_fem_splits = Vector{Vector{Vector{Any}}}(undef, L)
-
+    splits = Vector{Vector{Vector{CachedSplit}}}(undef, L)
+    fem_cols = [Vector{Vector{Tuple{Int, Int}}}(undef, L) for _ in members]
+    fem_entries = [Vector{typeof(_fem_monomial(gt, map(_ -> CachedSplit[], gt))[2])}(undef, L)
+                   for gt in group_terms]
     for l in 1:L
-        if skip_bits[l]
-            all_splits[l] = [CachedSplit[] for _ in 1:n_terms]
-            all_fem_splits[l] = [[] for _ in 1:n_terms]
-            continue
-        end
         exp = mset.exponents[l]
-        deg_max = sum(exp)
-        candidate_indices = indices_in_box_with_bounded_degree(mset, exp, 1, deg_max)
-        external_exp = SVector(ntuple(i -> exp[ROM + i], external_system_size))
-
-        term_splits = Vector{Vector{CachedSplit}}(undef, n_terms)
-        fem_term_splits = Vector{Vector{Any}}(undef, n_terms)
-
-        for (t_idx, t) in enumerate(model.nonlinear_terms)
-            if t.deg > deg_max
-                term_splits[t_idx] = CachedSplit[]
-                fem_term_splits[t_idx] = []
-                continue
-            end
-
-            me = t.multiplicity_external
-            deg = t.deg - me
-
-            if t isa FEMMultilinearMap
-                # Build CachedSplit first (to reuse factorisation logic), then convert to FEMCachedSplit.
-                sym = symmetry_type(t)
-                is_asym = sym isa FullyAsymmetric
-                orders = _orders_for_cache(sym, t, deg)
-                raw_splits = CachedSplit[]
-                if me == 0
-                    entries = _collect_entries(sym, t, mset, exp, deg, candidate_indices)
-                    push!(raw_splits, CachedSplit(1, Int[], is_asym, orders, entries))
-                else
-                    for (ext_idx, ext_multiindex_external, ext_count) in bounded_index_tuples(me, external_exp)
-                        ext_multiindex = SVector(ntuple(
-                            i -> i <= ROM ? 0 : ext_multiindex_external[i - ROM], Val(NVAR)))
-                        rem = exp - ext_multiindex
-                        entries = _collect_entries(
-                            sym, t, mset, rem, deg, candidate_indices)
-                        push!(raw_splits,
-                            CachedSplit(
-                                ext_count, collect(Int, ext_idx), is_asym, orders, entries))
-                    end
-                end
-                term_splits[t_idx] = raw_splits  # kept for reference / fallback
-                fem_term_splits[t_idx] = [_build_fem_cached_split(Val(deg), Val(me), cs)
-                                          for cs in raw_splits]
-            else
-                sym = symmetry_type(t)
-                is_asym = sym isa FullyAsymmetric
-                orders = _orders_for_cache(sym, t, deg)
-                splits = CachedSplit[]
-                if me == 0
-                    entries = _collect_entries(sym, t, mset, exp, deg, candidate_indices)
-                    push!(splits, CachedSplit(1, Int[], is_asym, orders, entries))
-                else
-                    for (ext_idx, ext_multiindex_external, ext_count) in bounded_index_tuples(me, external_exp)
-                        ext_multiindex = SVector(ntuple(
-                            i -> i <= ROM ? 0 : ext_multiindex_external[i - ROM], Val(NVAR)))
-                        rem = exp - ext_multiindex
-                        entries = _collect_entries(
-                            sym, t, mset, rem, deg, candidate_indices)
-                        push!(splits,
-                            CachedSplit(
-                                ext_count, collect(Int, ext_idx), is_asym, orders, entries))
-                    end
-                end
-                term_splits[t_idx] = splits
-                fem_term_splits[t_idx] = []
-            end
+        candidates = skip_bits[l] ? nothing :
+                     indices_in_box_with_bounded_degree(mset, exp, 1, sum(exp))
+        splits_l = [skip_bits[l] ? CachedSplit[] :
+                    _cached_splits(t, mset, exp, candidates, ROM)
+                    for t in terms]
+        fem_splits = splits_l[is_fem]
+        for (g, m) in enumerate(members)
+            fem_cols[g][l], fem_entries[g][l] = _fem_monomial(group_terms[g], fem_splits[m])
         end
-
-        all_splits[l] = term_splits
-        all_fem_splits[l] = fem_term_splits
+        splits[l] = [fem ? CachedSplit[] : s for (fem, s) in zip(is_fem, splits_l)]
     end
 
     T = eltype(parametrisation.poly)
@@ -249,49 +175,13 @@ function build_multilinear_terms_cache(
     # solve, so a re-based system costs nothing in the inner loop and no term needs to know
     # about the change of coordinates.
     external_arguments = external_argument_vectors(
-        model.external_system, external_system_size)
+        model.external_system, parametrisation.external_system_size)
 
-    # Compute the element-residual buffer size from the FEM terms in the model.
-    # The qp gradient buffer (∇W_qp) is term-specific and lives inside each FEMMultilinearMap.
-    max_ndofs = 0
-    for t in model.nonlinear_terms
-        t isa FEMMultilinearMap || continue
-        max_ndofs = max(max_ndofs, fem_ndofs_per_cell(t))
-    end
-    fem_Fe = zeros(T, max_ndofs)
+    fem_groups = ntuple(
+        g -> _fem_group(group_terms[g], fem_cols[g], fem_entries[g], T), length(members))
+    isempty(fem_terms) ||
+        @info "Single-pass FEM assembly" n_fem_terms=length(fem_terms) element_loops=length(fem_groups)
 
-    # --- O4: build global FEM splits and allocate shared buffers ---
-    fem_term_indices = [t_idx
-                        for (t_idx, t) in enumerate(model.nonlinear_terms)
-                        if t isa FEMMultilinearMap]
-
-    if !isempty(fem_term_indices)
-        @info "Using optimised FEM path: cached per-element loop" n_fem_terms = length(fem_term_indices)
-    end
-
-    global_fem_splits = Vector{Any}(undef, L)
-    for l in 1:L
-        global_fem_splits[l] = _build_global_fem_split(model, all_fem_splits[l], fem_term_indices)
-    end
-
-    if isempty(fem_term_indices)
-        QP = Nothing
-        global_∇W_qp = Matrix{Nothing}(undef, 0, 0)
-    else
-        driver_term = model.nonlinear_terms[fem_term_indices[1]]
-        QP = eltype(fem_qp_buffer(driver_term))
-        max_global_unique = maximum(
-            (length(global_fem_splits[l].global_unique_cols) for l in 1:L); init = 0)
-        max_n_qp = maximum(fem_n_qp(model.nonlinear_terms[i]) for i in fem_term_indices)
-        global_∇W_qp = Matrix{QP}(undef, max(max_global_unique, 1), max(max_n_qp, 1))
-    end
-
-    global_Fe_buffers = Vector{Vector{T}}([(t isa FEMMultilinearMap ?
-                                            zeros(T, fem_ndofs_per_cell(t)) : T[])
-                                           for t in model.nonlinear_terms])
-
-    return MultilinearTermsCache{T, QP, eltype(external_arguments)}(
-        all_splits, all_fem_splits, global_fem_splits,
-        zeros(T, FOM), zeros(T, FOM), zeros(T, FOM),
-        external_arguments, fem_Fe, global_∇W_qp, global_Fe_buffers)
+    return MultilinearTermsCache(splits, zeros(T, FOM), zeros(T, FOM), external_arguments,
+        fem_groups)
 end

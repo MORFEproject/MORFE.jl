@@ -11,7 +11,7 @@ using MORFE.ParametrisationMethod: create_parametrisation_method_objects
 #
 # Terms with `multiplicity_external > 0` were previously the one shape the two evaluation
 # paths disagreed on: `evaluate_term!`'s direct FEM overload passed `r` into the trailing
-# argument slots, while the cached solve path (`_replay_fem_split!`) built its qp tuple from
+# argument slots, while the cached solve path built its qp tuple from
 # the internal slots only and applied the external multiplicity as a bare scalar.  A term
 # whose integrand actually *depends* on which external direction it is handed therefore got
 # different answers from the two paths — and, once external systems could be re-based, would
@@ -58,24 +58,24 @@ MORFE.fem_reinit!(_, ::_StubFEMTerm) = nothing
 MORFE.fem_getdetJdV(_, _, ::_StubFEMTerm) = 1.0
 MORFE.fem_qp_buffer(t::_StubFEMTerm) = t.buffer
 
-function MORFE.scatter_qp!(∇W_col, W_global, _, t::_StubFEMTerm)
-    ∇W_col[1] = dot(conj(t.w), W_global)      # a plain projection, no conjugation intended
+function MORFE.scatter_qp!(qp_values, coefficient, _, t::_StubFEMTerm)
+    qp_values[1] = dot(conj(t.w), coefficient)      # a plain projection, no conjugation intended
     return nothing
 end
 
-function MORFE.assemble_element!(accum, Fe, _, ::_StubFEMTerm)
-    accum .+= Fe
+function MORFE.assemble_element!(result, Fe, _, ::_StubFEMTerm)
+    result .+= Fe
     return nothing
 end
 
-# The load-bearing signature: `∇W_args` must carry the external argument in its trailing
+# The load-bearing signature: `qp_args` must carry the external argument in its trailing
 # slot.  Before the fix this method was called with a 1-tuple and would have thrown.
 # `Tuple{Any, Any}`, not `NTuple{2}`: the latter means `Tuple{T, T}`, and the internal and
 # external slots have genuinely different types.
 function MORFE.accumulate_qp!(
-        Fe, ∇W_args::Tuple{Any, Any}, mult, _, _, dΩ, t::_StubFEMTerm)
-    u_qp, r_ext = ∇W_args
-    Fe .+= (mult * dΩ * u_qp * dot(conj(t.dir), r_ext)) .* t.shape
+        Fe, qp_args::Tuple{Any, Any}, multiplier, _, _, dΩ, t::_StubFEMTerm)
+    u_qp, r_ext = qp_args
+    Fe .+= (multiplier * dΩ * u_qp * dot(conj(t.dir), r_ext)) .* t.shape
     return nothing
 end
 
@@ -90,10 +90,7 @@ end
 """
 Nonlinear right-hand side for every monomial of `mset`, via the cached solve path.
 
-Uses `compute_multilinear_terms!` — the in-place variant — because that is the one the
-solve loop calls, and the only one that dispatches FEM terms through `_replay_term!` and
-the combined element loop.  Its allocating sibling replays every term through
-`_replay_split!`, which assumes a closure.
+Uses `compute_multilinear_terms!`, the in-place variant that the solve loop calls.
 """
 function _fem_rhs_all_monomials(term, mset, N_EXT, W)
     K = zeros(ComplexF64, _FEM_FOM, _FEM_FOM)
@@ -171,22 +168,23 @@ struct _StubFEMInternalTerm <: MORFE.FEMMultilinearMap{2}
     buffer::Matrix{ComplexF64}
 end
 
+MORFE.fem_element_loop(t::_StubFEMInternalTerm) = t.w   # what `scatter_qp!` reads
 MORFE.fem_elements(::_StubFEMInternalTerm) = 1:1
 MORFE.fem_n_qp(::_StubFEMInternalTerm) = 1
 MORFE.fem_ndofs_per_cell(::_StubFEMInternalTerm) = _FEM_FOM
 MORFE.fem_reinit!(_, ::_StubFEMInternalTerm) = nothing
 MORFE.fem_getdetJdV(_, _, ::_StubFEMInternalTerm) = 1.0
 MORFE.fem_qp_buffer(t::_StubFEMInternalTerm) = t.buffer
-function MORFE.scatter_qp!(values, W_global, _, t::_StubFEMInternalTerm)
-    values[1] = dot(conj(t.w), W_global)
+function MORFE.scatter_qp!(qp_values, coefficient, _, t::_StubFEMInternalTerm)
+    qp_values[1] = dot(conj(t.w), coefficient)
 end
-MORFE.assemble_element!(accum, Fe, _, ::_StubFEMInternalTerm) = (accum .+= Fe)
-function MORFE.accumulate_qp!(Fe, values::Tuple{Any, Any}, mult, _, _, dΩ,
+MORFE.assemble_element!(result, Fe, _, ::_StubFEMInternalTerm) = (result .+= Fe)
+function MORFE.accumulate_qp!(Fe, qp_args::Tuple{Any, Any}, multiplier, _, _, dΩ,
         t::_StubFEMInternalTerm)
-    Fe .+= (mult * dΩ * t.scale * values[1] * values[2]) .* t.shape
+    Fe .+= (multiplier * dΩ * t.scale * qp_args[1] * qp_args[2]) .* t.shape
 end
 
-@testset "global FEM cache merges two participating terms" begin
+@testset "single-pass assembly merges two terms" begin
     mset = all_multiindices_up_to(2, 2; min_degree = 1)
     W, _ = create_parametrisation_method_objects(mset, 2, _FEM_FOM, 2, 0, ComplexF64)
     W.poly.coefficients .= reshape(
@@ -200,12 +198,11 @@ end
     model = NthOrderModel((K, K, K), terms)
     cache = build_multilinear_terms_cache(model, W)
 
+    # a pure power: one factorisation per term, both reading the same column, scattered once
     quadratic_index = findfirst(e -> sum(e) == 2, mset.exponents)
-    global_split = cache.global_fem_splits[quadratic_index]
-    @test global_split.driver_term_idx == 1
-    @test global_split.participating_term_indices == [1, 2]
-    @test length(global_split.global_unique_cols) <
-          sum(length(first(cache.fem_splits[quadratic_index][i]).unique_cols) for i in 1:2)
+    @test count(!iszero, mset.exponents[quadratic_index]) == 1
+    @test map(length, only(cache.fem_groups).entries[quadratic_index]) == (1, 1)
+    @test length(only(cache.fem_groups).cols[quadratic_index]) == 1
 
     result = zeros(ComplexF64, _FEM_FOM)
     compute_multilinear_terms!(result, model, quadratic_index, W, cache)

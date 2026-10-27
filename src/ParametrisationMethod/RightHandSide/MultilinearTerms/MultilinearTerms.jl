@@ -17,9 +17,11 @@ sum enumerates factorisations of `α` into `k` sub-exponents from already-comput
   precomputes all factorisation bookkeeping in `MultilinearTermsCache` once before
   the solve loop, then replays it allocation-free at each monomial.
 
-For FEM-backed terms (`FEMMultilinearMap`) an additional **O4 combined element loop**
-merges all me=0 FEM contributions into a single mesh traversal per monomial,
-avoiding redundant `fem_reinit!` and `scatter_qp!` calls.
+FEM-backed terms (`FEMMultilinearMap`) are grouped by element loop (`fem_element_loop`), and
+each group is assembled in a **single pass** over its cells per monomial: each coefficient is
+scattered to the quadrature points once per element, and at each quadrature point the fluxes
+of every factorisation of every term of the group are summed and tested against the shape
+functions once.
 
 Three symmetry strategies (`FullyAsymmetric`, `FullySymmetric`, `GroupwiseSymmetric`)
 are dispatched at compile time from the `MultilinearMap.multiindex` field.
@@ -38,7 +40,9 @@ using ..FullOrderModel: NthOrderModel, MultilinearMap
 using ..MultilinearMaps: AbstractMultilinearMap, FEMMultilinearMap,
                          fem_elements, fem_n_qp, fem_ndofs_per_cell,
                          fem_reinit!, scatter_qp!, accumulate_qp!, assemble_element!,
-                         fem_getdetJdV, fem_qp_buffer
+                         fem_getdetJdV, fem_qp_buffer, fem_element_loop, fem_flux_zero,
+                         flux_qp, contract_qp!
+import ..MultilinearMaps: accumulate_terms_qp!
 # The external argument a term receives is materialised here, in *physical* external
 # coordinates: unit vectors normally, the columns of Q after a change of external basis.
 using ..ExternalSystems: external_argument_vectors

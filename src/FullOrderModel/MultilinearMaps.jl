@@ -8,16 +8,19 @@ Nonlinear terms in the full-order ODE are encoded as `AbstractMultilinearMap` su
   `multiplicity_external`, `deg`).
 - `FEMMultilinearMap{ORD}` — abstract base for FEM-backed terms that expose element-level
   primitives (`fem_elements`, `scatter_qp!`, `accumulate_qp!`, `assemble_element!`, …).
-  Implementing these methods enables the O4 batched RHS-C assembly path in `MultilinearTerms`.
+  Implementing these methods enables the single-pass assembly of the right-hand side in
+  `MultilinearTerms`.
 
-See `MORFEFerrite.jl` (StructuralSVK / FluidNavierStokes) and `examples/02_clamped_beam_gridap/` for reference FEM backend implementations.
+For FEM backends, see the MORFEExamples tutorial `writing_a_finite_element_nonlinearity`,
+which writes one from scratch, and MORFEFerrite.jl (`StructuralSVK`, `FluidNavierStokes`).
 """
 module MultilinearMaps
 
 export AbstractMultilinearMap, FEMMultilinearMap, MultilinearMap, evaluate_term!,
        fem_elements, fem_n_qp, fem_ndofs_per_cell,
        scatter_qp!, accumulate_qp!, assemble_element!, fem_getdetJdV, fem_qp_buffer,
-       fem_reinit!
+       fem_reinit!, fem_element_loop, fem_flux_zero, flux_qp, contract_qp!,
+       accumulate_terms_qp!
 
 """
 	AbstractMultilinearMap{ORD}
@@ -32,114 +35,311 @@ abstract type AbstractMultilinearMap{ORD} end
 """
 	FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD}
 
-Abstract type for FEM-backed multilinear terms that expose element-level primitives.
+Abstract type for nonlinear terms that a finite element backend integrates element by
+element. A concrete term evaluates the same multilinear form as a `MultilinearMap`, but
+instead of one function of full vectors it exposes the steps of an element loop. MORFE runs
+the loop itself, which lets one traversal of the cells serve every factorisation of a
+monomial and every FEM term on those cells: the single-pass assembly of `MultilinearTerms`.
 
-Implementing the interface below enables the RHS batched accumulation path in
-`MultilinearTerms.jl`: the mesh is traversed exactly once per (monomial, term, split)
-rather than once per factorisation entry.
+# Vocabulary
 
-Required fields (same semantics as `MultilinearMap`):
+- *coefficient*: one column `W[:, order, col]` of the parametrisation, a complex vector over
+  the free DOFs. Constrained DOFs have no entry: the backend maps its global DOF numbers to
+  free indices and reads zero where a DOF is constrained.
+- *element*: one item of `fem_elements(term)`, usually a mesh cell. It is passed back to every
+  other method, so it carries what they need (for Ferrite, a `CellCache` with the cell's
+  coordinates and global DOF numbers).
+- *quadrature-point value*: what `scatter_qp!` computes from one coefficient at one quadrature
+  point: a displacement gradient for a structure, a velocity value and gradient for
+  convection. Its type is the element type of `fem_qp_buffer(term)`.
+- `q`: the index of a quadrature point within the element, in `1:fem_n_qp(term)`.
+- `dΩ`: the integration weight at `q`, the quadrature weight times the Jacobian determinant
+  of the element map, as returned by `fem_getdetJdV`.
+- `Fe`: the element vector, of length `fem_ndofs_per_cell(term)` and indexed in the
+  element's local DOF order. MORFE zeroes it before each element.
+- `qp_args`: the arguments of one factorisation at `q`, an `NTuple` of length `term.deg`:
+  the quadrature-point values of its internal factors, in the order `term.multiindex` lists
+  the derivatives, followed by one external argument per external slot.
+- `multiplier`: the number of argument orderings one factorisation stands for, times the
+  multiplicity of its external split. The term scales its contribution by it.
+
+# The element loop
+
+A term runs on one element loop: cells of one element type, with one discretisation of the
+field (interpolation, quadrature, DOF map), so `fem_n_qp` and `fem_ndofs_per_cell` are
+constants of the term. A map acting on several element types or domains is passed as one term
+per element loop, which is exact because the weak form is a sum over cells.
+
+MORFE groups the FEM terms of a model by [`fem_element_loop`](@ref) and, per monomial, runs
+the loop below once per group. The methods are called on the group's first term, the driver,
+except `accumulate_qp!`, which is called on each term of the group in turn; in the direct
+evaluation `evaluate_term!` the term drives its own loop.
+
+	for element in fem_elements(driver)
+	    fem_reinit!(element, driver)
+	    for each distinct coefficient c read at this monomial
+	        scatter_qp!(qp_values_of_c, c, element, driver)
+	    end
+	    Fe .= 0
+	    for q in 1:fem_n_qp(driver)
+	        dΩ = fem_getdetJdV(element, q, driver)
+	        for each term of the group, for each of its factorisations
+	            accumulate_qp!(Fe, qp_args, multiplier, element, q, dΩ, term)
+	        end
+	    end
+	    assemble_element!(result, Fe, element, driver)
+	end
+
+The cache build checks that the terms of a group agree on `fem_n_qp` and
+`fem_ndofs_per_cell`. Terms that opt into flux summation replace the inner
+`accumulate_qp!` calls by one `contract_qp!` per quadrature point (see
+[`fem_flux_zero`](@ref)), and a backend may take over the whole quadrature-point step with
+[`accumulate_terms_qp!`](@ref).
+
+# Required fields
+
+Same semantics as `MultilinearMap`:
 - `multiindex`, `multiplicity_external`, `deg`
 - `fully_asymmetric::Union{Nothing, Bool}` — `nothing` = not set (triggers `@info` at `NthOrderModel`
   construction if multiindex implies symmetry); `false` = acknowledged symmetric; `true` = override to
   `FullyAsymmetric`. FEM backends whose integrand is symmetric by construction should default to `false`.
 
-Required methods (extend `MORFE.*`):
-- `fem_elements(t)`                                             → element iterator
-- `fem_n_qp(t)`                                                 → quadrature points per element
-- `fem_ndofs_per_cell(t)`                                       → DOFs per element
-- `scatter_qp!(∇W_col, W_global, element, t)`                   → fill qp field values for one unique W column
-- `accumulate_qp!(Fe, ∇W_args::NTuple, mult, element, q, dΩ, t)`→ add integrand at one qp
-- `assemble_element!(accum, Fe, element, t)`                    → scatter element residual to global
-- `fem_getdetJdV(element, q, t)`                                → integration weight at qp q
-- `fem_qp_buffer(t)`                                            → pre-allocated scratch buffer for one quadrature point
+# Required methods (extend `MORFE.*`)
+
+- [`fem_elements`](@ref)`(term)`: iterator over the elements
+- [`fem_reinit!`](@ref)`(element, term)`: prepare one element
+- [`fem_n_qp`](@ref)`(term)`: quadrature points per element
+- [`fem_ndofs_per_cell`](@ref)`(term)`: DOFs per element, the length of `Fe`
+- [`fem_qp_buffer`](@ref)`(term)`: buffer whose element type is the quadrature-point value type
+- [`scatter_qp!`](@ref)`(qp_values, coefficient, element, term)`: one coefficient at every quadrature point
+- [`fem_getdetJdV`](@ref)`(element, q, term)`: the weight `dΩ` at `q`
+- [`accumulate_qp!`](@ref)`(Fe, qp_args, multiplier, element, q, dΩ, term)`: one factorisation at `q`
+- [`assemble_element!`](@ref)`(result, Fe, element, term)`: add `Fe` to the free-DOF result
+
+# Optional methods
+
+- [`fem_element_loop`](@ref)`(term)`: a label shared by the terms on the same element loop,
+  which then share one pass; the default, the term itself, gives each term its own
+
+The others let the single-pass assembly test the integrands of all terms and factorisations
+against the shape functions once per quadrature point (see [`fem_flux_zero`](@ref)):
+- [`fem_flux_zero`](@ref)`(term)`: zero flux, or `nothing` (default) to opt out
+- [`flux_qp`](@ref)`(qp_args, element, q, term)`: flux of one factorisation at `q`
+- [`contract_qp!`](@ref)`(Fe, flux, element, q, dΩ, term)`: add the tested flux at `q`
+- [`accumulate_terms_qp!`](@ref)`(flux, Fe, coefficient_values, external_arguments, entries, terms, element, q, dΩ)`:
+  all factorisations of all terms at `q`, to share work between them
 """
 abstract type FEMMultilinearMap{ORD} <: AbstractMultilinearMap{ORD} end
 
 # Interface stubs — extend these in your concrete FEM type.
 
 """
-	fem_elements(t::FEMMultilinearMap) -> iterator
+	fem_elements(term::FEMMultilinearMap) -> iterator
 
-Return an iterator over the mesh elements (cells) for the FEM term `t`.
-Implement this for every concrete `FEMMultilinearMap` subtype.
+Iterator over the elements (cells) of the mesh. Each item is handed back as `element` to
+[`fem_reinit!`](@ref), [`scatter_qp!`](@ref), [`fem_getdetJdV`](@ref),
+[`accumulate_qp!`](@ref) and [`assemble_element!`](@ref), so it must carry what they need,
+for instance the element's global DOF numbers.
 """
-function fem_elements(t::FEMMultilinearMap)
-    error("fem_elements not implemented for $(typeof(t))")
+function fem_elements(term::FEMMultilinearMap)
+    error("fem_elements not implemented for $(typeof(term))")
 end
 """
-	fem_n_qp(t::FEMMultilinearMap) -> Int
+	fem_n_qp(term::FEMMultilinearMap) -> Int
 
-Return the number of quadrature points per element for the FEM term `t`.
+Number of quadrature points per element, the same for every element.
 """
-function fem_n_qp(t::FEMMultilinearMap)
-    error("fem_n_qp not implemented for $(typeof(t))")
+function fem_n_qp(term::FEMMultilinearMap)
+    error("fem_n_qp not implemented for $(typeof(term))")
 end
 """
-	fem_ndofs_per_cell(t::FEMMultilinearMap) -> Int
+	fem_ndofs_per_cell(term::FEMMultilinearMap) -> Int
 
-Return the number of degrees of freedom per element (cell) for the FEM term `t`.
+Number of DOFs of one element, which is the length of the element vector `Fe`.
 """
-function fem_ndofs_per_cell(t::FEMMultilinearMap)
-    error("fem_ndofs_per_cell not implemented for $(typeof(t))")
+function fem_ndofs_per_cell(term::FEMMultilinearMap)
+    error("fem_ndofs_per_cell not implemented for $(typeof(term))")
 end
 """
-	fem_reinit!(element, t::FEMMultilinearMap) -> nothing
+	fem_reinit!(element, term::FEMMultilinearMap) -> nothing
 
-Reinitialise the FEM quadrature cache (e.g. `CellValues`) for `element`.
-Called once per element before any `scatter_qp!` or `accumulate_qp!` calls.
+Prepare `term` for `element`. MORFE calls it once per element, before any other method
+receives that element. A Ferrite backend reinitialises its `CellValues` here, which maps the
+shape-function values and gradients to the element.
 """
-function fem_reinit!(element, t::FEMMultilinearMap)
-    error("fem_reinit! not implemented for $(typeof(t))")
+function fem_reinit!(element, term::FEMMultilinearMap)
+    error("fem_reinit! not implemented for $(typeof(term))")
 end
 """
-	scatter_qp!(∇W_col, W_global, element, t::FEMMultilinearMap) -> nothing
+	scatter_qp!(qp_values, coefficient, element, term::FEMMultilinearMap) -> nothing
 
-Fill `∇W_col` in-place with the field values (e.g. gradients) at all quadrature
-points of `element` for one column of the parametrisation `W_global`.
+Evaluate one coefficient of the parametrisation at every quadrature point of `element`.
+
+# Arguments
+- `qp_values`: output, a vector (a view into MORFE's buffer) of length `fem_n_qp(term)`
+  with the element type of `fem_qp_buffer(term)`; `qp_values[q]` receives the
+  quadrature-point value at `q`.
+- `coefficient`: one column `W[:, order, col]` of the parametrisation, a complex vector over
+  the free DOFs. Constrained DOFs have no entry and contribute zero.
+- `element`: the current element, already passed to [`fem_reinit!`](@ref).
 """
-function scatter_qp!(∇W_col, W_global, element, t::FEMMultilinearMap)
-    error("scatter_qp! not implemented for $(typeof(t))")
+function scatter_qp!(qp_values, coefficient, element, term::FEMMultilinearMap)
+    error("scatter_qp! not implemented for $(typeof(term))")
 end
 """
-	accumulate_qp!(Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap) -> nothing
+	accumulate_qp!(Fe, qp_args, multiplier, element, q, dΩ, term::FEMMultilinearMap) -> nothing
 
-Accumulate the integrand contribution at quadrature point `q` (weight `dΩ`) into
-the element residual vector `Fe`.  `∇W_args` is an NTuple of pre-scattered W columns;
-`mult` is the combinatorial multiplicity of the term.
+Add the integrand of one factorisation at quadrature point `q` of `element`, scaled by
+`multiplier * dΩ`, to the element vector `Fe`.
+
+# Arguments
+- `Fe`: the element vector, of length `fem_ndofs_per_cell(term)`, in local DOF order.
+- `qp_args`: an `NTuple` of `term.deg` arguments: the quadrature-point values at `q` of
+  the internal factors, in the order `term.multiindex` lists the derivatives, then one
+  external argument per external slot (see [`evaluate_term!`](@ref)).
+- `multiplier`: the number of argument orderings the factorisation stands for, times the
+  multiplicity of its external split; `1` in the direct evaluation.
+- `q`, `dΩ`: the quadrature-point index and its weight, `fem_getdetJdV(element, q, term)`.
+
+The integrand must be linear in each argument. The arguments are complex, so it must not
+conjugate them.
 """
-function accumulate_qp!(Fe, ∇W_args, mult, element, q, dΩ, t::FEMMultilinearMap)
-    error("accumulate_qp! not implemented for $(typeof(t))")
+function accumulate_qp!(Fe, qp_args, multiplier, element, q, dΩ, term::FEMMultilinearMap)
+    error("accumulate_qp! not implemented for $(typeof(term))")
 end
 """
-	assemble_element!(accum, Fe, element, t::FEMMultilinearMap) -> nothing
+	assemble_element!(result, Fe, element, term::FEMMultilinearMap) -> nothing
 
-Scatter the element residual `Fe` into the global accumulator `accum` using the
-DOF map of `element`.
+Add the element vector `Fe` to `result`, a vector over the free DOFs, through the DOF map of
+`element`. Entries of constrained DOFs are dropped.
 """
-function assemble_element!(accum, Fe, element, t::FEMMultilinearMap)
-    error("assemble_element! not implemented for $(typeof(t))")
+function assemble_element!(result, Fe, element, term::FEMMultilinearMap)
+    error("assemble_element! not implemented for $(typeof(term))")
 end
 
 """
-	fem_getdetJdV(element, q, t::FEMMultilinearMap) -> Real
+	fem_getdetJdV(element, q, term::FEMMultilinearMap) -> Real
 
-Return the integration weight `det(J) · w_q` at quadrature point index `q` of
-`element`.
+Integration weight `dΩ` at quadrature point `q` of `element`: the quadrature weight times
+the Jacobian determinant of the element map. The name follows Ferrite's `getdetJdV`.
 """
-function fem_getdetJdV(element, q, t::FEMMultilinearMap)
-    error("fem_getdetJdV not implemented for $(typeof(t))")
+function fem_getdetJdV(element, q, term::FEMMultilinearMap)
+    error("fem_getdetJdV not implemented for $(typeof(term))")
 end
 
 """
-	fem_qp_buffer(t::FEMMultilinearMap)
+	fem_qp_buffer(term::FEMMultilinearMap)
 
-Return a pre-allocated scratch buffer sized for one quadrature point of the FEM
-term `t`.  Reused across calls to avoid allocation in the inner element loop.
+Return a pre-allocated matrix for quadrature-point values, with at least `term.deg` rows and
+`fem_n_qp(term)` columns. The direct evaluation `evaluate_term!` scatters each argument into
+one row of it; the single-pass assembly reads only its element type and sizes its own
+buffer. Make the element type concrete (for Tensors.jl, all four parameters, as in
+`Tensor{2, 3, ComplexF64, 9}`): an abstract one boxes every value stored in the buffer.
 """
-function fem_qp_buffer(t::FEMMultilinearMap)
-    error("fem_qp_buffer not implemented for $(typeof(t))")
+function fem_qp_buffer(term::FEMMultilinearMap)
+    error("fem_qp_buffer not implemented for $(typeof(term))")
 end
+
+"""
+	fem_element_loop(term::FEMMultilinearMap) -> label
+
+A value identifying the element loop of `term`: the cells it integrates over, and how
+(element type, interpolation, quadrature, DOF map). The single-pass assembly runs one pass
+per group of terms with `isequal` labels, driven by the group's first term, so equal labels
+promise that either term can run on the other's loop:
+
+1. the same cells;
+2. `fem_reinit!` on either term prepares everything the other reads;
+3. `scatter_qp!` on either yields the quadrature-point values the other expects;
+4. the same quadrature points and weights;
+5. the same local DOF order and `assemble_element!`;
+6. if their fluxes have one type (see [`fem_flux_zero`](@ref)), the same `contract_qp!`.
+
+A backend returns, for instance, its DOF handler and cell values, compared by identity. A
+label that is too coarse integrates a term over the wrong cells; one that is too fine only
+costs passes. The default, the term itself, gives each term its own pass: always correct,
+but cells shared by several terms are then traversed once per term.
+
+A map acting on several element types or domains (materials, physics) is passed as one term
+per element loop: the weak form is a sum over cells, so the restrictions add up to the map
+exactly. Splitting all maps along the same boundaries visits each cell once per monomial.
+"""
+fem_element_loop(term::FEMMultilinearMap) = term
+
+"""
+	fem_flux_zero(term::FEMMultilinearMap) -> flux or nothing
+
+Opt the FEM term `term` into flux summation. Many integrands test a single quadrature-point
+quantity, the flux, against the shape functions: the first Piola-Kirchhoff stress against the
+shape-function gradients, for instance. A term of that kind returns its zero flux here and
+implements [`flux_qp`](@ref) and [`contract_qp!`](@ref) so that, for any arguments,
+
+	accumulate_qp!(Fe, qp_args, multiplier, element, q, dΩ, term)
+	≡ contract_qp!(Fe, multiplier * flux_qp(qp_args, element, q, term), element, q, dΩ, term)
+
+with `contract_qp!` linear in the flux. At each quadrature point, the single-pass assembly
+sums `multiplier * flux_qp(…)` over every factorisation of every term whose zero flux has the
+type of the driver's (the first term of its group, see [`fem_element_loop`](@ref)), and tests
+the sum once with the driver's
+`contract_qp!`: a factorisation costs one flux instead of one flux and one pass over the
+element's test functions. Terms whose fluxes share a type must therefore share their
+`contract_qp!`; a term tested against other shape functions returns a flux of another type,
+or `nothing`, and is integrated with `accumulate_qp!`. The flux must support `+` and
+multiplication by an integer, with results of the type of the zero returned here.
+
+The default, `nothing`, keeps the term on `accumulate_qp!`. The direct evaluation
+`evaluate_term!` always uses `accumulate_qp!`, which a term that opts in must still implement.
+"""
+fem_flux_zero(term::FEMMultilinearMap) = nothing
+
+"""
+	flux_qp(qp_args, element, q, term::FEMMultilinearMap) -> flux
+
+Flux of one factorisation at quadrature point `q`: the quantity `accumulate_qp!` tests
+against the shape functions, without the multiplier and the weight. `qp_args` is as in
+[`accumulate_qp!`](@ref). Required only when [`fem_flux_zero`](@ref) returns a flux.
+"""
+function flux_qp(qp_args, element, q, term::FEMMultilinearMap)
+    error("flux_qp not implemented for $(typeof(term))")
+end
+
+"""
+	contract_qp!(Fe, flux, element, q, dΩ, term::FEMMultilinearMap) -> nothing
+
+Test `flux` against the shape functions at quadrature point `q`, with weight `dΩ`, and add
+the result to the element vector `Fe`, as `accumulate_qp!` does with the flux of one
+factorisation. Must be linear in `flux`. Required only when [`fem_flux_zero`](@ref) returns
+a flux.
+"""
+function contract_qp!(Fe, flux, element, q, dΩ, term::FEMMultilinearMap)
+    error("contract_qp! not implemented for $(typeof(term))")
+end
+
+"""
+	accumulate_terms_qp!(flux, Fe, coefficient_values, external_arguments,
+	                     entries::Tuple, terms::Tuple, element, q, dΩ) -> flux
+
+Add, at quadrature point `q`, every factorisation of every FEM term in `terms`: the
+single-pass assembly calls it once per quadrature point with the FEM terms of one element loop
+(see [`fem_element_loop`](@ref)), `flux` being the driver's [`fem_flux_zero`](@ref). It returns `flux` plus the summed flux of
+the factorisations, to be tested once with the driver's `contract_qp!`, and adds to `Fe`
+whatever it integrates itself (weight `dΩ`).
+
+- `coefficient_values[i]` is the quadrature-point value at `q` of the `i`-th distinct
+  coefficient of the monomial, as `scatter_qp!` computed it.
+- `external_arguments[j]` is the external argument of external variable `j`.
+- `entries[k]` lists the factorisations of `terms[k]`. Each has a `multiplier::Int`, the
+  number of orderings times the multiplicity of its external split; `factors`, an `NTuple`
+  of indices into `coefficient_values`, one per internal slot; and `externals`, an `NTuple`
+  of indices into `external_arguments`, one per external slot.
+
+The default adds the terms one at a time: `multiplier * flux_qp(…)` for a term whose flux has
+the type of `flux`, `accumulate_qp!` otherwise. A backend may add a method for its own tuple
+of terms to share work between factorisations and terms evaluated at the same point: the
+SVK backend, for instance, collects strains per coefficient so that the quadratic and cubic
+stresses cost one constitutive evaluation and one product with each displacement gradient.
+"""
+function accumulate_terms_qp! end
 
 """
 	MultilinearMap{ORD, F}
@@ -882,56 +1082,54 @@ Evaluate a single `MultilinearMap` and accumulate (adds) the result into `res`.
 end
 
 """
-	evaluate_term!(res, t::FEMMultilinearMap{ORD}, xs, r)
+	evaluate_term!(res, term::FEMMultilinearMap{ORD}, xs, r)
 
-Direct (uncached) evaluation of a FEM-backed multilinear term at state `xs` and
-external state `r`, accumulating the result into `res`. To be used in InvarianceError.jl.
+Direct evaluation of a FEM term at the state `xs = (x, x^(1), …, x^(ORD-1))` and the
+physical external state `r`, added to `res`. The term drives its own element loop (see
+[`FEMMultilinearMap`](@ref)) with multiplier `1`. This is the path of
+[`evaluate_nonlinear_terms!`](@ref), used outside the cohomological solve, for instance by
+the invariance error, where no factorisation cache exists.
 
-Internal argument slots (determined by `t.multiindex`) are scattered to quadrature-point
-field quantities via `scatter_qp!` and assembled element-wise.
-
-For `me = 0`: `∇W_args` is a homogeneous `NTuple{N_INT, QP_TYPE}` — type-stable.
-
-For `me > 0`: the external arg slots in `∇W_args` receive `r` directly (not scattered).
-`r` is a small N_EXT-dimensional external-state vector, not a FOM displacement field.
-The concrete `accumulate_qp!` evaluates the full multilinear map
-`F(∇u₁,…,∇uₙ, r₁,…,rₘₑ)` at the actual inputs.
+Each internal slot of `term.multiindex` is scattered from the matching derivative in `xs`
+with `scatter_qp!`, into one row of `fem_qp_buffer(term)`. Each external slot of `qp_args`
+receives `r` itself, a vector of length `N_EXT` rather than a field, so `accumulate_qp!`
+evaluates the form at the actual external state.
 """
-function evaluate_term!(res, t::FEMMultilinearMap{ORD}, xs, r) where {ORD}
-    _eval_fem_term_direct!(res, t, xs, r, Val(t.deg), Val(sum(t.multiindex)))
+function evaluate_term!(res, term::FEMMultilinearMap{ORD}, xs, r) where {ORD}
+    _eval_fem_term_direct!(res, term, xs, r, Val(term.deg), Val(sum(term.multiindex)))
 end
 
 function _eval_fem_term_direct!(
-        res, t::FEMMultilinearMap{ORD}, xs, r,
+        res, term::FEMMultilinearMap{ORD}, xs, r,
         ::Val{DEG}, ::Val{N_INT}) where {ORD, DEG, N_INT}
-    inds = t.multiindex
-    me = DEG - N_INT        # number of external arg slots; compile-time constant
-    ∇W_qp = fem_qp_buffer(t)  # pre-allocated; ≥ DEG rows guaranteed by constructor
-    n_qp = fem_n_qp(t)
-    n_dofs = fem_ndofs_per_cell(t)
+    multiindex = term.multiindex
+    me = DEG - N_INT              # number of external slots; compile-time constant
+    qp_buffer = fem_qp_buffer(term)   # one row per internal slot, one column per qp
+    n_qp = fem_n_qp(term)
+    n_dofs = fem_ndofs_per_cell(term)
     Fe = zeros(eltype(res), n_dofs)
 
-    for element in fem_elements(t)
-        fem_reinit!(element, t)
-        # Scatter N_INT internal arg slots to qp-level gradients (rows 1:N_INT).
+    for element in fem_elements(term)
+        fem_reinit!(element, term)
+        # Row `slot` holds the quadrature-point values of the slot's state derivative.
         slot = 0
         for j in 1:ORD
-            for _ in 1:inds[j]
+            for _ in 1:multiindex[j]
                 slot += 1
-                scatter_qp!(@view(∇W_qp[slot, 1:n_qp]), xs[j], element, t)
+                scatter_qp!(@view(qp_buffer[slot, 1:n_qp]), xs[j], element, term)
             end
         end
         fill!(Fe, zero(eltype(Fe)))
         for q in 1:n_qp
-            dΩ = fem_getdetJdV(element, q, t)
+            dΩ = fem_getdetJdV(element, q, term)
             if me == 0
-                ∇W_args = ntuple(k -> ∇W_qp[k, q], Val(N_INT))
+                qp_args = ntuple(k -> qp_buffer[k, q], Val(N_INT))
             else
-                ∇W_args = ntuple(k -> k ≤ N_INT ? ∇W_qp[k, q] : r, Val(DEG))
+                qp_args = ntuple(k -> k ≤ N_INT ? qp_buffer[k, q] : r, Val(DEG))
             end
-            accumulate_qp!(Fe, ∇W_args, 1.0, element, q, dΩ, t)
+            accumulate_qp!(Fe, qp_args, 1.0, element, q, dΩ, term)
         end
-        assemble_element!(res, Fe, element, t)
+        assemble_element!(res, Fe, element, term)
     end
 end
 

@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------
-# Public API — cached
+# Closure terms, split by split
 # -----------------------------------------------------------------------
 
 """
@@ -40,274 +40,104 @@ function _replay_split!(result, scratch, temp, t, W, split, deg, external_argume
     isempty(split.args_ext_indices) || axpy!(split.ext_count, temp, result)
 end
 
-"""
-	_replay_fem_split!(result, t, W, fem_split, Fe, temp, external_arguments)
-
-Replay one `FEMCachedSplit{DEG, ME}` using the FEM-batched element loop.
-
-For each element: calls `fem_reinit!` once, scatters each unique `(order, col)` W
-column to qp-level field values via `scatter_qp!`, accumulates all qp contributions
-via `accumulate_qp!`, and assembles the element residual into `result` via
-`assemble_element!`.  The qp gradient buffer `∇W_qp` is obtained from the term
-via `fem_qp_buffer(t)` and is owned by the term, not allocated here.
-
-`accumulate_qp!` receives `DEG` internal arguments followed by `ME` external ones, so the
-tuple has length `t.deg` — matching what `evaluate_term!`'s direct FEM overload
-(`_eval_fem_term_direct!`) passes.  Before this, the external slots were omitted here and
-`ext_count` was applied as a bare scalar multiplier, so an `me > 0` FEM term could not
-tell one external direction from another and disagreed with the direct path.  The external
-arguments are hoisted out of the element loop, exactly as in `_replay_split!`.
-"""
-function _replay_fem_split!(
-        result, t::FEMMultilinearMap, W, fem_split::FEMCachedSplit{DEG, ME},
-        Fe, temp, external_arguments) where {DEG, ME}
-    ∇W_qp = fem_qp_buffer(t)   # Matrix{QP_TYPE}(max_unique, n_qp) — owned by the term
-
-    if ME == 0
-        accum = result
-        args_ext = ()
-    else
-        # External-forcing case: accumulate into `temp`, then axpy! into `result` — exactly
-        # as `_replay_split!` does for its me>0 branch.
-        #
-        # `temp` must be a *separate* FOM-length buffer, never `Fe`: `Fe` is the
-        # element-local residual that `assemble_element!` scatters *from*, so using it as
-        # the accumulator too makes the call `Fe .+= Fe` and doubles every contribution.
-        fill!(temp, zero(eltype(temp)))
-        accum = temp   # will be axpy!-ed into result after the loop
-        args_ext = ntuple(i -> external_arguments[fem_split.args_ext_indices[i]], Val(ME))
-    end
-
-    n_qp = fem_n_qp(t)
-    n_dofs = fem_ndofs_per_cell(t)
-    n_uniq = length(fem_split.unique_cols)
-
-    for element in fem_elements(t)
-
-        # reinit! is called once per element, before any scatter_qp! calls for this element.
-        fem_reinit!(element, t)
-
-        # 1. Scatter each unique (order, col) W column to qp-level field quantities.
-        for i in 1:n_uniq
-            (order, col) = fem_split.unique_cols[i]
-            scatter_qp!(@view(∇W_qp[i, 1:n_qp]), @view(W[:, order, col]), element, t)
-        end
-
-        # 2. Accumulate contributions from ALL fem_entries at each quadrature point.
-        fill!(@view(Fe[1:n_dofs]), zero(eltype(Fe)))
-        for q in 1:n_qp
-            dΩ = fem_getdetJdV(element, q, t)
-            for fem_entry in fem_split.fem_entries
-                @inbounds ∇W_args = (
-                    ntuple(k -> ∇W_qp[fem_entry.local_factor_indices[k], q], Val(DEG))...,
-                    args_ext...)
-                accumulate_qp!(
-                    @view(Fe[1:n_dofs]), ∇W_args, fem_entry.multiplier, element, q, dΩ, t)
-            end
-        end
-
-        # 3. Scatter element residual to global accumulator.
-        assemble_element!(accum, @view(Fe[1:n_dofs]), element, t)
-    end
-
-    ME == 0 || axpy!(fem_split.ext_count, temp, result)
-end
-
 # -----------------------------------------------------------------------
-# O4 — combined element loop across all me=0 FEM terms
+# Single-pass assembly of all FEM terms
 # -----------------------------------------------------------------------
 
 """
-	_replay_all_fem_splits!(result, model, W, global_split, global_∇W_qp, global_Fe_buffers)
+	_replay_fem!(result, W, group::FEMGroup, external_arguments, l)
 
-Execute the O4 combined element loop: traverse the mesh once, scatter all globally-unique
-W columns, then accumulate contributions from ALL me=0 FEM terms at each quadrature point.
+Add the right-hand side of the FEM terms of `group` at monomial `l` to `result`, in one pass
+over their element loop, driven by the group's first term.
 
-`fem_reinit!` and `scatter_qp!` are called at most once per unique `(element, W-column)`
-pair.
+In each element, every distinct coefficient that the factorisations read (`group.cols[l]`)
+is scattered to the quadrature points once. At each quadrature point, one call to
+[`accumulate_terms_qp!`](@ref) adds every factorisation of every term, external ones
+included: by default, the fluxes of the terms whose flux has the type of the driver's are
+summed, and the others go through `accumulate_qp!`. The flux sum is tested against the
+shape functions once, with the driver's `contract_qp!`, and the element vector is assembled
+once.
 
-`model.nonlinear_terms` is an `NTuple` of abstractly typed terms, so this method is only a
-function barrier. It gathers the participating terms into a tuple, whose concrete type the
-method below specialises on, once per monomial. Inside, the element loop, the loop over the
-terms and each term's quadrature loop ([`_accumulate_term_element!`](@ref)) dispatch at
-compile time; reading a term out of `model.nonlinear_terms` inside the loop would dispatch
-at run time and allocate, per element or per factorisation and quadrature point.
+`group.terms` and `group.entries[l]` are concretely typed tuples aligned term by term, so
+the quadrature loop dispatches nothing at run time.
 """
-function _replay_all_fem_splits!(result, model, W,
-        global_split::FEMGlobalSplit,
-        global_∇W_qp, global_Fe_buffers)
-    idx = Tuple(global_split.participating_term_indices)
-    terms = map(i -> model.nonlinear_terms[i], idx)
-    _replay_all_fem_splits!(result, model.nonlinear_terms[global_split.driver_term_idx],
-        terms, idx, W, global_split, global_∇W_qp, global_Fe_buffers)
-end
-
-function _replay_all_fem_splits!(result, driver::FEMMultilinearMap, terms::Tuple,
-        idx::Tuple, W, global_split::FEMGlobalSplit, global_∇W_qp, global_Fe_buffers)
+function _replay_fem!(result, W, group::FEMGroup, external_arguments, l)
+    cols = group.cols[l]
+    isempty(cols) && return nothing
+    (; terms, qp_buffer, Fe) = group
+    entries = group.entries[l]
+    driver = first(terms)
+    flux0 = fem_flux_zero(driver)
     n_qp = fem_n_qp(driver)
-    n_uniq = length(global_split.global_unique_cols)
 
     for element in fem_elements(driver)
         fem_reinit!(element, driver)
-
-        for i in 1:n_uniq
-            (order, col) = global_split.global_unique_cols[i]
-            scatter_qp!(@view(global_∇W_qp[i, 1:n_qp]), @view(W[:, order, col]), element, driver)
+        for (i, (order, col)) in enumerate(cols)
+            scatter_qp!(@view(qp_buffer[i, 1:n_qp]), @view(W[:, order, col]), element, driver)
         end
-
-        _accumulate_terms_element!(result, global_Fe_buffers, global_∇W_qp,
-            global_split.entries_by_deg, idx, element, n_qp, driver, terms)
+        fill!(Fe, zero(eltype(Fe)))
+        for q in 1:n_qp
+            dΩ = fem_getdetJdV(element, q, driver)
+            coefficient_values = @view qp_buffer[1:length(cols), q]
+            flux = accumulate_terms_qp!(flux0, Fe, coefficient_values, external_arguments,
+                entries, terms, element, q, dΩ)
+            flux0 === nothing || contract_qp!(Fe, flux, element, q, dΩ, driver)
+        end
+        assemble_element!(result, Fe, element, driver)
     end
+    return nothing
 end
 
-# Recursion over the participating terms, unrolled at compile time.
-@inline _accumulate_terms_element!(_, _, _, _, ::Tuple{}, _, _, _, ::Tuple{}) = nothing
+# One pass per element loop, unrolled at compile time: each group has its own types.
+_replay_fem_groups!(result, W, ::Tuple{}, external_arguments, l) = nothing
 
-@inline function _accumulate_terms_element!(result, Fe_buffers, ∇W_qp, entries_by_deg,
-        idx::Tuple, element, n_qp, driver, terms::Tuple)
-    _accumulate_term_element!(result, Fe_buffers[first(idx)], ∇W_qp, entries_by_deg,
-        first(idx), element, n_qp, driver, first(terms))
-    _accumulate_terms_element!(result, Fe_buffers, ∇W_qp, entries_by_deg,
-        Base.tail(idx), element, n_qp, driver, Base.tail(terms))
+@inline function _replay_fem_groups!(result, W, groups::Tuple, external_arguments, l)
+    _replay_fem!(result, W, first(groups), external_arguments, l)
+    return _replay_fem_groups!(result, W, Base.tail(groups), external_arguments, l)
 end
 
-"""
-	_accumulate_term_element!(result, Fe, ∇W_qp, entries_by_deg, t_idx, element, n_qp, driver, t)
+# The default: one term at a time, unrolled at compile time. Each term's branch and methods
+# resolve statically.
+@inline accumulate_terms_qp!(
+    flux, Fe, coefficient_values, external_arguments, ::Tuple{}, ::Tuple{},
+    element, q, dΩ) = flux
 
-Integrate term `t` (index `t_idx`) over one element and add it to `result`: every
-factorisation of the term at every quadrature point, with the gradients `scatter_qp!` left
-in `∇W_qp`. Specialised on the concrete type of `t`, which is what keeps the quadrature
-loop free of run-time dispatch. The integration weights come from the `driver` term, which
-owns the element loop.
-"""
-function _accumulate_term_element!(result, Fe, ∇W_qp, entries_by_deg, t_idx, element,
-        n_qp, driver, t)
-    fill!(Fe, zero(eltype(Fe)))
-    for q in 1:n_qp
-        dΩ = fem_getdetJdV(element, q, driver)
-        _accumulate_term_entries!(Fe, ∇W_qp, entries_by_deg, t_idx, element, q, dΩ, t)
-    end
-    assemble_element!(result, Fe, element, t)
-end
-
-"""
-	_accumulate_term_entries!(Fe, ∇W_qp, entries_by_deg, t_idx, element, q, dΩ, t)
-
-Add, at quadrature point `q`, every factorisation entry of term `t_idx` to `Fe`. Recurses
-over the degree-grouped entry tuple, so `Val(DEG)` in `ntuple` and the `accumulate_qp!`
-dispatch are resolved at compile time; groups of another degree than the term's are
-skipped. The base case (empty tuple) is a no-op.
-"""
-@inline _accumulate_term_entries!(_, _, ::Tuple{}, _, _, _, _, _) = nothing
-
-@inline function _accumulate_term_entries!(Fe, ∇W_qp,
-        entries_by_deg::Tuple{Vector{FEMGlobalEntry{DEG}}, Vararg}, t_idx, element, q, dΩ,
-        t) where {DEG}
-    if t.deg == DEG
-        for gentry in first(entries_by_deg)
-            gentry.term_idx == t_idx || continue
-            ∇W_args = ntuple(k -> ∇W_qp[gentry.local_factor_indices[k], q], Val(DEG))
-            accumulate_qp!(Fe, ∇W_args, gentry.multiplier, element, q, dΩ, t)
+@inline function accumulate_terms_qp!(flux, Fe, coefficient_values, external_arguments,
+        entries::Tuple, terms::Tuple, element, q, dΩ)
+    term = first(terms)
+    if flux !== nothing && fem_flux_zero(term) isa typeof(flux)
+        for e in first(entries)
+            qp_args = _qp_args(coefficient_values, external_arguments, e)
+            flux += e.multiplier * flux_qp(qp_args, element, q, term)
+        end
+    else
+        for e in first(entries)
+            qp_args = _qp_args(coefficient_values, external_arguments, e)
+            accumulate_qp!(Fe, qp_args, e.multiplier, element, q, dΩ, term)
         end
     end
-    _accumulate_term_entries!(
-        Fe, ∇W_qp, Base.tail(entries_by_deg), t_idx, element, q, dΩ, t)
+    return accumulate_terms_qp!(flux, Fe, coefficient_values, external_arguments,
+        Base.tail(entries), Base.tail(terms), element, q, dΩ)
 end
 
-"""
-	_replay_global_fem!(result, model, W, cache, exp_index)
-
-Function barrier: retrieves `cache.global_fem_splits[exp_index]` (stored as `Any`) and
-delegates to `_replay_all_fem_splits!`.  The barrier restores type stability because
-`cache.global_∇W_qp::Matrix{QP}` is concretely typed at the call site even though the
-`global_split` triggers runtime dispatch on `ENTRIES_TUPLE`.
-"""
-function _replay_global_fem!(result, model, W,
-        cache::MultilinearTermsCache{T, QP}, exp_index) where {T, QP}
-    gs = cache.global_fem_splits[exp_index]
-    isempty(gs.global_unique_cols) && return
-    _replay_all_fem_splits!(
-        result, model, W, gs, cache.global_∇W_qp, cache.global_Fe_buffers)
+# The arguments of one factorisation: its scattered internal factors, then its external
+# arguments. The indices were built against the sizes of both collections.
+@inline function _qp_args(coefficient_values, external_arguments, e::FEMEntry)
+    return (map(k -> @inbounds(coefficient_values[k]), e.factors)...,
+        map(k -> @inbounds(external_arguments[k]), e.externals)...)
 end
 
 # -----------------------------------------------------------------------
-# Term-level dispatch — cached path
+# Public API — cached
 # -----------------------------------------------------------------------
-#
-# Multiple dispatch on the concrete term type selects the replay strategy.
-# Adding a new AbstractMultilinearMap subtype requires only a new _replay_term! method;
-# compute_multilinear_terms! never needs to be modified.
-
-"""
-	_replay_term!(result, t, W, exp_index, t_idx, cache)
-
-Replay all cached splits for one nonlinear term `t` and monomial `exp_index` into
-`result`.  Dispatches on the concrete term type:
-
-- `MultilinearMap`: replays via `_replay_split!` (closure path).
-- `FEMMultilinearMap`: me=0 splits are handled by `_replay_global_fem!` (O4 combined
-  loop); only me>0 fallback splits are processed here via `_replay_fem_split!`.
-"""
-function _replay_term!(result, t::MultilinearMap, W, exp_index, t_idx,
-        cache::MultilinearTermsCache)
-    deg = t.deg - t.multiplicity_external
-    for split in cache.splits[exp_index][t_idx]
-        _replay_split!(result, cache.scratch_buffer, cache.temp_buffer,
-            t, W, split, deg, cache.external_arguments)
-    end
-end
-
-function _replay_term!(result, t::FEMMultilinearMap, W, exp_index, t_idx,
-        cache::MultilinearTermsCache)
-    # me=0 splits are handled by _replay_global_fem! (O4 combined loop).
-    # Only the me>0 fallback splits need processing here.
-    for fem_split in cache.fem_splits[exp_index][t_idx]
-        isempty(fem_split.args_ext_indices) && continue
-        _replay_fem_split!(result, t, W, fem_split, cache.fem_Fe, cache.temp_buffer,
-            cache.external_arguments)
-    end
-end
-
-"""
-	compute_multilinear_terms(model, exp_index, parametrisation, cache) → Vector
-
-Cached variant of `compute_multilinear_terms`: replays precomputed factorisation
-data instead of calling the factorisation routines.
-
-`exp_index` is the 1-based index into `parametrisation`'s multiindex set.
-"""
-function compute_multilinear_terms(model::NthOrderModel{ORD}, exp_index::Int,
-        parametrisation::Parametrisation{ORD, NVAR},
-        cache::MultilinearTermsCache) where {ORD, NVAR}
-    W = parametrisation.poly.coefficients
-    FOM = size(parametrisation)
-    T = eltype(parametrisation.poly)
-    deg_max = sum(parametrisation.poly.multiindex_set.exponents[exp_index])
-
-    result = zeros(T, FOM)
-    scratch = similar(result)
-    temp = similar(result)
-
-    # The cache already holds these (unit vectors, or Q's columns after a re-basing);
-    # rebuilding them here would both re-allocate and silently ignore the change of basis.
-    external_arguments = cache.external_arguments
-
-    for (t_idx, t) in enumerate(model.nonlinear_terms)
-        t.deg > deg_max && continue
-        deg = t.deg - t.multiplicity_external
-        for split in cache.splits[exp_index][t_idx]
-            _replay_split!(result, scratch, temp, t, W, split, deg, external_arguments)
-        end
-    end
-    return result
-end
 
 """
 	compute_multilinear_terms!(result, model, exp_index, parametrisation, cache) → nothing
 
-In-place variant: zeros `result` then accumulates all nonlinear contributions into it.
-Uses `cache.scratch_buffer`, `cache.temp_buffer`, and `cache.external_arguments` so that no
-heap allocation occurs during the inner solve loop.
+Zero `result`, then add the nonlinear right-hand side of monomial `exp_index`: the FEM terms
+in a single pass over each element loop ([`_replay_fem!`](@ref)), then each closure term
+split by split. Uses the buffers of `cache`, so no heap allocation occurs during the inner
+solve loop.
 """
 function compute_multilinear_terms!(
         result::AbstractVector,
@@ -316,15 +146,31 @@ function compute_multilinear_terms!(
         cache::MultilinearTermsCache) where {ORD, NVAR}
     fill!(result, zero(eltype(result)))
     W = parametrisation.poly.coefficients
-    deg_max = sum(parametrisation.poly.multiindex_set.exponents[exp_index])
-
-    # O4: single element loop covering all me=0 FEM terms.
-    _replay_global_fem!(result, model, W, cache, exp_index)
-
-    # Closure terms and me>0 FEM splits.
-    for (t_idx, t) in enumerate(model.nonlinear_terms)
-        t.deg > deg_max && continue
-        _replay_term!(result, t, W, exp_index, t_idx, cache)
+    _replay_fem_groups!(result, W, cache.fem_groups, cache.external_arguments, exp_index)
+    # Indexed, and only for terms with splits: iterating the abstractly typed term tuple
+    # allocates, even when every split list is empty, as for the FEM terms.
+    splits = cache.splits[exp_index]
+    for t_idx in eachindex(splits)
+        isempty(splits[t_idx]) && continue
+        t = model.nonlinear_terms[t_idx]
+        for split in splits[t_idx]
+            _replay_split!(result, cache.scratch_buffer, cache.temp_buffer, t, W, split,
+                t.deg - t.multiplicity_external, cache.external_arguments)
+        end
     end
     return nothing
+end
+
+"""
+	compute_multilinear_terms(model, exp_index, parametrisation, cache) → Vector
+
+Allocating variant of [`compute_multilinear_terms!`](@ref). `exp_index` is the 1-based
+index into `parametrisation`'s multiindex set.
+"""
+function compute_multilinear_terms(model::NthOrderModel{ORD}, exp_index::Int,
+        parametrisation::Parametrisation{ORD, NVAR},
+        cache::MultilinearTermsCache) where {ORD, NVAR}
+    result = zeros(eltype(parametrisation.poly), size(parametrisation))
+    compute_multilinear_terms!(result, model, exp_index, parametrisation, cache)
+    return result
 end
