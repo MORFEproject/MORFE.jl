@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <p class="lede">MORFE never sees a mesh: it only evaluates the nonlinear terms on given vectors.
       Write the geometric nonlinearity of the <a class="inline" href="structural_svk.html">clamped beam</a>
       yourself with Ferrite, first as a closure, then through the element-level interface that lets
-      MORFE batch the mesh loop.</p>
+      MORFE assemble each monomial in a single pass over the mesh.</p>
 
     <p>Both routes give the ROM of MORFEFerrite's built-in term to round-off. They differ in how often
       they traverse the mesh: at order 9, 486 times for the closure and 28 times, once per solved
@@ -120,8 +120,11 @@ document.addEventListener('DOMContentLoaded', function () {
           matrices and the spectral data come from the structural backend, exactly as in
           <a class="inline" href="structural_svk.html">From a mesh to a ROM</a>, and the backend's own
           <code>model</code> stays as the reference our terms must reproduce. <code>case.info</code>
-          exposes the three Ferrite objects we need: the <code>DofHandler</code>, the
-          <code>CellValues</code> and the map from global to free degrees of freedom.
+          exposes the three Ferrite objects we need: <code>dof_handler</code>, the
+          <code>DofHandler</code> that numbers the degrees of freedom of every cell;
+          <code>cell_values</code>, the <code>CellValues</code> with the shape functions and the
+          quadrature rule; and <code>dof_to_free</code>, the map from a global degree of freedom
+          to its index in the free vector, which leaves out the clamped ones.
         </p>
         <p>
           They are declared <code class="nolink">const</code> because the functions below read them as
@@ -133,11 +136,11 @@ document.addEventListener('DOMContentLoaded', function () {
     <span class="var">material</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-SVKMaterial"><span class="fn">SVK.SVKMaterial</span></a>(<span class="var">E</span> <span class="op">=</span> <span class="num">160e3</span>, <span class="var">ν</span> <span class="op">=</span> <span class="num">0.22</span>, <span class="var">ρ</span> <span class="op">=</span> <span class="num">2.32e-3</span>),
     <span class="var">damping</span> <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#StructuralSVK-RayleighDamping"><span class="fn">SVK.RayleighDamping</span></a>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
     <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">"Dirichlet"</span>)
-(; <span class="var">model</span>, <span class="var">spectral</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
+(; <span class="var">model</span>, <span class="var">spectral</span>) <span class="op">=</span> <a class="doc-link" href="../morfeferrite-documentation.html#Common-build_model"><span class="fn">build_model</span></a>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>])
 
-<span class="kw">const</span> <span class="var">dh</span> <span class="op">=</span> <span class="var">case.info.dh</span>                <span class="cm"># degrees of freedom of every cell</span>
-<span class="kw">const</span> <span class="var">cv</span> <span class="op">=</span> <span class="var">case.info.cellvalues</span>        <span class="cm"># shape functions and quadrature rule</span>
-<span class="kw">const</span> <span class="var">free</span> <span class="op">=</span> <span class="var">case.info.free_to_local</span>   <span class="cm"># global dof =&gt; free dof, clamped ones absent</span>
+<span class="kw">const</span> <span class="var">dof_handler</span> <span class="op">=</span> <span class="var">case.info.dof_handler</span>   <span class="cm"># degrees of freedom of every cell</span>
+<span class="kw">const</span> <span class="var">cell_values</span> <span class="op">=</span> <span class="var">case.info.cell_values</span>   <span class="cm"># shape functions and quadrature rule</span>
+<span class="kw">const</span> <span class="var">dof_to_free</span> <span class="op">=</span> <span class="var">case.info.dof_to_free</span>   <span class="cm"># global dof =&gt; free dof, clamped ones absent</span>
 <span class="kw">const</span> <span class="var">λ</span>, <span class="var">μ</span> <span class="op">=</span> <span class="var">case.material</span>.<span class="var">λ</span>, <span class="var">case.material</span>.<span class="var">μ</span>
 <span class="var">model.n_fom</span> <span class="cm"># print number of free degrees of freedom</span></pre>
       </div>
@@ -201,37 +204,37 @@ document.addEventListener('DOMContentLoaded', function () {
           declares it symmetric in them, so MORFE evaluates each unordered combination of coefficients
           once. A counter records how often the mesh is traversed.
         </p>
-<pre class="code"><span class="kw">const</span> <span class="var">ue</span> <span class="op">=</span> [<span class="fn">zeros</span>(<span class="var">ComplexF64</span>, <span class="fn">ndofs_per_cell</span>(<span class="var">dh</span>)) <span class="kw">for</span> <span class="var">_</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="num">3</span>] <span class="cm"># values of 3 arguments</span>
-<span class="kw">const</span> <span class="var">Fe</span> <span class="op">=</span> <span class="fn">zeros</span>(<span class="var">ComplexF64</span>, <span class="fn">ndofs_per_cell</span>(<span class="var">dh</span>))                <span class="cm"># cell vector</span>
-<span class="kw">const</span> <span class="var">passes</span> <span class="op">=</span> <span class="fn">Ref</span>(<span class="num">0</span>)                                           <span class="cm"># mesh traversals</span>
+<pre class="code"><span class="kw">const</span> <span class="var">ue</span> <span class="op">=</span> [<span class="fn">zeros</span>(<span class="var">ComplexF64</span>, <span class="fn">ndofs_per_cell</span>(<span class="var">dof_handler</span>)) <span class="kw">for</span> <span class="var">_</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="num">3</span>] <span class="cm"># values of 3 arguments</span>
+<span class="kw">const</span> <span class="var">Fe</span> <span class="op">=</span> <span class="fn">zeros</span>(<span class="var">ComplexF64</span>, <span class="fn">ndofs_per_cell</span>(<span class="var">dof_handler</span>))                <span class="cm"># cell vector</span>
+<span class="kw">const</span> <span class="var">passes</span> <span class="op">=</span> <span class="fn">Ref</span>(<span class="num">0</span>)                                                    <span class="cm"># mesh traversals</span>
 
 <span class="kw">function</span> <span class="fn">gather!</span>(<span class="var">ue</span>, <span class="var">u</span>, <span class="var">cell</span>)
     <span class="kw">for</span> (<span class="var">i</span>, <span class="var">d</span>) <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="fn">celldofs</span>(<span class="var">cell</span>))
-        <span class="var">j</span> <span class="op">=</span> <span class="fn">get</span>(<span class="var">free</span>, <span class="var">d</span>, <span class="num">0</span>)
+        <span class="var">j</span> <span class="op">=</span> <span class="fn">get</span>(<span class="var">dof_to_free</span>, <span class="var">d</span>, <span class="num">0</span>)
         <span class="var">ue</span>[<span class="var">i</span>] <span class="op">=</span> <span class="var">j</span> <span class="op">==</span> <span class="num">0</span> <span class="op">?</span> <span class="num">0</span> <span class="op">:</span> <span class="var">u</span>[<span class="var">j</span>]
     <span class="kw">end</span>
 <span class="kw">end</span>
 
 <span class="kw">function</span> <span class="fn">scatter!</span>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>)
     <span class="kw">for</span> (<span class="var">i</span>, <span class="var">d</span>) <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="fn">celldofs</span>(<span class="var">cell</span>))
-        <span class="var">j</span> <span class="op">=</span> <span class="fn">get</span>(<span class="var">free</span>, <span class="var">d</span>, <span class="num">0</span>)
+        <span class="var">j</span> <span class="op">=</span> <span class="fn">get</span>(<span class="var">dof_to_free</span>, <span class="var">d</span>, <span class="num">0</span>)
         <span class="var">j</span> <span class="op">==</span> <span class="num">0</span> <span class="op">||</span> (<span class="var">res</span>[<span class="var">j</span>] <span class="op">+</span><span class="op">=</span> <span class="var">Fe</span>[<span class="var">i</span>])
     <span class="kw">end</span>
 <span class="kw">end</span>
 
 <span class="kw">function</span> <span class="fn">assemble!</span>(<span class="var">res</span>, <span class="var">P</span>, <span class="var">us</span><span class="op">:</span><span class="sym">:Vararg</span>{<span class="var">Any</span>, <span class="var">N</span>}) <span class="kw">where</span> {<span class="var">N</span>}
     <span class="var">passes</span>[] <span class="op">+</span><span class="op">=</span> <span class="num">1</span>
-    <span class="kw">for</span> <span class="var">cell</span> <span class="kw">in</span> <span class="fn">CellIterator</span>(<span class="var">dh</span>)
-        <span class="fn">reinit!</span>(<span class="var">cv</span>, <span class="var">cell</span>)
+    <span class="kw">for</span> <span class="var">cell</span> <span class="kw">in</span> <span class="fn">CellIterator</span>(<span class="var">dof_handler</span>)
+        <span class="fn">reinit!</span>(<span class="var">cell_values</span>, <span class="var">cell</span>)
         <span class="kw">for</span> <span class="var">k</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="var">N</span>
             <span class="fn">gather!</span>(<span class="var">ue</span>[<span class="var">k</span>], <span class="var">us</span>[<span class="var">k</span>], <span class="var">cell</span>)
         <span class="kw">end</span>
         <span class="fn">fill!</span>(<span class="var">Fe</span>, <span class="num">0</span>)
-        <span class="kw">for</span> <span class="var">q</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="fn">getnquadpoints</span>(<span class="var">cv</span>)
-            <span class="var">Pq</span> <span class="op">=</span> <span class="fn">P</span>(<span class="fn">ntuple</span>(<span class="var">k</span> <span class="op">-&gt;</span> <span class="fn">function_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">ue</span>[<span class="var">k</span>]), <span class="var">N</span>)<span class="op">...</span>)
-            <span class="var">dΩ</span> <span class="op">=</span> <span class="fn">getdetJdV</span>(<span class="var">cv</span>, <span class="var">q</span>)
+        <span class="kw">for</span> <span class="var">q</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="fn">getnquadpoints</span>(<span class="var">cell_values</span>)
+            <span class="var">Pq</span> <span class="op">=</span> <span class="fn">P</span>(<span class="fn">ntuple</span>(<span class="var">k</span> <span class="op">-&gt;</span> <span class="fn">function_gradient</span>(<span class="var">cell_values</span>, <span class="var">q</span>, <span class="var">ue</span>[<span class="var">k</span>]), <span class="var">N</span>)<span class="op">...</span>)
+            <span class="var">dΩ</span> <span class="op">=</span> <span class="fn">getdetJdV</span>(<span class="var">cell_values</span>, <span class="var">q</span>)
             <span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">Fe</span>)
-                <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> (<span class="fn">shape_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">Pq</span>) <span class="op">*</span> <span class="var">dΩ</span>
+                <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> (<span class="fn">shape_gradient</span>(<span class="var">cell_values</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">Pq</span>) <span class="op">*</span> <span class="var">dΩ</span>
             <span class="kw">end</span>
         <span class="kw">end</span>
         <span class="fn">scatter!</span>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>)
@@ -279,22 +282,23 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="body">
         <h3 id="step-element">Route two: the element-level interface</h3>
         <p>
-          Batching needs MORFE to run the mesh loop, so the term must describe one cell at a time. It
+          A single pass needs MORFE to run the mesh loop, so the term must describe one cell at a time. It
           becomes a subtype of <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><code>FEMMultilinearMap</code></a>, carries the same four fields as a
           <a class="doc-link" href="../documentation.html#MultilinearMaps-MultilinearMap"><code>MultilinearMap</code></a>, and extends a handful of primitives:
         </p>
         <ul>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_elements"><code>fem_elements</code></a> and <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_reinit!"><code>fem_reinit!</code></a> iterate over the cells and prepare each one;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_element_loop"><code>fem_element_loop</code></a> tells MORFE that both terms run on the same cells, so they share one pass; without it, each term gets its own;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_n_qp"><code>fem_n_qp</code></a>, <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_ndofs_per_cell"><code>fem_ndofs_per_cell</code></a> and <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_getdetJdV"><code>fem_getdetJdV</code></a> give the quadrature points, the cell size and the integration weights;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> computes the gradient of one coefficient at every quadrature point of a cell;</li>
-          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> adds one factorisation at one quadrature point to the cell vector, where <code class="nolink">mult</code> counts the orderings of the factorisation;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> adds one factorisation at one quadrature point to the cell vector, where <code class="nolink">multiplier</code> counts the orderings of the factorisation;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> adds the cell vector to the global one;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_qp_buffer"><code>fem_qp_buffer</code></a> returns a buffer whose element type tells MORFE what <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> produces. Spell it out in full, <code class="nolink">Tensor{2, 3, ComplexF64, 9}</code>: without the last parameter the type is abstract, and every gradient stored in the buffer is boxed.</li>
         </ul>
         <p>
           MORFE then traverses the mesh once per monomial for all terms together. In each cell it calls
           <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> once per distinct coefficient, <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> once per
-          factorisation and quadrature point, and <a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> once per term. The
+          factorisation and quadrature point, and <a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> once per cell. The
           physics stays the same two lines; only the bookkeeping moves.
         </p>
 <pre class="code"><span class="kw">struct</span> <span class="var">SVKTerm</span>{<span class="var">DEG</span>} <span class="op">&lt;</span><span class="op">:</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><span class="var">FEMMultilinearMap</span></a>{<span class="num">2</span>}
@@ -307,25 +311,26 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="fn">stress</span>(<span class="op">:</span><span class="sym">:SVKTerm</span>{<span class="num">2</span>}) <span class="op">=</span> <span class="var">P2</span>
 <span class="fn">stress</span>(<span class="op">:</span><span class="sym">:SVKTerm</span>{<span class="num">3</span>}) <span class="op">=</span> <span class="var">P3</span>
 
-<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_elements"><span class="fn">MORFE.fem_elements</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> (<span class="var">passes</span>[] <span class="op">+</span><span class="op">=</span> <span class="num">1</span>; <span class="fn">CellIterator</span>(<span class="var">dh</span>))
-<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_reinit!"><span class="fn">MORFE.fem_reinit!</span></a>(<span class="var">cell</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">reinit!</span>(<span class="var">cv</span>, <span class="var">cell</span>)
-<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_n_qp"><span class="fn">MORFE.fem_n_qp</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">getnquadpoints</span>(<span class="var">cv</span>)
-<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_ndofs_per_cell"><span class="fn">MORFE.fem_ndofs_per_cell</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">ndofs_per_cell</span>(<span class="var">dh</span>)
-<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_getdetJdV"><span class="fn">MORFE.fem_getdetJdV</span></a>(<span class="var">cell</span>, <span class="var">q</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">getdetJdV</span>(<span class="var">cv</span>, <span class="var">q</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_element_loop"><span class="fn">MORFE.fem_element_loop</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="var">dof_handler</span>
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_elements"><span class="fn">MORFE.fem_elements</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> (<span class="var">passes</span>[] <span class="op">+</span><span class="op">=</span> <span class="num">1</span>; <span class="fn">CellIterator</span>(<span class="var">dof_handler</span>))
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_reinit!"><span class="fn">MORFE.fem_reinit!</span></a>(<span class="var">cell</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">reinit!</span>(<span class="var">cell_values</span>, <span class="var">cell</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_n_qp"><span class="fn">MORFE.fem_n_qp</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">getnquadpoints</span>(<span class="var">cell_values</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_ndofs_per_cell"><span class="fn">MORFE.fem_ndofs_per_cell</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">ndofs_per_cell</span>(<span class="var">dof_handler</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_getdetJdV"><span class="fn">MORFE.fem_getdetJdV</span></a>(<span class="var">cell</span>, <span class="var">q</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">getdetJdV</span>(<span class="var">cell_values</span>, <span class="var">q</span>)
 <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_qp_buffer"><span class="fn">MORFE.fem_qp_buffer</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>{<span class="var">DEG</span>}) <span class="kw">where</span> {<span class="var">DEG</span>} <span class="op">=</span>
-    <span class="var">Matrix</span>{<span class="var">Tensor</span>{<span class="num">2</span>, <span class="num">3</span>, <span class="var">ComplexF64</span>, <span class="num">9</span>}}(<span class="var">undef</span>, <span class="var">DEG</span>, <span class="fn">getnquadpoints</span>(<span class="var">cv</span>))
+    <span class="var">Matrix</span>{<span class="var">Tensor</span>{<span class="num">2</span>, <span class="num">3</span>, <span class="var">ComplexF64</span>, <span class="num">9</span>}}(<span class="var">undef</span>, <span class="var">DEG</span>, <span class="fn">getnquadpoints</span>(<span class="var">cell_values</span>))
 
 <span class="kw">function</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><span class="fn">MORFE.scatter_qp!</span></a>(∇<span class="var">u</span>, <span class="var">u</span>, <span class="var">cell</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>)
     <span class="fn">gather!</span>(<span class="var">ue</span>[<span class="num">1</span>], <span class="var">u</span>, <span class="var">cell</span>)
     <span class="kw">for</span> <span class="var">q</span> <span class="kw">in</span> <span class="fn">eachindex</span>(∇<span class="var">u</span>)
-        ∇<span class="var">u</span>[<span class="var">q</span>] <span class="op">=</span> <span class="fn">function_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">ue</span>[<span class="num">1</span>])
+        ∇<span class="var">u</span>[<span class="var">q</span>] <span class="op">=</span> <span class="fn">function_gradient</span>(<span class="var">cell_values</span>, <span class="var">q</span>, <span class="var">ue</span>[<span class="num">1</span>])
     <span class="kw">end</span>
 <span class="kw">end</span>
 
-<span class="kw">function</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><span class="fn">MORFE.accumulate_qp!</span></a>(<span class="var">Fe</span>, ∇<span class="var">u</span>, <span class="var">mult</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span><span class="op">:</span><span class="sym">:SVKTerm</span>)
+<span class="kw">function</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><span class="fn">MORFE.accumulate_qp!</span></a>(<span class="var">Fe</span>, ∇<span class="var">u</span>, <span class="var">multiplier</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span><span class="op">:</span><span class="sym">:SVKTerm</span>)
     <span class="var">Pq</span> <span class="op">=</span> <span class="fn">stress</span>(<span class="var">t</span>)(∇<span class="var">u</span><span class="op">...</span>)
     <span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">Fe</span>)
-        <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> <span class="var">mult</span> <span class="op">*</span> (<span class="fn">shape_gradient</span>(<span class="var">cv</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">Pq</span>) <span class="op">*</span> <span class="var">dΩ</span>
+        <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> <span class="var">multiplier</span> <span class="op">*</span> (<span class="fn">shape_gradient</span>(<span class="var">cell_values</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">Pq</span>) <span class="op">*</span> <span class="var">dΩ</span>
     <span class="kw">end</span>
 <span class="kw">end</span>
 
@@ -404,10 +409,10 @@ document.addEventListener('DOMContentLoaded', function () {
         <p>
           The traversals of the closure grow with the number of factorisations, those of the
           element-level term only with the number of monomials. The right-hand-side time falls by less,
-          because <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> still runs once per factorisation: batching shares the
+          because <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> still runs once per factorisation: the single pass shares the
           traversal, the gathering and the gradients, not the physics. The gain therefore grows with the
           order and with the number of reduced coordinates, and it is largest for cheap integrands.
-          MORFEFerrite's built-in kernel is costlier per call, so batching gains less with it
+          MORFEFerrite's built-in kernel is costlier per call, so the single pass gains less with it
           (<a class="inline" href="#fig-01">FIG · 01</a>, second button).
         </p>
 
@@ -423,8 +428,8 @@ document.addEventListener('DOMContentLoaded', function () {
         (<strong>4977 free DOFs</strong>, master mode 1) against the expansion order. Left: mesh traversals.
         Right: right-hand-side time. <strong>Tutorial kernel</strong> draws the
         <code class="nolink">rhs_cost.csv</code> this notebook writes; <strong>MORFEFerrite kernel</strong>
-        draws <code class="nolink">batching_speedup.csv</code>, written by the example's
-        <code class="nolink">benchmark.jl</code> for MORFEFerrite's built-in term. Apple M2 Pro, one thread.</div>
+        draws the costs of MORFEFerrite's built-in term, measured by the example's
+        <code class="nolink">benchmark.jl</code>. Apple M2 Pro, one thread.</div>
     </div>
 
     <div class="adm tip">

@@ -157,19 +157,19 @@ case = SVK.mechanical_model({json.dumps(str(MESH))};
     damping = SVK.RayleighDamping(α = 0.0, β = 0.0),
     dirichlet = "Dirichlet")
 n = {PROBE_NODE}
-@assert all(isapprox.(Tuple(case.info.dh.grid.nodes[n].x), {PROBE_XYZ}; atol = 1e-8))
-g = SVK.Common.node_dof(case.info.dh, n, 2)
+@assert all(isapprox.(Tuple(case.info.dof_handler.grid.nodes[n].x), {PROBE_XYZ}; atol = 1e-8))
+g = SVK.Common.node_dof(case.info.dof_handler, n, 2)
 @assert g == {PROBE_GLOBAL_DOF}
-@assert case.info.free_to_local[g] == {PROBE_FREE_DOF}
-(; spectral) = build_model(case; master = [1], expansion_order = 3)
+@assert case.info.dof_to_free[g] == {PROBE_FREE_DOF}
+(; spectral) = build_model(case; master = [1])
 phi = MORFE.right_modes(spectral)[:, 1]
-phase = cis(-angle(phi[case.info.free_to_local[g]]))
+phase = cis(-angle(phi[case.info.dof_to_free[g]]))
 u = real.(phase .* phi)
-@assert u[case.info.free_to_local[g]] > 0
-for node in eachindex(case.info.dh.grid.nodes)
+@assert u[case.info.dof_to_free[g]] > 0
+for node in eachindex(case.info.dof_handler.grid.nodes)
     values = ntuple(3) do component
-        dof = SVK.Common.node_dof(case.info.dh, node, component)
-        haskey(case.info.free_to_local, dof) ? u[case.info.free_to_local[dof]] : 0.0
+        dof = SVK.Common.node_dof(case.info.dof_handler, node, component)
+        haskey(case.info.dof_to_free, dof) ? u[case.info.dof_to_free[dof]] : 0.0
     end
     println("MODE_DATA ", node, " ", values[1], " ", values[2], " ", values[3])
 end

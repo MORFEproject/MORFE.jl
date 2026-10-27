@@ -6,9 +6,8 @@ MORFEExamples' `writing_a_finite_element_nonlinearity` example writes:
 
 - `cost.v1.csv` is `results/data/rhs_cost.csv`, written by the notebook: the tutorial's own
   first-Piola kernel, as a closure and through the element-level interface;
-- `benchmark.v1.csv` is `results/data/batching_speedup.csv`, written by `benchmark.jl`:
-  MORFEFerrite's production SVK kernel behind the same two routes (the numbers the MORFE.jl
-  paper quotes).
+- `benchmark.v1.csv` holds the costs of MORFEFerrite's production SVK kernel behind the same
+  two routes, measured by an earlier version of `benchmark.jl` at the tutorial's orders.
 
 To refresh, rerun the example, copy both CSVs here under these names and run, from the
 MORFE repository root:
@@ -39,8 +38,8 @@ def load():
         for r in read_csv(HERE / "cost.v1.csv")
     ]
     production = [
-        dict(order=int(r["order"]), passes=(int(r["passes_closure"]), int(r["passes_batched"])),
-             time=(float(r["rhs_closure_s"]), float(r["rhs_batched_s"])))
+        dict(order=int(r["order"]), passes=(int(r["passes_closure"]), int(r["passes_element"])),
+             time=(float(r["rhs_closure_s"]), float(r["rhs_element_s"])))
         for r in read_csv(HERE / "benchmark.v1.csv")
     ]
     # Both runs count the same traversals: they depend on the multiindex set, not the kernel.
@@ -159,7 +158,7 @@ COST_HTML = r'''<!doctype html>
 <div id="stage">__SVG__</div>
 <div id="note">The traversals do not depend on the kernel. Hover a point for its value.</div></div>
 <script>
-const notes={tutorial:'The notebook’s first-Piola kernel. The traversals do not depend on the kernel. Hover a point for its value.',production:'MORFEFerrite’s built-in SVK kernel, timed by benchmark.jl. Its integrand dominates, so batching gains less.'};
+const notes={tutorial:'The notebook’s first-Piola kernel. The traversals do not depend on the kernel. Hover a point for its value.',production:'MORFEFerrite’s built-in SVK kernel, timed by benchmark.jl. Its integrand dominates, so the single pass gains less.'};
 function show(k){for(const id of['tutorial','production']){document.getElementById(id).classList.toggle('on',id===k);document.getElementById('time-'+id).style.display=id===k?'inline':'none'}document.getElementById('note').textContent=notes[k]}
 document.getElementById('tutorial').onclick=()=>show('tutorial');document.getElementById('production').onclick=()=>show('production');show('tutorial');
 </script></body></html>'''

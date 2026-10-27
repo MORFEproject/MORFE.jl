@@ -85,13 +85,13 @@ end
 
 # Displacement of mode pair `p` at every grid node; constrained degrees of freedom are 0.
 function nodal_mode(case, sp, p)
-    dh = case.info.dh
+    dof_handler = case.info.dof_handler
     ϕ = mode_shape(sp, p)
-    u = zeros(Ferrite.ndofs(dh))
-    for (dof, row) in case.info.free_to_local
+    u = zeros(Ferrite.ndofs(dof_handler))
+    for (dof, row) in case.info.dof_to_free
         u[dof] = ϕ[row]
     end
-    return Ferrite.evaluate_at_grid_nodes(dh, u, :u)
+    return Ferrite.evaluate_at_grid_nodes(dof_handler, u, :u)
 end
 
 mode_label(m) = m.tilt_x ≥ 0.3 ? "mirror tilts about x" :

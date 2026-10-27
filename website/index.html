@@ -437,7 +437,7 @@ body.home-page .foot { margin-top: 0; }
     <span class="var">damping</span> <span class="op">=</span> <span class="fn">SVK.RayleighDamping</span>(<span class="var">α</span> <span class="op">=</span> <span class="num">0.0</span>, <span class="var">β</span> <span class="op">=</span> <span class="num">0.0</span>),
     <span class="var">dirichlet</span> <span class="op">=</span> <span class="str">"Dirichlet"</span>)
 
-(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <span class="fn">build_model</span>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>], <span class="var">expansion_order</span> <span class="op">=</span> <span class="var">order</span>)
+(; <span class="var">model</span>, <span class="var">spectral</span>, <span class="var">meta</span>) <span class="op">=</span> <span class="fn">build_model</span>(<span class="var">case</span>; <span class="var">master</span> <span class="op">=</span> [<span class="num">1</span>])
 <span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral</span>, <span class="var">order</span>;
     <span class="var">resonance</span> <span class="op">=</span> <span class="fn">ResonanceConfig</span>(<span class="var">style</span> <span class="op">=</span> <span class="sym">:complex_normal_form</span>, <span class="var">tol</span> <span class="op">=</span> <span class="num">0.05</span>))</pre>
       </div>

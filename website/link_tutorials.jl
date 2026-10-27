@@ -42,7 +42,7 @@ const OVERRIDES = Dict(
         "MORFEFerrite.FluidNavierStokes" => "$(COMPANION_DOC_HREF)#FluidNavierStokes",
         # `build_model` is defined by four backends, so the scraped map drops it as a clash
         # and it would silently stay plain text.  This page calls the fluid method, whose
-        # docstring is the one that documents `master`, `outer` and `expansion_order`.
+        # docstring is the one that documents `master`, `outer` and `scale`.
         "build_model" => "$(COMPANION_DOC_HREF)#FluidNavierStokes-build_model"
     ),
     "mems_micromirror.html" => Dict(
