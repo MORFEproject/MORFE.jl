@@ -196,46 +196,6 @@ function _build_solve_jobs(sym::ConjugateSymmetryData)
 end
 
 """
-	_group_solve_jobs(ctx, mset, jobs, Val(ROM)) -> Vector{_SolveGroup}
-
-Partition causal jobs into degree-local groups with equal [`StructuralFactorKey`](@ref).
-Group order follows the first occurrence of each key, and job order is preserved within a
-group.
-"""
-function _group_solve_jobs(ctx, mset, jobs::Vector{_SolveJob}, ::Val{ROM}) where {ROM}
-    representatives = _eigenvalue_representatives(ctx.lambda_diag)
-    T = eltype(ctx.lambda_diag)
-    NVAR = length(ctx.lambda_diag)
-    Key = StructuralFactorKey{NVAR, ROM}
-    ordered_groups = Vector{_SolveGroup{T}}()
-
-    first_job = firstindex(jobs)
-    while first_job <= lastindex(jobs)
-        degree = sum(mset[jobs[first_job].index])
-        keys = Key[]
-        groups = Dict{Key, _SolveGroup{T}}()
-        next_job = first_job
-        while next_job <= lastindex(jobs) &&
-              sum(mset[jobs[next_job].index]) == degree
-            job = jobs[next_job]
-            resonance = _resonance_vector(ctx.resonance_set, job.index, Val(ROM))
-            key = _structural_factor_key(
-                mset[job.index], resonance, representatives)
-            if !haskey(groups, key)
-                groups[key] = _SolveGroup(
-                    _superharmonic(mset[job.index], ctx.lambda_diag), _SolveJob[])
-                push!(keys, key)
-            end
-            push!(groups[key].jobs, job)
-            next_job += 1
-        end
-        append!(ordered_groups, (groups[key] for key in keys))
-        first_job = next_job
-    end
-    return ordered_groups
-end
-
-"""
 	_job_positions(jobs, L) -> Vector{Int}
 
 Map each of the `L` multiindex-set positions to the number of the job that makes it final:
@@ -317,35 +277,17 @@ function _job_dependencies(ctx, R, mset::MultiindexSet{NVAR}, jobs::Vector{_Solv
 end
 
 """
-	_respects_dependencies(order, dependencies) -> Bool
-
-Return whether executing job numbers in `order` runs every job after all of its
-dependencies.
-"""
-function _respects_dependencies(order::AbstractVector{Int},
-        dependencies::Vector{Vector{Int}})
-    rank = zeros(Int, length(dependencies))
-    for (position, number) in enumerate(order)
-        rank[number] = position
-    end
-    for number in order
-        for dependency in dependencies[number]
-            rank[dependency] < rank[number] || return false
-        end
-    end
-    return true
-end
-
-"""
 	_schedule_key_runs(keys, key_priority, dependencies) -> Union{Nothing, Vector{Vector{Int}}}
 
 Topologically sort job numbers `1:n` so that jobs sharing a key run consecutively whenever
 the dependencies allow, and return the maximal same-key runs in execution order.
 
 `keys[k]` is the integer key of job `k` and `key_priority[key]` its rank (lower opens
-first). The sort is Kahn's algorithm with one preference: while a ready job carries the
-current key, the smallest-numbered such job runs next; otherwise the ready key of lowest
-priority opens a new run. Returns `nothing` if the dependencies contain a cycle.
+first). The sort is Kahn's algorithm with two preferences. While a ready job carries the
+current key, the smallest-numbered such job runs next. Otherwise a new run opens, on the
+key of lowest priority among those that no unfinished job of another key holds back,
+which therefore finish in one run; only if there is none, on the ready key of lowest
+priority. Returns `nothing` if the dependencies contain a cycle.
 """
 function _schedule_key_runs(keys::Vector{Int}, key_priority::Vector{Int},
         dependencies::Vector{Vector{Int}})
@@ -353,10 +295,13 @@ function _schedule_key_runs(keys::Vector{Int}, key_priority::Vector{Int},
     n_keys = length(key_priority)
     successors = [Int[] for _ in 1:n]
     pending = zeros(Int, n)
+    # unfinished dependencies of each key's jobs on jobs of other keys
+    foreign = zeros(Int, n_keys)
     for number in 1:n, dependency in dependencies[number]
 
         push!(successors[dependency], number)
         pending[number] += 1
+        keys[dependency] == keys[number] || (foreign[keys[number]] += 1)
     end
     ready = [BitSet() for _ in 1:n_keys]
     for number in 1:n
@@ -369,7 +314,10 @@ function _schedule_key_runs(keys::Vector{Int}, key_priority::Vector{Int},
     scheduled = 0
     while scheduled < n
         if current == 0 || isempty(ready[current])
-            next = findfirst(key -> !isempty(ready[key]), keys_by_priority)
+            next = findfirst(key -> !isempty(ready[key]) && foreign[key] == 0,
+                keys_by_priority)
+            next === nothing &&
+                (next = findfirst(key -> !isempty(ready[key]), keys_by_priority))
             next === nothing && return nothing
             current = keys_by_priority[next]
             push!(runs, Int[])
@@ -380,6 +328,7 @@ function _schedule_key_runs(keys::Vector{Int}, key_priority::Vector{Int},
         scheduled += 1
         for successor in successors[number]
             pending[successor] -= 1
+            keys[successor] == current || (foreign[keys[successor]] -= 1)
             pending[successor] == 0 && push!(ready[keys[successor]], successor)
         end
     end
@@ -387,38 +336,76 @@ function _schedule_key_runs(keys::Vector{Int}, key_priority::Vector{Int},
 end
 
 """
-	_group_solve_jobs_across_degrees(ctx, R, mset, jobs, Val(ROM))
+	_group_solve_jobs(ctx, mset, jobs, dependencies, Val(ROM); across_degrees = false)
 		-> Union{Nothing, Vector{_SolveGroup}}
 
-Partition jobs into factor-reuse groups that may span total degrees. Keys are the exact
-[`StructuralFactorKey`](@ref)s used within a degree; they are opened in order of their
-aggregated degree, then first occurrence, which runs every master key in one group when
-the only zero eigenvalues are frozen parameters. Returns `nothing` when the dependency
-graph cannot be ordered.
+Partition jobs into factor-reuse groups of equal [`StructuralFactorKey`](@ref), ordered so
+that every job runs after its `dependencies` ([`_job_dependencies`](@ref)). The
+topological sort [`_schedule_key_runs`](@ref) keeps a group together wherever the
+dependencies allow and splits it only where one requires it.
+
+By default each total degree is scheduled on its own, with keys opened in order of first
+occurrence, so the groups complete each degree before the next. Where no dependency
+intervenes, this gives one group per key and degree.
+
+With `across_degrees = true` a group may span degrees. Keys are then opened in order of
+their aggregated degree, then first occurrence, which runs every master key in one group
+when the only zero eigenvalues are frozen parameters. Returns `nothing` when the
+dependency graph cannot be ordered.
 """
-function _group_solve_jobs_across_degrees(ctx, R, mset, jobs::Vector{_SolveJob},
-        ::Val{ROM}) where {ROM}
+function _group_solve_jobs(ctx, mset, jobs::Vector{_SolveJob},
+        dependencies::Vector{Vector{Int}}, ::Val{ROM};
+        across_degrees::Bool = false) where {ROM}
     representatives = _eigenvalue_representatives(ctx.lambda_diag)
     T = eltype(ctx.lambda_diag)
     NVAR = length(ctx.lambda_diag)
-    Key = StructuralFactorKey{NVAR, ROM}
-    key_ids = Dict{Key, Int}()
-    keys = Vector{Int}(undef, length(jobs))
-    key_priority_data = Tuple{Int, Int}[]
-    for (number, job) in enumerate(jobs)
-        resonance = _resonance_vector(ctx.resonance_set, job.index, Val(ROM))
-        key = _structural_factor_key(mset[job.index], resonance, representatives)
-        keys[number] = get!(key_ids, key) do
-            push!(key_priority_data, (sum(key.exponents), number))
-            length(key_priority_data)
+    structural_keys = [_structural_factor_key(mset[job.index],
+                           _resonance_vector(ctx.resonance_set, job.index, Val(ROM)),
+                           representatives) for job in jobs]
+    # Within degrees, each degree is scheduled on its own: its jobs are contiguous in the
+    # causal order, and their dependencies on lower degrees are already met.
+    blocks = across_degrees ? [1:length(jobs)] :
+             _degree_blocks([sum(mset[job.index]) for job in jobs])
+    runs = Vector{Vector{Int}}()
+    for block in blocks
+        key_ids = Dict{StructuralFactorKey{NVAR, ROM}, Int}()
+        keys = Vector{Int}(undef, length(block))
+        key_priority_data = Tuple{Int, Int}[]
+        for (local_number, number) in enumerate(block)
+            key = structural_keys[number]
+            keys[local_number] = get!(key_ids, key) do
+                push!(key_priority_data,
+                    (across_degrees ? sum(key.exponents) : 0, local_number))
+                length(key_priority_data)
+            end
         end
+        offset = first(block) - 1
+        local_dependencies = [[d - offset for d in dependencies[number] if d in block]
+                              for number in block]
+        block_runs = _schedule_key_runs(
+            keys, invperm(sortperm(key_priority_data)), local_dependencies)
+        block_runs === nothing && return nothing
+        append!(runs, [run .+ offset for run in block_runs])
     end
-    key_priority = invperm(sortperm(key_priority_data))
-    dependencies = _job_dependencies(ctx, R, mset, jobs, Val(ROM))
-    runs = _schedule_key_runs(keys, key_priority, dependencies)
-    runs === nothing && return nothing
     return [_SolveGroup(_superharmonic(mset[jobs[first(run)].index], ctx.lambda_diag),
                 jobs[run]) for run in runs]::Vector{_SolveGroup{T}}
+end
+
+"""
+	_degree_blocks(degrees) -> Vector{UnitRange{Int}}
+
+Split positions `1:length(degrees)` into maximal runs of equal degree.
+"""
+function _degree_blocks(degrees::Vector{Int})
+    blocks = UnitRange{Int}[]
+    start = 1
+    for k in 2:(length(degrees) + 1)
+        if k > length(degrees) || degrees[k] != degrees[start]
+            push!(blocks, start:(k - 1))
+            start = k
+        end
+    end
+    return blocks
 end
 
 """
@@ -427,16 +414,16 @@ end
 Create a causal direct or grouped plan.
 
 - `:off` returns the direct graded-lexicographic plan.
-- `:on` groups equal keys within each total degree. `:auto` does the same only when zero
-  or repeated eigenvalues make reuse possible and grouping reduces the number of numeric
-  factorisations.
-- `:across_degrees` groups equal keys across degrees by a dependency-respecting
-  topological sort ([`_group_solve_jobs_across_degrees`](@ref)).
+- `:on` groups equal keys within each total degree.
+- `:across_degrees` lets groups span degrees.
+- `:auto` returns, among the direct, within-degree and cross-degree plans, the one with the
+  fewest numeric factorisations, preferring the degree-ordered plans on ties. Without zero
+  or repeated eigenvalues no reuse is possible, and it returns the direct plan at once.
 
-Every grouped plan is checked against the jobs' data dependencies
-([`_job_dependencies`](@ref)) and replaced by the direct plan if it would read a
-coefficient before it is final. Within-degree grouping can do that when the reduced linear
-dynamics couple variables with distinct eigenvalues.
+Both groupings come from [`_group_solve_jobs`](@ref), which follows the jobs' data
+dependencies ([`_job_dependencies`](@ref)) and splits a group only where one of them
+requires it. Within a degree that happens when the reduced linear dynamics couple
+variables with distinct eigenvalues.
 """
 function _build_solve_plan(ctx, R, sym, mset, grouping::Symbol, ::Val{ROM}) where {ROM}
     grouping in (:off, :on, :auto, :across_degrees) || throw(ArgumentError(
@@ -447,23 +434,39 @@ function _build_solve_plan(ctx, R, sym, mset, grouping::Symbol, ::Val{ROM}) wher
         !_has_structural_factor_reuse(ctx.lambda_diag) &&
         return _DirectSolvePlan(jobs)
 
-    if grouping == :across_degrees
-        groups = _group_solve_jobs_across_degrees(ctx, R, mset, jobs, Val(ROM))
-        groups === nothing && return _DirectSolvePlan(jobs)
-        jobs_per_degree = Dict{Int, Int}()
-        for job in jobs
-            degree = sum(mset[job.index])
-            jobs_per_degree[degree] = get(jobs_per_degree, degree, 0) + 1
-        end
-        return _CrossDegreeSolvePlan(groups, length(jobs), jobs_per_degree)
+    dependencies = _job_dependencies(ctx, R, mset, jobs, Val(ROM))
+    within = grouping == :across_degrees ? nothing :
+             _group_solve_jobs(ctx, mset, jobs, dependencies, Val(ROM))
+    across = grouping == :on ? nothing :
+             _group_solve_jobs(ctx, mset, jobs, dependencies, Val(ROM);
+        across_degrees = true)
+    if grouping == :on
+        within === nothing && return _DirectSolvePlan(jobs)
+        return _GroupedSolvePlan(within, length(jobs))
+    elseif grouping == :across_degrees
+        across === nothing && return _DirectSolvePlan(jobs)
+        return _cross_degree_plan(across, jobs, mset)
     end
 
-    groups = _group_solve_jobs(ctx, mset, jobs, Val(ROM))
-    grouping == :auto && length(groups) == length(jobs) &&
-        return _DirectSolvePlan(jobs)
-    positions = _job_positions(jobs, length(mset))
-    order = [positions[job.index] for group in groups for job in group.jobs]
-    _respects_dependencies(order, _job_dependencies(ctx, R, mset, jobs, Val(ROM))) ||
-        return _DirectSolvePlan(jobs)
-    return _GroupedSolvePlan(groups, length(jobs))
+    # Each group costs one numeric factorisation and each direct job one.
+    n_within = within === nothing ? length(jobs) : length(within)
+    across !== nothing && length(across) < n_within &&
+        return _cross_degree_plan(across, jobs, mset)
+    n_within < length(jobs) && return _GroupedSolvePlan(within, length(jobs))
+    return _DirectSolvePlan(jobs)
+end
+
+"""
+	_cross_degree_plan(groups, jobs, mset) -> _CrossDegreeSolvePlan
+
+Wrap cross-degree `groups` with the number of jobs per total degree, which lets the plan
+report a degree complete when its last job runs.
+"""
+function _cross_degree_plan(groups, jobs::Vector{_SolveJob}, mset)
+    jobs_per_degree = Dict{Int, Int}()
+    for job in jobs
+        degree = sum(mset[job.index])
+        jobs_per_degree[degree] = get(jobs_per_degree, degree, 0) + 1
+    end
+    return _CrossDegreeSolvePlan(groups, length(jobs), jobs_per_degree)
 end

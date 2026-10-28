@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">22 modules · 396 documented entries · generated 27 October 2026</p>
+  <p class="lede">22 modules · 396 documented entries · generated 28 October 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -4005,12 +4005,14 @@ not been benchmarked on MORFE&#39;s bordered systems.</code></pre>
 <ul>
 <li><p><code>grouping::Symbol &#61; :auto</code> — exact reuse of a factorisation by monomials whose cohomological matrices are structurally identical:</p>
 <ul>
-<li><p><code>:auto</code> groups within each total degree only when repeated or zero eigenvalues make</p>
+<li><p><code>:auto</code> builds both groupings below when repeated or zero eigenvalues make reuse</p>
 </li>
 </ul>
 </li>
 </ul>
-<pre><code>reuse possible and grouping actually reduces the number of factorisations;</code></pre>
+<pre><code>possible, and runs whichever needs the fewest numeric factorisations, the ungrouped
+direct order included; ties keep the degree-by-degree order. Every schedule gives
+bit-identical coefficients;</code></pre>
 <ul>
 <li><p><code>:on</code> always builds and processes the exact structural groups within each degree;</p>
 </li>
@@ -4024,7 +4026,7 @@ then share one factorisation;</code></pre>
 <li><p><code>:off</code> solves directly in graded-lexicographic order without grouping.</p>
 </li>
 </ul>
-<p>Grouping is exact; it never clusters approximately equal eigenvalues. Each group uses   its first monomial&#39;s superharmonic consistently for every member. A grouped order that   would read a coefficient before it is final falls back to the direct order.</p>
+<p>Grouping is exact; it never clusters approximately equal eigenvalues. Each group uses   its first monomial&#39;s superharmonic consistently for every member. Both groupings follow   the data dependencies between monomials and split a group only where a monomial needs   another one solved in between, so no coefficient is read before it is final.</p>
 <ul>
 <li><p><code>residual_check::Symbol &#61; :off</code> — <code>:backward_error</code> verifies every bordered solve; <code>:off</code> skips this additional check.</p>
 </li>
@@ -4448,7 +4450,7 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_build_solve_plan" data-doc-name="_build_solve_plan" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L424" target="_blank" rel="noopener">_build_solve_plan</a>(ctx, R, sym, mset, grouping::Symbol, ::Val{ROM}) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L411" target="_blank" rel="noopener">_build_solve_plan</a>(ctx, R, sym, mset, grouping::Symbol, ::Val{ROM}) where ROM</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_build_solve_plan&#40;ctx, R, sym, mset, grouping, Val&#40;ROM&#41;&#41; -&gt; _AbstractSolvePlan</code></pre>
@@ -4456,12 +4458,14 @@ then share one factorisation;</code></pre>
 <ul>
 <li><p><code>:off</code> returns the direct graded-lexicographic plan.</p>
 </li>
-<li><p><code>:on</code> groups equal keys within each total degree. <code>:auto</code> does the same only when zero or repeated eigenvalues make reuse possible and grouping reduces the number of numeric factorisations.</p>
+<li><p><code>:on</code> groups equal keys within each total degree.</p>
 </li>
-<li><p><code>:across_degrees</code> groups equal keys across degrees by a dependency-respecting topological sort &#40;<a class="doc-ref" href="#ParametrisationSolver-_group_solve_jobs_across_degrees"><code>_group_solve_jobs_across_degrees</code></a>&#41;.</p>
+<li><p><code>:across_degrees</code> lets groups span degrees.</p>
+</li>
+<li><p><code>:auto</code> returns, among the direct, within-degree and cross-degree plans, the one with the fewest numeric factorisations, preferring the degree-ordered plans on ties. Without zero or repeated eigenvalues no reuse is possible, and it returns the direct plan at once.</p>
 </li>
 </ul>
-<p>Every grouped plan is checked against the jobs&#39; data dependencies &#40;<a class="doc-ref" href="#ParametrisationSolver-_job_dependencies"><code>_job_dependencies</code></a>&#41; and replaced by the direct plan if it would read a coefficient before it is final. Within-degree grouping can do that when the reduced linear dynamics couple variables with distinct eigenvalues.</p>
+<p>Both groupings come from <a class="doc-ref" href="#ParametrisationSolver-_group_solve_jobs"><code>_group_solve_jobs</code></a>, which follows the jobs&#39; data dependencies &#40;<a class="doc-ref" href="#ParametrisationSolver-_job_dependencies"><code>_job_dependencies</code></a>&#41; and splits a group only where one of them requires it. Within a degree that happens when the reduced linear dynamics couple variables with distinct eigenvalues.</p>
 </div>
   </div>
 </div>
@@ -4522,6 +4526,28 @@ then share one factorisation;</code></pre>
   <div class="doc-body">
 <div class="markdown"><pre><code>_compose_observers&#40;a, b&#41; -&gt; _AbstractSolveObserver</code></pre>
 <p>Elide no-op observers and otherwise return a composite that preserves notification order.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="ParametrisationSolver-_cross_degree_plan" data-doc-name="_cross_degree_plan" data-doc-module="ParametrisationSolver">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L459" target="_blank" rel="noopener">_cross_degree_plan</a>(groups, jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, mset)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_cross_degree_plan&#40;groups, jobs, mset&#41; -&gt; _CrossDegreeSolvePlan</code></pre>
+<p>Wrap cross-degree <code>groups</code> with the number of jobs per total degree, which lets the plan report a degree complete when its last job runs.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="ParametrisationSolver-_degree_blocks" data-doc-name="_degree_blocks" data-doc-module="ParametrisationSolver">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L394" target="_blank" rel="noopener">_degree_blocks</a>(degrees::Vector{Int64})</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_degree_blocks&#40;degrees&#41; -&gt; Vector&#123;UnitRange&#123;Int&#125;&#125;</code></pre>
+<p>Split positions <code>1:length&#40;degrees&#41;</code> into maximal runs of equal degree.</p>
 </div>
   </div>
 </div>
@@ -4687,23 +4713,14 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_group_solve_jobs" data-doc-name="_group_solve_jobs" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L198" target="_blank" rel="noopener">_group_solve_jobs</a>(ctx, mset, jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, ::Val{ROM}) where ROM</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L338" target="_blank" rel="noopener">_group_solve_jobs</a>(ctx, mset, jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, dependencies::Vector{Vector{Int64}}, ::Val{ROM}; across_degrees) where ROM</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_group_solve_jobs&#40;ctx, mset, jobs, Val&#40;ROM&#41;&#41; -&gt; Vector&#123;_SolveGroup&#125;</code></pre>
-<p>Partition causal jobs into degree-local groups with equal <a class="doc-ref" href="#ParametrisationSolver-StructuralFactorKey"><code>StructuralFactorKey</code></a>. Group order follows the first occurrence of each key, and job order is preserved within a group.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="ParametrisationSolver-_group_solve_jobs_across_degrees" data-doc-name="_group_solve_jobs_across_degrees" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L389" target="_blank" rel="noopener">_group_solve_jobs_across_degrees</a>(ctx, R, mset, jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, ::Val{ROM}) where ROM</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>_group_solve_jobs_across_degrees&#40;ctx, R, mset, jobs, Val&#40;ROM&#41;&#41;
+<div class="markdown"><pre><code>_group_solve_jobs&#40;ctx, mset, jobs, dependencies, Val&#40;ROM&#41;; across_degrees &#61; false&#41;
 	-&gt; Union&#123;Nothing, Vector&#123;_SolveGroup&#125;&#125;</code></pre>
-<p>Partition jobs into factor-reuse groups that may span total degrees. Keys are the exact <a class="doc-ref" href="#ParametrisationSolver-StructuralFactorKey"><code>StructuralFactorKey</code></a>s used within a degree; they are opened in order of their aggregated degree, then first occurrence, which runs every master key in one group when the only zero eigenvalues are frozen parameters. Returns <code>nothing</code> when the dependency graph cannot be ordered.</p>
+<p>Partition jobs into factor-reuse groups of equal <a class="doc-ref" href="#ParametrisationSolver-StructuralFactorKey"><code>StructuralFactorKey</code></a>, ordered so that every job runs after its <code>dependencies</code> &#40;<a class="doc-ref" href="#ParametrisationSolver-_job_dependencies"><code>_job_dependencies</code></a>&#41;. The topological sort <a class="doc-ref" href="#ParametrisationSolver-_schedule_key_runs"><code>_schedule_key_runs</code></a> keeps a group together wherever the dependencies allow and splits it only where one requires it.</p>
+<p>By default each total degree is scheduled on its own, with keys opened in order of first occurrence, so the groups complete each degree before the next. Where no dependency intervenes, this gives one group per key and degree.</p>
+<p>With <code>across_degrees &#61; true</code> a group may span degrees. Keys are then opened in order of their aggregated degree, then first occurrence, which runs every master key in one group when the only zero eigenvalues are frozen parameters. Returns <code>nothing</code> when the dependency graph cannot be ordered.</p>
 </div>
   </div>
 </div>
@@ -4740,7 +4757,7 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_job_dependencies" data-doc-name="_job_dependencies" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L267" target="_blank" rel="noopener">_job_dependencies</a>(ctx, R, mset::MultiindexSet{NVAR}, jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, ::Val{ROM}) where {NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L227" target="_blank" rel="noopener">_job_dependencies</a>(ctx, R, mset::MultiindexSet{NVAR}, jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, ::Val{ROM}) where {NVAR, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_job_dependencies&#40;ctx, R, mset, jobs, Val&#40;ROM&#41;&#41; -&gt; Vector&#123;Vector&#123;Int&#125;&#125;</code></pre>
@@ -4758,7 +4775,7 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_job_positions" data-doc-name="_job_positions" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L238" target="_blank" rel="noopener">_job_positions</a>(jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, L::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L198" target="_blank" rel="noopener">_job_positions</a>(jobs::Vector{MORFE.ParametrisationSolver._SolveJob}, L::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_job_positions&#40;jobs, L&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -5057,22 +5074,11 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_replace_options" data-doc-name="_replace_options" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Configuration.jl#L206" target="_blank" rel="noopener">_replace_options</a>(options::ParametrisationOptions; backend, grouping, residual_check, residual_tolerance, max_refinement_steps, validate_mset, checkpoint, show_progress, verbose, setup_io)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/Configuration.jl#L209" target="_blank" rel="noopener">_replace_options</a>(options::ParametrisationOptions; backend, grouping, residual_check, residual_tolerance, max_refinement_steps, validate_mset, checkpoint, show_progress, verbose, setup_io)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_replace_options&#40;options; overrides...&#41; -&gt; ParametrisationOptions</code></pre>
 <p>Return a validated copy of <code>options</code>, replacing only the supplied keyword fields. This is the internal equivalent of an immutable record update and preserves the concrete <code>setup_io</code> type when no replacement is requested.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="ParametrisationSolver-_respects_dependencies" data-doc-name="_respects_dependencies" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L319" target="_blank" rel="noopener">_respects_dependencies</a>(order::AbstractVector{Int64}, dependencies::Vector{Vector{Int64}})</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>_respects_dependencies&#40;order, dependencies&#41; -&gt; Bool</code></pre>
-<p>Return whether executing job numbers in <code>order</code> runs every job after all of its dependencies.</p>
 </div>
   </div>
 </div>
@@ -5102,12 +5108,12 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_schedule_key_runs" data-doc-name="_schedule_key_runs" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L339" target="_blank" rel="noopener">_schedule_key_runs</a>(keys::Vector{Int64}, key_priority::Vector{Int64}, dependencies::Vector{Vector{Int64}})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L279" target="_blank" rel="noopener">_schedule_key_runs</a>(keys::Vector{Int64}, key_priority::Vector{Int64}, dependencies::Vector{Vector{Int64}})</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_schedule_key_runs&#40;keys, key_priority, dependencies&#41; -&gt; Union&#123;Nothing, Vector&#123;Vector&#123;Int&#125;&#125;&#125;</code></pre>
 <p>Topologically sort job numbers <code>1:n</code> so that jobs sharing a key run consecutively whenever the dependencies allow, and return the maximal same-key runs in execution order.</p>
-<p><code>keys&#91;k&#93;</code> is the integer key of job <code>k</code> and <code>key_priority&#91;key&#93;</code> its rank &#40;lower opens first&#41;. The sort is Kahn&#39;s algorithm with one preference: while a ready job carries the current key, the smallest-numbered such job runs next; otherwise the ready key of lowest priority opens a new run. Returns <code>nothing</code> if the dependencies contain a cycle.</p>
+<p><code>keys&#91;k&#93;</code> is the integer key of job <code>k</code> and <code>key_priority&#91;key&#93;</code> its rank &#40;lower opens first&#41;. The sort is Kahn&#39;s algorithm with two preferences. While a ready job carries the current key, the smallest-numbered such job runs next. Otherwise a new run opens, on the key of lowest priority among those that no unfinished job of another key holds back, which therefore finish in one run; only if there is none, on the ready key of lowest priority. Returns <code>nothing</code> if the dependencies contain a cycle.</p>
 </div>
   </div>
 </div>
@@ -5149,7 +5155,7 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_structurally_nonzero" data-doc-name="_structurally_nonzero" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L255" target="_blank" rel="noopener">_structurally_nonzero</a>(reduced, resonance_set, i::Int64, index::Int64, ROM::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveSchedule.jl#L215" target="_blank" rel="noopener">_structurally_nonzero</a>(reduced, resonance_set, i::Int64, index::Int64, ROM::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_structurally_nonzero&#40;reduced, resonance_set, i, index, ROM&#41; -&gt; Bool</code></pre>

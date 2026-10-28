@@ -105,7 +105,7 @@ end
             :_group_solve_jobs,
             :_job_dependencies,
             :_schedule_key_runs,
-            :_group_solve_jobs_across_degrees,
+            :_cross_degree_plan,
             :_compose_observers,
             :_execute_solve_plan!,
             :_execute_solve_schedule!,

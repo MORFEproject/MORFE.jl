@@ -99,8 +99,10 @@ direct keywords of `parametrise`. Mathematical choices (`resonance` and
 	not been benchmarked on MORFE's bordered systems.
 - `grouping::Symbol = :auto` — exact reuse of a factorisation by monomials whose
   cohomological matrices are structurally identical:
-  - `:auto` groups within each total degree only when repeated or zero eigenvalues make
-	reuse possible and grouping actually reduces the number of factorisations;
+  - `:auto` builds both groupings below when repeated or zero eigenvalues make reuse
+	possible, and runs whichever needs the fewest numeric factorisations, the ungrouped
+	direct order included; ties keep the degree-by-degree order. Every schedule gives
+	bit-identical coefficients;
   - `:on` always builds and processes the exact structural groups within each degree;
   - `:across_degrees` also lets a group span degrees: it reorders the solve so that
 	monomials with equal keys run consecutively whenever their data dependencies allow.
@@ -108,8 +110,9 @@ direct keywords of `parametrise`. Mathematical choices (`resonance` and
 	then share one factorisation;
   - `:off` solves directly in graded-lexicographic order without grouping.
   Grouping is exact; it never clusters approximately equal eigenvalues. Each group uses
-  its first monomial's superharmonic consistently for every member. A grouped order that
-  would read a coefficient before it is final falls back to the direct order.
+  its first monomial's superharmonic consistently for every member. Both groupings follow
+  the data dependencies between monomials and split a group only where a monomial needs
+  another one solved in between, so no coefficient is read before it is final.
 - `residual_check::Symbol = :off` — `:backward_error` verifies every bordered solve;
   `:off` skips this additional check.
 - `residual_tolerance::Union{Nothing, Real} = nothing` — positive backward-error limit.

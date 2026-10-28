@@ -34,6 +34,12 @@ end
 function MORFE.checkpoint_fingerprint_data(::typeof(_cross_degree_load!))
     ("cross-degree-load", 1)
 end
+# The same terms for three external coordinates (θ₁, r₁, θ₂).
+const _CROSS_DEGREE_G3 = [0.3 -0.1 0.2; -0.2 0.4 0.1]
+function _cross_degree_stiffness3!(res, x, r)
+    res .+= r[1] .* (_CROSS_DEGREE_K1 * x) .+ r[3] .* x
+end
+_cross_degree_load3!(res, r) = (res .+= _CROSS_DEGREE_G3 * r)
 
 @testset "Cohomological sparse backends and durable checkpoints" begin
     relerr(a, b) = norm(a .- b) / max(norm(a), norm(b), eps())
@@ -84,7 +90,7 @@ end
     rounding_context = (
         lambda_diag = repeated, resonance_set = rounding_resonances)
     rounding_groups = PS._group_solve_jobs(rounding_context, rounding_mset,
-        [PS._SolveJob(1, 0), PS._SolveJob(2, 0)], Val(1))
+        [PS._SolveJob(1, 0), PS._SolveJob(2, 0)], [Int[], Int[]], Val(1))
     @test length(rounding_groups) == 1
     scheduled_first_superharmonic = CE._superharmonic(rounding_mset[1], repeated)
     @test rounding_groups[1].superharmonic == scheduled_first_superharmonic
@@ -487,15 +493,23 @@ end
               :across_degrees
         @test_throws ArgumentError ParametrisationOptions(grouping = :across_degree)
 
-        # Equal keys run back to back when the dependencies allow, split when they do not,
-        # and a cycle is reported instead of looping.
+        # Equal keys run back to back when the dependencies allow, a key that can finish in
+        # one run opens first, a key splits only when it must, and a cycle is reported
+        # instead of looping.
         @test PS._schedule_key_runs([1, 2, 1, 2, 1], [1, 2],
             [Int[], Int[], [1], [2, 3], [3]]) == [[1, 3, 5], [2, 4]]
         split_dependencies = [Int[], Int[], [2], Int[]]
         split_runs = PS._schedule_key_runs([1, 2, 1, 2], [1, 2], split_dependencies)
-        @test split_runs == [[1], [2, 4], [3]]
-        @test PS._respects_dependencies(reduce(vcat, split_runs), split_dependencies)
-        @test !PS._respects_dependencies([1, 3, 2, 4], split_dependencies)
+        @test split_runs == [[2, 4], [1, 3]]
+        @test PS._schedule_key_runs([1, 2, 1], [1, 2], [Int[], [1], [2]]) ==
+              [[1], [2], [3]]
+        # Whether executing job numbers in `order` runs every job after its dependencies.
+        function respects_dependencies(order, dependencies)
+            rank = invperm(order)
+            return all(rank[d] < rank[n] for n in order for d in dependencies[n])
+        end
+        @test respects_dependencies(reduce(vcat, split_runs), split_dependencies)
+        @test !respects_dependencies([1, 3, 2, 4], split_dependencies)
         @test PS._schedule_key_runs([1, 1], [1], [[2], [1]]) === nothing
 
         cubic = MultilinearMap(_checkpoint_test_cubic!, (3, 0))
@@ -516,12 +530,14 @@ end
         end
 
         # Solve in benchmark mode, which records whether each solve factorised.
-        function measured_solve(model, spectral, permutation, grouping, backend)
-            rset = MORFE.Resonance.build_resonance_set(model, mset, spectral, resonance)
+        function measured_solve(model, spectral, permutation, grouping, backend;
+                multiindices = mset)
+            rset = MORFE.Resonance.build_resonance_set(
+                model, multiindices, spectral, resonance)
             options = ParametrisationOptions(;
                 backend, grouping, show_progress = false, verbose = false)
             return mktempdir() do directory
-                W, R = solve_parametrisation(model, mset, spectral, rset;
+                W, R = solve_parametrisation(model, multiindices, spectral, rset;
                     conjugate_permutation = permutation,
                     benchmark_dir = directory, options)
                 rows = readlines(joinpath(directory, "benchmark_per_monomial.csv"))[2:end]
@@ -542,10 +558,12 @@ end
                 :off => length(primaries),
                 :on => length(unique((sum(α), α[1], α[2]) for α in primaries)),
                 :across_degrees => length(unique((α[1], α[2]) for α in primaries)))
+            # `:auto` takes whichever plan needs the fewest factorisations: here, across.
+            expected[:auto] = expected[:across_degrees]
             for (model, backend) in ((frozen_sparse, :klu), (frozen_sparse, :umfpack),
                 (frozen_dense, :auto))
                 direct = measured_solve(model, frozen_sd, permutation, :off, backend)
-                for grouping in (:off, :on, :across_degrees)
+                for grouping in (:off, :on, :across_degrees, :auto)
                     result = measured_solve(
                         model, frozen_sd, permutation, grouping, backend)
                     @test result.n_jobs == length(primaries)
@@ -572,12 +590,48 @@ end
         end
         _, coupled_sparse, coupled_sd = fixture(ExternalSystem(coupled_polynomial))
         coupled_direct = measured_solve(coupled_sparse, coupled_sd, nothing, :off, :klu)
-        for grouping in (:on, :across_degrees)
+        # No grouping saves a factorisation here, so `:auto` keeps the direct order.
+        for grouping in (:on, :across_degrees, :auto)
             result = measured_solve(coupled_sparse, coupled_sd, nothing, grouping, :klu)
             @test result.n_factorised == result.n_jobs
             @test result.W == coupled_direct.W
             @test result.R == coupled_direct.R
         end
+
+        # Two frozen parameters, the second driving `r₁` (external order θ₁, r₁, θ₂). Within
+        # a degree, e.g. (1,0,1,0,0) and (1,0,0,0,1) share a key, but the second reads
+        # (1,0,0,1,0) of another key that falls between them in graded order. Grouping
+        # within degrees must run that key first rather than drop the grouping: 65
+        # factorisations, as many as an order that ignores the dependencies would form.
+        drive = let ms = all_multiindices_up_to(3, 1; min_degree = 1)
+            A = ComplexF64[0 0 0; 0 -0.5 1; 0 0 0]
+            coefficients = zeros(ComplexF64, 3, length(ms))
+            for (j, α) in enumerate(ms.exponents)
+                column = findfirst(==(1), α)
+                column === nothing || (coefficients[:, j] = A[:, column])
+            end
+            ExternalSystem(MORFE.Polynomials.DensePolynomial(coefficients, ms))
+        end
+        driven_terms = (cubic, MultilinearMap(_cross_degree_stiffness3!, (1, 0), 1),
+            MultilinearMap(_cross_degree_load3!, (0, 0), 1))
+        driven_dense = NthOrderModel((B0, B1, B2), driven_terms, drive)
+        driven_sparse = NthOrderModel(map(sparse, (B0, B1, B2)), driven_terms, drive)
+        driven_sd = SpectralData(driven_dense,
+            spectrum(driven_dense; solver = DefaultEigensolver());
+            master = master_by_sorting(2))
+        driven_mset = all_multiindices_up_to(5, degree; min_degree = 1)
+        driven(grouping) = measured_solve(
+            driven_sparse, driven_sd, nothing, grouping, :klu;
+            multiindices = driven_mset)
+        driven_direct = driven(:off)
+        driven_results = Dict(g => driven(g) for g in (:on, :across_degrees, :auto))
+        for result in values(driven_results)
+            @test result.W == driven_direct.W
+            @test result.R == driven_direct.R
+        end
+        @test driven_results[:on].n_factorised == 65 < driven_direct.n_factorised
+        @test driven_results[:auto].n_factorised == min(
+            driven_results[:on].n_factorised, driven_results[:across_degrees].n_factorised)
 
         # A cross-degree checkpoint resumes from any subset of committed groups, even
         # though its chunks and degree markers are written out of degree order.
