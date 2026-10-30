@@ -223,7 +223,7 @@ end
         seed = 0x51a7
 
         result = only(invariance_error_convergence(
-            model, W_coupled, R_coupled;
+            model, W_coupled, R_coupled; spectral = _EC_spectral,
             n_samples,
             r_external = target,
             master_amplitude = amplitude,
@@ -238,11 +238,11 @@ end
         rng = MersenneTwister(seed)
         expected = zeros(n_samples)
         for sample in 1:n_samples
-            z = ComplexF64[
-                amplitude * complex(randn(rng), randn(rng)),
-                amplitude * complex(randn(rng), randn(rng)),
-                target...
-            ]
+            # the cloud is realified: the second master is the conjugate of the first,
+            # whose own draw is discarded
+            z1 = amplitude * complex(randn(rng), randn(rng))
+            randn(rng), randn(rng)
+            z = ComplexF64[z1, conj(z1), target...]
             invariance_error_residual!(
                 E, workspace, model, W_coupled, R_coupled, z;
                 r_external = target
@@ -257,12 +257,12 @@ end
         @test all(isfinite, result.state_errors)
 
         @test_throws DimensionMismatch invariance_error_convergence(
-            model, W_coupled, R_coupled; r_external = target[1:1])
+            model, W_coupled, R_coupled; spectral = _EC_spectral, r_external = target[1:1])
         @test_throws ArgumentError invariance_error_convergence(
-            model, W_coupled, R_coupled;
+            model, W_coupled, R_coupled; spectral = _EC_spectral,
             r_external = target, r_magnitudes = [0.1])
         @test_throws ArgumentError invariance_error_convergence(
-            model, W_coupled, R_coupled; master_amplitude = 0.5)
+            model, W_coupled, R_coupled; spectral = _EC_spectral, master_amplitude = 0.5)
 
         z_bad = ComplexF64[0, 0, 0, 0]
         @test_throws ArgumentError invariance_error_residual!(
@@ -273,13 +273,13 @@ end
     @testset "legacy convergence path is unchanged" begin
         model = _ec_make_model(A_coupled, _EC_F)
         legacy = invariance_error_convergence(
-            model, W_coupled, R_coupled;
+            model, W_coupled, R_coupled; spectral = _EC_spectral,
             n_samples = 20,
             r_magnitudes = [0.0, 1e-3],
             rng = MersenneTwister(0x91)
         )
         explicit_defaults = invariance_error_convergence(
-            model, W_coupled, R_coupled;
+            model, W_coupled, R_coupled; spectral = _EC_spectral,
             n_samples = 20,
             r_magnitudes = [0.0, 1e-3],
             r_external = nothing,

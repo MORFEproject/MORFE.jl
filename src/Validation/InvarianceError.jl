@@ -14,12 +14,23 @@ module InvarianceError
 
 using LinearAlgebra: mul!, dot, norm, lu, ldiv!
 using Random
+using SparseArrays: SparseMatrixCSC, sparse
+using StaticArrays: SVector
 using Statistics: median
 
+using ..Multiindices: find_in_set
 using ..Polynomials: DensePolynomial, evaluate
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics
 using ..FullOrderModel: NthOrderModel, evaluate_nonlinear_terms!
 using ..ExternalSystems: to_physical_external
+using ..SpectralDecomposition: SpectralData, left_modes, left_mode_blocks,
+                               external_conjugate_permutation,
+                               master_conjugate_permutation
+using ..InvarianceEquation: precompute_master_column_polynomials, evaluate_column!
+using ..MasterModeOrthogonality: precompute_orthogonality_operator_coefficients,
+                                 precompute_orthogonality_column_polynomials,
+                                 evaluate_orthogonality_row_and_lower_order_rhs!,
+                                 evaluate_orthogonality_column_row!
 
 export InvarianceErrorWorkspace, invariance_error_residual!,
        invariance_error_norms, invariance_error_convergence, plot_invariance_convergence
@@ -223,19 +234,76 @@ function invariance_error_residual!(
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Sample reduced coordinates (in-place)
+# Sample reduced coordinates on the realified Gaussian cloud (in-place)
 # ─────────────────────────────────────────────────────────────────────────────
 
-function _sample_z!(z::AbstractVector, ROM, N_EXT, r_magnitude, rng)
+"""
+	_conjugate_structure(model, R, master_permutation) -> Vector{Int}
+
+The conjugate partner of every reduced coordinate. The master block is the solve's own
+permutation when `master_permutation` is one, and the external block is the external
+system's involution when it has one. A block without either is paired by eigenvalue
+([`_conjugate_partners`](@ref)), within the block, so that a master at `+iω` never pairs
+with a forcing at `-iω`.
+"""
+function _conjugate_structure(model::NthOrderModel, R::ReducedDynamics, master_permutation)
+    ROM = Base.size(R)
+    indices = _unit_indices(R.poly.multiindex_set)
+    λ = [R.poly.coefficients[j, indices[j]] for j in eachindex(indices)]
+    master = master_permutation === nothing ? _conjugate_partners(λ[1:ROM]) :
+             collect(Int, master_permutation)
+    σ = external_conjugate_permutation(model.external_system)
+    external = σ === nothing ? _conjugate_partners(λ[(ROM + 1):end]) : σ
+    return vcat(master, ROM .+ external)
+end
+
+"""
+	_conjugate_partners(λ) -> Vector{Int}
+
+Pair coordinates by eigenvalue when no conjugate permutation is known: `j` and `k` are
+partners when `λ[k] = conj(λ[j])` to a relative `1e-8`. Each coordinate is paired at most
+once, so repeated pairs (the double modes of a symmetric structure) pair one to one. A
+coordinate with a real eigenvalue, or with no free partner, is its own.
+"""
+function _conjugate_partners(λ::AbstractVector)
+    partner = collect(eachindex(λ))
+    for j in eachindex(λ)
+        partner[j] == j || continue
+        tolerance = 1e-8 * max(1, abs(λ[j]))
+        abs(imag(λ[j])) <= tolerance && continue
+        k = findfirst(k -> k > j && partner[k] == k && abs(λ[k] - conj(λ[j])) <= tolerance,
+            eachindex(λ))
+        k === nothing || (partner[j] = k; partner[k] = j)
+    end
+    return partner
+end
+
+# Make the coordinates `range` of a sample real: the higher-index member of each conjugate
+# pair takes the conjugate of the other, and a self-conjugate coordinate its real part.
+function _realify!(z::AbstractVector, partner, range)
+    for j in range
+        k = partner[j]
+        if k == j
+            z[j] = real(z[j])
+        elseif j < k
+            z[k] = conj(z[j])
+        end
+    end
+    return z
+end
+
+function _sample_z!(z::AbstractVector, ROM, N_EXT, r_magnitude, rng, partner)
     fill!(z, zero(eltype(z)))
     for j in 1:ROM
         z[j] = complex(randn(rng), randn(rng))
     end
+    _realify!(z, partner, 1:ROM)
     if N_EXT > 0 && !iszero(r_magnitude)
         NVAR = length(z)
         for j in (ROM + 1):NVAR
             z[j] = complex(randn(rng), randn(rng))
         end
+        _realify!(z, partner, (ROM + 1):NVAR)
         ext_norm = norm(view(z, (ROM + 1):NVAR))
         if !iszero(ext_norm)
             z[(ROM + 1):NVAR] .*= r_magnitude / ext_norm
@@ -296,6 +364,122 @@ function _log_log_regression(radii, errors; min_points::Int = 5)
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Frequency-matched state error
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Index of the linear monomial of each variable in a multiindex set.
+function _unit_indices(mset)
+    NVAR = length(first(mset.exponents))
+    return [something(find_in_set(mset, ntuple(i -> Int(i == j), NVAR))) for j in 1:NVAR]
+end
+
+"""
+	_orbit_frequency(R, z_samples, partner, ROM) -> s̄
+
+The frequency of a common orbit of the realified cloud. Along a real orbit, a master
+coordinate evolves with the complex frequency `ż_j / z_j = R_j(z) / z_j`. At each sample
+these frequencies are averaged with the weights `|z_j|²`,
+
+	s_k = Σ_j |z_j|² R_j(z) / z_j / Σ_j |z_j|² = Σ_j conj(z_j) R_j(z) / Σ_j |z_j|²,
+
+over one master coordinate of each conjugate pair (the one of positive frequency) and every
+self-conjugate master coordinate: both members of a pair would cancel their frequencies,
+`+iω` and `-iω`, and give `s̄ ≈ 0`. `s̄` is the median of the `s_k`, its real and imaginary
+parts taken separately. External coordinates enter `R` but not the average.
+"""
+function _orbit_frequency(R::ReducedDynamics, z_samples::AbstractMatrix, partner, ROM)
+    indices = _unit_indices(R.poly.multiindex_set)
+    λ = [R.poly.coefficients[j, indices[j]] for j in 1:ROM]
+    representatives = [j
+                       for j in 1:ROM
+                       if partner[j] == j ||
+        (imag(λ[j]), -j) > (imag(λ[partner[j]]), -partner[j])]
+    n_samples = size(z_samples, 2)
+    re_s = Vector{Float64}(undef, n_samples)
+    im_s = Vector{Float64}(undef, n_samples)
+    for sample in 1:n_samples
+        z = view(z_samples, :, sample)
+        rz = evaluate(R.poly, z)
+        numerator = sum(conj(z[j]) * rz[j] for j in representatives)
+        denominator = sum(abs2(z[j]) for j in representatives)
+        s = iszero(denominator) ? zero(ComplexF64) : ComplexF64(numerator / denominator)
+        re_s[sample] = real(s)
+        im_s[sample] = imag(s)
+    end
+    return complex(median(re_s), median(im_s))
+end
+
+"""
+	_state_error_factorisation(model, W, R, spectral, s̄) -> factorisation
+
+Factorise the bordered matrix of Eq. (cohomological_final) at the frequency `s̄`, with every
+master mode resonant (the border of the graph style),
+
+	[ L(s̄)   C̃(s̄)  ] [δx]   [ε]
+	[ J(s̄)   C̃⊥(s̄) ] [δf] = [0] ,
+
+so that `δx` is the frequency-matched state error of a residual `ε`. The orthogonality rows
+`J` keep `δx` free of master-mode components: a residual along a master mode is absorbed by
+the reduced dynamics, through `δf`, as at a resonant monomial, and is not a state error. This
+is also what keeps the system regular when `s̄` lies on a master eigenvalue, where `L(s̄)`
+alone is singular.
+
+The right modes and eigenvalues are read from `W` and `R`, so validating in rescaled
+coordinates stays consistent; only the left modes come from `spectral`. Rescaling the right
+modes rescales `δf` alone, never `δx`.
+"""
+function _state_error_factorisation(model::NthOrderModel{ORD}, W::Parametrisation,
+        R::ReducedDynamics, spectral::SpectralData, s̄) where {ORD}
+    T = ComplexF64
+    linear_terms = model.linear_terms
+    FOM = model.n_fom
+    ROM = Base.size(R)
+    units = _unit_indices(W.poly.multiindex_set)
+    NVAR = length(units)
+    master, external = units[1:ROM], units[(ROM + 1):NVAR]
+    right_blocks = W.poly.coefficients[:, :, master]
+    Λ = T.(R.poly.coefficients[:, units])
+    J_coeffs = precompute_orthogonality_operator_coefficients(
+        linear_terms, left_modes(spectral), left_mode_blocks(spectral))
+    column_coeffs, _ = precompute_master_column_polynomials(
+        linear_terms, right_blocks[:, 1, :], Λ[1:ROM, 1:ROM])
+    corner_coeffs, _ = precompute_orthogonality_column_polynomials(
+        J_coeffs, right_blocks, W.poly.coefficients[:, 1, external], Λ)
+
+    s = T(s̄)
+    columns = Matrix{T}(undef, FOM, ROM)
+    rows = Matrix{T}(undef, ROM, FOM)
+    corner = Matrix{T}(undef, ROM, ROM)
+    no_couplings = [zeros(T, FOM) for _ in 1:ORD]
+    resonant = SVector{ROM, Bool}(ntuple(_ -> true, ROM))
+    for r in 1:ROM
+        evaluate_column!(view(columns, :, r), s, r, column_coeffs)
+        evaluate_orthogonality_row_and_lower_order_rhs!(
+            view(rows, r, :), s, no_couplings, J_coeffs[r])
+        evaluate_orthogonality_column_row!(
+            view(corner, r, :), s, r, corner_coeffs, resonant)
+    end
+
+    L = s^0 * linear_terms[1]
+    for k in 2:length(linear_terms)
+        L = L + s^(k - 1) * linear_terms[k]
+    end
+    bordered = L isa SparseMatrixCSC ?
+               [L sparse(columns); sparse(rows) sparse(corner)] : [L columns; rows corner]
+    return lu(bordered)
+end
+
+# ‖δx‖ for the residual `E`: the state block of the bordered solve, with zero orthogonality
+# rows. `rhs` and `solution` have length FOM + ROM.
+function _state_error(factorisation, E, rhs, solution)
+    FOM = length(E)
+    copyto!(view(rhs, 1:FOM), E)
+    fill!(view(rhs, (FOM + 1):length(rhs)), zero(eltype(rhs)))
+    ldiv!(solution, factorisation, rhs)
+    return norm(view(solution, 1:FOM))
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Public API: invariance_error_norms
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -307,11 +491,13 @@ end
 						   rng = Random.default_rng())
 	→ NamedTuple{(:max, :mean, :rms, :pointwise)}
 
-Evaluate the invariance-equation residual ‖E(z)‖₂ over a Gaussian point cloud
-in reduced coordinates.
+Evaluate the invariance-equation residual ‖E(z)‖₂ over a realified Gaussian point cloud
+in reduced coordinates: real points, on which the members of each conjugate pair are
+conjugate (paired by eigenvalue, see [`_conjugate_partners`](@ref)).
 
 `amplitude` is the standard deviation of each complex master-mode component
-(real and imaginary parts drawn i.i.d. from `N(0, amplitude²/2)`).
+(real and imaginary parts drawn i.i.d. from `N(0, amplitude²/2)`); its conjugate partner
+follows, and a self-conjugate component keeps the real part.
 External coordinates are fixed to zero unless `r_external` is provided.
 """
 function invariance_error_norms(
@@ -342,12 +528,14 @@ function invariance_error_norms(
         length(r_external) == N_EXT || throw(DimensionMismatch(
             "r_external has length $(length(r_external)); expected $N_EXT"))
     end
+    partner = _conjugate_structure(model, R, nothing)
 
     for s in 1:n_samples
         fill!(z, zero(Tc))
         for j in 1:ROM
             z[j] = complex(σ * randn(rng), σ * randn(rng))
         end
+        _realify!(z, partner, 1:ROM)
         if !isnothing(r_external)
             copyto!(view(z, (NVAR - N_EXT + 1):NVAR), r_external)
         end
@@ -370,6 +558,7 @@ end
 
 """
 	invariance_error_convergence(model, W, R;
+								 spectral,
 								 n_samples = 1000,
 								 r_magnitudes = [0.0],
 								 r_external = nothing,
@@ -379,13 +568,22 @@ end
 
 For each forcing magnitude `|r|` in `r_magnitudes`, draw `n_samples` points with
 master-mode coordinates from `N(0,1)` and external coordinates sampled uniformly
-on a sphere of radius `|r|`.  Each result NamedTuple contains:
+on a sphere of radius `|r|`. The cloud is realified: every point is real, the members of
+each conjugate pair being conjugate (the solve's permutation from `spectral` and the external
+system's involution, or pairs found by eigenvalue), and a self-conjugate coordinate keeping
+its real part. Each result NamedTuple contains:
 
 - `radii`            — `‖z_k‖` for each sample
 - `radii_master`     — `‖(z_k)_master‖` for each sample
 - `force_errors`     — `‖E(z_k)‖₂` (force residual)
-- `state_errors`     — `‖L(s̄)⁻¹ E(z_k)‖₂` (state error estimate)
-- `s_bar`            — median local superharmonic `s̄ = median(⟨z,R(z)⟩/⟨z,z⟩)`
+- `state_errors`     — `‖δx_k‖₂`, the frequency-matched state error: the state block of
+					   the bordered cohomological system at `s̄`, with every master mode
+					   resonant, for the residual `E(z_k)`; a residual along a master mode
+					   is absorbed by the reduced dynamics and is no state error
+- `s_bar`            — the frequency of a common orbit: the median over the samples of the
+					   complex frequencies `ż_j / z_j` of the master coordinates, averaged with
+					   weights `|z_j|²` over one member of each conjugate pair, so that
+					   conjugate frequencies never cancel
 - `max_order`        — total degree of the highest monomial in W
 - `r_magnitude`      — the `|r|` value for this level
 - `convergence_rate` — OLS log-log slope of `force_errors` vs `radii_master`
@@ -398,11 +596,15 @@ To validate a physical parameter point, pass its exact reduced external coordina
 `master_amplitude` scales only the randomly sampled master coordinates.  The manifold,
 reduced dynamics, and full-order model are all evaluated at that same external point.
 `r_magnitudes` must remain `[0.0]` in fixed-target mode.
+
+`spectral` is the `SpectralData` the parametrisation was solved with; the state error reads
+its left master modes, which define the orthogonality rows.
 """
 function invariance_error_convergence(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics;
+        spectral::SpectralData,
         n_samples::Int = 1000,
         r_magnitudes::AbstractVector{<:Real} = [0.0],
         r_external = nothing,
@@ -416,12 +618,12 @@ function invariance_error_convergence(
             "r_magnitudes must be [0.0] when r_external fixes the target point"))
         master_amplitude > 0 || throw(ArgumentError("master_amplitude must be positive"))
         return [_convergence_fixed_external(
-            model, W, R, n_samples, Float64(master_amplitude), r_external, rng)]
+            model, W, R, spectral, n_samples, Float64(master_amplitude), r_external, rng)]
     end
     master_amplitude == 1 || throw(ArgumentError(
         "master_amplitude is only meaningful with a fixed r_external"))
     return map(r_magnitudes) do r_mag
-        _convergence_one_level(model, W, R, n_samples, Float64(r_mag), rng)
+        _convergence_one_level(model, W, R, spectral, n_samples, Float64(r_mag), rng)
     end
 end
 
@@ -429,6 +631,7 @@ function _convergence_fixed_external(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics,
+        spectral::SpectralData,
         n_samples::Int,
         master_amplitude::Float64,
         r_external,
@@ -445,9 +648,9 @@ function _convergence_fixed_external(
     E = zeros(Tc, FOM)
     buf_nl = zeros(Tc, FOM)
     buf_fom = zeros(Tc, FOM)
-    delta_x = zeros(Tc, FOM)
     pw_buf = zeros(Tc, NVAR, max_exp + 1)
 
+    partner = _conjugate_structure(model, R, master_conjugate_permutation(spectral))
     z_samples = Matrix{Tc}(undef, NVAR, n_samples)
     for sample in 1:n_samples
         z = view(z_samples, :, sample)
@@ -455,30 +658,14 @@ function _convergence_fixed_external(
         for j in 1:ROM
             z[j] = master_amplitude * complex(randn(rng), randn(rng))
         end
+        _realify!(z, partner, 1:ROM)
         copyto!(view(z, (ROM + 1):NVAR), external)
     end
 
-    # Frozen external coordinates do not contribute to the local modal
-    # superharmonic used for the dynamic-stiffness error estimate.
-    re_s = Vector{Float64}(undef, n_samples)
-    im_s = Vector{Float64}(undef, n_samples)
-    for sample in 1:n_samples
-        z = view(z_samples, :, sample)
-        rz = evaluate(R.poly, z)
-        z_master = view(z, 1:ROM)
-        rz_master = view(rz, 1:ROM)
-        dz2 = real(dot(z_master, z_master))
-        s = iszero(dz2) ? zero(Tc) : Tc(dot(z_master, rz_master) / dz2)
-        re_s[sample] = real(s)
-        im_s[sample] = imag(s)
-    end
-    s_bar = complex(median(re_s), median(im_s))
-
-    L_bar = Tc(s_bar^0) * model.linear_terms[1]
-    for k in 2:length(model.linear_terms)
-        L_bar = L_bar + Tc(s_bar^(k - 1)) * model.linear_terms[k]
-    end
-    lu_Lbar = lu(L_bar)
+    s_bar = _orbit_frequency(R, z_samples, partner, ROM)
+    factorisation = _state_error_factorisation(model, W, R, spectral, s_bar)
+    rhs = zeros(Tc, FOM + ROM)
+    solution = similar(rhs)
 
     radii = Vector{Float64}(undef, n_samples)
     radii_master = Vector{Float64}(undef, n_samples)
@@ -491,8 +678,7 @@ function _convergence_fixed_external(
         _invariance_error_at!(
             E, buf_nl, buf_fom, pw_buf, model, max_deg, W, R, z, external)
         force_errors[sample] = norm(E)
-        ldiv!(delta_x, lu_Lbar, E)
-        state_errors[sample] = norm(delta_x)
+        state_errors[sample] = _state_error(factorisation, E, rhs, solution)
     end
 
     convergence_rate, _ = _log_log_regression(radii_master, force_errors)
@@ -514,6 +700,7 @@ function _convergence_one_level(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics,
+        spectral::SpectralData,
         n_samples::Int,
         r_mag::Float64,
         rng::AbstractRNG
@@ -529,35 +716,20 @@ function _convergence_one_level(
     E = zeros(Tc, FOM)
     buf_nl = zeros(Tc, FOM)
     buf_fom = zeros(Tc, FOM)
-    δx = zeros(Tc, FOM)
     pw_buf = zeros(Tc, NVAR, max_exp + 1)
 
     # Store samples as a (NVAR × n_samples) matrix for contiguous memory layout
+    partner = _conjugate_structure(model, R, master_conjugate_permutation(spectral))
     z_samples = Matrix{Tc}(undef, NVAR, n_samples)
     for s in 1:n_samples
-        _sample_z!(view(z_samples, :, s), ROM, N_EXT, r_mag, rng)
+        _sample_z!(view(z_samples, :, s), ROM, N_EXT, r_mag, rng, partner)
     end
 
-    # Phase 1: evaluate R(z_k) → s̄ via median Rayleigh quotient
-    # Fill pre-allocated Float64 buffers to avoid real.(s_vals) / imag.(s_vals) allocs
-    re_s = Vector{Float64}(undef, n_samples)
-    im_s = Vector{Float64}(undef, n_samples)
-    for s in 1:n_samples
-        z_k = view(z_samples, :, s)
-        rz_k = evaluate(R.poly, z_k)
-        dz2 = real(dot(z_k, z_k))
-        sk = iszero(dz2) ? zero(Tc) : Tc(dot(z_k, rz_k) / dz2)
-        re_s[s] = real(sk)
-        im_s[s] = imag(sk)
-    end
-    s_bar = complex(median(re_s), median(im_s))
-
-    # Assemble and factor dynamic stiffness L(s̄) = ∑_k s̄^{k-1} Bₖ
-    L_bar = Tc(s_bar^0) * model.linear_terms[1]
-    for k in 2:length(model.linear_terms)
-        L_bar = L_bar + Tc(s_bar^(k - 1)) * model.linear_terms[k]
-    end
-    lu_Lbar = lu(L_bar)
+    # Phase 1: the frequency of a common orbit, and the bordered operator at it
+    s_bar = _orbit_frequency(R, z_samples, partner, ROM)
+    factorisation = _state_error_factorisation(model, W, R, spectral, s_bar)
+    rhs = zeros(Tc, FOM + ROM)
+    solution = similar(rhs)
 
     # Phase 2: force residual and state error for each sample
     radii = Vector{Float64}(undef, n_samples)
@@ -571,8 +743,7 @@ function _convergence_one_level(
         radii_master[s] = norm(view(z_k, 1:ROM))
         _invariance_error_at!(E, buf_nl, buf_fom, pw_buf, model, max_deg, W, R, z_k)
         force_errors[s] = norm(E)
-        ldiv!(δx, lu_Lbar, E)
-        state_errors[s] = norm(δx)
+        state_errors[s] = _state_error(factorisation, E, rhs, solution)
     end
 
     convergence_rate, _ = _log_log_regression(radii_master, force_errors)

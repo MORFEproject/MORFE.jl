@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">22 modules · 396 documented entries · generated 28 October 2026</p>
+  <p class="lede">22 modules · 400 documented entries · generated 29 October 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -1648,7 +1648,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-type" id="InvarianceError-InvarianceErrorWorkspace" data-doc-name="InvarianceErrorWorkspace" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L145" target="_blank" rel="noopener">InvarianceErrorWorkspace</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L156" target="_blank" rel="noopener">InvarianceErrorWorkspace</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>InvarianceErrorWorkspace&#40;model, W&#91;, T &#61; ComplexF64&#93;&#41;</code></pre>
@@ -1656,10 +1656,32 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="InvarianceError-_conjugate_partners" data-doc-name="_conjugate_partners" data-doc-module="InvarianceError">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L260" target="_blank" rel="noopener">_conjugate_partners</a>(λ::AbstractVector)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_conjugate_partners&#40;λ&#41; -&gt; Vector&#123;Int&#125;</code></pre>
+<p>Pair coordinates by eigenvalue when no conjugate permutation is known: <code>j</code> and <code>k</code> are partners when <code>λ&#91;k&#93; &#61; conj&#40;λ&#91;j&#93;&#41;</code> to a relative <code>1e-8</code>. Each coordinate is paired at most once, so repeated pairs &#40;the double modes of a symmetric structure&#41; pair one to one. A coordinate with a real eigenvalue, or with no free partner, is its own.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="InvarianceError-_conjugate_structure" data-doc-name="_conjugate_structure" data-doc-module="InvarianceError">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L240" target="_blank" rel="noopener">_conjugate_structure</a>(model::NthOrderModel, R::ReducedDynamics, master_permutation)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_conjugate_structure&#40;model, R, master_permutation&#41; -&gt; Vector&#123;Int&#125;</code></pre>
+<p>The conjugate partner of every reduced coordinate. The master block is the solve&#39;s own permutation when <code>master_permutation</code> is one, and the external block is the external system&#39;s involution when it has one. A block without either is paired by eigenvalue &#40;<a class="doc-ref" href="#InvarianceError-_conjugate_partners"><code>_conjugate_partners</code></a>&#41;, within the block, so that a master at <code>&#43;iω</code> never pairs with a forcing at <code>-iω</code>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="InvarianceError-_jvp_last_block!" data-doc-name="_jvp_last_block!" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L31" target="_blank" rel="noopener">_jvp_last_block!</a>(result::AbstractVector, W_poly::DensePolynomial{T, NVAR, N, A} where {N, A&lt;:AbstractArray{T, N}}, z::AbstractVector, v::AbstractVector, pw_buf::AbstractMatrix) where {T, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L42" target="_blank" rel="noopener">_jvp_last_block!</a>(result::AbstractVector, W_poly::DensePolynomial{T, NVAR, N, A} where {N, A&lt;:AbstractArray{T, N}}, z::AbstractVector, v::AbstractVector, pw_buf::AbstractMatrix) where {T, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_jvp_last_block&#33;&#40;result, W_poly, z, v, pw_buf&#41;</code></pre>
@@ -1670,7 +1692,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-function" id="InvarianceError-_log_log_regression" data-doc-name="_log_log_regression" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L251" target="_blank" rel="noopener">_log_log_regression</a>(radii, errors; min_points)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L319" target="_blank" rel="noopener">_log_log_regression</a>(radii, errors; min_points)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_log_log_regression&#40;radii, errors; min_points&#61;5&#41; → &#40;slope, intercept&#41;</code></pre>
@@ -1679,20 +1701,49 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 </div>
   </div>
 </div>
+<div class="doc doc-function" id="InvarianceError-_orbit_frequency" data-doc-name="_orbit_frequency" data-doc-module="InvarianceError">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L376" target="_blank" rel="noopener">_orbit_frequency</a>(R::ReducedDynamics, z_samples::AbstractMatrix, partner, ROM)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_orbit_frequency&#40;R, z_samples, partner, ROM&#41; -&gt; s̄</code></pre>
+<p>The frequency of a common orbit of the realified cloud. Along a real orbit, a master coordinate evolves with the complex frequency <code>ż_j / z_j &#61; R_j&#40;z&#41; / z_j</code>. At each sample these frequencies are averaged with the weights <code>|z_j|²</code>,</p>
+<pre><code>s_k &#61; Σ_j |z_j|² R_j&#40;z&#41; / z_j / Σ_j |z_j|² &#61; Σ_j conj&#40;z_j&#41; R_j&#40;z&#41; / Σ_j |z_j|²,</code></pre>
+<p>over one master coordinate of each conjugate pair &#40;the one of positive frequency&#41; and every self-conjugate master coordinate: both members of a pair would cancel their frequencies, <code>&#43;iω</code> and <code>-iω</code>, and give <code>s̄ ≈ 0</code>. <code>s̄</code> is the median of the <code>s_k</code>, its real and imaginary parts taken separately. External coordinates enter <code>R</code> but not the average.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="InvarianceError-_state_error_factorisation" data-doc-name="_state_error_factorisation" data-doc-module="InvarianceError">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L412" target="_blank" rel="noopener">_state_error_factorisation</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {ORDP1, N_NL, N_EXT, T}, W::Parametrisation, R::ReducedDynamics, spectral::SpectralData, s̄) where ORD</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_state_error_factorisation&#40;model, W, R, spectral, s̄&#41; -&gt; factorisation</code></pre>
+<p>Factorise the bordered matrix of Eq. &#40;cohomological_final&#41; at the frequency <code>s̄</code>, with every master mode resonant &#40;the border of the graph style&#41;,</p>
+<pre><code>&#91; L&#40;s̄&#41;   C̃&#40;s̄&#41;  &#93; &#91;δx&#93;   &#91;ε&#93;
+&#91; J&#40;s̄&#41;   C̃⊥&#40;s̄&#41; &#93; &#91;δf&#93; &#61; &#91;0&#93; ,</code></pre>
+<p>so that <code>δx</code> is the frequency-matched state error of a residual <code>ε</code>. The orthogonality rows <code>J</code> keep <code>δx</code> free of master-mode components: a residual along a master mode is absorbed by the reduced dynamics, through <code>δf</code>, as at a resonant monomial, and is not a state error. This is also what keeps the system regular when <code>s̄</code> lies on a master eigenvalue, where <code>L&#40;s̄&#41;</code> alone is singular.</p>
+<p>The right modes and eigenvalues are read from <code>W</code> and <code>R</code>, so validating in rescaled coordinates stays consistent; only the left modes come from <code>spectral</code>. Rescaling the right modes rescales <code>δf</code> alone, never <code>δx</code>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="InvarianceError-invariance_error_convergence" data-doc-name="invariance_error_convergence" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L371" target="_blank" rel="noopener">invariance_error_convergence</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, r_magnitudes, r_external, master_amplitude, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L559" target="_blank" rel="noopener">invariance_error_convergence</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; spectral, n_samples, r_magnitudes, r_external, master_amplitude, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>invariance_error_convergence&#40;model, W, R;
+							 spectral,
 							 n_samples &#61; 1000,
 							 r_magnitudes &#61; &#91;0.0&#93;,
 							 r_external &#61; nothing,
 							 master_amplitude &#61; 1.0,
 							 rng &#61; Random.default_rng&#40;&#41;&#41;
 → Vector of NamedTuples, one per entry in &#96;r_magnitudes&#96;</code></pre>
-<p>For each forcing magnitude <code>|r|</code> in <code>r_magnitudes</code>, draw <code>n_samples</code> points with master-mode coordinates from <code>N&#40;0,1&#41;</code> and external coordinates sampled uniformly on a sphere of radius <code>|r|</code>.  Each result NamedTuple contains:</p>
+<p>For each forcing magnitude <code>|r|</code> in <code>r_magnitudes</code>, draw <code>n_samples</code> points with master-mode coordinates from <code>N&#40;0,1&#41;</code> and external coordinates sampled uniformly on a sphere of radius <code>|r|</code>. The cloud is realified: every point is real, the members of each conjugate pair being conjugate &#40;the solve&#39;s permutation from <code>spectral</code> and the external system&#39;s involution, or pairs found by eigenvalue&#41;, and a self-conjugate coordinate keeping its real part. Each result NamedTuple contains:</p>
 <ul>
 <li><p><code>radii</code>            — <code>‖z_k‖</code> for each sample</p>
 </li>
@@ -1700,10 +1751,20 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 </li>
 <li><p><code>force_errors</code>     — <code>‖E&#40;z_k&#41;‖₂</code> &#40;force residual&#41;</p>
 </li>
-<li><p><code>state_errors</code>     — <code>‖L&#40;s̄&#41;⁻¹ E&#40;z_k&#41;‖₂</code> &#40;state error estimate&#41;</p>
+<li><p><code>state_errors</code>     — <code>‖δx_k‖₂</code>, the frequency-matched state error: the state block of</p>
 </li>
-<li><p><code>s_bar</code>            — median local superharmonic <code>s̄ &#61; median&#40;⟨z,R&#40;z&#41;⟩/⟨z,z⟩&#41;</code></p>
+</ul>
+<pre><code>				   the bordered cohomological system at &#96;s̄&#96;, with every master mode
+				   resonant, for the residual &#96;E&#40;z_k&#41;&#96;; a residual along a master mode
+				   is absorbed by the reduced dynamics and is no state error</code></pre>
+<ul>
+<li><p><code>s_bar</code>            — the frequency of a common orbit: the median over the samples of the</p>
 </li>
+</ul>
+<pre><code>				   complex frequencies &#96;ż_j / z_j&#96; of the master coordinates, averaged with
+				   weights &#96;|z_j|²&#96; over one member of each conjugate pair, so that
+				   conjugate frequencies never cancel</code></pre>
+<ul>
 <li><p><code>max_order</code>        — total degree of the highest monomial in W</p>
 </li>
 <li><p><code>r_magnitude</code>      — the <code>|r|</code> value for this level</p>
@@ -1714,13 +1775,14 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <pre><code>				   &#40;saturated points auto-trimmed&#41;</code></pre>
 <p>Use <code><a class="doc-ref" href="#InvarianceError-plot_invariance_convergence">plot_invariance_convergence</a></code> to visualise the result.</p>
 <p>To validate a physical parameter point, pass its exact reduced external coordinate as <code>r_external</code>.  In this mode the external tail is fixed for the entire point cloud and <code>master_amplitude</code> scales only the randomly sampled master coordinates.  The manifold, reduced dynamics, and full-order model are all evaluated at that same external point. <code>r_magnitudes</code> must remain <code>&#91;0.0&#93;</code> in fixed-target mode.</p>
+<p><code>spectral</code> is the <code><a class="doc-ref" href="#SpectralDecomposition-SpectralData">SpectralData</a></code> the parametrisation was solved with; the state error reads its left master modes, which define the orthogonality rows.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="InvarianceError-invariance_error_norms" data-doc-name="invariance_error_norms" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L302" target="_blank" rel="noopener">invariance_error_norms</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, amplitude, r_external, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L486" target="_blank" rel="noopener">invariance_error_norms</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, amplitude, r_external, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>invariance_error_norms&#40;model, W, R;
@@ -1729,15 +1791,15 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 					   r_external &#61; nothing,
 					   rng &#61; Random.default_rng&#40;&#41;&#41;
 → NamedTuple&#123;&#40;:max, :mean, :rms, :pointwise&#41;&#125;</code></pre>
-<p>Evaluate the invariance-equation residual ‖E&#40;z&#41;‖₂ over a Gaussian point cloud in reduced coordinates.</p>
-<p><code>amplitude</code> is the standard deviation of each complex master-mode component &#40;real and imaginary parts drawn i.i.d. from <code>N&#40;0, amplitude²/2&#41;</code>&#41;. External coordinates are fixed to zero unless <code>r_external</code> is provided.</p>
+<p>Evaluate the invariance-equation residual ‖E&#40;z&#41;‖₂ over a realified Gaussian point cloud in reduced coordinates: real points, on which the members of each conjugate pair are conjugate &#40;paired by eigenvalue, see <a class="doc-ref" href="#InvarianceError-_conjugate_partners"><code>_conjugate_partners</code></a>&#41;.</p>
+<p><code>amplitude</code> is the standard deviation of each complex master-mode component &#40;real and imaginary parts drawn i.i.d. from <code>N&#40;0, amplitude²/2&#41;</code>&#41;; its conjugate partner follows, and a self-conjugate component keeps the real part. External coordinates are fixed to zero unless <code>r_external</code> is provided.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="InvarianceError-invariance_error_residual!" data-doc-name="invariance_error_residual!" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L176" target="_blank" rel="noopener">invariance_error_residual!</a>(E::AbstractVector{T}, workspace::InvarianceErrorWorkspace{T, VT, MT} where {VT&lt;:AbstractVector{T}, MT&lt;:AbstractMatrix{T}}, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics, z::AbstractVector; r_external) where {T, ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L187" target="_blank" rel="noopener">invariance_error_residual!</a>(E::AbstractVector{T}, workspace::InvarianceErrorWorkspace{T, VT, MT} where {VT&lt;:AbstractVector{T}, MT&lt;:AbstractMatrix{T}}, model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics, z::AbstractVector; r_external) where {T, ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>invariance_error_residual&#33;&#40;E, workspace, model, W, R, z;
@@ -1750,7 +1812,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-function" id="InvarianceError-plot_invariance_convergence" data-doc-name="plot_invariance_convergence" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L596" target="_blank" rel="noopener">plot_invariance_convergence</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L767" target="_blank" rel="noopener">plot_invariance_convergence</a>(args...; kwargs...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>plot_invariance_convergence&#40;results; kwargs...&#41;</code></pre>

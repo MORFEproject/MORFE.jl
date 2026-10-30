@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """Build the assets of the "Writing a finite element nonlinearity" tutorial.
 
-Nothing is computed here. The costs are read from two committed copies of CSVs that
+Nothing is measured here. The costs are read from two committed copies of CSVs that
 MORFEExamples' `writing_a_finite_element_nonlinearity` example writes:
 
-- `cost.v1.csv` is `results/data/rhs_cost.csv`, written by the notebook: the tutorial's own
-  first-Piola kernel, as a closure and through the element-level interface;
-- `benchmark.v1.csv` holds the costs of MORFEFerrite's production SVK kernel behind the same
-  two routes, measured by an earlier version of `benchmark.jl` at the tutorial's orders.
+- `cost.v2.csv` is `results/data/rhs_cost.csv`, written by the notebook: the tutorial's own
+  first-Piola kernel, as a closure and through the element-level interface with flux
+  summation;
+- `benchmark.v2.csv` is the output of `benchmark.jl` for MORFEFerrite's production SVK kernel
+  behind the same two routes, one row per assembled monomial, on the generated mesh with the
+  tutorial's 4977 dofs:
+
+      MORFE_BENCH_MESHES=small MORFE_BENCH_ROMS=2 MORFE_BENCH_ORDERS="2=>9" \
+      MORFE_BENCH_OUT=benchmark.v2.csv julia benchmark.jl
+
+  The costs up to each order are the sums of those rows; the solve is graded, so one run to
+  order 9 contains every lower order.
 
 To refresh, rerun the example, copy both CSVs here under these names and run, from the
 MORFE repository root:
@@ -31,16 +39,25 @@ def read_csv(path: Path):
     return [dict(zip(header, r)) for r in body]
 
 
+def up_to(rows, route, order):
+    """The benchmark rows of one route whose monomials have degree at most `order`."""
+    return [r for r in rows if r["route"] == route and int(r["degree"]) <= order]
+
+
 def load():
     tutorial = [
         dict(order=int(r["order"]), passes=(int(r["passes_closure"]), int(r["passes_element"])),
              time=(float(r["rhs_closure_s"]), float(r["rhs_element_s"])))
-        for r in read_csv(HERE / "cost.v1.csv")
+        for r in read_csv(HERE / "cost.v2.csv")
     ]
+    bench = read_csv(HERE / "benchmark.v2.csv")
     production = [
-        dict(order=int(r["order"]), passes=(int(r["passes_closure"]), int(r["passes_element"])),
-             time=(float(r["rhs_closure_s"]), float(r["rhs_element_s"])))
-        for r in read_csv(HERE / "benchmark.v1.csv")
+        dict(order=p,
+             passes=tuple(sum(int(r["passes"]) for r in up_to(bench, route, p))
+                          for route in ("closure", "single_pass")),
+             time=tuple(sum(float(r["rhs_time_s"]) for r in up_to(bench, route, p))
+                        for route in ("closure", "single_pass")))
+        for p in (r["order"] for r in tutorial)
     ]
     # Both runs count the same traversals: they depend on the multiindex set, not the kernel.
     assert [r["passes"] for r in tutorial] == [r["passes"] for r in production]
@@ -158,7 +175,7 @@ COST_HTML = r'''<!doctype html>
 <div id="stage">__SVG__</div>
 <div id="note">The traversals do not depend on the kernel. Hover a point for its value.</div></div>
 <script>
-const notes={tutorial:'The notebook’s first-Piola kernel. The traversals do not depend on the kernel. Hover a point for its value.',production:'MORFEFerrite’s built-in SVK kernel, timed by benchmark.jl. Its integrand dominates, so the single pass gains less.'};
+const notes={tutorial:'The notebook’s first-Piola kernel. The traversals do not depend on the kernel. Hover a point for its value.',production:'MORFEFerrite’s built-in SVK kernel, timed by benchmark.jl. It forms one stress per distinct coefficient rather than one per factorisation, so its single pass gains even more.'};
 function show(k){for(const id of['tutorial','production']){document.getElementById(id).classList.toggle('on',id===k);document.getElementById('time-'+id).style.display=id===k?'inline':'none'}document.getElementById('note').textContent=notes[k]}
 document.getElementById('tutorial').onclick=()=>show('tutorial');document.getElementById('production').onclick=()=>show('production');show('tutorial');
 </script></body></html>'''

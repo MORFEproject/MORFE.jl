@@ -1,0 +1,6 @@
+# notebook run of 2026-10-29, Julia 1.12.6, Apple M2 Pro, 1 thread(s), MORFE 76feeb5, MORFEFerrite befe718, fastest of 3 runs
+order,passes_closure,passes_element,rhs_closure_s,rhs_element_s
+3,7,4,0.025518708,0.014318124
+5,45,10,0.16807133200000002,0.062287127
+7,169,18,0.646563124,0.18863525
+9,486,28,1.893890164,0.47310066700000003

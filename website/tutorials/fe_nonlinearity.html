@@ -291,15 +291,17 @@ document.addEventListener('DOMContentLoaded', function () {
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_element_loop"><code>fem_element_loop</code></a> tells MORFE that both terms run on the same cells, so they share one pass; without it, each term gets its own;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_n_qp"><code>fem_n_qp</code></a>, <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_ndofs_per_cell"><code>fem_ndofs_per_cell</code></a> and <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_getdetJdV"><code>fem_getdetJdV</code></a> give the quadrature points, the cell size and the integration weights;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> computes the gradient of one coefficient at every quadrature point of a cell;</li>
-          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> adds one factorisation at one quadrature point to the cell vector, where <code class="nolink">multiplier</code> counts the orderings of the factorisation;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-flux_qp"><code>flux_qp</code></a> returns the stress of one factorisation at one quadrature point, and <a class="doc-link" href="../documentation.html#MultilinearMaps-contract_qp!"><code>contract_qp!</code></a> tests a stress against the shape-function gradients and adds it to the cell vector; <a class="doc-link" href="../documentation.html#MultilinearMaps-fem_flux_zero"><code>fem_flux_zero</code></a> returns the zero stress, which tells MORFE that it may sum the stresses of several factorisations before testing them;</li>
+          <li><a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> adds one factorisation at one quadrature point to the cell vector, <code class="nolink">multiplier</code> times its stress, where <code class="nolink">multiplier</code> counts the orderings of the factorisation; MORFE uses it when it evaluates a term on its own, outside the single pass;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> adds the cell vector to the global one;</li>
           <li><a class="doc-link" href="../documentation.html#MultilinearMaps-fem_qp_buffer"><code>fem_qp_buffer</code></a> returns a buffer whose element type tells MORFE what <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> produces. Spell it out in full, <code class="nolink">Tensor{2, 3, ComplexF64, 9}</code>: without the last parameter the type is abstract, and every gradient stored in the buffer is boxed.</li>
         </ul>
         <p>
           MORFE then traverses the mesh once per monomial for all terms together. In each cell it calls
-          <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> once per distinct coefficient, <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> once per
-          factorisation and quadrature point, and <a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> once per cell. The
-          physics stays the same two lines; only the bookkeeping moves.
+          <a class="doc-link" href="../documentation.html#MultilinearMaps-scatter_qp!"><code>scatter_qp!</code></a> once per distinct coefficient. At each quadrature point it sums
+          <code class="nolink">multiplier * flux_qp(…)</code> over every factorisation of both terms and
+          tests the sum once with <a class="doc-link" href="../documentation.html#MultilinearMaps-contract_qp!"><code>contract_qp!</code></a>. It calls <a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><code>assemble_element!</code></a> once
+          per cell. The physics stays the same two lines; only the bookkeeping moves.
         </p>
 <pre class="code"><span class="kw">struct</span> <span class="var">SVKTerm</span>{<span class="var">DEG</span>} <span class="op">&lt;</span><span class="op">:</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-FEMMultilinearMap"><span class="var">FEMMultilinearMap</span></a>{<span class="num">2</span>}
     <span class="var">multiindex</span><span class="op">:</span><span class="sym">:NTuple</span>{<span class="num">2</span>, <span class="var">Int</span>}
@@ -327,12 +329,17 @@ document.addEventListener('DOMContentLoaded', function () {
     <span class="kw">end</span>
 <span class="kw">end</span>
 
-<span class="kw">function</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><span class="fn">MORFE.accumulate_qp!</span></a>(<span class="var">Fe</span>, ∇<span class="var">u</span>, <span class="var">multiplier</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span><span class="op">:</span><span class="sym">:SVKTerm</span>)
-    <span class="var">Pq</span> <span class="op">=</span> <span class="fn">stress</span>(<span class="var">t</span>)(∇<span class="var">u</span><span class="op">...</span>)
+<a class="doc-link" href="../documentation.html#MultilinearMaps-fem_flux_zero"><span class="fn">MORFE.fem_flux_zero</span></a>(<span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">zero</span>(<span class="var">Tensor</span>{<span class="num">2</span>, <span class="num">3</span>, <span class="var">ComplexF64</span>})
+<a class="doc-link" href="../documentation.html#MultilinearMaps-flux_qp"><span class="fn">MORFE.flux_qp</span></a>(∇<span class="var">u</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">t</span><span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">stress</span>(<span class="var">t</span>)(∇<span class="var">u</span><span class="op">...</span>)
+
+<span class="kw">function</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-contract_qp!"><span class="fn">MORFE.contract_qp!</span></a>(<span class="var">Fe</span>, <span class="var">P</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>)
     <span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="fn">eachindex</span>(<span class="var">Fe</span>)
-        <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> <span class="var">multiplier</span> <span class="op">*</span> (<span class="fn">shape_gradient</span>(<span class="var">cell_values</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">Pq</span>) <span class="op">*</span> <span class="var">dΩ</span>
+        <span class="var">Fe</span>[<span class="var">i</span>] <span class="op">+</span><span class="op">=</span> (<span class="fn">shape_gradient</span>(<span class="var">cell_values</span>, <span class="var">q</span>, <span class="var">i</span>) <span class="op">⊡</span> <span class="var">P</span>) <span class="op">*</span> <span class="var">dΩ</span>
     <span class="kw">end</span>
 <span class="kw">end</span>
+
+<a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><span class="fn">MORFE.accumulate_qp!</span></a>(<span class="var">Fe</span>, ∇<span class="var">u</span>, <span class="var">multiplier</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span><span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span>
+    <a class="doc-link" href="../documentation.html#MultilinearMaps-contract_qp!"><span class="fn">MORFE.contract_qp!</span></a>(<span class="var">Fe</span>, <span class="var">multiplier</span> <span class="op">*</span> <a class="doc-link" href="../documentation.html#MultilinearMaps-flux_qp"><span class="fn">MORFE.flux_qp</span></a>(∇<span class="var">u</span>, <span class="var">cell</span>, <span class="var">q</span>, <span class="var">t</span>), <span class="var">cell</span>, <span class="var">q</span>, <span class="var">dΩ</span>, <span class="var">t</span>)
 
 <a class="doc-link" href="../documentation.html#MultilinearMaps-assemble_element!"><span class="fn">MORFE.assemble_element!</span></a>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>, <span class="op">:</span><span class="sym">:SVKTerm</span>) <span class="op">=</span> <span class="fn">scatter!</span>(<span class="var">res</span>, <span class="var">Fe</span>, <span class="var">cell</span>)
 
@@ -386,8 +393,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <span class="var">rset</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#Resonance-build_resonance_set"><span class="fn">build_resonance_set</span></a>(<span class="var">m</span>, <span class="var">mset</span>, <span class="var">spectral</span>, <span class="var">resonance</span>)
     <span class="var">quiet</span> <span class="op">=</span> <a class="doc-link" href="../documentation.html#ParametrisationSolver-ParametrisationOptions"><span class="fn">ParametrisationOptions</span></a>(<span class="var">show_progress</span> <span class="op">=</span> <span class="var">false</span>, <span class="var">verbose</span> <span class="op">=</span> <span class="var">false</span>)
     <a class="doc-link" href="../documentation.html#ParametrisationSolver-solve_parametrisation"><span class="fn">solve_parametrisation</span></a>(<span class="var">m</span>, <span class="var">mset</span>, <span class="var">spectral</span>, <span class="var">rset</span>; <span class="var">benchmark_dir</span> <span class="op">=</span> <span class="var">dir</span>, <span class="var">options</span> <span class="op">=</span> <span class="var">quiet</span>)
-    <span class="var">rows</span> <span class="op">=</span> <span class="fn">split</span>.(<span class="fn">readlines</span>(<span class="fn">joinpath</span>(<span class="var">dir</span>, <span class="str">"benchmark_per_order.csv"</span>))[<span class="num">2</span><span class="op">:</span><span class="kw">end</span>], ',')
-    <span class="kw">return</span> (<span class="var">passes</span> <span class="op">=</span> <span class="var">passes</span>[], <span class="var">seconds</span> <span class="op">=</span> <span class="fn">sum</span>(<span class="var">r</span> <span class="op">-&gt;</span> <span class="fn">parse</span>(<span class="var">Float64</span>, <span class="var">r</span>[<span class="num">3</span>]), <span class="var">rows</span>))
+    <span class="var">header</span>, <span class="var">rows</span><span class="op">...</span> <span class="op">=</span> <span class="fn">split</span>.(<span class="fn">readlines</span>(<span class="fn">joinpath</span>(<span class="var">dir</span>, <span class="str">"benchmark_per_order.csv"</span>)), ',')
+    <span class="var">rhs</span> <span class="op">=</span> <span class="fn">findfirst</span>(<span class="op">==</span>(<span class="str">"rhs_time_s"</span>), <span class="var">header</span>)   <span class="cm"># the right-hand-side time of each degree</span>
+    <span class="kw">return</span> (<span class="var">passes</span> <span class="op">=</span> <span class="var">passes</span>[], <span class="var">seconds</span> <span class="op">=</span> <span class="fn">sum</span>(<span class="var">r</span> <span class="op">-&gt;</span> <span class="fn">parse</span>(<span class="var">Float64</span>, <span class="var">r</span>[<span class="var">rhs</span>]), <span class="var">rows</span>))
 <span class="kw">end</span>
 <span class="fn">rhs_cost</span>(<span class="var">m</span>, <span class="var">p</span>) <span class="op">=</span> <span class="fn">argmin</span>(<span class="var">c</span> <span class="op">-&gt;</span> <span class="var">c.seconds</span>, [<span class="fn">rhs_cost_once</span>(<span class="var">m</span>, <span class="var">p</span>) <span class="kw">for</span> <span class="var">_</span> <span class="kw">in</span> <span class="num">1</span><span class="op">:</span><span class="num">3</span>]) <span class="cm"># least noisy of 3</span>
 
@@ -408,12 +416,15 @@ document.addEventListener('DOMContentLoaded', function () {
 <span class="var">fig</span></pre>
         <p>
           The traversals of the closure grow with the number of factorisations, those of the
-          element-level term only with the number of monomials. The right-hand-side time falls by less,
-          because <a class="doc-link" href="../documentation.html#MultilinearMaps-accumulate_qp!"><code>accumulate_qp!</code></a> still runs once per factorisation: the single pass shares the
-          traversal, the gathering and the gradients, not the physics. The gain therefore grows with the
-          order and with the number of reduced coordinates, and it is largest for cheap integrands.
-          MORFEFerrite's built-in kernel is costlier per call, so the single pass gains less with it
-          (<a class="inline" href="#fig-01">FIG · 01</a>, second button).
+          element-level term only with the number of monomials. In each cell, the single pass computes
+          the gradient of every distinct coefficient once, sums the stresses of all factorisations of
+          both terms at each quadrature point, and tests the sum once against the shape functions; only
+          the stress itself is still evaluated once per factorisation. At order 9 the right-hand side
+          therefore takes four times less time, for 17 times fewer traversals, and the gain grows with
+          the order and with the number of reduced coordinates. MORFEFerrite's built-in kernel is faster
+          on both routes, and its single pass also shares the stress: at each quadrature point it forms
+          one per distinct coefficient for both terms, rather than one per factorisation, and gains
+          five times (<a class="inline" href="#fig-01">FIG · 01</a>, second button).
         </p>
 
       </div>
@@ -429,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function () {
         Right: right-hand-side time. <strong>Tutorial kernel</strong> draws the
         <code class="nolink">rhs_cost.csv</code> this notebook writes; <strong>MORFEFerrite kernel</strong>
         draws the costs of MORFEFerrite's built-in term, measured by the example's
-        <code class="nolink">benchmark.jl</code>. Apple M2 Pro, one thread.</div>
+        <code class="nolink">benchmark.jl</code> on a generated mesh with the same 4977 DOFs. Apple M2 Pro, one thread.</div>
     </div>
 
     <div class="adm tip">
