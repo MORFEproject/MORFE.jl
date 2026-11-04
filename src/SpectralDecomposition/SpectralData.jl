@@ -64,17 +64,29 @@ struct ModeBundle{ORD, EV <: AbstractVector{ComplexF64}, RD, LD}
         end
         length(indices) == n || throw(ArgumentError(
             "indices has $(length(indices)) entries but there are $n eigenvalues"))
-        # THE mirrored convention, written once. Right physical is the FIRST slice,
-        # left physical is the LAST.
+        # THE mirrored convention: right physical is the FIRST slice, left physical the
+        # LAST (`_left_physical_and_orders`, shared with everything that reads left blocks).
         rp = rb === nothing ? nothing : Matrix{ComplexF64}(rb[:, 1, :])
-        lp = lb === nothing ? nothing : Matrix{ComplexF64}(lb[:, ORD, :])
-        # Same convention, other end: right derivatives are blocks 2:ORD, left order-blocks
-        # are 1:ORD-1. Empty for ORD == 1, which the accessors report as `nothing`.
+        # Right derivatives are blocks 2:ORD. Empty for ORD == 1, reported as `nothing`.
         rd = (rb === nothing || ORD == 1) ? nothing : @view rb[:, 2:ORD, :]
-        ld = (lb === nothing || ORD == 1) ? nothing : @view lb[:, 1:(ORD - 1), :]
+        lp, ld = lb === nothing ? (nothing, nothing) : _left_physical_and_orders(lb)
         return new{ORD, EV, typeof(rd), typeof(ld)}(
             eigenvalues, rb, lb, rp, lp, rd, ld, collect(Int, indices))
     end
+end
+
+"""
+	_left_physical_and_orders(left_blocks) -> (physical, orders)
+
+The mirrored left convention, applied in this one place: of left order-blocks
+`FOM × ORD × n`, the physical slice is the **last** block (returned as a matrix), and the
+blocks `1:ORD-1` that feed the orthogonality rows come as a view (`nothing` when
+`ORD == 1`).
+"""
+function _left_physical_and_orders(left_blocks::AbstractArray{<:Number, 3})
+    ORD = size(left_blocks, 2)
+    physical = Matrix{ComplexF64}(left_blocks[:, ORD, :])
+    return physical, ORD == 1 ? nothing : @view left_blocks[:, 1:(ORD - 1), :]
 end
 
 """
@@ -735,17 +747,10 @@ no cost to a normal run. Call it in tests, or when a result looks wrong.
 """
 function check_biorthogonality(sd::SpectralData{ORD, ROM}, model::NthOrderModel) where {
         ORD, ROM}
-    _, B = linear_first_order_matrices(model)
     right = sd.master.right_blocks
     left = sd.master.left_blocks
     (right === nothing || left === nothing) &&
         throw(ArgumentError("check_biorthogonality needs both right and left blocks"))
-    G = Matrix{ComplexF64}(undef, ROM, ROM)
-    for r in 1:ROM, s in 1:ROM
-
-        φ = vec(@view left[:, :, r])
-        ψ = vec(@view right[:, :, s])
-        G[r, s] = dot(φ, B * ψ)
-    end
-    return G
+    # One product with B_ORD on the stacked blocks, not ROM² products with an assembled 𝓑.
+    return _stacked(left)' * _apply_B(_FirstOrderForm(model), _stacked(right))
 end

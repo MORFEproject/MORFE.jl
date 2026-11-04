@@ -12,13 +12,13 @@ order and returned as structured data for further analysis.
 """
 module InvarianceError
 
-using LinearAlgebra: mul!, dot, norm, lu, ldiv!
+using LinearAlgebra: mul!, dot, norm, lu, ldiv!, diag
 using Random
 using SparseArrays: SparseMatrixCSC, sparse
 using StaticArrays: SVector
 using Statistics: median
 
-using ..Multiindices: find_in_set
+using ..Multiindices: check_unit_columns
 using ..Polynomials: DensePolynomial, evaluate
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics
 using ..FullOrderModel: NthOrderModel, evaluate_nonlinear_terms!
@@ -248,8 +248,7 @@ with a forcing at `-iω`.
 """
 function _conjugate_structure(model::NthOrderModel, R::ReducedDynamics, master_permutation)
     ROM = Base.size(R)
-    indices = _unit_indices(R.poly.multiindex_set)
-    λ = [R.poly.coefficients[j, indices[j]] for j in eachindex(indices)]
+    λ = diag(view(R.poly.coefficients, :, 1:size(R.poly.coefficients, 1)))
     master = master_permutation === nothing ? _conjugate_partners(λ[1:ROM]) :
              collect(Int, master_permutation)
     σ = external_conjugate_permutation(model.external_system)
@@ -367,12 +366,6 @@ end
 # Frequency-matched state error
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Index of the linear monomial of each variable in a multiindex set.
-function _unit_indices(mset)
-    NVAR = length(first(mset.exponents))
-    return [something(find_in_set(mset, ntuple(i -> Int(i == j), NVAR))) for j in 1:NVAR]
-end
-
 """
 	_orbit_frequency(R, z_samples, partner, ROM) -> s̄
 
@@ -388,8 +381,7 @@ self-conjugate master coordinate: both members of a pair would cancel their freq
 parts taken separately. External coordinates enter `R` but not the average.
 """
 function _orbit_frequency(R::ReducedDynamics, z_samples::AbstractMatrix, partner, ROM)
-    indices = _unit_indices(R.poly.multiindex_set)
-    λ = [R.poly.coefficients[j, indices[j]] for j in 1:ROM]
+    λ = [R.poly.coefficients[j, j] for j in 1:ROM]
     representatives = [j
                        for j in 1:ROM
                        if partner[j] == j ||
@@ -410,7 +402,40 @@ function _orbit_frequency(R::ReducedDynamics, z_samples::AbstractMatrix, partner
 end
 
 """
-	_state_error_factorisation(model, W, R, spectral, s̄) -> factorisation
+	_state_error_operators(model, W, R, spectral) -> (; J_coeffs, column_coeffs, corner_coeffs)
+
+The frequency-independent part of the state-error system: the coefficients of the
+orthogonality rows `J`, of the invariance columns `C̃` and of the corner `C̃⊥`, built once
+for every frequency `s̄` it is factorised at ([`_state_error_factorisation`](@ref)).
+
+The linear part is read from columns `1:NVAR` of `W` and `R`, so validating in rescaled
+coordinates stays consistent. Rescaling the right modes rescales `δf` alone, never `δx`.
+The left blocks come from [`master_left_basis`](@ref), exactly as in the solve: the left
+eigenvectors of `spectral` for a diagonal master block, the dual left basis otherwise
+(Schur or Jordan coordinates, where the left eigenvectors are not the basis the rows
+need, and for a Jordan block would make the bordered matrix singular).
+"""
+function _state_error_operators(model::NthOrderModel, W::Parametrisation,
+        R::ReducedDynamics, spectral::SpectralData)
+    linear_terms = model.linear_terms
+    ROM = Base.size(R)
+    NVAR = size(R.poly.coefficients, 1)
+    master_W = view(W.poly.coefficients, :, :, 1:ROM)
+    Λ = view(R.poly.coefficients, :, 1:NVAR)
+    master_dynamics = view(Λ, 1:ROM, 1:ROM)
+    left = master_left_basis(model, master_W, master_dynamics,
+        master_bundle(spectral).left_blocks;
+        conjugate_permutation = master_conjugate_permutation(spectral))
+    J_coeffs = precompute_orthogonality_operator_coefficients(linear_terms, left)
+    column_coeffs, _ = precompute_master_column_polynomials(
+        linear_terms, view(master_W, :, 1, :), master_dynamics)
+    corner_coeffs, _ = precompute_orthogonality_column_polynomials(
+        J_coeffs, master_W, view(W.poly.coefficients, :, 1, (ROM + 1):NVAR), Λ)
+    return (; J_coeffs, column_coeffs, corner_coeffs)
+end
+
+"""
+	_state_error_factorisation(model, operators, s̄) -> factorisation
 
 Factorise the bordered matrix of Eq. (cohomological_final) at the frequency `s̄`, with every
 master mode resonant (the border of the graph style),
@@ -422,36 +447,14 @@ so that `δx` is the frequency-matched state error of a residual `ε`. The ortho
 `J` keep `δx` free of master-mode components: a residual along a master mode is absorbed by
 the reduced dynamics, through `δf`, as at a resonant monomial, and is not a state error. This
 is also what keeps the system regular when `s̄` lies on a master eigenvalue, where `L(s̄)`
-alone is singular.
-
-The right modes and the master block are read from `W` and `R`, so validating in rescaled
-coordinates stays consistent. Rescaling the right modes rescales `δf` alone, never `δx`.
-The left blocks come from [`master_left_basis`](@ref), exactly as in the solve: the left
-eigenvectors of `spectral` for a diagonal master block, the dual left basis otherwise
-(Schur or Jordan coordinates, where the left eigenvectors are not the basis the rows
-need, and for a Jordan block would make the bordered matrix singular).
+alone is singular. `operators` come from [`_state_error_operators`](@ref).
 """
-function _state_error_factorisation(model::NthOrderModel{ORD}, W::Parametrisation,
-        R::ReducedDynamics, spectral::SpectralData, s̄) where {ORD}
+function _state_error_factorisation(model::NthOrderModel{ORD}, operators, s̄) where {ORD}
     T = ComplexF64
     linear_terms = model.linear_terms
     FOM = model.n_fom
-    ROM = Base.size(R)
-    units = _unit_indices(W.poly.multiindex_set)
-    NVAR = length(units)
-    master, external = units[1:ROM], units[(ROM + 1):NVAR]
-    right_blocks = W.poly.coefficients[:, :, master]
-    Λ = T.(R.poly.coefficients[:, units])
-    left = master_left_basis(model, right_blocks, view(Λ, 1:ROM, 1:ROM),
-        master_bundle(spectral).left_blocks;
-        conjugate_permutation = master_conjugate_permutation(spectral))
-    J_coeffs = precompute_orthogonality_operator_coefficients(linear_terms,
-        left[:, ORD, :], ORD == 1 ? nothing : view(left, :, 1:(ORD - 1), :))
-    column_coeffs, _ = precompute_master_column_polynomials(
-        linear_terms, right_blocks[:, 1, :], Λ[1:ROM, 1:ROM])
-    corner_coeffs, _ = precompute_orthogonality_column_polynomials(
-        J_coeffs, right_blocks, W.poly.coefficients[:, 1, external], Λ)
-
+    (; J_coeffs, column_coeffs, corner_coeffs) = operators
+    ROM = length(J_coeffs)
     s = T(s̄)
     columns = Matrix{T}(undef, FOM, ROM)
     rows = Matrix{T}(undef, ROM, FOM)
@@ -515,6 +518,7 @@ function invariance_error_norms(
         r_external = nothing,
         rng::AbstractRNG = Random.default_rng()
 ) where {ORD, ORDP1, N_NL, N_EXT, NVAR}
+    check_unit_columns(W.poly.multiindex_set)
     FOM = model.n_fom
     ROM = Base.size(R)
     Tc = ComplexF64
@@ -605,7 +609,7 @@ reduced dynamics, and full-order model are all evaluated at that same external p
 
 `spectral` is the `SpectralData` the parametrisation was solved with; the state error builds
 the orthogonality rows from its left master modes, or from the dual left basis when the
-master block is not diagonal (see `_state_error_factorisation`).
+master block is not diagonal (see `_state_error_operators`).
 """
 function invariance_error_convergence(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},
@@ -618,19 +622,25 @@ function invariance_error_convergence(
         master_amplitude::Real = 1.0,
         rng::AbstractRNG = Random.default_rng()
 ) where {ORD, ORDP1, N_NL, N_EXT, NVAR}
-    if !isnothing(r_external)
+    fixed_external = !isnothing(r_external)
+    if fixed_external
         length(r_external) == N_EXT || throw(DimensionMismatch(
             "r_external has length $(length(r_external)); expected $N_EXT"))
         length(r_magnitudes) == 1 && iszero(only(r_magnitudes)) || throw(ArgumentError(
             "r_magnitudes must be [0.0] when r_external fixes the target point"))
         master_amplitude > 0 || throw(ArgumentError("master_amplitude must be positive"))
-        return [_convergence_fixed_external(
-            model, W, R, spectral, n_samples, Float64(master_amplitude), r_external, rng)]
+    else
+        master_amplitude == 1 || throw(ArgumentError(
+            "master_amplitude is only meaningful with a fixed r_external"))
     end
-    master_amplitude == 1 || throw(ArgumentError(
-        "master_amplitude is only meaningful with a fixed r_external"))
+    check_unit_columns(W.poly.multiindex_set)
+    # Frequency-independent, so built once for every level.
+    operators = _state_error_operators(model, W, R, spectral)
+    fixed_external && return [_convergence_fixed_external(model, W, R, spectral, operators,
+        n_samples, Float64(master_amplitude), r_external, rng)]
     return map(r_magnitudes) do r_mag
-        _convergence_one_level(model, W, R, spectral, n_samples, Float64(r_mag), rng)
+        _convergence_one_level(
+            model, W, R, spectral, operators, n_samples, Float64(r_mag), rng)
     end
 end
 
@@ -639,6 +649,7 @@ function _convergence_fixed_external(
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics,
         spectral::SpectralData,
+        operators,
         n_samples::Int,
         master_amplitude::Float64,
         r_external,
@@ -670,7 +681,7 @@ function _convergence_fixed_external(
     end
 
     s_bar = _orbit_frequency(R, z_samples, partner, ROM)
-    factorisation = _state_error_factorisation(model, W, R, spectral, s_bar)
+    factorisation = _state_error_factorisation(model, operators, s_bar)
     rhs = zeros(Tc, FOM + ROM)
     solution = similar(rhs)
 
@@ -708,6 +719,7 @@ function _convergence_one_level(
         W::Parametrisation{ORD, NVAR},
         R::ReducedDynamics,
         spectral::SpectralData,
+        operators,
         n_samples::Int,
         r_mag::Float64,
         rng::AbstractRNG
@@ -734,7 +746,7 @@ function _convergence_one_level(
 
     # Phase 1: the frequency of a common orbit, and the bordered operator at it
     s_bar = _orbit_frequency(R, z_samples, partner, ROM)
-    factorisation = _state_error_factorisation(model, W, R, spectral, s_bar)
+    factorisation = _state_error_factorisation(model, operators, s_bar)
     rhs = zeros(Tc, FOM + ROM)
     solution = similar(rhs)
 

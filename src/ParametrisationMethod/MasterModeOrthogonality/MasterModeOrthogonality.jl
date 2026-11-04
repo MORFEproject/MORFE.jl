@@ -188,6 +188,7 @@ module MasterModeOrthogonality
 
 using LinearAlgebra
 using StaticArrays
+using ..SpectralDecomposition: _left_physical_and_orders
 
 include("HornerEvaluator.jl")
 include("ColumnPolynomials.jl")

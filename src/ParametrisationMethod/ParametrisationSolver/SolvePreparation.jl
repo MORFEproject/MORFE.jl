@@ -121,7 +121,7 @@ function _prepare_shared_resources(
 ) where {NVAR, MT}
     ORD, FOM, ROM, _, _ = dimensions
     T = eltype(W.poly.coefficients)
-    linear_skip_set = Set(_linear_monomial_indices(mset)[1:ROM])
+    linear_skip_set = Set(1:ROM)              # the master unit columns, set from `spectral`
     lower_order = LowerOrderResources{NVAR, T}(mset, ORD, FOM)
     permutation = conjugate_permutation === nothing ?
                   NoConjugatePermutation() :
@@ -149,44 +149,43 @@ function _prepare_shared_resources(
 end
 
 """
-	_check_master_linear_dynamics(model, W, Λ, conjugate_permutation, unit_offset, ROM)
+	_check_master_linear_dynamics(model, master_W, Λ, conjugate_permutation)
 
 Validate a non-diagonal master block `Λ` (read back from `R`) against the master columns
-stored in `W`, raising an `ArgumentError` that names the failing condition:
+`master_W = W[:, :, 1:ROM]`, raising an `ArgumentError` that names the failing condition:
 
-- **conjugate frame** (with an involution): the master columns are conjugate pairs on every
-  derivative level and `Λ[σ, σ] = conj(Λ)`, which conjugate filling assumes;
+- **conjugate frame** (with a master involution `σ`): the master columns are conjugate pairs
+  on every derivative level and `Λ[σ, σ] = conj(Λ)`, which conjugate filling assumes;
 - **levels**: `W⁽ᵏ⁺¹⁾ = W⁽ᵏ⁾ Λ` on the master columns, so the invariance columns (built from
   level one and powers of `Λ`) and the stored levels describe the same modes;
 - **right invariance**: `Σₖ Bₖ Φ Λᵏ = 0`, so the coupling belongs to these modes. This is
-  checked to `1e-8`, the accuracy of eigensolver data; the others to `1e-10`.
+  checked to `_RTOL_EIGENSOLVER`, the accuracy of eigensolver data; the others to
+  `_RTOL_EXACT`.
 
 Runs after storage and restoration, so it also covers a supplied `initial_solution`.
 """
-function _check_master_linear_dynamics(model, W, Λ, permutation, unit_offset::Int, ROM::Int)
-    coefficients = W.poly.coefficients
-    master = (unit_offset + 1):(unit_offset + ROM)
-    if permutation !== nothing
-        σ = view(permutation, 1:ROM)
-        for r in 1:ROM
-            column = view(coefficients, :, :, unit_offset + r)
-            partner = view(coefficients, :, :, unit_offset + σ[r])
-            norm(partner - conj.(column)) <= 1e-10 * norm(column) || throw(ArgumentError(
-                "conjugate symmetry needs the master columns in conjugate pairs on every " *
-                "derivative level, but column $(σ[r]) is not the conjugate of column $r"))
+function _check_master_linear_dynamics(model, master_W, Λ, σ)
+    if σ !== nothing
+        for r in axes(master_W, 3)
+            column = view(master_W, :, :, r)
+            norm(view(master_W, :, :, σ[r]) - conj.(column)) <=
+            _RTOL_EXACT * norm(column) ||
+                throw(ArgumentError("conjugate symmetry needs the master columns in " *
+                                    "conjugate pairs on every derivative level, but column " *
+                                    "$(σ[r]) is not the conjugate of column $r"))
         end
-        isapprox(Λ[σ, σ], conj.(Λ); rtol = 1e-10) || throw(ArgumentError(
+        isapprox(Λ[σ, σ], conj.(Λ); rtol = _RTOL_EXACT) || throw(ArgumentError(
             "conjugate symmetry needs Λ̃[σ, σ] = conj(Λ̃) on the master block"))
     end
-    for k in 1:(size(coefficients, 2) - 1)
-        next = view(coefficients, :, k + 1, master)
-        mismatch = norm(next - view(coefficients, :, k, master) * Λ) / norm(next)
-        mismatch <= 1e-10 || throw(ArgumentError(
+    for k in 1:(size(master_W, 2) - 1)
+        next = view(master_W, :, k + 1, :)
+        mismatch = norm(next - view(master_W, :, k, :) * Λ) / norm(next)
+        mismatch <= _RTOL_EXACT || throw(ArgumentError(
             "derivative level $(k + 1) of the master columns is not level $k times the " *
             "master block (relative mismatch $mismatch); build the right blocks of a " *
             "coupled master block with `master_right_blocks`"))
     end
-    power = Matrix(view(coefficients, :, 1, master))
+    power = Matrix(view(master_W, :, 1, :))
     residual = model.linear_terms[1] * power
     scale = norm(residual)
     for k in 2:length(model.linear_terms)
@@ -195,53 +194,28 @@ function _check_master_linear_dynamics(model, W, Λ, permutation, unit_offset::I
         residual += term
         scale += norm(term)
     end
-    norm(residual) <= 1e-8 * scale || throw(ArgumentError(
+    norm(residual) <= _RTOL_EIGENSOLVER * scale || throw(ArgumentError(
         "the master block does not belong to the master columns: Σₖ Bₖ Φ Λ̃ᵏ has " *
         "relative norm $(norm(residual) / scale) instead of 0. Check the master block " *
-        "(SpectralData's `linear_dynamics`) against the right modes."))
+        "(SpectralData's `upper_triangular`) against the right modes."))
     return nothing
 end
 
 """
-	_master_left_blocks(model, W, Λ, spectral, conjugate_permutation, unit_offset, ROM)
-	-> (master_left_modes, master_left_mode_blocks)
+	_prepare_master_operators(linear_terms, master_W, master_dynamics, left_blocks)
+	-> (orthogonality_J_coeffs, invariance_C_coeffs, master_derivative_steps)
 
-The left physical slice and lower-order left blocks the orthogonality rows are built from,
-for the master columns stored in `W` and the master block `Λ` read from `R`. They come from
-[`master_left_basis`](@ref): the spectral left eigenvectors as they are when `Λ` is
-diagonal, and the dual left basis otherwise or when `spectral` carries no left blocks.
+Precompute the external-independent operators: the orthogonality rows from the master
+`left_blocks` ([`master_left_basis`](@ref)), and the invariance columns from the master
+columns at level one of `W` and the master block `master_dynamics` of `R` — the same
+columns every other consumer reads.
 """
-function _master_left_blocks(model, W, Λ, spectral, permutation, unit_offset::Int,
-        ROM::Int)
-    σ = permutation === nothing ? nothing : view(permutation, 1:ROM)
-    left = master_left_basis(model,
-        view(W.poly.coefficients, :, :, (unit_offset + 1):(unit_offset + ROM)), Λ,
-        master_bundle(spectral).left_blocks; conjugate_permutation = σ)
-    ORD = size(left, 2)
-    return left[:, ORD, :], (ORD == 1 ? nothing : view(left, :, 1:(ORD - 1), :))
-end
-
-"""
-	_prepare_master_operators(linear_terms, W, R, master modes and blocks,
-		unit_offset, ROM)
-
-Precompute the external-independent orthogonality and invariance operators. Return the
-orthogonality row coefficients, the master order-block view, the invariance columns, and
-the master derivative steps.
-"""
-function _prepare_master_operators(
-        linear_terms, W, R, master_right_modes, master_left_modes,
-        master_left_mode_blocks, unit_offset::Int, ROM::Int)
+function _prepare_master_operators(linear_terms, master_W, master_dynamics, left_blocks)
     orthogonality_J_coeffs = precompute_orthogonality_operator_coefficients(
-        linear_terms, master_left_modes, master_left_mode_blocks)
-    right_master_blocks = view(W.poly.coefficients, :, :,
-        ((unit_offset + 1):(unit_offset + ROM)))
-    lambda_master = view(
-        R.poly.coefficients, 1:ROM, (unit_offset + 1):(unit_offset + ROM))
+        linear_terms, left_blocks)
     invariance_C_coeffs, master_derivative_steps = precompute_master_column_polynomials(
-        linear_terms, master_right_modes, lambda_master)
-    return orthogonality_J_coeffs, right_master_blocks,
-    invariance_C_coeffs, master_derivative_steps
+        linear_terms, view(master_W, :, 1, :), master_dynamics)
+    return orthogonality_J_coeffs, invariance_C_coeffs, master_derivative_steps
 end
 
 """
@@ -253,10 +227,10 @@ function returns.
 """
 function _prepare_external_directions!(
         W, R, supplied::Bool, completed_indices,
-        model, cache, symmetry, dimensions::NTuple{5, Int}, unit_offset::Int,
+        model, cache, symmetry, dimensions::NTuple{5, Int},
         lambda_matrix, lambda_diag, linear_terms,
         invariance_C_coeffs, master_derivative_steps,
-        orthogonality_J_coeffs, right_master_blocks,
+        orthogonality_J_coeffs, master_W,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
     _, FOM, ROM, N_EXT, NVAR = dimensions
     T = eltype(W.poly.coefficients)
@@ -270,7 +244,7 @@ function _prepare_external_directions!(
                 master_derivative_steps)
             partial_orth_C_coeffs,
             partial_orth_E_coeffs = precompute_orthogonality_column_polynomials(
-                orthogonality_J_coeffs, right_master_blocks,
+                orthogonality_J_coeffs, master_W,
                 external_directions, lambda_matrix)
             if 1 <= blank <= N_EXT
                 fill!(partial_E_coeffs[blank], zero(T))
@@ -295,48 +269,45 @@ function _prepare_external_directions!(
             coupled_external || return shared_partial_context
             for known_index in 1:(external_index - 1)
                 known_directions[:, known_index] .= view(
-                    W.poly.coefficients, :, 1,
-                    ROM + known_index + unit_offset)
+                    W.poly.coefficients, :, 1, ROM + known_index)
             end
             return build_partial_context(known_directions, external_index)
         end
 
         _solve_external_directions!(
-            W, R, partial_context_for, model, cache, symmetry,
-            N_EXT, ROM, unit_offset)
+            W, R, partial_context_for, model, cache, symmetry, N_EXT, ROM)
     else
         for external_index in 1:N_EXT
-            @inbounds symmetry.skip_bits[
-                ROM + external_index + unit_offset] = true
+            @inbounds symmetry.skip_bits[ROM + external_index] = true
         end
     end
     return nothing
 end
 
 """
-	_build_complete_context(W, dimensions, unit_offset, ...)
+	_build_complete_context(W, dimensions, ...)
 
 Read the final external directions from `W`, build the complete external operators, and
 return the context used by the nonlinear solve.
 """
 function _build_complete_context(
-        W, dimensions::NTuple{5, Int}, unit_offset::Int,
+        W, dimensions::NTuple{5, Int},
         linear_terms, lambda_matrix, lambda_diag,
         invariance_C_coeffs, master_derivative_steps,
-        orthogonality_J_coeffs, right_master_blocks,
+        orthogonality_J_coeffs, master_W,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
     _, FOM, ROM, N_EXT, _ = dimensions
     T = eltype(W.poly.coefficients)
     external_directions = zeros(T, FOM, N_EXT)
     for external_index in 1:N_EXT
         external_directions[:, external_index] .= W.poly.coefficients[
-            :, 1, ROM + external_index + unit_offset]
+            :, 1, ROM + external_index]
     end
     invariance_E_coeffs = precompute_external_column_polynomials(
         linear_terms, external_directions, lambda_matrix, master_derivative_steps)
     orthogonality_C_coeffs,
     orthogonality_E_coeffs = precompute_orthogonality_column_polynomials(
-        orthogonality_J_coeffs, right_master_blocks,
+        orthogonality_J_coeffs, master_W,
         external_directions, lambda_matrix)
     return _build_context(
         linear_terms, lambda_diag,

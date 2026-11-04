@@ -173,7 +173,8 @@ end
         rng = MersenneTwister(3)
         E = complex.(randn(rng, 4), randn(rng, 4))
         state_error(W, R, sd) = _TM_IE._state_error(
-            _TM_IE._state_error_factorisation(model, W, R, sd, 0.9im), E,
+            _TM_IE._state_error_factorisation(model,
+                _TM_IE._state_error_operators(model, W, R, sd), 0.9im), E,
             zeros(ComplexF64, 6), zeros(ComplexF64, 6))
         @test state_error(WB, RB, without_left) ≈ state_error(W, R, sd) rtol = 1e-10
     end
@@ -309,6 +310,35 @@ end
             nonlinear = [k for (k, γ) in enumerate(mset.exponents) if sum(γ) ≥ 2]
             @test maximum(abs, W.poly.coefficients[:, :, nonlinear]) < 1e-12
         end
+    end
+
+    @testset "route B against the assembled first-order form" begin
+        # The dual basis is computed with FOM-size solves only; check its two defining
+        # identities against the assembled ORD·FOM pencil.
+        function dual_identities(model, blocks, Λ)
+            dual = master_left_basis(model, blocks, Λ)
+            A, B = linear_first_order_matrices(model)
+            Φ, Ψ = reshape(blocks, :, size(blocks, 3)), reshape(dual, :, size(blocks, 3))
+            return norm(Ψ' * B * Φ - I), norm(Ψ' * A - Λ * Ψ' * B) / norm(Ψ' * A)
+        end
+        # A free rigid-body mode: λ = 0 is a Jordan block of the first-order form, so the
+        # shift is what keeps the solve away from the singular P(0) = K.
+        K, Z, M = [1.0 -1.0; -1.0 1.0], zeros(2, 2), Matrix(1.0I, 2, 2)
+        Λ0 = ComplexF64[0 1; 0 0]
+        rigid = master_right_blocks(hcat(ComplexF64[1, 1] / sqrt(2), zeros(2)), Λ0, 2)
+        for terms in ((K, Z, M), sparse.((K, Z, M)))
+            biorthogonality, invariance = dual_identities(NthOrderModel(terms), rigid, Λ0)
+            @test biorthogonality < 1e-10
+            @test invariance < 1e-10
+        end
+        # ORD = 3 with a zero top matrix (the augmented mass model), in Schur coordinates.
+        model, sd = _tm_mass_model()
+        T = ComplexF64[1 -0.2+0.4im; 0 1.1+0.3im]
+        Λ_S = _tm_schur(Diagonal(master_eigenvalues(sd)), T)
+        biorthogonality, invariance = dual_identities(model,
+            master_right_blocks(right_modes(sd) * T, Λ_S, 3), Λ_S)
+        @test biorthogonality < 1e-10
+        @test invariance < 1e-10
     end
 
     @testset "conjugate_master_frame refuses what it cannot re-base" begin

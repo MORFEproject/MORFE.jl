@@ -110,6 +110,20 @@ function precompute_orthogonality_operator_coefficients(
     return result
 end
 
+"""
+	precompute_orthogonality_operator_coefficients(fom_matrices, left_blocks)
+	-> Vector{Matrix{T}}
+
+The same coefficients from whole left order-blocks `FOM × ORD × ROM`, in the layout
+`SpectralData` stores them and `master_left_basis` returns: the physical slice last.
+"""
+function precompute_orthogonality_operator_coefficients(
+        fom_matrices::NTuple{ORDP1, <:AbstractMatrix},
+        left_blocks::AbstractArray{<:Number, 3}) where {ORDP1}
+    return precompute_orthogonality_operator_coefficients(
+        fom_matrices, _left_physical_and_orders(left_blocks)...)
+end
+
 # =============================================================================
 # Pre-compute joint operator coefficients → (C_coeffs, E_coeffs)
 # =============================================================================

@@ -6,12 +6,12 @@
 
 """
 	_prepare_problem_inputs(model, mset, spectral, conjugate_permutation, options)
+	-> (conjugate_structure, dimensions)
 
-Resolve concrete spectral arrays, validate dimensions and conjugate structure, and return
-the data required by storage and operator preparation. This is the single setup boundary
-for `SpectralData` fields whose higher-order blocks may be `nothing`. The left blocks are
-resolved later, by [`_master_left_blocks`](@ref): they depend on the master block, which is
-read back from `R` once storage is prepared.
+Validate the multiindex set, the dimensions and the conjugate structure, and return the
+resolved conjugate permutation and `(ORD, FOM, ROM, N_EXT, NVAR)`. The set's linear part is
+its columns `1:NVAR` ([`check_unit_columns`](@ref)), which every later phase indexes
+directly.
 """
 function _prepare_problem_inputs(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
@@ -19,19 +19,17 @@ function _prepare_problem_inputs(
         conjugate_permutation, options::ParametrisationOptions
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
-    master_right_modes = right_modes(spectral)::Matrix{ComplexF64}
-    master_right_mode_derivatives = right_mode_derivatives(spectral)
     conjugate_structure = _spectral_conjugate_permutation(
         conjugate_permutation, spectral, model.external_system)
     options.validate_mset && validate_multiindex_set(mset, NVAR, ROM;
         conjugate_permutation = conjugate_structure)
+    check_unit_columns(mset)
     _check_external_conjugate_block(
         conjugate_structure, model.external_system, ROM, NVAR)
-    FOM = size(master_right_modes, 1)
-    @assert size(master_right_modes, 2) == ROM "master right modes must have $ROM columns"
-    dimensions = (ORD, FOM, ROM, N_EXT, NVAR)
-    return master_linear_dynamics(spectral), master_right_modes,
-    master_right_mode_derivatives, conjugate_structure, dimensions
+    FOM = model.n_fom
+    size(master_bundle(spectral).right_blocks) == (FOM, ORD, ROM) || throw(ArgumentError(
+        "the master right blocks must be $FOM × $ORD × $ROM"))
+    return conjugate_structure, (ORD, FOM, ROM, N_EXT, NVAR)
 end
 
 """Commit degree-one coefficients once external directions are final."""
@@ -192,7 +190,6 @@ function _prepare_solve(
         options::ParametrisationOptions
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     checkpoint = options.checkpoint
-    master_dynamics, master_right_modes, master_right_mode_derivatives,
     conj_perm, dimensions = _prepare_problem_inputs(
         model, mset, spectral, conjugate_permutation, options)
     _, FOM, _, _, _ = dimensions
@@ -206,49 +203,45 @@ function _prepare_solve(
     # incompatible dense/sparse/backend request therefore fails at the setup boundary.
     sparse_solver = _make_sparse_solver(MT, linear_terms, FOM, ROM, options)
 
-    zero_vec = SVector{NVAR, Int}(ntuple(_ -> 0, Val(NVAR)))
-    has_zero = length(mset) >= 1 && mset.exponents[1] == zero_vec
-    unit_offset = has_zero ? 1 : 0
-
     W, R, supplied = _prepare_solution_storage(
-        initial_solution, mset, model, master_right_modes, master_dynamics,
-        master_right_mode_derivatives, dimensions, unit_offset, T)
+        initial_solution, mset, model, spectral, dimensions, T)
     completed_indices, completed_degree = _restore_solution_checkpoint!(
         checkpoint_session, W, R, supplied)
 
-    Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
-    lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
-    # The master block as R holds it — a supplied `initial_solution` included — decides.
-    master_block = view(Λ, 1:ROM, 1:ROM)
-    isdiag(master_block) || _check_master_linear_dynamics(
-        model, W, master_block, conj_perm, unit_offset, ROM)
-    master_left_modes, master_left_mode_blocks = _master_left_blocks(
-        model, W, master_block, spectral, conj_perm, unit_offset, ROM)
+    # The linear part, as W and R hold it (a supplied `initial_solution` included): every
+    # operator below is built from these, never from `spectral` again.
+    Λ = view(R.poly.coefficients, 1:NVAR, 1:NVAR)
+    lambda_diag = diag(Λ)
+    master_W = view(W.poly.coefficients, :, :, 1:ROM)
+    master_dynamics = view(Λ, 1:ROM, 1:ROM)
+    master_σ = conj_perm === nothing ? nothing : view(conj_perm, 1:ROM)
+    isdiag(master_dynamics) ||
+        _check_master_linear_dynamics(model, master_W, master_dynamics, master_σ)
+    left_blocks = master_left_basis(model, master_W, master_dynamics,
+        master_bundle(spectral).left_blocks; conjugate_permutation = master_σ)
 
     linear_skip_set, lower_order, sym, ml_cache, buffers = _prepare_shared_resources(
         model, W, mset, conj_perm, completed_indices,
         dimensions, MT, options)
-    orthogonality_J_coeffs, right_master_blocks,
-    invariance_C_coeffs, master_derivative_steps = _prepare_master_operators(
-        linear_terms, W, R, master_right_modes, master_left_modes,
-        master_left_mode_blocks, unit_offset, ROM)
+    orthogonality_J_coeffs, invariance_C_coeffs,
+    master_derivative_steps = _prepare_master_operators(linear_terms, master_W, master_dynamics, left_blocks)
 
     _prepare_external_directions!(
         W, R, supplied, completed_indices,
-        model, ml_cache, sym, dimensions, unit_offset,
+        model, ml_cache, sym, dimensions,
         Λ, lambda_diag, linear_terms,
         invariance_C_coeffs, master_derivative_steps,
-        orthogonality_J_coeffs, right_master_blocks,
+        orthogonality_J_coeffs, master_W,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
 
     completed_degree = _commit_initial_degree!(
         checkpoint_session, W, R, mset, sparse_solver, completed_degree)
 
     ctx = _build_complete_context(
-        W, dimensions, unit_offset,
+        W, dimensions,
         linear_terms, Λ, lambda_diag,
         invariance_C_coeffs, master_derivative_steps,
-        orthogonality_J_coeffs, right_master_blocks,
+        orthogonality_J_coeffs, master_W,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
 
     return (; W, R, ctx, symmetry = sym, ml_cache, sparse_solver, checkpoint_session)

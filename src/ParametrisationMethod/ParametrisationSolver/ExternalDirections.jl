@@ -2,7 +2,7 @@
 
 """
 	_solve_external_directions!(W, R, partial_ctx_for, model, ml_cache,
-		symmetry, N_EXT, ROM, unit_offset)
+		symmetry, N_EXT, ROM)
 
 Solve external forcing directions in increasing variable order. Partial contexts contain
 only directions already solved, as required by upper-triangular external dynamics.
@@ -13,11 +13,11 @@ equals that of the direction solved before it reuses its numeric factorisation
 """
 function _solve_external_directions!(
         W, R, partial_ctx_for, model, ml_cache,
-        sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int, ROM::Int, unit_offset::Int
+        sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int, ROM::Int
 )
     previous = nothing
     for e in 1:N_EXT
-        idx = ROM + e + unit_offset
+        idx = ROM + e
         previous = _solve_external_direction!(
             W, R, idx, partial_ctx_for(e), model, ml_cache, sym, previous, ROM)
         @inbounds sym.skip_bits[idx] = true
@@ -27,12 +27,12 @@ end
 
 function _solve_external_directions!(
         W, R, partial_ctx_for, model, ml_cache,
-        sym::ConjugateSymmetryData{<:SVector}, N_EXT::Int, ROM::Int, unit_offset::Int
+        sym::ConjugateSymmetryData{<:SVector}, N_EXT::Int, ROM::Int
 )
     N_EXT == 0 && return nothing
     previous = nothing
     for e in 1:N_EXT
-        idx = ROM + e + unit_offset
+        idx = ROM + e
         if @inbounds sym.skip_bits[idx]
             # Secondary: its source is a pre-marked primary with a smaller index, so it is
             # already available — `_build_conjugate_symmetry` only ever marks the larger
@@ -44,7 +44,7 @@ function _solve_external_directions!(
         end
     end
     for e in 1:N_EXT
-        @inbounds sym.skip_bits[ROM + e + unit_offset] = true
+        @inbounds sym.skip_bits[ROM + e] = true
     end
     return nothing
 end

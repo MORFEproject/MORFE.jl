@@ -36,7 +36,7 @@ using SHA
 using TOML
 using StaticArrays: SVector, MVector
 
-using ..Multiindices: MultiindexSet, build_exponent_index_map
+using ..Multiindices: MultiindexSet, build_exponent_index_map, check_unit_columns
 using ..Polynomials: DensePolynomial
 using ..ParametrisationObjects: validate_multiindex_set,
                                 Parametrisation, ReducedDynamics,
@@ -45,12 +45,12 @@ using ..ParametrisationObjects: validate_multiindex_set,
                                 multiindex_set
 using ..FullOrderModel: NthOrderModel
 using ..ExternalSystems: external_basis
-using ..SpectralDecomposition: SpectralData, right_modes, right_mode_derivatives,
-                               master_eigenvalues, master_conjugate_permutation,
+using ..SpectralDecomposition: SpectralData, master_conjugate_permutation,
                                master_linear_dynamics, master_bundle,
                                detect_conjugate_permutation,
                                external_conjugate_permutation,
-                               full_conjugate_permutation, master_left_basis
+                               full_conjugate_permutation, master_left_basis,
+                               _RTOL_EXACT, _RTOL_EIGENSOLVER
 using ..MultilinearTerms: compute_multilinear_terms!, build_multilinear_terms_cache,
                           MultilinearTermsCache
 using ..Resonance: ResonanceSet, is_resonant

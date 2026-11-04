@@ -114,5 +114,10 @@ using MORFE.Multiindices: MultiindexSet, find_in_set
         # hatch reaches the solver instead of throwing.
         @test parametrise(model, sd, not_closed; resonance = cnf,
             options = ParametrisationOptions(validate_mset = false)) isa Tuple
+        # The linear part must still be columns 1:NVAR: a constant monomial in front is
+        # rejected, not shifted around.
+        with_constant = all_multiindices_up_to(ROM, 3)
+        @test_throws ArgumentError parametrise(model, sd, with_constant; resonance = cnf,
+            options = ParametrisationOptions(validate_mset = false))
     end
 end

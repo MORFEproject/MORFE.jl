@@ -22,7 +22,7 @@ export MultiindexSet, zero_multiindex, # nvars,
        all_multiindices_up_to, multiindices_with_total_degree,
        all_multiindices_in_box, indices_in_box_with_bounded_degree,
        delete_multiindices, is_downward_closed, is_conjugate_closed,
-       divides, is_constant, find_in_set, build_exponent_index_map,
+       divides, is_constant, check_unit_columns, find_in_set, build_exponent_index_map,
        factorisations_asymmetric, factorisations_fully_symmetric,
        factorisations_groupwise_symmetric, FactorisationEntry,
        bounded_index_tuples
@@ -443,6 +443,24 @@ divides(a::AbstractVector{Int}, b::AbstractVector{Int}) = all(a .<= b)
 Return true if the exponent vector is all zeros.
 """
 is_constant(exp::AbstractVector{Int}) = all(iszero, exp)
+
+"""
+	check_unit_columns(mset::MultiindexSet{N}) -> nothing
+
+Check that the first `N` members of `mset` are the unit multiindices `e₁, …, e_N`, in that
+order. Every set the parametrisation accepts has this layout — it holds each `eᵢ` and no
+constant monomial, and GrLex lists degree one first — so the linear part of `W` and `R`
+is columns `1:N`, which the solve and its validation index directly. Throws an
+`ArgumentError` otherwise, which matters only when the contract check is switched off.
+"""
+function check_unit_columns(mset::MultiindexSet{N}) where {N}
+    units = length(mset) >= N &&
+            all(k -> mset.exponents[k] == SVector{N, Int}(ntuple(i -> Int(i == k), N)), 1:N)
+    units || throw(ArgumentError(
+        "the multiindex set must begin with the unit multiindices e₁ … e_$N: it needs " *
+        "every eᵢ and no constant monomial (clauses 2 and 3 of `validate_multiindex_set`)"))
+    return nothing
+end
 
 # ==================== Operations on MultiindexSet ====================
 

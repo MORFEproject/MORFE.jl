@@ -54,7 +54,7 @@ function _extend_right_blocks!(blocks::AbstractArray{<:Number, 3}, Λ::AbstractM
 end
 
 """
-	conjugate_master_frame(blocks, Λ, σ; rtol = 1e-10) -> (blocks, Λ, T)
+	conjugate_master_frame(blocks, Λ, σ; rtol = _RTOL_EXACT) -> (blocks, Λ, T)
 
 Re-base master coordinates onto the **conjugate frame** the solve's complex symmetry needs,
 keeping `Λ` upper triangular with the same diagonal.
@@ -96,7 +96,7 @@ Map a result back to the given coordinates with `z = T ẑ`: `W ∘ T⁻¹` and 
 e.g. via `compose_linear` with `T⁻¹` extended by the identity on the external variables.
 """
 function conjugate_master_frame(blocks::AbstractArray{<:Number, 3}, Λ::AbstractMatrix,
-        σ::AbstractVector{<:Integer}; rtol::Real = 1e-10)
+        σ::AbstractVector{<:Integer}; rtol::Real = _RTOL_EXACT)
     FOM, ORD, ROM = size(blocks)
     size(Λ) == (ROM, ROM) || throw(ArgumentError(
         "Λ is $(size(Λ, 1)) × $(size(Λ, 2)) but there are $ROM master columns"))
@@ -164,7 +164,7 @@ function _conjugate_consistent(M::AbstractMatrix, Λ::AbstractMatrix,
 
         partner = (σ[i], σ[j])
         if partner[1] > partner[2]          # includes a pair coupled to itself
-            abs(out[i, j]) <= 1e-8 * scale || throw(ArgumentError(
+            abs(out[i, j]) <= _RTOL_EIGENSOLVER * scale || throw(ArgumentError(
                 "the master coupling is not consistent with the conjugate structure: " *
                 "Λ̂[$i, $j] = $(out[i, j]) has its conjugate partner below the diagonal"))
             out[i, j] = 0

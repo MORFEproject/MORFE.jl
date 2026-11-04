@@ -99,7 +99,7 @@ _cross_degree_load3!(res, r) = (res .+= _CROSS_DEGREE_G3 * r)
 
     @testset "solve jobs use the final skip mask" begin
         mset = all_multiindices_up_to(2, 3; min_degree = 1)
-        linear = Set(PS._linear_monomial_indices(mset))
+        linear = Set(1:2)                       # the unit columns e₁, e₂
         inactive = PS._build_conjugate_symmetry(
             NoConjugatePermutation(), linear, length(mset))
         inactive_jobs = PS._build_solve_jobs(inactive)

@@ -85,6 +85,11 @@ export detect_conjugate_permutation, external_conjugate_permutation,
 export master_linear_dynamics, master_right_blocks, conjugate_master_frame,
        master_left_basis
 
+# Relative tolerances of the master-block checks: structure that holds by construction
+# (conjugate frames, derivative levels), and data that carries eigensolver error.
+const _RTOL_EXACT = 1e-10
+const _RTOL_EIGENSOLVER = 1e-8
+
 include("Eigensolvers.jl")
 include("ConjugatePermutation.jl")
 include("TriangularLinearDynamics.jl")

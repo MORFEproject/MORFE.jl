@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <main class="docs-main">
   <div class="crumbs"><a href="index.html">MORFE.jl</a><span class="sep">/</span><span>Code Documentation</span></div>
   <h1>Code Documentation</h1>
-  <p class="lede">22 modules · 418 documented entries · generated 4 November 2026</p>
+  <p class="lede">22 modules · 421 documented entries · generated 4 November 2026</p>
   <p id="doc-search-status" class="doc-search-status" aria-live="polite" hidden></p>
   <div id="doc-search-results" class="doc-search-results" hidden></div>
 
@@ -1659,7 +1659,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-function" id="InvarianceError-_conjugate_partners" data-doc-name="_conjugate_partners" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L260" target="_blank" rel="noopener">_conjugate_partners</a>(λ::AbstractVector)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L259" target="_blank" rel="noopener">_conjugate_partners</a>(λ::AbstractVector)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_conjugate_partners&#40;λ&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -1692,7 +1692,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-function" id="InvarianceError-_log_log_regression" data-doc-name="_log_log_regression" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L319" target="_blank" rel="noopener">_log_log_regression</a>(radii, errors; min_points)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L318" target="_blank" rel="noopener">_log_log_regression</a>(radii, errors; min_points)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_log_log_regression&#40;radii, errors; min_points&#61;5&#41; → &#40;slope, intercept&#41;</code></pre>
@@ -1704,7 +1704,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-function" id="InvarianceError-_orbit_frequency" data-doc-name="_orbit_frequency" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L376" target="_blank" rel="noopener">_orbit_frequency</a>(R::ReducedDynamics, z_samples::AbstractMatrix, partner, ROM)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L369" target="_blank" rel="noopener">_orbit_frequency</a>(R::ReducedDynamics, z_samples::AbstractMatrix, partner, ROM)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_orbit_frequency&#40;R, z_samples, partner, ROM&#41; -&gt; s̄</code></pre>
@@ -1717,22 +1717,33 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-function" id="InvarianceError-_state_error_factorisation" data-doc-name="_state_error_factorisation" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L412" target="_blank" rel="noopener">_state_error_factorisation</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {ORDP1, N_NL, N_EXT, T}, W::Parametrisation, R::ReducedDynamics, spectral::SpectralData, s̄) where ORD</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L437" target="_blank" rel="noopener">_state_error_factorisation</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where {ORDP1, N_NL, N_EXT, T}, operators, s̄) where ORD</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_state_error_factorisation&#40;model, W, R, spectral, s̄&#41; -&gt; factorisation</code></pre>
+<div class="markdown"><pre><code>_state_error_factorisation&#40;model, operators, s̄&#41; -&gt; factorisation</code></pre>
 <p>Factorise the bordered matrix of Eq. &#40;cohomological_final&#41; at the frequency <code>s̄</code>, with every master mode resonant &#40;the border of the graph style&#41;,</p>
 <pre><code>&#91; L&#40;s̄&#41;   C̃&#40;s̄&#41;  &#93; &#91;δx&#93;   &#91;ε&#93;
 &#91; J&#40;s̄&#41;   C̃⊥&#40;s̄&#41; &#93; &#91;δf&#93; &#61; &#91;0&#93; ,</code></pre>
-<p>so that <code>δx</code> is the frequency-matched state error of a residual <code>ε</code>. The orthogonality rows <code>J</code> keep <code>δx</code> free of master-mode components: a residual along a master mode is absorbed by the reduced dynamics, through <code>δf</code>, as at a resonant monomial, and is not a state error. This is also what keeps the system regular when <code>s̄</code> lies on a master eigenvalue, where <code>L&#40;s̄&#41;</code> alone is singular.</p>
-<p>The right modes and the master block are read from <code>W</code> and <code>R</code>, so validating in rescaled coordinates stays consistent. Rescaling the right modes rescales <code>δf</code> alone, never <code>δx</code>. The left blocks come from <a class="doc-ref" href="#SpectralDecomposition-master_left_basis"><code>master_left_basis</code></a>, exactly as in the solve: the left eigenvectors of <code>spectral</code> for a diagonal master block, the dual left basis otherwise &#40;Schur or Jordan coordinates, where the left eigenvectors are not the basis the rows need, and for a Jordan block would make the bordered matrix singular&#41;.</p>
+<p>so that <code>δx</code> is the frequency-matched state error of a residual <code>ε</code>. The orthogonality rows <code>J</code> keep <code>δx</code> free of master-mode components: a residual along a master mode is absorbed by the reduced dynamics, through <code>δf</code>, as at a resonant monomial, and is not a state error. This is also what keeps the system regular when <code>s̄</code> lies on a master eigenvalue, where <code>L&#40;s̄&#41;</code> alone is singular. <code>operators</code> come from <a class="doc-ref" href="#InvarianceError-_state_error_operators"><code>_state_error_operators</code></a>.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="InvarianceError-_state_error_operators" data-doc-name="_state_error_operators" data-doc-module="InvarianceError">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L404" target="_blank" rel="noopener">_state_error_operators</a>(model::NthOrderModel, W::Parametrisation, R::ReducedDynamics, spectral::SpectralData)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_state_error_operators&#40;model, W, R, spectral&#41; -&gt; &#40;; J_coeffs, column_coeffs, corner_coeffs&#41;</code></pre>
+<p>The frequency-independent part of the state-error system: the coefficients of the orthogonality rows <code>J</code>, of the invariance columns <code>C̃</code> and of the corner <code>C̃⊥</code>, built once for every frequency <code>s̄</code> it is factorised at &#40;<a class="doc-ref" href="#InvarianceError-_state_error_factorisation"><code>_state_error_factorisation</code></a>&#41;.</p>
+<p>The linear part is read from columns <code>1:NVAR</code> of <code>W</code> and <code>R</code>, so validating in rescaled coordinates stays consistent. Rescaling the right modes rescales <code>δf</code> alone, never <code>δx</code>. The left blocks come from <a class="doc-ref" href="#SpectralDecomposition-master_left_basis"><code>master_left_basis</code></a>, exactly as in the solve: the left eigenvectors of <code>spectral</code> for a diagonal master block, the dual left basis otherwise &#40;Schur or Jordan coordinates, where the left eigenvectors are not the basis the rows need, and for a Jordan block would make the bordered matrix singular&#41;.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="InvarianceError-invariance_error_convergence" data-doc-name="invariance_error_convergence" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L565" target="_blank" rel="noopener">invariance_error_convergence</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; spectral, n_samples, r_magnitudes, r_external, master_amplitude, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L569" target="_blank" rel="noopener">invariance_error_convergence</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; spectral, n_samples, r_magnitudes, r_external, master_amplitude, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>invariance_error_convergence&#40;model, W, R;
@@ -1775,14 +1786,14 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <pre><code>				   &#40;saturated points auto-trimmed&#41;</code></pre>
 <p>Use <code><a class="doc-ref" href="#InvarianceError-plot_invariance_convergence">plot_invariance_convergence</a></code> to visualise the result.</p>
 <p>To validate a physical parameter point, pass its exact reduced external coordinate as <code>r_external</code>.  In this mode the external tail is fixed for the entire point cloud and <code>master_amplitude</code> scales only the randomly sampled master coordinates.  The manifold, reduced dynamics, and full-order model are all evaluated at that same external point. <code>r_magnitudes</code> must remain <code>&#91;0.0&#93;</code> in fixed-target mode.</p>
-<p><code>spectral</code> is the <code><a class="doc-ref" href="#SpectralDecomposition-SpectralData">SpectralData</a></code> the parametrisation was solved with; the state error builds the orthogonality rows from its left master modes, or from the dual left basis when the master block is not diagonal &#40;see <code><a class="doc-ref" href="#InvarianceError-_state_error_factorisation">_state_error_factorisation</a></code>&#41;.</p>
+<p><code>spectral</code> is the <code><a class="doc-ref" href="#SpectralDecomposition-SpectralData">SpectralData</a></code> the parametrisation was solved with; the state error builds the orthogonality rows from its left master modes, or from the dual left basis when the master block is not diagonal &#40;see <code><a class="doc-ref" href="#InvarianceError-_state_error_operators">_state_error_operators</a></code>&#41;.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="InvarianceError-invariance_error_norms" data-doc-name="invariance_error_norms" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L492" target="_blank" rel="noopener">invariance_error_norms</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, amplitude, r_external, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L495" target="_blank" rel="noopener">invariance_error_norms</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, T} where T, W::Parametrisation{ORD, NVAR}, R::ReducedDynamics; n_samples, amplitude, r_external, rng) where {ORD, ORDP1, N_NL, N_EXT, NVAR}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>invariance_error_norms&#40;model, W, R;
@@ -1812,7 +1823,7 @@ E_coeffs&#91;e&#93;&#91;:, j&#93; ← D&#91;:, ROM&#43;e&#93;   for e &#61; 1…
 <div class="doc doc-function" id="InvarianceError-plot_invariance_convergence" data-doc-name="plot_invariance_convergence" data-doc-module="InvarianceError">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L774" target="_blank" rel="noopener">plot_invariance_convergence</a>(args...; kwargs...)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Validation/InvarianceError.jl#L786" target="_blank" rel="noopener">plot_invariance_convergence</a>(args...; kwargs...)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>plot_invariance_convergence&#40;results; kwargs...&#41;</code></pre>
@@ -1960,7 +1971,7 @@ J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
 <div class="doc doc-function" id="MasterModeOrthogonality-assemble_orthogonality_matrix_and_rhs!" data-doc-name="assemble_orthogonality_matrix_and_rhs!" data-doc-module="MasterModeOrthogonality">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl#L206" target="_blank" rel="noopener">assemble_orthogonality_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::T, J_coeffs::AbstractVector{&lt;:AbstractMatrix{T}}, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}, external_dynamics::AbstractVector{T}) where {T, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/MasterModeOrthogonality.jl#L207" target="_blank" rel="noopener">assemble_orthogonality_matrix_and_rhs!</a>(M::AbstractMatrix, rhs::AbstractVector, s::T, J_coeffs::AbstractVector{&lt;:AbstractMatrix{T}}, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}, lower_order_couplings::AbstractVector{&lt;:AbstractVector{T}}, external_dynamics::AbstractVector{T}) where {T, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>assemble_orthogonality_matrix_and_rhs&#33;&#40;M, rhs, s, J_coeffs, C_coeffs, E_coeffs,
@@ -1981,7 +1992,7 @@ J_r&#91;ORD&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41;</code></pre>
 <div class="doc doc-function" id="MasterModeOrthogonality-evaluate_orthogonality_column_row!" data-doc-name="evaluate_orthogonality_column_row!" data-doc-module="MasterModeOrthogonality">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L263" target="_blank" rel="noopener">evaluate_orthogonality_column_row!</a>(c::AbstractVector{T}, s::T, r::Int64, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}) where {T, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L277" target="_blank" rel="noopener">evaluate_orthogonality_column_row!</a>(c::AbstractVector{T}, s::T, r::Int64, C_coeffs::Vector{&lt;:AbstractMatrix{T}}, resonance::StaticArraysCore.SVector{ROM, Bool}) where {T, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>evaluate_orthogonality_column_row&#33;&#40;c, s, r, C_coeffs, resonance&#41; -&gt; c</code></pre>
@@ -2017,7 +2028,7 @@ c&#91;j&#93; ← val</code></pre>
 <div class="doc doc-function" id="MasterModeOrthogonality-evaluate_orthogonality_external_rhs" data-doc-name="evaluate_orthogonality_external_rhs" data-doc-module="MasterModeOrthogonality">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L349" target="_blank" rel="noopener">evaluate_orthogonality_external_rhs</a>(s::T, r::Int64, external_dynamics::AbstractVector{T}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L363" target="_blank" rel="noopener">evaluate_orthogonality_external_rhs</a>(s::T, r::Int64, external_dynamics::AbstractVector{T}, E_coeffs::Vector{&lt;:AbstractMatrix{T}}) where T</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>evaluate_orthogonality_external_rhs&#40;s, r, external_dynamics, E_coeffs&#41; -&gt; T</code></pre>
@@ -2089,7 +2100,7 @@ c&#91;j&#93; ← val</code></pre>
 <div class="doc doc-function" id="MasterModeOrthogonality-precompute_orthogonality_column_polynomials" data-doc-name="precompute_orthogonality_column_polynomials" data-doc-module="MasterModeOrthogonality">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L117" target="_blank" rel="noopener">precompute_orthogonality_column_polynomials</a>(J_coeffs::AbstractVector{&lt;:AbstractMatrix}, right_master_blocks::AbstractArray{&lt;:Number, 3}, external_directions::AbstractMatrix, reduced_dynamics_linear::AbstractMatrix)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L131" target="_blank" rel="noopener">precompute_orthogonality_column_polynomials</a>(J_coeffs::AbstractVector{&lt;:AbstractMatrix}, right_master_blocks::AbstractArray{&lt;:Number, 3}, external_directions::AbstractMatrix, reduced_dynamics_linear::AbstractMatrix)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>precompute_orthogonality_column_polynomials&#40;J_coeffs, right_master_blocks,
@@ -2140,6 +2151,7 @@ E_r&#40;s&#41; &#61; Σ_&#123;k&#61;1&#125;^&#123;ORD-1&#125; G_&#123;r,k&#125;&
     <span class="badge f">function</span>
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_orthogonality_operator_coefficients</a>(fom_matrices::NTuple{ORDP1, var"#s317"} where var"#s317"&lt;:(AbstractMatrix), left_eigenmodes::AbstractMatrix) where ORDP1</code>
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_orthogonality_operator_coefficients</a>(fom_matrices::NTuple{ORDP1, var"#s316"} where var"#s316"&lt;:(AbstractMatrix), left_eigenmodes::AbstractMatrix, left_modes_derivatives::Union{Nothing, AbstractArray{&lt;:Number, 3}}) where ORDP1</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/MasterModeOrthogonality/ColumnPolynomials.jl#L5" target="_blank" rel="noopener">precompute_orthogonality_operator_coefficients</a>(fom_matrices::NTuple{ORDP1, var"#s317"} where var"#s317"&lt;:(AbstractMatrix), left_blocks::AbstractArray{&lt;:Number, 3}) where ORDP1</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>precompute_orthogonality_operator_coefficients&#40;fom_matrices, left_eigenmodes,
@@ -2174,6 +2186,9 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <li><p>Storage: <code>O&#40;ROM · ORD · FOM&#41;</code></p>
 </li>
 </ul>
+</div><div class="markdown"><pre><code>precompute_orthogonality_operator_coefficients&#40;fom_matrices, left_blocks&#41;
+-&gt; Vector&#123;Matrix&#123;T&#125;&#125;</code></pre>
+<p>The same coefficients from whole left order-blocks <code>FOM × ORD × ROM</code>, in the layout <code><a class="doc-ref" href="#SpectralDecomposition-SpectralData">SpectralData</a></code> stores them and <code><a class="doc-ref" href="#SpectralDecomposition-master_left_basis">master_left_basis</a></code> returns: the physical slice last.</p>
 </div>
   </div>
 </div>
@@ -2198,7 +2213,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-type" id="Multiindices-FactorisationEntry" data-doc-name="FactorisationEntry" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L645" target="_blank" rel="noopener">FactorisationEntry</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L663" target="_blank" rel="noopener">FactorisationEntry</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>FactorisationEntry</code></pre>
@@ -2235,8 +2250,8 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="Multiindices-_last_index_below_degree" data-doc-name="_last_index_below_degree" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L532" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L532" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64, allowed_indices::AbstractVector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L550" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L550" target="_blank" rel="noopener">_last_index_below_degree</a>(set::MultiindexSet, max_total_deg::Int64, allowed_indices::AbstractVector{Int64})</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_last_index_below_degree&#40;set::MultiindexSet, max_total_deg::Int&#41; -&gt; Int</code></pre>
@@ -2250,7 +2265,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="Multiindices-_lex_cmp_same_degree" data-doc-name="_lex_cmp_same_degree" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L477" target="_blank" rel="noopener">_lex_cmp_same_degree</a>(v::StaticArraysCore.SVector{N, Int64}, e) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L495" target="_blank" rel="noopener">_lex_cmp_same_degree</a>(v::StaticArraysCore.SVector{N, Int64}, e) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_lex_cmp_same_degree&#40;v::SVector&#123;N,Int&#125;, e&#41; -&gt; Int</code></pre>
@@ -2261,7 +2276,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="Multiindices-_multinomial" data-doc-name="_multinomial" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L929" target="_blank" rel="noopener">_multinomial</a>(e::Int64, k::Vector{Int64})</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L947" target="_blank" rel="noopener">_multinomial</a>(e::Int64, k::Vector{Int64})</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_multinomial&#40;e::Int, k::Vector&#123;Int&#125;&#41; -&gt; Int</code></pre>
@@ -2272,7 +2287,7 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="Multiindices-_total_degree" data-doc-name="_total_degree" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L462" target="_blank" rel="noopener">_total_degree</a>(exp, ::Val{N}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L480" target="_blank" rel="noopener">_total_degree</a>(exp, ::Val{N}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_total_degree&#40;exp, ::Val&#123;N&#125;&#41; -&gt; Int</code></pre>
@@ -2305,8 +2320,8 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="Multiindices-bounded_index_tuples" data-doc-name="bounded_index_tuples" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L945" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{0, T}) where T</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L945" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{N, Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L963" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{0, T}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L963" target="_blank" rel="noopener">bounded_index_tuples</a>(M::Int64, exp::StaticArraysCore.SVector{N, Int64}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>bounded_index_tuples&#40;M, exp::SVector&#123;N,Int&#125;&#41;</code></pre>
@@ -2342,11 +2357,22 @@ J_r&#91;ORD, :&#93; &#61; conj&#40;B_ORDᴴ φ_&#123;r,ORD&#125;&#41; &#61; conj
 <div class="doc doc-function" id="Multiindices-build_exponent_index_map" data-doc-name="build_exponent_index_map" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L913" target="_blank" rel="noopener">build_exponent_index_map</a>(set::MultiindexSet{N}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L931" target="_blank" rel="noopener">build_exponent_index_map</a>(set::MultiindexSet{N}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>build_exponent_index_map&#40;set::MultiindexSet&#41; -&gt; Dict&#123;SVector&#123;N,Int&#125;, Int&#125;</code></pre>
 <p>Build a dictionary mapping each exponent <code>SVector</code> to its 1-based column index in <code>set</code>. Useful for O&#40;1&#41; lookups without repeated binary searches.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="Multiindices-check_unit_columns" data-doc-name="check_unit_columns" data-doc-module="Multiindices">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L447" target="_blank" rel="noopener">check_unit_columns</a>(mset::MultiindexSet{N}) where N</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>check_unit_columns&#40;mset::MultiindexSet&#123;N&#125;&#41; -&gt; nothing</code></pre>
+<p>Check that the first <code>N</code> members of <code>mset</code> are the unit multiindices <code>e₁, …, e_N</code>, in that order. Every set the parametrisation accepts has this layout — it holds each <code>eᵢ</code> and no constant monomial, and GrLex lists degree one first — so the linear part of <code>W</code> and <code>R</code> is columns <code>1:N</code>, which the solve and its validation index directly. Throws an <code>ArgumentError</code> otherwise, which matters only when the contract check is switched off.</p>
 </div>
   </div>
 </div>
@@ -2389,7 +2415,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="doc doc-function" id="Multiindices-factorisations_asymmetric" data-doc-name="factorisations_asymmetric" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L671" target="_blank" rel="noopener">factorisations_asymmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L689" target="_blank" rel="noopener">factorisations_asymmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>factorisations_asymmetric&#40;set, exp, num_factors, candidate_indices&#41; -&gt; Vector&#123;FactorisationEntry&#125;</code></pre>
@@ -2400,7 +2426,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="doc doc-function" id="Multiindices-factorisations_fully_symmetric" data-doc-name="factorisations_fully_symmetric" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L712" target="_blank" rel="noopener">factorisations_fully_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L730" target="_blank" rel="noopener">factorisations_fully_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, num_factors::Int64, candidate_indices::AbstractVector{Int64}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>factorisations_fully_symmetric&#40;set, exp, num_factors, candidate_indices&#41; -&gt; Vector&#123;FactorisationEntry&#125;</code></pre>
@@ -2412,7 +2438,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="doc doc-function" id="Multiindices-factorisations_groupwise_symmetric" data-doc-name="factorisations_groupwise_symmetric" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L783" target="_blank" rel="noopener">factorisations_groupwise_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, group_sizes::NTuple{M, Int64}, candidate_indices::AbstractVector{Int64}) where {N, M}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L801" target="_blank" rel="noopener">factorisations_groupwise_symmetric</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}, group_sizes::NTuple{M, Int64}, candidate_indices::AbstractVector{Int64}) where {N, M}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>factorisations_groupwise_symmetric&#40;set, exp, group_sizes, candidate_indices&#41; -&gt; Vector&#123;FactorisationEntry&#125;</code></pre>
@@ -2438,8 +2464,8 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="doc doc-function" id="Multiindices-find_in_set" data-doc-name="find_in_set" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L508" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L508" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L526" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L526" target="_blank" rel="noopener">find_in_set</a>(set::MultiindexSet{N}, exp::NTuple{N, Int64}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>find_in_set&#40;set::MultiindexSet, exp::AbstractVector&#123;Int&#125;&#41; -&gt; Union&#123;Int, Nothing&#125;</code></pre>
@@ -2464,8 +2490,8 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="doc doc-function" id="Multiindices-indices_in_box_with_bounded_degree" data-doc-name="indices_in_box_with_bounded_degree" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L565" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64) where N</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L565" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64, allowed_indices::AbstractVector{Int64}) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L583" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64) where N</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L583" target="_blank" rel="noopener">indices_in_box_with_bounded_degree</a>(set::MultiindexSet{N}, box_upper::AbstractVector{Int64}, degree_lower_bound::Int64, total_deg_upper::Int64, allowed_indices::AbstractVector{Int64}) where N</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>indices_in_box_with_bounded_degree&#40;set::MultiindexSet, box_upper::AbstractVector&#123;Int&#125;,
@@ -2530,7 +2556,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="doc doc-function" id="Multiindices-monomial_rank" data-doc-name="monomial_rank" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L858" target="_blank" rel="noopener">monomial_rank</a>(exp::AbstractVector{Int64}, nvars::Int64, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L876" target="_blank" rel="noopener">monomial_rank</a>(exp::AbstractVector{Int64}, nvars::Int64, max_degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>monomial_rank&#40;exp::AbstractVector&#123;Int&#125;, nvars::Int, max_degree::Int&#41; -&gt; Int</code></pre>
@@ -2565,7 +2591,7 @@ delete_multiindices&#40;α -&gt; sum&#40;α&#41; &gt; 2, S&#41; &#61;&#61; all_m
 <div class="doc doc-function" id="Multiindices-num_multiindices_up_to" data-doc-name="num_multiindices_up_to" data-doc-module="Multiindices">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L846" target="_blank" rel="noopener">num_multiindices_up_to</a>(nvars::Int64, max_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/Multiindices.jl#L864" target="_blank" rel="noopener">num_multiindices_up_to</a>(nvars::Int64, max_degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>num_multiindices_up_to&#40;nvars::Int, max_degree::Int&#41; -&gt; Integer</code></pre>
@@ -4435,7 +4461,7 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_bordered_matrices" data-doc-name="_bordered_matrices" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L257" target="_blank" rel="noopener">_bordered_matrices</a>(model::NthOrderModel, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet, targets; conjugate_permutation, options) where {NVAR, ORD, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L250" target="_blank" rel="noopener">_bordered_matrices</a>(model::NthOrderModel, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet, targets; conjugate_permutation, options) where {NVAR, ORD, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_bordered_matrices&#40;model, mset, spectral, resonance_set, targets;
@@ -4448,10 +4474,10 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_build_complete_context" data-doc-name="_build_complete_context" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L316" target="_blank" rel="noopener">_build_complete_context</a>(W, dimensions::NTuple{5, Int64}, unit_offset::Int64, linear_terms, lambda_matrix, lambda_diag, invariance_C_coeffs, master_derivative_steps, orthogonality_J_coeffs, right_master_blocks, resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L287" target="_blank" rel="noopener">_build_complete_context</a>(W, dimensions::NTuple{5, Int64}, linear_terms, lambda_matrix, lambda_diag, invariance_C_coeffs, master_derivative_steps, orthogonality_J_coeffs, master_W, resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_build_complete_context&#40;W, dimensions, unit_offset, ...&#41;</code></pre>
+<div class="markdown"><pre><code>_build_complete_context&#40;W, dimensions, ...&#41;</code></pre>
 <p>Read the final external directions from <code>W</code>, build the complete external operators, and return the context used by the nonlinear solve.</p>
 </div>
   </div>
@@ -4547,17 +4573,17 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_check_master_linear_dynamics" data-doc-name="_check_master_linear_dynamics" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L151" target="_blank" rel="noopener">_check_master_linear_dynamics</a>(model, W, Λ, permutation, unit_offset::Int64, ROM::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L151" target="_blank" rel="noopener">_check_master_linear_dynamics</a>(model, master_W, Λ, σ)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_check_master_linear_dynamics&#40;model, W, Λ, conjugate_permutation, unit_offset, ROM&#41;</code></pre>
-<p>Validate a non-diagonal master block <code>Λ</code> &#40;read back from <code>R</code>&#41; against the master columns stored in <code>W</code>, raising an <code>ArgumentError</code> that names the failing condition:</p>
+<div class="markdown"><pre><code>_check_master_linear_dynamics&#40;model, master_W, Λ, conjugate_permutation&#41;</code></pre>
+<p>Validate a non-diagonal master block <code>Λ</code> &#40;read back from <code>R</code>&#41; against the master columns <code>master_W &#61; W&#91;:, :, 1:ROM&#93;</code>, raising an <code>ArgumentError</code> that names the failing condition:</p>
 <ul>
-<li><p><strong>conjugate frame</strong> &#40;with an involution&#41;: the master columns are conjugate pairs on every derivative level and <code>Λ&#91;σ, σ&#93; &#61; conj&#40;Λ&#41;</code>, which conjugate filling assumes;</p>
+<li><p><strong>conjugate frame</strong> &#40;with a master involution <code>σ</code>&#41;: the master columns are conjugate pairs on every derivative level and <code>Λ&#91;σ, σ&#93; &#61; conj&#40;Λ&#41;</code>, which conjugate filling assumes;</p>
 </li>
 <li><p><strong>levels</strong>: <code>W⁽ᵏ⁺¹⁾ &#61; W⁽ᵏ⁾ Λ</code> on the master columns, so the invariance columns &#40;built from level one and powers of <code>Λ</code>&#41; and the stored levels describe the same modes;</p>
 </li>
-<li><p><strong>right invariance</strong>: <code>Σₖ Bₖ Φ Λᵏ &#61; 0</code>, so the coupling belongs to these modes. This is checked to <code>1e-8</code>, the accuracy of eigensolver data; the others to <code>1e-10</code>.</p>
+<li><p><strong>right invariance</strong>: <code>Σₖ Bₖ Φ Λᵏ &#61; 0</code>, so the coupling belongs to these modes. This is checked to <code>_RTOL_EIGENSOLVER</code>, the accuracy of eigensolver data; the others to <code>_RTOL_EXACT</code>.</p>
 </li>
 </ul>
 <p>Runs after storage and restoration, so it also covers a supplied <code>initial_solution</code>.</p>
@@ -4567,7 +4593,7 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_commit_initial_degree!" data-doc-name="_commit_initial_degree!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L37" target="_blank" rel="noopener">_commit_initial_degree!</a>(session, W, R, mset, sparse_solver, completed_degree::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L35" target="_blank" rel="noopener">_commit_initial_degree!</a>(session, W, R, mset, sparse_solver, completed_degree::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Commit degree-one coefficients once external directions are final.</p>
@@ -4702,7 +4728,7 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_execute_problem_schedule!" data-doc-name="_execute_problem_schedule!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L46" target="_blank" rel="noopener">_execute_problem_schedule!</a>(W, R, ctx, symmetry, model, cache, mset, sparse_solver, checkpoint_session, benchmark_dir, options)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L44" target="_blank" rel="noopener">_execute_problem_schedule!</a>(W, R, ctx, symmetry, model, cache, mset, sparse_solver, checkpoint_session, benchmark_dir, options)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><p>Execute benchmark or ordinary scheduling with the appropriate concrete observer.</p>
@@ -4823,16 +4849,15 @@ then share one factorisation;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_initialise_waveform!" data-doc-name="_initialise_waveform!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L71" target="_blank" rel="noopener">_initialise_waveform!</a>(W::Parametrisation, R::ReducedDynamics, master_right_modes, master_linear_dynamics, master_right_mode_derivatives, unit_offset::Int64, model)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L51" target="_blank" rel="noopener">_initialise_waveform!</a>(W::Parametrisation, R::ReducedDynamics, right_blocks, master_dynamics, model)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_initialise_waveform&#33;&#40;W, R, master_right_modes, master_linear_dynamics,
-                      master_right_mode_derivatives, unit_offset, model&#41;</code></pre>
-<p>Initialise the linear-monomial coefficients of <code>W</code> and <code>R</code> from spectral data:</p>
+<div class="markdown"><pre><code>_initialise_waveform&#33;&#40;W, R, right_blocks, master_dynamics, model&#41;</code></pre>
+<p>Initialise the linear part of <code>W</code> and <code>R</code>, which is their columns <code>1:NVAR</code> &#40;<code><a class="doc-ref" href="#Multiindices-check_unit_columns">check_unit_columns</a></code>&#41;, from the spectral data:</p>
 <ul>
-<li><p><code>W&#91;:, 1, eᵣ&#93; &#61; master_right_modes&#91;:, r&#93;</code> and, for <code>ORD &gt; 1</code>, <code>W&#91;:, k, eᵣ&#93; &#61; master_right_mode_derivatives&#91;:, k-1, r&#93;</code>.</p>
+<li><p><code>W&#91;:, :, 1:ROM&#93; &#61; right_blocks</code>, the master right order-blocks;</p>
 </li>
-<li><p><code>R&#91;1:r, eᵣ&#93; &#61; master_linear_dynamics&#91;1:r, r&#93;</code>: the upper-triangular master block <code>Λ̃</code>, whose diagonal is the master eigenvalues &#40;<code>Diagonal&#40;eigenvalues&#41;</code> for eigenvectors&#41;.</p>
+<li><p><code>R&#91;1:ROM, 1:ROM&#93; &#61; master_dynamics</code>, the master block <code>Λ̃</code> &#40;<code>Diagonal</code> or <code>UpperTriangular</code>, whose diagonal is the master eigenvalues&#41;.</p>
 </li>
 </ul>
 <p>Also embeds the external-system linear dynamics into the external rows of <code>R</code> via <code><a class="doc-ref" href="#ParametrisationSolver-_embed_external_dynamics!">_embed_external_dynamics&#33;</a></code> when <code>model.external_system &#33;&#61;&#61; nothing</code>.</p>
@@ -4877,17 +4902,6 @@ then share one factorisation;</code></pre>
   <div class="doc-body">
 <div class="markdown"><pre><code>_job_target&#40;sym, index&#41; -&gt; Int</code></pre>
 <p>Return the larger conjugate-secondary position reconstructed after solving <code>index</code>, or <code>0</code> when symmetry is inactive, the monomial is self-conjugate, or no partner is present.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="ParametrisationSolver-_linear_monomial_indices" data-doc-name="_linear_monomial_indices" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L51" target="_blank" rel="noopener">_linear_monomial_indices</a>(mset::MultiindexSet{NVAR}) where NVAR</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>_linear_monomial_indices&#40;mset&#41; -&gt; Vector&#123;Int&#125;</code></pre>
-<p>Return the positions of every unit-vector monomial in <code>mset</code>. These are the linear coefficients initialised from eigenvectors or external directions rather than by the main nonlinear solve.</p>
 </div>
   </div>
 </div>
@@ -4945,18 +4959,6 @@ then share one factorisation;</code></pre>
   <div class="doc-body">
 <div class="markdown"><pre><code>_mark_degree_complete&#33;&#40;session, degree&#41; -&gt; nothing</code></pre>
 <p>Commit a degree-completion marker under the writer lock without writing another coefficient chunk. Used after all factor-group chunks for the degree are durable.</p>
-</div>
-  </div>
-</div>
-<div class="doc doc-function" id="ParametrisationSolver-_master_left_blocks" data-doc-name="_master_left_blocks" data-doc-module="ParametrisationSolver">
-  <div class="doc-sig">
-    <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L205" target="_blank" rel="noopener">_master_left_blocks</a>(model, W, Λ, spectral, permutation, unit_offset::Int64, ROM::Int64)</code>
-  </div>
-  <div class="doc-body">
-<div class="markdown"><pre><code>_master_left_blocks&#40;model, W, Λ, spectral, conjugate_permutation, unit_offset, ROM&#41;
--&gt; &#40;master_left_modes, master_left_mode_blocks&#41;</code></pre>
-<p>The left physical slice and lower-order left blocks the orthogonality rows are built from, for the master columns stored in <code>W</code> and the master block <code>Λ</code> read from <code>R</code>. They come from <a class="doc-ref" href="#SpectralDecomposition-master_left_basis"><code>master_left_basis</code></a>: the spectral left eigenvectors as they are when <code>Λ</code> is diagonal, and the dual left basis otherwise or when <code>spectral</code> carries no left blocks.</p>
 </div>
   </div>
 </div>
@@ -5066,7 +5068,7 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_prepare_external_directions!" data-doc-name="_prepare_external_directions!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L247" target="_blank" rel="noopener">_prepare_external_directions!</a>(W, R, supplied::Bool, completed_indices, model, cache, symmetry, dimensions::NTuple{5, Int64}, unit_offset::Int64, lambda_matrix, lambda_diag, linear_terms, invariance_C_coeffs, master_derivative_steps, orthogonality_J_coeffs, right_master_blocks, resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L221" target="_blank" rel="noopener">_prepare_external_directions!</a>(W, R, supplied::Bool, completed_indices, model, cache, symmetry, dimensions::NTuple{5, Int64}, lambda_matrix, lambda_diag, linear_terms, invariance_C_coeffs, master_derivative_steps, orthogonality_J_coeffs, master_W, resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_prepare_external_directions&#33;&#40;W, R, supplied, completed_indices, ...&#41;</code></pre>
@@ -5077,12 +5079,12 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_prepare_master_operators" data-doc-name="_prepare_master_operators" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L224" target="_blank" rel="noopener">_prepare_master_operators</a>(linear_terms, W, R, master_right_modes, master_left_modes, master_left_mode_blocks, unit_offset::Int64, ROM::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolvePreparation.jl#L204" target="_blank" rel="noopener">_prepare_master_operators</a>(linear_terms, master_W, master_dynamics, left_blocks)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_prepare_master_operators&#40;linear_terms, W, R, master modes and blocks,
-	unit_offset, ROM&#41;</code></pre>
-<p>Precompute the external-independent orthogonality and invariance operators. Return the orthogonality row coefficients, the master order-block view, the invariance columns, and the master derivative steps.</p>
+<div class="markdown"><pre><code>_prepare_master_operators&#40;linear_terms, master_W, master_dynamics, left_blocks&#41;
+-&gt; &#40;orthogonality_J_coeffs, invariance_C_coeffs, master_derivative_steps&#41;</code></pre>
+<p>Precompute the external-independent operators: the orthogonality rows from the master <code>left_blocks</code> &#40;<a class="doc-ref" href="#SpectralDecomposition-master_left_basis"><code>master_left_basis</code></a>&#41;, and the invariance columns from the master columns at level one of <code>W</code> and the master block <code>master_dynamics</code> of <code>R</code> — the same columns every other consumer reads.</p>
 </div>
   </div>
 </div>
@@ -5092,8 +5094,9 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L7" target="_blank" rel="noopener">_prepare_problem_inputs</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, conjugate_permutation, options::ParametrisationOptions) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_prepare_problem_inputs&#40;model, mset, spectral, conjugate_permutation, options&#41;</code></pre>
-<p>Resolve concrete spectral arrays, validate dimensions and conjugate structure, and return the data required by storage and operator preparation. This is the single setup boundary for <code><a class="doc-ref" href="#SpectralDecomposition-SpectralData">SpectralData</a></code> fields whose higher-order blocks may be <code>nothing</code>. The left blocks are resolved later, by <a class="doc-ref" href="#ParametrisationSolver-_master_left_blocks"><code>_master_left_blocks</code></a>: they depend on the master block, which is read back from <code>R</code> once storage is prepared.</p>
+<div class="markdown"><pre><code>_prepare_problem_inputs&#40;model, mset, spectral, conjugate_permutation, options&#41;
+-&gt; &#40;conjugate_structure, dimensions&#41;</code></pre>
+<p>Validate the multiindex set, the dimensions and the conjugate structure, and return the resolved conjugate permutation and <code>&#40;ORD, FOM, ROM, N_EXT, NVAR&#41;</code>. The set&#39;s linear part is its columns <code>1:NVAR</code> &#40;<a class="doc-ref" href="#Multiindices-check_unit_columns"><code>check_unit_columns</code></a>&#41;, which every later phase indexes directly.</p>
 </div>
   </div>
 </div>
@@ -5112,19 +5115,18 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_prepare_solution_storage" data-doc-name="_prepare_solution_storage" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L112" target="_blank" rel="noopener">_prepare_solution_storage</a>(initial_solution, mset, model, master_right_modes, master_linear_dynamics, master_right_mode_derivatives, dimensions::NTuple{5, Int64}, unit_offset::Int64, ::Type{T}) where T</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L75" target="_blank" rel="noopener">_prepare_solution_storage</a>(initial_solution, mset, model, spectral, dimensions::NTuple{5, Int64}, ::Type{T}) where T</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_prepare_solution_storage&#40;initial_solution, mset, model, master_right_modes,
-	master_linear_dynamics, master_right_mode_derivatives, dimensions, unit_offset, T&#41;</code></pre>
-<p>Return <code>&#40;W, R, supplied&#41;</code>. Supplied objects are returned unchanged and by identity. When no storage is supplied, allocate zeroed coefficient arrays and initialise their known linear coefficients from the spectral and external-system data.</p>
+<div class="markdown"><pre><code>_prepare_solution_storage&#40;initial_solution, mset, model, spectral, dimensions, T&#41;</code></pre>
+<p>Return <code>&#40;W, R, supplied&#41;</code>. Supplied objects are returned unchanged and by identity. When no storage is supplied, allocate zeroed coefficient arrays and initialise their known linear coefficients from <code>spectral</code> &#40;the master right blocks and the master block of the reduced linear dynamics&#41; and the external system.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="ParametrisationSolver-_prepare_solve" data-doc-name="_prepare_solve" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L174" target="_blank" rel="noopener">_prepare_solve</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet, initial_solution, conjugate_permutation, options::ParametrisationOptions) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L172" target="_blank" rel="noopener">_prepare_solve</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet, initial_solution, conjugate_permutation, options::ParametrisationOptions) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_prepare_solve&#40;model, mset, spectral, resonance_set, initial_solution,
@@ -5193,8 +5195,8 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_restore_solution_checkpoint!" data-doc-name="_restore_solution_checkpoint!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L141" target="_blank" rel="noopener">_restore_solution_checkpoint!</a>(::Nothing, W, R, supplied::Bool)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L141" target="_blank" rel="noopener">_restore_solution_checkpoint!</a>(session::MORFE.ParametrisationSolver.CheckpointSession, W, R, supplied::Bool)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L97" target="_blank" rel="noopener">_restore_solution_checkpoint!</a>(::Nothing, W, R, supplied::Bool)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolutionStorage.jl#L97" target="_blank" rel="noopener">_restore_solution_checkpoint!</a>(session::MORFE.ParametrisationSolver.CheckpointSession, W, R, supplied::Bool)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_restore_solution_checkpoint&#33;&#40;session, W, R, supplied&#41;</code></pre>
@@ -5240,12 +5242,12 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_solve_external_directions!" data-doc-name="_solve_external_directions!" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ExternalDirections.jl#L3" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int64, ROM::Int64, unit_offset::Int64)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ExternalDirections.jl#L3" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, N_EXT::Int64, ROM::Int64, unit_offset::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ExternalDirections.jl#L3" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{NoConjugatePermutation}, N_EXT::Int64, ROM::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/ExternalDirections.jl#L3" target="_blank" rel="noopener">_solve_external_directions!</a>(W, R, partial_ctx_for, model, ml_cache, sym::ConjugateSymmetryData{&lt;:StaticArraysCore.SVector}, N_EXT::Int64, ROM::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_solve_external_directions&#33;&#40;W, R, partial_ctx_for, model, ml_cache,
-	symmetry, N_EXT, ROM, unit_offset&#41;</code></pre>
+	symmetry, N_EXT, ROM&#41;</code></pre>
 <p>Solve external forcing directions in increasing variable order. Partial contexts contain only directions already solved, as required by upper-triangular external dynamics. Conjugate secondaries are reconstructed immediately, and every external linear monomial is marked skipped before the nonlinear schedule is built. A direction whose bordered matrix equals that of the direction solved before it reuses its numeric factorisation &#40;<a class="doc-ref" href="#ParametrisationSolver-_solve_external_direction!"><code>_solve_external_direction&#33;</code></a>&#41;.</p>
 </div>
   </div>
@@ -5253,7 +5255,7 @@ _finish_observer&#33;&#40;observer&#41;</code></pre>
 <div class="doc doc-function" id="ParametrisationSolver-_spectral_conjugate_permutation" data-doc-name="_spectral_conjugate_permutation" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L298" target="_blank" rel="noopener">_spectral_conjugate_permutation</a>(request, spectral::SpectralData, sys)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L291" target="_blank" rel="noopener">_spectral_conjugate_permutation</a>(request, spectral::SpectralData, sys)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_spectral_conjugate_permutation&#40;request, spectral, external_system&#41;</code></pre>
@@ -5367,7 +5369,7 @@ f_&#123;P·β&#125;&#91;r&#93; &#61; conj&#40;f_β&#91;perm&#91;r&#93;&#93;&#41;
 <div class="doc doc-function" id="ParametrisationSolver-solve_parametrisation" data-doc-name="solve_parametrisation" data-doc-module="ParametrisationSolver">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L66" target="_blank" rel="noopener">solve_parametrisation</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/ParametrisationMethod/ParametrisationSolver/SolveProblem.jl#L64" target="_blank" rel="noopener">solve_parametrisation</a>(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT}, mset::MultiindexSet{NVAR}, spectral::SpectralData{ORD, ROM}, resonance_set::ResonanceSet; initial_solution, conjugate_permutation, benchmark_dir, options) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>solve_parametrisation&#40;
@@ -6511,7 +6513,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-type" id="SpectralDecomposition-SpectralData" data-doc-name="SpectralData" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge t">type</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L129" target="_blank" rel="noopener">SpectralData</a></code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L141" target="_blank" rel="noopener">SpectralData</a></code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>SpectralData&#123;ORD, ROM&#125;</code></pre>
@@ -6644,6 +6646,33 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 </div>
   </div>
 </div>
+<div class="doc doc-type" id="SpectralDecomposition-_FirstOrderForm" data-doc-name="_FirstOrderForm" data-doc-module="SpectralDecomposition">
+  <div class="doc-sig">
+    <span class="badge t">type</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L70" target="_blank" rel="noopener">_FirstOrderForm</a></code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_FirstOrderForm&#40;model&#41;</code></pre>
+<p>The first-order form <code>&#40;𝓐, 𝓑&#41;</code> of <code>Σₖ Bₖ x⁽ᵏ⁾ &#61; 0</code>, as products with the model&#39;s own <code>&#40;B₀, …, B_ORD&#41;</code> instead of assembled <code>ORD·FOM × ORD·FOM</code> matrices &#40;<code><a class="doc-ref" href="#FullOrderModel-linear_first_order_matrices">linear_first_order_matrices</a></code>&#41;. On stacked vectors <code>&#91;x₁; …; x_ORD&#93;</code>,</p>
+<pre><code>𝓑 &#61; blockdiag&#40;I, …, I, B_ORD&#41;,    𝓐 &#61; &#91;shift identities; −B₀ … −B_&#123;ORD−1&#125;&#93;,</code></pre>
+<p>so every product and every shifted solve needs only <code>FOM × FOM</code> operations.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="SpectralDecomposition-_adjoint_shifted_solve" data-doc-name="_adjoint_shifted_solve" data-doc-module="SpectralDecomposition">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L110" target="_blank" rel="noopener">_adjoint_shifted_solve</a>(form::MORFE.SpectralDecomposition._FirstOrderForm, factor, s, Y)</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_adjoint_shifted_solve&#40;form, factor, s, Y&#41; -&gt; X</code></pre>
+<p>Solve <code>&#40;𝓐 − s𝓑&#41;ᴴ X &#61; Y</code> with one solve by <code>P&#40;s&#41;ᴴ</code>, where <code>factor &#61; lu&#40;P&#40;s&#41;&#41;</code> and <code>P&#40;s&#41; &#61; Σₖ sᵏ Bₖ</code>. Block by block the system reads</p>
+<pre><code>−s̄X₁ − B₀ᴴX_ORD &#61; Y₁,    X_&#123;j−1&#125; − s̄X_j − B_&#123;j−1&#125;ᴴX_ORD &#61; Y_j  &#40;1 &lt; j &lt; ORD&#41;,
+X_&#123;ORD−1&#125; − &#40;B_&#123;ORD−1&#125; &#43; s B_ORD&#41;ᴴ X_ORD &#61; Y_ORD.</code></pre>
+<p>Eliminating <code>X₁ … X_&#123;ORD−1&#125;</code> leaves <code>P&#40;s&#41;ᴴ X_ORD &#61; −Σᵢ s̄^&#123;i−1&#125; Y_i</code>. The other blocks then follow downwards from the last row, <code>X_&#123;ORD−1&#125; &#61; Y_ORD &#43; &#40;B_&#123;ORD−1&#125; &#43; s B_ORD&#41;ᴴ X_ORD</code> and <code>X_&#123;j−1&#125; &#61; Y_j &#43; s̄X_j &#43; B_&#123;j−1&#125;ᴴ X_ORD</code>. That direction never divides by <code>s̄</code>: substituting upwards from the first row would, and near <code>s &#61; 0</code> &#40;a rigid-body master&#41; the cancellation in <code>Y₁ &#43; B₀ᴴX_ORD</code> would be amplified by <code>1/|s|</code>.</p>
+</div>
+  </div>
+</div>
 <div class="doc doc-function" id="SpectralDecomposition-_conjugate_consistent" data-doc-name="_conjugate_consistent" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
@@ -6671,10 +6700,10 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-_dualise" data-doc-name="_dualise" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L66" target="_blank" rel="noopener">_dualise</a>(A, B, Φ, Λ, Ψ)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L155" target="_blank" rel="noopener">_dualise</a>(form::MORFE.SpectralDecomposition._FirstOrderForm, Φ, Λ, Ψ)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_dualise&#40;A, B, Φ, Λ, Ψ&#41; -&gt; &#40;Ψ̃, nothing&#41; or &#40;nothing, reason&#41;</code></pre>
+<div class="markdown"><pre><code>_dualise&#40;form, Φ, Λ, Ψ&#41; -&gt; &#40;Ψ̃, nothing&#41; or &#40;nothing, reason&#41;</code></pre>
 <p>The dual basis <code>Ψ̃ &#61; Ψ G⁻ᴴ</code>, <code>G &#61; Ψᴴ𝓑Φ</code>, of a left basis <code>Ψ</code>, after checking that <code>G</code> is well conditioned and that <code>Ψ̃</code> is left-invariant with <code>Λ</code>. A failure returns its reason instead, so a caller can fall back to another route.</p>
 </div>
   </div>
@@ -6682,7 +6711,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-_eigenvalue_groups" data-doc-name="_eigenvalue_groups" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L116" target="_blank" rel="noopener">_eigenvalue_groups</a>(λ::AbstractVector)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L205" target="_blank" rel="noopener">_eigenvalue_groups</a>(λ::AbstractVector)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_eigenvalue_groups&#40;λ&#41; -&gt; Vector&#123;Vector&#123;Int&#125;&#125;</code></pre>
@@ -6704,22 +6733,33 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-_group_left_basis" data-doc-name="_group_left_basis" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L137" target="_blank" rel="noopener">_group_left_basis</a>(A, B, Φ_group, λ; max_iterations)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L226" target="_blank" rel="noopener">_group_left_basis</a>(form::MORFE.SpectralDecomposition._FirstOrderForm, Φ_group, λ; max_iterations)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_group_left_basis&#40;A, B, Φ_group, λ; max_iterations &#61; 10&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
-<p>An orthonormal basis of the left generalised eigenspace of <code>λ</code>, by block inverse iteration on the adjoint pencil, <code>X ← &#40;𝓐 − s𝓑&#41;⁻ᴴ 𝓑ᴴ X</code> with <code>s &#61; λ &#43; 10⁻⁶·max&#40;1, |λ|&#41;</code>. The start <code>𝓑Φ_group</code> has a non-singular component along that subspace &#40;its Gram matrix&#41;, and the iteration converges to the whole invariant subspace at the rate <code>|s − λ| / gap</code>, so a Jordan block needs no chains and no rank decisions.</p>
+<div class="markdown"><pre><code>_group_left_basis&#40;form, Φ_group, λ; max_iterations &#61; 10&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
+<p>An orthonormal basis of the left generalised eigenspace of <code>λ</code>, by block inverse iteration on the adjoint pencil, <code>X ← &#40;𝓐 − s𝓑&#41;⁻ᴴ 𝓑ᴴ X</code> &#40;<a class="doc-ref" href="#SpectralDecomposition-_adjoint_shifted_solve"><code>_adjoint_shifted_solve</code></a>&#41; with <code>s &#61; λ &#43; 10⁻⁴·max&#40;1, |λ|&#41;</code>, kept off zero for rigid-body masters. The start <code>𝓑Φ_group</code> has a non-singular component along that subspace &#40;its Gram matrix&#41;, and the iteration converges to the whole invariant subspace at the rate <code>|s − λ| / gap</code>, so a Jordan block needs no chains and no rank decisions.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="SpectralDecomposition-_left_invariant_basis" data-doc-name="_left_invariant_basis" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L88" target="_blank" rel="noopener">_left_invariant_basis</a>(A, B, Φ, Λ, σ)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/DualLeftBasis.jl#L177" target="_blank" rel="noopener">_left_invariant_basis</a>(form::MORFE.SpectralDecomposition._FirstOrderForm, Φ, Λ, σ)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>_left_invariant_basis&#40;A, B, Φ, Λ, σ&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
+<div class="markdown"><pre><code>_left_invariant_basis&#40;form, Φ, Λ, σ&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
 <p>A basis of the left invariant subspace of the master eigenvalues <code>diag&#40;Λ&#41;</code>, one eigenvalue group at a time, with each group&#39;s columns in that group&#39;s positions. With an involution <code>σ</code>, a group whose conjugate partners form another group fills that one by conjugation.</p>
+</div>
+  </div>
+</div>
+<div class="doc doc-function" id="SpectralDecomposition-_left_physical_and_orders" data-doc-name="_left_physical_and_orders" data-doc-module="SpectralDecomposition">
+  <div class="doc-sig">
+    <span class="badge f">function</span>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L78" target="_blank" rel="noopener">_left_physical_and_orders</a>(left_blocks::AbstractArray{&lt;:Number, 3})</code>
+  </div>
+  <div class="doc-body">
+<div class="markdown"><pre><code>_left_physical_and_orders&#40;left_blocks&#41; -&gt; &#40;physical, orders&#41;</code></pre>
+<p>The mirrored left convention, applied in this one place: of left order-blocks <code>FOM × ORD × n</code>, the physical slice is the <strong>last</strong> block &#40;returned as a matrix&#41;, and the blocks <code>1:ORD-1</code> that feed the orthogonality rows come as a view &#40;<code>nothing</code> when <code>ORD &#61;&#61; 1</code>&#41;.</p>
 </div>
   </div>
 </div>
@@ -6740,7 +6780,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-_mode_numbers" data-doc-name="_mode_numbers" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L226" target="_blank" rel="noopener">_mode_numbers</a>(σ::Union{Nothing, AbstractVector{Int64}}, n_eigs::Int64)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L238" target="_blank" rel="noopener">_mode_numbers</a>(σ::Union{Nothing, AbstractVector{Int64}}, n_eigs::Int64)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_mode_numbers&#40;σ, n_eigs&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -6754,7 +6794,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-_stack_blocks" data-doc-name="_stack_blocks" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L435" target="_blank" rel="noopener">_stack_blocks</a>(physical::AbstractArray, companions::Union{Nothing, AbstractArray}, ROM::Int64, side::Symbol)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L447" target="_blank" rel="noopener">_stack_blocks</a>(physical::AbstractArray, companions::Union{Nothing, AbstractArray}, ROM::Int64, side::Symbol)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>_stack_blocks&#40;physical, companions, ROM, side&#41; -&gt; Array&#123;ComplexF64, 3&#125;</code></pre>
@@ -6780,7 +6820,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-check_biorthogonality" data-doc-name="check_biorthogonality" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L723" target="_blank" rel="noopener">check_biorthogonality</a>(sd::SpectralData{ORD, ROM}, model::NthOrderModel) where {ORD, ROM}</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L735" target="_blank" rel="noopener">check_biorthogonality</a>(sd::SpectralData{ORD, ROM}, model::NthOrderModel) where {ORD, ROM}</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>check_biorthogonality&#40;sd::SpectralData, model&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
@@ -6796,7 +6836,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
     <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/TriangularLinearDynamics.jl#L56" target="_blank" rel="noopener">conjugate_master_frame</a>(blocks::AbstractArray{&lt;:Number, 3}, Λ::AbstractMatrix, σ::AbstractVector{&lt;:Integer}; rtol)</code>
   </div>
   <div class="doc-body">
-<div class="markdown"><pre><code>conjugate_master_frame&#40;blocks, Λ, σ; rtol &#61; 1e-10&#41; -&gt; &#40;blocks, Λ, T&#41;</code></pre>
+<div class="markdown"><pre><code>conjugate_master_frame&#40;blocks, Λ, σ; rtol &#61; _RTOL_EXACT&#41; -&gt; &#40;blocks, Λ, T&#41;</code></pre>
 <p>Re-base master coordinates onto the <strong>conjugate frame</strong> the solve&#39;s complex symmetry needs, keeping <code>Λ</code> upper triangular with the same diagonal.</p>
 <p><code>blocks</code> are the right order-blocks &#40;<code>FOM × ORD × ROM</code>&#41;, <code>Λ</code> is the upper-triangular master block of the reduced linear dynamics, and <code>σ</code> is the master conjugate involution: <code>r &lt; σ&#91;r&#93;</code> is a primary, <code>σ&#91;r&#93;</code> its secondary, and <code>σ&#91;r&#93; &#61; r</code> a real mode.</p>
 <h2>Why</h2>
@@ -6940,7 +6980,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-indices" data-doc-name="indices" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L80" target="_blank" rel="noopener">indices</a>(b::ModeBundle)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L92" target="_blank" rel="noopener">indices</a>(b::ModeBundle)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>indices&#40;b::ModeBundle&#41; -&gt; Vector&#123;Int&#125;</code></pre>
@@ -6973,8 +7013,8 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-left_mode_blocks" data-doc-name="left_mode_blocks" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L115" target="_blank" rel="noopener">left_mode_blocks</a>(b::ModeBundle)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L115" target="_blank" rel="noopener">left_mode_blocks</a>(sd::SpectralData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L127" target="_blank" rel="noopener">left_mode_blocks</a>(b::ModeBundle)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L127" target="_blank" rel="noopener">left_mode_blocks</a>(sd::SpectralData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>left_mode_blocks&#40;b::ModeBundle&#41; -&gt; view or nothing</code></pre>
@@ -6985,8 +7025,8 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-left_modes" data-doc-name="left_modes" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L99" target="_blank" rel="noopener">left_modes</a>(b::ModeBundle)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L99" target="_blank" rel="noopener">left_modes</a>(sd::SpectralData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L111" target="_blank" rel="noopener">left_modes</a>(b::ModeBundle)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L111" target="_blank" rel="noopener">left_modes</a>(sd::SpectralData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>left_modes&#40;b::ModeBundle&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
@@ -7021,7 +7061,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-master_conjugate_permutation" data-doc-name="master_conjugate_permutation" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L271" target="_blank" rel="noopener">master_conjugate_permutation</a>(sd::SpectralData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L283" target="_blank" rel="noopener">master_conjugate_permutation</a>(sd::SpectralData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>master_conjugate_permutation&#40;sd&#41; -&gt; Union&#123;Nothing, Vector&#123;Int&#125;&#125;</code></pre>
@@ -7040,7 +7080,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="markdown"><pre><code>master_left_basis&#40;model, right_blocks, Λ, left_blocks &#61; nothing;
 	conjugate_permutation &#61; nothing&#41; -&gt; Array&#123;ComplexF64, 3&#125;</code></pre>
 <p>The left order-blocks the orthogonality rows of the solve need, for master coordinates with right blocks <code>right_blocks</code> &#40;<code>FOM × ORD × ROM</code>&#41; and upper-triangular master block <code>Λ</code>. The result has the layout <code><a class="doc-ref" href="#SpectralDecomposition-SpectralData">SpectralData</a></code> stores left blocks in &#40;<code>FOM × ORD × ROM</code>, physical slice <strong>last</strong>&#41;.</p>
-<p>In the first-order form <code>&#40;𝓐, 𝓑&#41; &#61; linear_first_order_matrices&#40;model&#41;</code>, with <code>Φ</code> and <code>Ψ̃</code> the stacked blocks, these are the <strong>dual basis</strong> of the left invariant subspace:</p>
+<p>In the first-order form <code>&#40;𝓐, 𝓑&#41;</code> of the model &#40;never assembled: see <a class="doc-ref" href="#SpectralDecomposition-_FirstOrderForm"><code>_FirstOrderForm</code></a>&#41;, with <code>Φ</code> and <code>Ψ̃</code> the stacked blocks, these are the <strong>dual basis</strong> of the left invariant subspace:</p>
 <pre><code>Ψ̃ᴴ 𝓑 Φ &#61; I,    Ψ̃ᴴ 𝓐 &#61; Λ Ψ̃ᴴ 𝓑.</code></pre>
 <p>Any basis <code>Ψ</code> of that subspace gives it as <code>Ψ̃ &#61; Ψ G⁻ᴴ</code> with <code>G &#61; Ψᴴ 𝓑 Φ</code>, whatever basis it is, so everything reduces to finding the subspace.</p>
 <ul>
@@ -7052,21 +7092,21 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <ul>
 <li><p>The master indices are grouped by eigenvalue.</p>
 </li>
-<li><p>Each group&#39;s left generalised eigenspace comes from block inverse iteration on the adjoint pencil: one LU per group, at a shift just off the eigenvalue. The iteration converges to the invariant subspace whatever the Jordan structure.</p>
+<li><p>Each group&#39;s left generalised eigenspace comes from block inverse iteration on the adjoint pencil, at a shift just off the eigenvalue. Each step is one solve with the <code>FOM × FOM</code> matrix <code>P&#40;s&#41;ᴴ &#61; &#40;Σₖ sᵏ Bₖ&#41;ᴴ</code>, factorised once per group. The iteration converges to the invariant subspace whatever the Jordan structure.</p>
 </li>
 <li><p>Given <code>conjugate_permutation</code> &#40;the master involution&#41;, a group&#39;s conjugate partner is taken as the conjugate rather than solved again.</p>
 </li>
 </ul>
 </li>
 </ul>
-<p>Both routes are accepted only if <code>cond&#40;G&#41; ≤ 1e8</code> and the relative left-invariance residual is at most <code>1e-8</code>, the accuracy of the eigensolver data <code>Φ</code> comes from.</p>
+<p>Both routes are accepted only if <code>cond&#40;G&#41; ≤ 1e8</code> and the relative left-invariance residual is at most <code>_RTOL_EIGENSOLVER</code>, the accuracy of the eigensolver data <code>Φ</code> comes from.</p>
 </div>
   </div>
 </div>
 <div class="doc doc-function" id="SpectralDecomposition-master_linear_dynamics" data-doc-name="master_linear_dynamics" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L210" target="_blank" rel="noopener">master_linear_dynamics</a>(sd::SpectralData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L222" target="_blank" rel="noopener">master_linear_dynamics</a>(sd::SpectralData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>master_linear_dynamics&#40;sd&#41; -&gt; Union&#123;Diagonal, UpperTriangular&#125;</code></pre>
@@ -7106,7 +7146,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-outer_conjugate_permutation" data-doc-name="outer_conjugate_permutation" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L282" target="_blank" rel="noopener">outer_conjugate_permutation</a>(sd::SpectralData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L294" target="_blank" rel="noopener">outer_conjugate_permutation</a>(sd::SpectralData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>outer_conjugate_permutation&#40;sd&#41; -&gt; Union&#123;Nothing, Vector&#123;Int&#125;&#125;</code></pre>
@@ -7118,7 +7158,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-physical_mode" data-doc-name="physical_mode" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L256" target="_blank" rel="noopener">physical_mode</a>(sd::SpectralData, i::Integer)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L268" target="_blank" rel="noopener">physical_mode</a>(sd::SpectralData, i::Integer)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>physical_mode&#40;sd::SpectralData, i::Integer&#41; -&gt; Int</code></pre>
@@ -7129,8 +7169,8 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-right_mode_derivatives" data-doc-name="right_mode_derivatives" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L107" target="_blank" rel="noopener">right_mode_derivatives</a>(b::ModeBundle)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L107" target="_blank" rel="noopener">right_mode_derivatives</a>(sd::SpectralData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L119" target="_blank" rel="noopener">right_mode_derivatives</a>(b::ModeBundle)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L119" target="_blank" rel="noopener">right_mode_derivatives</a>(sd::SpectralData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>right_mode_derivatives&#40;b::ModeBundle&#41; -&gt; view or nothing</code></pre>
@@ -7141,8 +7181,8 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-right_modes" data-doc-name="right_modes" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L92" target="_blank" rel="noopener">right_modes</a>(b::ModeBundle)</code>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L92" target="_blank" rel="noopener">right_modes</a>(sd::SpectralData)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L104" target="_blank" rel="noopener">right_modes</a>(b::ModeBundle)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L104" target="_blank" rel="noopener">right_modes</a>(sd::SpectralData)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>right_modes&#40;b::ModeBundle&#41; -&gt; Matrix&#123;ComplexF64&#125;</code></pre>
@@ -7197,7 +7237,7 @@ a &#61; cycle_amplitude.&#40;Ref&#40;u&#41;, branch.amplitude&#41; # its amplitu
 <div class="doc doc-function" id="SpectralDecomposition-spectrum_entries" data-doc-name="spectrum_entries" data-doc-module="SpectralDecomposition">
   <div class="doc-sig">
     <span class="badge f">function</span>
-    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L263" target="_blank" rel="noopener">spectrum_entries</a>(sd::SpectralData, p::Integer)</code>
+    <code><a href="https://github.com/MORFEproject/MORFE.jl/blob/main/src/SpectralDecomposition/SpectralData.jl#L275" target="_blank" rel="noopener">spectrum_entries</a>(sd::SpectralData, p::Integer)</code>
   </div>
   <div class="doc-body">
 <div class="markdown"><pre><code>spectrum_entries&#40;sd::SpectralData, p::Integer&#41; -&gt; Vector&#123;Int&#125;</code></pre>
