@@ -50,7 +50,7 @@ _monomial_metrics(::_NoMonomialInstrumentation, ::Nothing, ::Nothing) = nothing
 
 Unpack the bordered solution into the primary coefficients of `W` and the resonant rows of
 `R`, write exact zeros to non-resonant master rows, and propagate the higher derivative
-coefficients using the generalised right eigenmodes.
+coefficients from the right eigenmodes held by the unit monomials of `W`.
 """
 function _finalise_monomial!(
         W::Parametrisation{ORD, NVAR, T},
@@ -72,14 +72,15 @@ function _finalise_monomial!(
         R.poly.coefficients[r, idx] = resonance[r] ? sol[FOM + r] : zero(T)
     end
 
-    # A unit monomial's own column coincides with the s-term (see the docstring).
+    # A unit monomial's own column is already the s-term; see
+    # `compute_higher_derivative_coefficients!`.
     multi = multiindex_set(W)[idx]
     self_variable = sum(multi) == 1 ? findfirst(!iszero, multi) : 0
     compute_higher_derivative_coefficients!(
         W.poly.coefficients,
         view(R.poly.coefficients, 1:ROM, :),
         external_dynamics, s, idx,
-        ctx.generalised_eigenmodes, lower_order_couplings; self_variable)
+        lower_order_couplings; self_variable)
     return nothing
 end
 

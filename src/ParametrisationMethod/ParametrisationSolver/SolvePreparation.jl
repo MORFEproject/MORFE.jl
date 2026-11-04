@@ -26,21 +26,15 @@ function _make_sparse_solver(::Type{<:AbstractMatrix}, _, ::Int, ::Int,
 end
 
 """
-	_build_context(linear_terms, generalised_right_eigenmodes, lambda_matrix, lambda_diag,
+	_build_context(linear_terms, lambda_diag,
 				   inv_ops, orth_ops, resonance_set, linear_skip_set,
 				   lower_order, buffers, sparse_solver) -> CohomologicalContext
 
 Construct a `CohomologicalContext` from pre-assembled operator data and shared
 resources.  All type parameters are inferred from the arguments.
-
-`generalised_right_eigenmodes` is `Φ` (level 1); the context stores every derivative level
-`Φ Λ^(j-1)` it needs, from the same `lambda_matrix` the column polynomials were built with,
-so the stored higher levels of `W` agree with the bordered solve.
 """
 function _build_context(
         linear_terms::NTuple{ORDP1, MT},
-        generalised_right_eigenmodes::Matrix{T},
-        lambda_matrix::AbstractMatrix,
         lambda_diag::Vector{T},
         inv_ops::InvarianceOperators{T},
         orth_ops::OrthogonalityOperators{T},
@@ -50,13 +44,11 @@ function _build_context(
         buffers::CohomologicalBuffers{T},
         sparse_solver
 ) where {ORDP1, MT, T, NVAR}
-    FOM = size(generalised_right_eigenmodes, 1)
+    FOM = size(linear_terms[1], 1)
     ORD = ORDP1 - 1
     LT = eltype(MT)
-    eigenmode_levels = derivative_level_modes(
-        generalised_right_eigenmodes, lambda_matrix, max(ORD - 1, 1))
     return CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT}(
-        linear_terms, eigenmode_levels, lambda_diag,
+        linear_terms, lambda_diag,
         inv_ops, orth_ops,
         resonance_set, linear_skip_set,
         lower_order, buffers, sparse_solver
@@ -189,7 +181,7 @@ function returns.
 function _prepare_external_directions!(
         W, R, supplied::Bool, completed_indices,
         model, cache, symmetry, dimensions::NTuple{5, Int}, unit_offset::Int,
-        lambda_matrix, lambda_diag, linear_terms, master_right_modes,
+        lambda_matrix, lambda_diag, linear_terms,
         invariance_C_coeffs, master_derivative_steps,
         orthogonality_J_coeffs, right_master_blocks,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
@@ -214,8 +206,7 @@ function _prepare_external_directions!(
                 end
             end
             return _build_context(
-                linear_terms, hcat(master_right_modes, external_directions),
-                lambda_matrix, lambda_diag,
+                linear_terms, lambda_diag,
                 InvarianceOperators{T}(invariance_C_coeffs, partial_E_coeffs),
                 OrthogonalityOperators{T}(orthogonality_J_coeffs,
                     partial_orth_C_coeffs, partial_orth_E_coeffs),
@@ -257,7 +248,7 @@ return the context used by the nonlinear solve.
 """
 function _build_complete_context(
         W, dimensions::NTuple{5, Int}, unit_offset::Int,
-        linear_terms, master_right_modes, lambda_matrix, lambda_diag,
+        linear_terms, lambda_matrix, lambda_diag,
         invariance_C_coeffs, master_derivative_steps,
         orthogonality_J_coeffs, right_master_blocks,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
@@ -268,7 +259,6 @@ function _build_complete_context(
         external_directions[:, external_index] .= W.poly.coefficients[
             :, 1, ROM + external_index + unit_offset]
     end
-    generalised_right_eigenmodes = hcat(master_right_modes, external_directions)
     invariance_E_coeffs = precompute_external_column_polynomials(
         linear_terms, external_directions, lambda_matrix, master_derivative_steps)
     orthogonality_C_coeffs,
@@ -276,7 +266,7 @@ function _build_complete_context(
         orthogonality_J_coeffs, right_master_blocks,
         external_directions, lambda_matrix)
     return _build_context(
-        linear_terms, generalised_right_eigenmodes, lambda_matrix, lambda_diag,
+        linear_terms, lambda_diag,
         InvarianceOperators{T}(invariance_C_coeffs, invariance_E_coeffs),
         OrthogonalityOperators{T}(orthogonality_J_coeffs,
             orthogonality_C_coeffs, orthogonality_E_coeffs),

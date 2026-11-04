@@ -103,12 +103,12 @@ linear-operator tuple is read from `model.linear_terms`.
    completed work.
 3. Build symmetry and shared resources after restored indices have entered the skip mask.
 4. Solve the linear cohomological equations for each fresh external forcing direction via
-   a partial context in which the not-yet-solved external columns of the generalised
-   right-eigenmode matrix are set to zero. Supplied or restored external directions are
+   a partial context whose external operators set the not-yet-solved directions to zero —
+   exactly what `W` still holds for them. Supplied or restored external directions are
    accepted rather than recomputed.
-5. Build the full `generalised_right_eigenmodes` matrix by concatenating the master right
-   eigenmodes with the solved external right directions. This matrix is stored as
-   `CohomologicalContext.generalised_eigenmodes`; left eigenmodes enter only through the
+5. Read the solved external directions from `W` and build the complete external operators.
+   The right eigenmodes are never copied: the derivative propagation reads them, at every
+   level, from the unit monomials of `W`; left eigenmodes enter only through the
    orthogonality operators.
 6. Assemble the full context and solve every monomial not marked linear, conjugate-secondary,
    or checkpoint-complete.
@@ -229,7 +229,7 @@ function _prepare_solve(
     _prepare_external_directions!(
         W, R, supplied, completed_indices,
         model, ml_cache, sym, dimensions, unit_offset,
-        Λ, lambda_diag, linear_terms, master_right_modes,
+        Λ, lambda_diag, linear_terms,
         invariance_C_coeffs, master_derivative_steps,
         orthogonality_J_coeffs, right_master_blocks,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)
@@ -239,7 +239,7 @@ function _prepare_solve(
 
     ctx = _build_complete_context(
         W, dimensions, unit_offset,
-        linear_terms, master_right_modes, Λ, lambda_diag,
+        linear_terms, Λ, lambda_diag,
         invariance_C_coeffs, master_derivative_steps,
         orthogonality_J_coeffs, right_master_blocks,
         resonance_set, linear_skip_set, lower_order, buffers, sparse_solver)

@@ -27,13 +27,13 @@ Everything here is re-exported by `ParametrisationMethod`, so
 """
 module ParametrisationObjects
 
-using LinearAlgebra: mul!, axpy!
+using LinearAlgebra: mul!
 using StaticArrays: SVector
 using ..Multiindices: MultiindexSet, find_in_set, is_downward_closed, is_conjugate_closed
 using ..Polynomials: DensePolynomial, restrict_polynomial_to_degree
 
 export Parametrisation, ReducedDynamics, create_parametrisation_method_objects,
-       compute_higher_derivative_coefficients!, derivative_level_modes,
+       compute_higher_derivative_coefficients!,
        restrict_ReducedDynamics_to_degree, restrict_Parametrisation_to_degree,
        validate_multiindex_set
 
@@ -272,70 +272,38 @@ end
 """
 	compute_higher_derivative_coefficients!(
 		param_coeff, red_coeff, external_dynamics, superharmonic, global_index,
-		eigenmode_levels, lower_order_couplings; self_variable = 0
+		lower_order_couplings; self_variable = 0
 	) -> nothing
 
-Compute the higher time‑derivative coefficients `W^(j+1)[α]` for `j = 1 … ORD-1`
-using the superharmonic recurrence
+Fill the higher time-derivative levels `W⁽ʲ⁺¹⁾[γ]`, `j = 1 … ORD-1`, of the monomial `γ` at
+`global_index` from its solved first level, by differentiating `W⁽ʲ⁾` along `ż = R(z)`:
 
 ```
-W^(j+1)[α] = s · W^(j)[α]  +  Φ⁽ʲ⁾_master · R[α]  +  Φ⁽ʲ⁾_ext · e_dyn  +  ξ[j]
+W⁽ʲ⁺¹⁾[γ] = s · W⁽ʲ⁾[γ]  +  Φ⁽ʲ⁾ R[γ]  +  ξ[j]
 ```
 
-where:
-- `s = superharmonic` is the frequency `⟨λ, α⟩`,
-- `Φ⁽ʲ⁾ = eigenmode_levels[j]` (`FOM × NVAR`) is the **level-`j`** coefficient of `W` at
-  the unit monomials, `Φ⁽ʲ⁾ = Φ · Λ^(j-1)` with `Λ` the linear reduced dynamics — see
-  [`derivative_level_modes`](@ref),
-- `R[α] = red_coeff[:, global_index]` (`ROM`‑vector) contains the master‑mode
-  reduced‑dynamics coefficients at the current monomial (already solved),
-- `e_dyn = external_dynamics` (`N_EXT`‑vector) contains the *known* external
-  dynamics at the current monomial,
-- `ξ[j] = lower_order_couplings[j]` (`FOM`‑vector) contains the coupling
-  from lower‑order monomials at derivative order `j`.
+with `s = ⟨λ, γ⟩` the superharmonic, `ξ` the lower-order couplings and `Φ⁽ʲ⁾` the **linear
+part of `W⁽ʲ⁾`**: its coefficients at the unit monomials, which a valid multiindex set holds
+first and in variable order (masters `1:ROM`, then the external directions). `Φ⁽ʲ⁾` is read
+in place at the same level `j`. That matters from `ORD = 3` on: at linear order
+`Φ⁽ʲ⁺¹⁾ = Φ⁽ʲ⁾ Λ`, so a master mode's velocity column is `λφ` and its acceleration column
+`λ²φ`, and level 1 at every level would put `φ` where `λφ` belongs. The master columns are
+written from the spectral data before the solve, the external directions by this function
+as they are solved.
 
-Modifies `param_coeff` in‑place.  Does nothing when `ORD = 1` (no higher
-derivatives exist for a first‑order ODE).
-
-## Why the modes depend on the level
-
-The `Φ · R[α]` term is the `β = α` part of `d/dt W^(j) = Σᵢ ∂W^(j)/∂zᵢ · Rᵢ`: the unit
-monomial `eᵢ` of `W^(j)` multiplied by `Rᵢ[α]`. That coefficient is `Φ Λ^(j-1)`, not `Φ`:
-the velocity level of a master mode is `λφ`, the acceleration level `λ²φ`. The bordered
-solve already uses `Φ Λ^k` in its columns ([`precompute_master_column_polynomials`](@ref)),
-so a single `Φ` here only agrees with it at `j = 1`. That is every level an `ORD ≤ 2` model
-has, which is why the single-matrix method below is kept for those and **refused** for
-`ORD ≥ 3`: on an augmented model (a parametric mass on `ü`) it stored a wrong acceleration
-level, which the mass term then read back, corrupting `R` from second order in the
-parameter on — non-zero real parts in a conservative system's normal form.
-
-## Unit monomials: `self_variable`
-
-For `α = e_m` the term `i = m` of the sum is the same contribution as `s · W^(j)[α]`
-(both are `λ_m W^(j)[e_m]`), so it must be counted once. Pass `self_variable = m` to drop
-it; `0` (the default) drops nothing. Only the external-direction solve propagates unit
-monomials — the master ones are initialised from the eigenvectors — and there column `m` of
-`Φ⁽¹⁾` is zero anyway, so this only changes anything for coupled external systems at
-`j ≥ 2`.
+At a unit monomial `γ = eₘ` (an external direction) the term `i = m` of `Φ⁽ʲ⁾ R[γ]` is the
+same contribution as `s · W⁽ʲ⁾[γ]`. `self_variable = m` counts it once, so that the formula
+reproduces `Φ⁽ʲ⁺¹⁾ = Φ⁽ʲ⁾ Λ`; `0` excludes nothing.
 
 ## Arguments
 
-- `param_coeff :: AbstractArray{T, 3}` — shape `FOM × ORD × L`; the coefficient
-  tensor of the parametrisation polynomial.
-- `red_coeff :: AbstractMatrix{T}` — shape `ROM × L`; master‑mode reduced‑dynamics
-  coefficients.
-- `external_dynamics :: AbstractVector{T}` — length `N_EXT`; known external
-  dynamics at the current monomial.
-- `superharmonic :: T` — scalar `s = ⟨λ, α⟩`.
-- `global_index :: Int` — monomial index into the last axis of `param_coeff` and
-  the last axis of `red_coeff`.
-- `eigenmode_levels :: AbstractVector{<:AbstractMatrix{T}}` — at least `ORD - 1`
-  matrices, each `FOM × NVAR` (master modes in columns `1:ROM`, external modes in
-  `ROM+1:NVAR`); element `j` is the level-`j` coefficient `Φ Λ^(j-1)`.
-  A single `AbstractMatrix` is accepted as level 1 alone, for `ORD ≤ 2` only.
-- `lower_order_couplings :: AbstractVector{<:AbstractVector{T}}` — length `ORD`;
-  element `j` is a length‑`FOM` vector `ξ[j]` produced by
-  [`LowerOrderCouplings.compute_lower_order_couplings`](@ref).
+- `param_coeff :: AbstractArray{T, 3}` — the `FOM × ORD × L` coefficients of `W`.
+- `red_coeff :: AbstractMatrix{T}` — the `ROM × L` master rows of `R`.
+- `external_dynamics :: AbstractVector{T}` — the `N_EXT` external rows of `R[γ]`.
+- `superharmonic :: T` — `s = ⟨λ, γ⟩`.
+- `global_index :: Int` — the position of `γ` in the multiindex set.
+- `lower_order_couplings :: AbstractVector{<:AbstractVector{T}}` — `ξ[j]` for each level,
+  from [`LowerOrderCouplings.compute_lower_order_couplings`](@ref).
 """
 function compute_higher_derivative_coefficients!(
         param_coeff::AbstractArray{T, 3},
@@ -343,84 +311,49 @@ function compute_higher_derivative_coefficients!(
         external_dynamics::AbstractVector{T},
         superharmonic::T,
         global_index::Int,
-        eigenmode_levels::AbstractVector{<:AbstractMatrix{T}},
         lower_order_couplings::AbstractVector{<:AbstractVector{T}};
         self_variable::Int = 0
 ) where {T}
-    ORD = size(param_coeff, 2)
-    ORD <= 1 && return nothing
-    length(eigenmode_levels) >= ORD - 1 || throw(ArgumentError(
-        "ORD = $ORD needs eigenmode levels 1:$(ORD - 1), got $(length(eigenmode_levels))"))
-    ROM = size(red_coeff, 1)
-    NVAR = size(first(eigenmode_levels), 2)
-    N_EXT = NVAR - ROM
+    R_master = view(red_coeff, :, global_index)
+    self_variable == 0 &&
+        return _add_derivative_levels!(param_coeff, R_master, external_dynamics,
+            superharmonic, global_index, lower_order_couplings)
 
-    Rα = view(red_coeff, :, global_index)
-
-    for j in 1:(ORD - 1)
-        Φj = eigenmode_levels[j]
-        Wj = view(param_coeff, :, j, global_index)
-        Wj1 = view(param_coeff, :, j + 1, global_index)
-
-        # W^(j+1)[α] = s·W^(j)[α] + ξ[j]
-        @. Wj1 = superharmonic * Wj + lower_order_couplings[j]
-
-        # + Φ⁽ʲ⁾_master · R[α]
-        mul!(Wj1, view(Φj, :, 1:ROM), Rα, one(T), one(T))
-
-        # + Φ⁽ʲ⁾_ext · e_dyn  (only if external modes are present)
-        if N_EXT > 0
-            mul!(Wj1, view(Φj, :, (ROM + 1):NVAR), external_dynamics, one(T), one(T))
-        end
-
-        # α = e_m: its own column is already the s-term above; count it once.
-        if self_variable > 0
-            r = self_variable <= ROM ? Rα[self_variable] :
-                external_dynamics[self_variable - ROM]
-            iszero(r) || axpy!(-r, view(Φj, :, self_variable), Wj1)
-        end
+    # γ = eₘ: zero the coefficient of its own column (in a copy, at most N_EXT times per
+    # solve), so that column adds an exact zero — the s-term already accounts for it.
+    R_master, R_ext = collect(R_master), collect(external_dynamics)
+    ROM = length(R_master)
+    if self_variable <= ROM
+        R_master[self_variable] = zero(T)
+    else
+        R_ext[self_variable - ROM] = zero(T)
     end
-
-    return nothing
+    return _add_derivative_levels!(param_coeff, R_master, R_ext,
+        superharmonic, global_index, lower_order_couplings)
 end
 
-# A single eigenmode matrix is level 1 only, which is all an ORD ≤ 2 model has. Refused
-# above that: reusing it at every level is the bug the level-aware method exists to fix.
-function compute_higher_derivative_coefficients!(
-        param_coeff::AbstractArray{T, 3},
-        red_coeff::AbstractMatrix{T},
-        external_dynamics::AbstractVector{T},
-        superharmonic::T,
-        global_index::Int,
-        generalised_eigenmodes::AbstractMatrix{T},
-        lower_order_couplings::AbstractVector{<:AbstractVector{T}};
-        kwargs...
+"""
+	_add_derivative_levels!(param_coeff, R_master, R_ext, superharmonic, global_index,
+		lower_order_couplings) -> nothing
+
+The loop of [`compute_higher_derivative_coefficients!`](@ref), behind a function barrier so
+that its allocation-free path (views of `R`) and its unit-monomial path (copies) each
+compile to type-stable code.
+"""
+function _add_derivative_levels!(
+        param_coeff::AbstractArray{T, 3}, R_master::AbstractVector, R_ext::AbstractVector,
+        superharmonic, global_index::Int, lower_order_couplings
 ) where {T}
-    ORD = size(param_coeff, 2)
-    ORD <= 2 || throw(ArgumentError(
-        "a single eigenmode matrix describes derivative level 1 only, but ORD = $ORD " *
-        "needs levels 1:$(ORD - 1); pass `derivative_level_modes(Φ, Λ, $(ORD - 1))`"))
-    return compute_higher_derivative_coefficients!(param_coeff, red_coeff,
-        external_dynamics, superharmonic, global_index, [generalised_eigenmodes],
-        lower_order_couplings; kwargs...)
-end
-
-"""
-	derivative_level_modes(Φ, Λ, n_levels) -> Vector{Matrix}
-
-The coefficients of `W` at the unit monomials, derivative level by level:
-`[Φ, Φ Λ, Φ Λ², …]`, `n_levels` of them. `Φ` is `FOM × NVAR` (master right eigenmodes,
-then external directions) and `Λ` the `NVAR × NVAR` linear reduced dynamics — `R` at the
-unit monomials. These are the modes [`compute_higher_derivative_coefficients!`](@ref)
-needs at each level, and the same products the bordered solve's column polynomials are
-built from. Level 1 is a copy of `Φ` itself, so `ORD ≤ 2` arithmetic is unchanged.
-"""
-function derivative_level_modes(Φ::AbstractMatrix, Λ::AbstractMatrix, n_levels::Int)
-    levels = [Matrix(Φ)]
-    for _ in 2:n_levels
-        push!(levels, levels[end] * Λ)
+    ROM, N_EXT = length(R_master), length(R_ext)
+    for j in 1:(size(param_coeff, 2) - 1)
+        W_j = view(param_coeff, :, j, global_index)
+        W_next = view(param_coeff, :, j + 1, global_index)
+        @. W_next = superharmonic * W_j + lower_order_couplings[j]
+        mul!(W_next, view(param_coeff, :, j, 1:ROM), R_master, one(T), one(T))
+        N_EXT > 0 && mul!(W_next, view(param_coeff, :, j, (ROM + 1):(ROM + N_EXT)),
+            R_ext, one(T), one(T))
     end
-    return levels
+    return nothing
 end
 
 """
