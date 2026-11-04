@@ -24,7 +24,8 @@ using StaticArrays
         mass = MultilinearMap((res, x, r) -> (res .-= r[1] .* (M1 * x)), (0, 0, 1), 1)
         model = NthOrderModel((K, C, M0, Z), (mass,), ExternalSystem((0.0,)))
         spectral = SpectralData(model, ep; master = master_by_sorting(2))
-        mset = MultiindexSet([SVector(a, b, c) for a in 0:1 for b in 0:1 for c in 0:MAXθ
+        mset = MultiindexSet([SVector(a, b, c) for a in 0:1 for b in 0:1
+                              for c in 0:MAXθ
                               if a + b ≤ 1 && a + b + c ≥ 1])
         _, R = parametrise(model, spectral, mset; resonance, options)
         exps = R.poly.multiindex_set.exponents
