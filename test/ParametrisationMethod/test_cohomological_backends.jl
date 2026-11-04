@@ -576,6 +576,34 @@ _cross_degree_load3!(res, r) = (res .+= _CROSS_DEGREE_G3 * r)
             end
         end
 
+        # External directions: two frozen parameters share one bordered matrix, so the
+        # second reuses the first's factorisation; a forced pair (±iΩ) never does, nor do
+        # two contexts, as a coupled external block builds one per direction.
+        external_positions = [findfirst(==(SVector(0, 0, 1, 0)), mset.exponents),
+            findfirst(==(SVector(0, 0, 0, 1)), mset.exponents)]
+        function prepared_context(model, spectral)
+            rset = MORFE.Resonance.build_resonance_set(model, mset, spectral, resonance)
+            options = ParametrisationOptions(
+                backend = :klu, show_progress = false, verbose = false)
+            return PS._prepare_solve(
+                model, mset, spectral, rset, nothing, nothing, options).ctx
+        end
+        frozen_context = prepared_context(frozen_sparse, frozen_sd)
+        @test PS._same_bordered_matrix(
+            frozen_context, external_positions[1], frozen_context, external_positions[2],
+            mset, 2)
+        @test !PS._same_bordered_matrix(
+            prepared_context(frozen_sparse, frozen_sd), external_positions[1],
+            frozen_context, external_positions[2], mset, 2)
+        @test !PS._same_bordered_matrix(
+            frozen_context, findfirst(==(SVector(1, 0, 0, 0)), mset.exponents),
+            frozen_context, external_positions[1], mset, 2)
+        _, forced_sparse, forced_sd = fixture(ExternalSystem((0.3im, -0.3im)))
+        forced_context = prepared_context(forced_sparse, forced_sd)
+        @test !PS._same_bordered_matrix(
+            forced_context, external_positions[1], forced_context, external_positions[2],
+            mset, 2)
+
         # `r₁` is driven by the frozen `θ` (Λ₁₂ ≠ 0, distinct eigenvalues): the monomial
         # (…, m, k) reads (…, m + 1, k − 1), which belongs to a later key. The scheduler
         # must interleave the keys, and a key-major order would read unsolved data.

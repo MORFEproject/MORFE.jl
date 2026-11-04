@@ -62,10 +62,11 @@ once.
 the quadrature loop dispatches nothing at run time.
 """
 function _replay_fem!(result, W, group::FEMGroup, external_arguments, l)
-    cols = group.cols[l]
-    isempty(cols) && return nothing
-    (; terms, qp_buffer, Fe) = group
     entries = group.entries[l]
+    # Not `isempty(cols)`: a term without internal factors reads no column yet contributes.
+    all(isempty, entries) && return nothing
+    cols = group.cols[l]
+    (; terms, qp_buffer, Fe) = group
     driver = first(terms)
     flux0 = fem_flux_zero(driver)
     n_qp = fem_n_qp(driver)

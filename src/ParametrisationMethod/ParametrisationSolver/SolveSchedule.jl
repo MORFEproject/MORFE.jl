@@ -167,6 +167,18 @@ function _structural_factor_key(multi::SVector{NVAR, Int},
 end
 
 """
+	_structural_keys(ctx, mset, jobs, Val(ROM)) -> Vector{StructuralFactorKey}
+
+The [`StructuralFactorKey`](@ref) of every job, in job order.
+"""
+function _structural_keys(ctx, mset, jobs::Vector{_SolveJob}, ::Val{ROM}) where {ROM}
+    representatives = _eigenvalue_representatives(ctx.lambda_diag)
+    return [_structural_factor_key(mset[job.index],
+                _resonance_vector(ctx.resonance_set, job.index, Val(ROM)),
+                representatives) for job in jobs]
+end
+
+"""
 	_job_target(sym, index) -> Int
 
 Return the larger conjugate-secondary position reconstructed after solving `index`, or `0`
@@ -351,17 +363,15 @@ intervenes, this gives one group per key and degree.
 With `across_degrees = true` a group may span degrees. Keys are then opened in order of
 their aggregated degree, then first occurrence, which runs every master key in one group
 when the only zero eigenvalues are frozen parameters. Returns `nothing` when the
-dependency graph cannot be ordered.
+dependency graph cannot be ordered. `structural_keys` are the jobs' keys
+([`_structural_keys`](@ref)), passed in when the caller already has them.
 """
 function _group_solve_jobs(ctx, mset, jobs::Vector{_SolveJob},
         dependencies::Vector{Vector{Int}}, ::Val{ROM};
-        across_degrees::Bool = false) where {ROM}
-    representatives = _eigenvalue_representatives(ctx.lambda_diag)
+        across_degrees::Bool = false,
+        structural_keys = _structural_keys(ctx, mset, jobs, Val(ROM))) where {ROM}
     T = eltype(ctx.lambda_diag)
     NVAR = length(ctx.lambda_diag)
-    structural_keys = [_structural_factor_key(mset[job.index],
-                           _resonance_vector(ctx.resonance_set, job.index, Val(ROM)),
-                           representatives) for job in jobs]
     # Within degrees, each degree is scheduled on its own: its jobs are contiguous in the
     # causal order, and their dependencies on lower degrees are already met.
     blocks = across_degrees ? [1:length(jobs)] :
@@ -418,7 +428,9 @@ Create a causal direct or grouped plan.
 - `:across_degrees` lets groups span degrees.
 - `:auto` returns, among the direct, within-degree and cross-degree plans, the one with the
   fewest numeric factorisations, preferring the degree-ordered plans on ties. Without zero
-  or repeated eigenvalues no reuse is possible, and it returns the direct plan at once.
+  or repeated eigenvalues no reuse is possible, and it returns the direct plan at once; with
+  them, it still returns the direct plan before analysing dependencies when every job has
+  its own key, since no grouping can then save a factorisation.
 
 Both groupings come from [`_group_solve_jobs`](@ref), which follows the jobs' data
 dependencies ([`_job_dependencies`](@ref)) and splits a group only where one of them
@@ -434,12 +446,15 @@ function _build_solve_plan(ctx, R, sym, mset, grouping::Symbol, ::Val{ROM}) wher
         !_has_structural_factor_reuse(ctx.lambda_diag) &&
         return _DirectSolvePlan(jobs)
 
+    structural_keys = _structural_keys(ctx, mset, jobs, Val(ROM))
+    grouping == :auto && allunique(structural_keys) && return _DirectSolvePlan(jobs)
     dependencies = _job_dependencies(ctx, R, mset, jobs, Val(ROM))
     within = grouping == :across_degrees ? nothing :
-             _group_solve_jobs(ctx, mset, jobs, dependencies, Val(ROM))
+             _group_solve_jobs(ctx, mset, jobs, dependencies, Val(ROM);
+        structural_keys)
     across = grouping == :on ? nothing :
              _group_solve_jobs(ctx, mset, jobs, dependencies, Val(ROM);
-        across_degrees = true)
+        across_degrees = true, structural_keys)
     if grouping == :on
         within === nothing && return _DirectSolvePlan(jobs)
         return _GroupedSolvePlan(within, length(jobs))

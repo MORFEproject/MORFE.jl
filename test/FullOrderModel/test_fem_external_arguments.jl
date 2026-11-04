@@ -157,6 +157,50 @@ end
     end
 end #@testset "FEM terms with an external factor"
 
+"""
+`g(r) = (dir · r) * shape`: no internal factor, so its monomials read no column of W.
+"""
+struct _StubFEMForcingTerm <: MORFE.FEMMultilinearMap{2}
+    multiindex::NTuple{2, Int}
+    multiplicity_external::Int
+    deg::Int
+    fully_asymmetric::Union{Nothing, Bool}
+    shape::Vector{ComplexF64}
+    dir::Vector{ComplexF64}
+    buffer::Matrix{ComplexF64}
+end
+
+MORFE.fem_elements(::_StubFEMForcingTerm) = 1:1
+MORFE.fem_n_qp(::_StubFEMForcingTerm) = _FEM_NQP
+MORFE.fem_ndofs_per_cell(::_StubFEMForcingTerm) = _FEM_FOM
+MORFE.fem_reinit!(_, ::_StubFEMForcingTerm) = nothing
+MORFE.fem_getdetJdV(_, _, ::_StubFEMForcingTerm) = 1.0
+MORFE.fem_qp_buffer(t::_StubFEMForcingTerm) = t.buffer
+MORFE.assemble_element!(result, Fe, _, ::_StubFEMForcingTerm) = (result .+= Fe)
+function MORFE.accumulate_qp!(Fe, qp_args::Tuple{Any}, multiplier, _, _, dΩ,
+        t::_StubFEMForcingTerm)
+    Fe .+= (multiplier * dΩ * dot(conj(t.dir), only(qp_args))) .* t.shape
+end
+
+@testset "FEM term without internal factors" begin
+    # Its external monomials have no column to scatter, which once made the single-pass
+    # assembly skip the term altogether.
+    ROM, N_EXT = 2, 2
+    mset = all_multiindices_up_to(ROM + N_EXT, 2; min_degree = 1)
+    W, _ = create_parametrisation_method_objects(mset, 2, _FEM_FOM, ROM, N_EXT, ComplexF64)
+    fem_term = _StubFEMForcingTerm((0, 0), 1, 1, false, ComplexF64[0.3, 1.0, -0.7],
+        ComplexF64[2.0, -3.0], zeros(ComplexF64, 1, _FEM_NQP))
+    closure_term = MultilinearMap(
+        (res, r) -> (res .+= dot(conj(fem_term.dir), r) .* fem_term.shape),
+        (0, 0), 1; fully_asymmetric = false)
+
+    fem_rhs = _fem_rhs_all_monomials(fem_term, mset, N_EXT, W)
+    closure_rhs = _fem_rhs_all_monomials(closure_term, mset, N_EXT, W)
+    @test all(isapprox.(fem_rhs, closure_rhs; atol = 1e-12))
+    external_index = findfirst(==(SVector(0, 0, 1, 0)), mset.exponents)
+    @test norm(fem_rhs[external_index]) > 1e-6
+end
+
 struct _StubFEMInternalTerm <: MORFE.FEMMultilinearMap{2}
     multiindex::NTuple{2, Int}
     multiplicity_external::Int

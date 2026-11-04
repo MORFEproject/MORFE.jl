@@ -129,5 +129,50 @@
                 param_coeff, red_coeff, ext_dyn, 2.0 + 0im, 1, eigenmodes, xi)
             @test param_coeff == param_before   # must be unchanged
         end
+
+        @testset "compute_higher_derivative_coefficients! uses level-j modes (ORD = 3)" begin
+            # The R[α] term at level j is W^(j) at the unit monomials, Φ Λ^(j-1): the
+            # acceleration level of a master mode is λφ, not φ.
+            PM = MORFE.ParametrisationMethod
+            FOM, L, k = 2, 3, 2
+            Φ = ComplexF64[1.0; 2.0;;]
+            Λ = fill(0.5im, 1, 1)
+            levels = PM.derivative_level_modes(Φ, Λ, 2)
+            @test levels[1] == Φ
+            @test levels[2] ≈ Φ * Λ
+
+            param_coeff = zeros(ComplexF64, FOM, 3, L)
+            red_coeff = zeros(ComplexF64, 1, L)
+            W1 = ComplexF64[1.0, 2.0]
+            param_coeff[:, 1, k] .= W1
+            R_k = ComplexF64[0.3]
+            red_coeff[:, k] .= R_k
+            ξ = [ComplexF64[0.1, 0.2], ComplexF64[-0.4, 0.5]]
+            s = 3.0 + 0.0im
+
+            PM.compute_higher_derivative_coefficients!(
+                param_coeff, red_coeff, ComplexF64[], s, k, levels, ξ)
+            W2 = s .* W1 .+ Φ * R_k .+ ξ[1]
+            @test param_coeff[:, 2, k] ≈ W2
+            @test param_coeff[:, 3, k] ≈ s .* W2 .+ (Φ * Λ) * R_k .+ ξ[2]
+
+            # One matrix is level 1 only; at ORD = 3 that is the old bug, so it is refused.
+            @test_throws ArgumentError PM.compute_higher_derivative_coefficients!(
+                param_coeff, red_coeff, ComplexF64[], s, k, Φ, ξ)
+        end
+
+        @testset "compute_higher_derivative_coefficients! self_variable" begin
+            # A unit monomial's own column is the s-term already; self_variable drops it.
+            PM = MORFE.ParametrisationMethod
+            Φ = ComplexF64[1.0 3.0; 2.0 4.0]               # ROM = 1, N_EXT = 1
+            param_coeff = zeros(ComplexF64, 2, 2, 2)
+            param_coeff[:, 1, 2] .= ComplexF64[1.0, -1.0]
+            red_coeff = ComplexF64[0.0 0.25]
+            e_dyn = ComplexF64[0.7]
+            ξ = [zeros(ComplexF64, 2)]
+            PM.compute_higher_derivative_coefficients!(
+                param_coeff, red_coeff, e_dyn, 2.0 + 0im, 2, [Φ], ξ; self_variable = 2)
+            @test param_coeff[:, 2, 2] ≈ 2 .* ComplexF64[1.0, -1.0] .+ Φ[:, 1] .* 0.25
+        end
     end
 end #@testset "ParametrisationMethod"

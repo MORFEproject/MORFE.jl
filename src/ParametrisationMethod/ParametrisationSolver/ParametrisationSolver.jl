@@ -42,6 +42,7 @@ using ..ParametrisationObjects: validate_multiindex_set,
                                 Parametrisation, ReducedDynamics,
                                 create_parametrisation_method_objects,
                                 compute_higher_derivative_coefficients!,
+                                derivative_level_modes,
                                 multiindex_set
 using ..FullOrderModel: NthOrderModel
 using ..ExternalSystems: external_basis

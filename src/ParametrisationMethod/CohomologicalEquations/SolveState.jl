@@ -249,11 +249,14 @@ provenance is visible at the call site (`ctx.orthogonality.J_coeffs`, not a bare
 
 - `linear_terms::NTuple{ORDP1, MT}` — the `ORD+1` FOM matrices `B₀ … B_ORD` whose
   combination `L(s) = Σ_j s^j B_j` forms the `(1,1)` block of the bordered system.
-- `generalised_eigenmodes::Matrix{T}` — `FOM × NVAR` matrix of generalised **right**
-  eigenmodes, formed by concatenating the master right eigenmodes and the solved external
-  right directions. It propagates higher derivative coefficients after the linear
-  monomials have been initialised. The left eigenmodes are represented separately through
-  `orthogonality` and are never stored in this field.
+- `generalised_eigenmodes::Vector{Matrix{T}}` — the generalised **right** eigenmodes per
+  derivative level: element `j` is the `FOM × NVAR` matrix `Φ Λ^(j-1)`, where `Φ`
+  concatenates the master right eigenmodes and the solved external right directions and `Λ`
+  is the linear reduced dynamics (see [`derivative_level_modes`](@ref)). It propagates
+  higher derivative coefficients after the linear monomials have been initialised; level
+  `j` must be `Φ Λ^(j-1)`, not `Φ`, or an `ORD ≥ 3` model stores wrong higher levels. The
+  left eigenmodes are represented separately through `orthogonality` and are never stored
+  in this field.
 - `lambda_diag::Vector{T}` — the `NVAR` reduced eigenvalues; the superharmonic of a
   monomial is `s = ⟨lambda_diag, α⟩`.
 - `invariance::InvarianceOperators{T}` — border-column coefficients; see
@@ -276,7 +279,7 @@ provenance is visible at the call site (`ctx.orthogonality.J_coeffs`, not a bare
 struct CohomologicalContext{T, ORD, ORDP1, NVAR, FOM, LT, MT <: AbstractMatrix{LT}}
     # ── Spectral / model data ─────────────────────────────────────────────────
     linear_terms::NTuple{ORDP1, MT}
-    generalised_eigenmodes::Matrix{T}
+    generalised_eigenmodes::Vector{Matrix{T}}
     lambda_diag::Vector{T}
     # ── Precomputed operators ─────────────────────────────────────────────────
     invariance::InvarianceOperators{T}

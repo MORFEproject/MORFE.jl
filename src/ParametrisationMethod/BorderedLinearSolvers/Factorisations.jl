@@ -127,6 +127,10 @@ end
 Factorise the current bordered matrix through SuiteSparse UMFPACK. Successful symbolic
 analysis is reused by `lu!`. A failed cached numeric factorisation is discarded and retried
 once from a fresh analysis; only a successful factorisation is retained in `state.fact`.
+
+The previous numeric factor is freed before `lu!`, as for KLU. `lu!` computes the new factor
+before replacing the old one, which only its finaliser frees, so without this two complete
+LU factors coexist at every refactorisation, and more until the garbage collector runs.
 """
 function _refactorise_umfpack!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     if ss.fact === nothing
@@ -136,6 +140,7 @@ function _refactorise_umfpack!(ss::SparseLinearSolverState, A::SparseMatrixCSC)
     end
     F = _cached_umfpack_factor(ss, A)
     try
+        Base.finalize(F.numeric)
         lu!(F, A; check = false, reuse_symbolic = true)
     catch error
         _is_unrecoverable_failure(error) && rethrow()
