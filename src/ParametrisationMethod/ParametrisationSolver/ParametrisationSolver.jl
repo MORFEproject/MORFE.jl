@@ -45,12 +45,12 @@ using ..ParametrisationObjects: validate_multiindex_set,
                                 multiindex_set
 using ..FullOrderModel: NthOrderModel
 using ..ExternalSystems: external_basis
-using ..SpectralDecomposition: SpectralData, right_modes, left_modes,
-                               right_mode_derivatives, left_mode_blocks,
+using ..SpectralDecomposition: SpectralData, right_modes, right_mode_derivatives,
                                master_eigenvalues, master_conjugate_permutation,
+                               master_linear_dynamics, master_bundle,
                                detect_conjugate_permutation,
                                external_conjugate_permutation,
-                               full_conjugate_permutation
+                               full_conjugate_permutation, master_left_basis
 using ..MultilinearTerms: compute_multilinear_terms!, build_multilinear_terms_cache,
                           MultilinearTermsCache
 using ..Resonance: ResonanceSet, is_resonant

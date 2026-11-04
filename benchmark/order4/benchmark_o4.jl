@@ -286,7 +286,7 @@ rs_s = resonance_set_from_complex_normal_form_style(
 
 lmd_s = left_eigenmode_orders_from_slice(
     model_s.linear_terms, lm_s, collect(me_s))[:, 1:(end - 1), :]
-sd_s = SpectralData(; eigenvalues = me_s,
+sd_s = SpectralData(; diagonal = me_s,
     right_modes = mm_s, right_derivatives = mmd_s,
     left_modes = lm_s, left_blocks = Array(lmd_s))
 

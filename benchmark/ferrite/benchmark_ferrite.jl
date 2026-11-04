@@ -178,7 +178,7 @@ resonance_set = resonance_set_from_complex_normal_form_style(
 println("\n§2  Cohomological solve (max_degree = $max_degree) …")
 left_modes_derivatives = left_eigenmode_orders_from_slice(
     model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
-spectral = SpectralData(; eigenvalues = master_eigenvalues,
+spectral = SpectralData(; diagonal = master_eigenvalues,
     right_modes = master_modes, right_derivatives = master_modes_derivatives,
     left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 r2 = @timed solve_cohomological_problem(

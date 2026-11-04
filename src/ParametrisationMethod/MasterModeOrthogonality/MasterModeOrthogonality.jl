@@ -59,6 +59,15 @@ zero anyway.
 
 # Coefficients from eigenvector order-blocks (no eigenvalue folding)
 
+When the master block `Λ` of the reduced linear dynamics is upper triangular rather than
+diagonal (Schur coordinates, or the Jordan chain of a defective eigenvalue), `φ_r` is not
+a left eigenvector but row `r` of the **dual left basis** `Ψ̃`, with `Ψ̃ᴴ B Φ = I` and
+`Ψ̃ᴴ A = Λ Ψ̃ᴴ B` ([`master_left_basis`](@ref)); for a diagonal `Λ` that basis is the left
+eigenvectors. Nothing below depends on which: the condition `φ_rᴴ B 𝒲 = 0` and its
+reduction use only the blocks, never an eigenvalue. Projected onto the master subspace, the
+rows make the system upper triangular, `(s I − Λ) p + f = …`, so every resonance pattern
+stays solvable by back-substitution.
+
 The row coefficients are read directly off the (conjugated) left eigenvector
 order-blocks — no eigenvalue appears:
 

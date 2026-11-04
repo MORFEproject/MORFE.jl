@@ -150,6 +150,10 @@ boundary.
   [`master_conjugate_permutation`](@ref) / [`outer_conjugate_permutation`](@ref).
 - `mode_numbers::Vector{Int}` — physical mode number of each spectrum entry, derived from
   `σ`'s orbits (see below).
+- `master_linear_dynamics` — the master block `Λ̃` of the reduced linear dynamics, as
+  `ExternalSystem` keeps its `linear_matrix`: a `Diagonal` for eigenvector coordinates, an
+  `UpperTriangular` otherwise (Schur coordinates, Jordan chains). The master eigenvalues
+  are its diagonal.
 
 ## One involution, detected once — and each restriction computed once
 
@@ -177,18 +181,24 @@ struct SpectralData{ORD, ROM}
     master_permutation::Union{Nothing, Vector{Int}}
     outer_permutation::Union{Nothing, Vector{Int}}
     mode_numbers::Vector{Int}
+    master_linear_dynamics::Union{Diagonal{ComplexF64, SVector{ROM, ComplexF64}},
+        UpperTriangular{ComplexF64, Matrix{ComplexF64}}}
 
-    # The only constructor: takes the canonical facts (bundles + σ) and settles everything
-    # derived from them here, once. Restriction failures are raised at this point, where the
-    # offending spectrum entry can be named.
+    # The only constructor: takes the canonical facts (bundles + σ + master block) and
+    # settles everything derived from them here, once. Restriction failures are raised at
+    # this point, where the offending spectrum entry can be named.
     function SpectralData{ORD, ROM}(master::ModeBundle{ORD, SVector{ROM, ComplexF64}},
             outer::ModeBundle{ORD, Vector{ComplexF64}},
             σ::Union{Nothing, AbstractVector{Int}},
-            n_eigs::Int) where {ORD, ROM}
+            n_eigs::Int,
+            Λ::Union{Diagonal, UpperTriangular} = Diagonal(master.eigenvalues)
+    ) where {ORD, ROM}
         σv = σ === nothing ? nothing : collect(Int, σ)
         mp = _restrict_permutation(σv, master.indices, "master")
         op = _restrict_permutation(σv, outer.indices, "outer")
-        return new{ORD, ROM}(master, outer, σv, mp, op, _mode_numbers(σv, n_eigs))
+        diag(Λ) == master.eigenvalues || throw(ArgumentError(
+            "the master eigenvalues must be the diagonal of the master block"))
+        return new{ORD, ROM}(master, outer, σv, mp, op, _mode_numbers(σv, n_eigs), Λ)
     end
 end
 
@@ -196,6 +206,15 @@ master_bundle(sd::SpectralData) = sd.master
 outer_bundle(sd::SpectralData) = sd.outer
 master_eigenvalues(sd::SpectralData) = sd.master.eigenvalues
 outer_eigenvalues(sd::SpectralData) = sd.outer.eigenvalues
+
+"""
+	master_linear_dynamics(sd) -> Union{Diagonal, UpperTriangular}
+
+The master block `Λ̃` of the reduced linear dynamics: `Diagonal` for eigenvector
+coordinates, `UpperTriangular` for Schur or Jordan coordinates. Its diagonal is the master
+eigenvalues.
+"""
+master_linear_dynamics(sd::SpectralData) = sd.master_linear_dynamics
 
 right_modes(sd::SpectralData) = right_modes(sd.master)
 left_modes(sd::SpectralData) = left_modes(sd.master)
@@ -295,16 +314,39 @@ function Base.show(io::IO, sd::SpectralData{ORD, ROM}) where {ORD, ROM}
     print(io, "SpectralData{ORD=$ORD, ROM=$ROM}(", length(sd.outer),
         " outer eigenvalues, ",
         sd.conjugate_permutation === nothing ? "no conjugate structure" :
-        "conjugate pairs detected", ")")
+        "conjugate pairs detected",
+        sd.master_linear_dynamics isa Diagonal ? "" : ", upper-triangular master block",
+        ")")
 end
 
 """
-	SpectralData(; eigenvalues, right_modes, left_modes,
+	SpectralData(; diagonal | upper_triangular, right_modes, left_modes = nothing,
 				 right_derivatives = nothing, left_blocks = nothing,
 				 outer_eigenvalues = ComplexF64[], conjugate_permutation = nothing)
 
 Build `SpectralData` directly from raw arrays — for eigensolvers that never construct a
-`Spectrum` (a shift-invert Hopf solve, say).
+`Spectrum` (a shift-invert Hopf solve, say), or for master coordinates chosen by the
+caller.
+
+The master block `Λ̃` of the reduced linear dynamics is given by **exactly one** of
+
+- `diagonal` — its diagonal, i.e. the master eigenvalues, for eigenvector coordinates;
+- `upper_triangular` — `Λ̃` itself, for coordinates that are not eigenvectors: Schur
+  coordinates, or the Jordan chain of a defective eigenvalue, which lists its eigenvalue
+  once per coordinate on the diagonal. Its diagonal is the master eigenvalues. The right
+  blocks must follow `Φ⁽ᵏ⁺¹⁾ = Φ⁽ᵏ⁾Λ̃`; build them with [`master_right_blocks`](@ref). A
+  diagonal matrix here is the same as passing its diagonal.
+
+With `upper_triangular` and a `conjugate_permutation`, the master columns must come in
+conjugate pairs for the solve's conjugate filling. Columns that do not (complex Schur
+vectors, where a pair couples to itself) are re-based here with
+[`conjugate_master_frame`](@ref): each secondary column becomes the conjugate of its
+primary and `Λ̃` becomes `T⁻¹Λ̃T`, with the same diagonal. An `@info` line names the replaced
+columns, and the parametrisation is then computed in that frame.
+
+The left side is optional. Without it the solve computes the left blocks it needs with
+[`master_left_basis`](@ref), which is also the only way to supply a defective eigenvalue,
+whose left eigenvectors alone do not span its left subspace.
 
 Two shapes are accepted:
 
@@ -333,27 +375,28 @@ It is accepted at **either of two lengths**:
   among the outer targets reports once rather than twice. A real (non-oscillatory) outer
   mode is its own conjugate and maps to itself.
 """
-function SpectralData(; eigenvalues::AbstractVector,
+function SpectralData(; diagonal::Union{Nothing, AbstractVector} = nothing,
+        upper_triangular::Union{Nothing, AbstractMatrix} = nothing,
         right_modes::AbstractArray,
-        left_modes::AbstractArray,
+        left_modes::Union{Nothing, AbstractArray} = nothing,
         right_derivatives::Union{Nothing, AbstractArray} = nothing,
         left_blocks::Union{Nothing, AbstractArray} = nothing,
         outer_eigenvalues::AbstractVector = ComplexF64[],
         conjugate_permutation::Union{Nothing, AbstractVector{Int}} = nothing)
-    ROM = length(eigenvalues)
+    Λ = _master_dynamics(diagonal, upper_triangular)
+    ROM = size(Λ, 1)
     rb = _stack_blocks(right_modes, right_derivatives, ROM, :right)
-    lb = _stack_blocks(left_modes, left_blocks, ROM, :left)
     ORD = size(rb, 2)
-    size(lb, 2) == ORD || throw(ArgumentError(
-        "right_modes has $ORD order-blocks but left_modes has $(size(lb, 2))"))
-    λ = SVector{ROM, ComplexF64}(ComplexF64.(eigenvalues))
+    left_modes === nothing && left_blocks !== nothing &&
+        throw(ArgumentError(
+            "left_blocks are the companions of left_modes; pass left_modes as well"))
+    lb = left_modes === nothing ? nothing :
+         _stack_blocks(left_modes, left_blocks, ROM, :left)
+    lb === nothing || size(lb, 2) == ORD ||
+        throw(ArgumentError(
+            "right_modes has $ORD order-blocks but left_modes has $(size(lb, 2))"))
+    λ = SVector{ROM, ComplexF64}(diag(Λ))
     n_out = length(outer_eigenvalues)
-    # Raw arrays carry no spectrum of their own, so define one: masters occupy entries
-    # 1:ROM and the outer eigenvalues follow. Those positions are what `physical_mode`
-    # and the off-manifold warning report.
-    master = ModeBundle{ORD}(λ, rb, lb, 1:ROM)
-    outer = ModeBundle{ORD}(Vector{ComplexF64}(outer_eigenvalues), nothing, nothing,
-        (ROM + 1):(ROM + n_out))
     perm = conjugate_permutation === nothing ? nothing : collect(Int, conjugate_permutation)
     # Accepted at either length, as in `_resolve_permutation`: a ROM-length MASTER block
     # (outer entries then self-paired), or the involution over the whole synthetic
@@ -367,7 +410,14 @@ function SpectralData(; eigenvalues::AbstractVector,
         _validate_master_permutation(perm, ROM)
         _embed_master_permutation(perm, ROM, ROM + n_out)
     end
-    return SpectralData{ORD, ROM}(master, outer, σ, ROM + n_out)
+    rb, Λ = _conjugate_master_columns(rb, Λ, _restrict_permutation(σ, 1:ROM, "master"))
+    # Raw arrays carry no spectrum of their own, so define one: masters occupy entries
+    # 1:ROM and the outer eigenvalues follow. Those positions are what `physical_mode`
+    # and the off-manifold warning report.
+    master = ModeBundle{ORD}(λ, rb, lb, 1:ROM)
+    outer = ModeBundle{ORD}(Vector{ComplexF64}(outer_eigenvalues), nothing, nothing,
+        (ROM + 1):(ROM + n_out))
+    return SpectralData{ORD, ROM}(master, outer, σ, ROM + n_out, Λ)
 end
 
 # Widen a ROM-length master-block involution to the full spectrum, fixing the outer entries.
@@ -579,12 +629,10 @@ function _reconcile_right(ep, idx, λ, ORD_spec::Int, ORD_model::Int)
 
         blocks[:, k, r] .= @view ep.eigenmodes[:, k, i]
     end
-    for r in eachindex(idx), k in (ORD_spec + 1):ORD_model
-        # λ · the block just below, NOT a fresh λ^{k-1}ψ: the eigensolver's own block
-        # carries its numerical content and must be the thing that is scaled.
-        @views blocks[:, k, r] .= λ[r] .* blocks[:, k - 1, r]
-    end
-    return blocks
+    # λ · the block just below, NOT a fresh λ^{k-1}ψ: the eigensolver's own block carries
+    # its numerical content and must be the thing that is scaled. This is the diagonal case
+    # of `master_right_blocks`' recurrence, so both share it.
+    return _extend_right_blocks!(blocks, Diagonal(λ), ORD_spec)
 end
 
 # Left blocks: slice when the orders match; otherwise rebuild from the physical slice

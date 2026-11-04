@@ -9,7 +9,9 @@
 
 Resolve concrete spectral arrays, validate dimensions and conjugate structure, and return
 the data required by storage and operator preparation. This is the single setup boundary
-for `SpectralData` fields whose higher-order blocks may be `nothing`.
+for `SpectralData` fields whose higher-order blocks may be `nothing`. The left blocks are
+resolved later, by [`_master_left_blocks`](@ref): they depend on the master block, which is
+read back from `R` once storage is prepared.
 """
 function _prepare_problem_inputs(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
@@ -17,11 +19,8 @@ function _prepare_problem_inputs(
         conjugate_permutation, options::ParametrisationOptions
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     @assert NVAR == ROM + N_EXT "Multiindex set has $NVAR variables but ROM + N_EXT = $(ROM + N_EXT)"
-    master_eigs = master_eigenvalues(spectral)
     master_right_modes = right_modes(spectral)::Matrix{ComplexF64}
-    master_left_modes = left_modes(spectral)::Matrix{ComplexF64}
     master_right_mode_derivatives = right_mode_derivatives(spectral)
-    master_left_mode_blocks = left_mode_blocks(spectral)
     conjugate_structure = _spectral_conjugate_permutation(
         conjugate_permutation, spectral, model.external_system)
     options.validate_mset && validate_multiindex_set(mset, NVAR, ROM;
@@ -31,9 +30,8 @@ function _prepare_problem_inputs(
     FOM = size(master_right_modes, 1)
     @assert size(master_right_modes, 2) == ROM "master right modes must have $ROM columns"
     dimensions = (ORD, FOM, ROM, N_EXT, NVAR)
-    return master_eigs, master_right_modes, master_left_modes,
-    master_right_mode_derivatives, master_left_mode_blocks,
-    conjugate_structure, dimensions
+    return master_linear_dynamics(spectral), master_right_modes,
+    master_right_mode_derivatives, conjugate_structure, dimensions
 end
 
 """Commit degree-one coefficients once external directions are final."""
@@ -121,7 +119,10 @@ linear-operator tuple is read from `model.linear_terms`.
   their derivative blocks, the left physical modes and their orthogonality blocks, and the
   conjugate involution. Build it with `SpectralData(model, spectrum; master = …)`.
   The orthogonality row operators are read directly off the left blocks — no eigenvalue
-  folding.
+  folding. For master coordinates that are not eigenvectors (Schur coordinates, Jordan
+  chains), `SpectralData(; upper_triangular = Λ̃, …)` carries an upper-triangular master
+  block instead of eigenvalues, and may omit the left blocks: the dual left basis the rows
+  need is then computed ([`master_left_basis`](@ref)).
 - `resonance_set :: ResonanceSet`.
 - `initial_solution` — optionally supply an already-initialised `(W, R)` tuple. The solver
   mutates and returns those same objects, trusts their master and external linear data, and
@@ -176,9 +177,10 @@ end
 		-> (; W, R, ctx, symmetry, ml_cache, sparse_solver, checkpoint_session)
 
 Run every phase of [`solve_parametrisation`](@ref) before the monomial loop: input
-resolution, checkpoint opening and restoration, storage, shared resources, master
-operators, the degree-one external directions, and the complete context. Nothing of degree
-two or more is solved, so the result holds only order-one data.
+resolution, checkpoint opening and restoration, storage, the master block's validation and
+left blocks, shared resources, master operators, the degree-one external directions, and
+the complete context. Nothing of degree two or more is solved, so the result holds only
+order-one data.
 """
 function _prepare_solve(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT, LT, MT},
@@ -190,8 +192,7 @@ function _prepare_solve(
         options::ParametrisationOptions
 ) where {ORD, ORDP1, N_NL, N_EXT, LT, MT, NVAR, ROM}
     checkpoint = options.checkpoint
-    master_eigs, master_right_modes, master_left_modes,
-    master_right_mode_derivatives, master_left_mode_blocks,
+    master_dynamics, master_right_modes, master_right_mode_derivatives,
     conj_perm, dimensions = _prepare_problem_inputs(
         model, mset, spectral, conjugate_permutation, options)
     _, FOM, _, _, _ = dimensions
@@ -210,13 +211,19 @@ function _prepare_solve(
     unit_offset = has_zero ? 1 : 0
 
     W, R, supplied = _prepare_solution_storage(
-        initial_solution, mset, model, master_right_modes, master_eigs,
+        initial_solution, mset, model, master_right_modes, master_dynamics,
         master_right_mode_derivatives, dimensions, unit_offset, T)
     completed_indices, completed_degree = _restore_solution_checkpoint!(
         checkpoint_session, W, R, supplied)
 
     Λ = view(R.poly.coefficients, 1:NVAR, (unit_offset + 1):(unit_offset + NVAR))
     lambda_diag = [R.poly.coefficients[i, i + unit_offset] for i in 1:NVAR]
+    # The master block as R holds it — a supplied `initial_solution` included — decides.
+    master_block = view(Λ, 1:ROM, 1:ROM)
+    isdiag(master_block) || _check_master_linear_dynamics(
+        model, W, master_block, conj_perm, unit_offset, ROM)
+    master_left_modes, master_left_mode_blocks = _master_left_blocks(
+        model, W, master_block, spectral, conj_perm, unit_offset, ROM)
 
     linear_skip_set, lower_order, sym, ml_cache, buffers = _prepare_shared_resources(
         model, W, mset, conj_perm, completed_indices,

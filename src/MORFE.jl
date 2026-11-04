@@ -90,6 +90,9 @@ export Spectrum, spectrum, left_eigenmode_orders_from_slice,
 export SpectralData, ModeBundle, check_biorthogonality,
        right_modes, left_modes, right_mode_derivatives, left_mode_blocks,
        master_eigenvalues, outer_eigenvalues
+# Upper-triangular master blocks
+export master_linear_dynamics, master_right_blocks, conjugate_master_frame,
+       master_left_basis
 # Resonance configuration
 export ResonanceConfig
 

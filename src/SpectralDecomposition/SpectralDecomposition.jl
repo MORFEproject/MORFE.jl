@@ -11,8 +11,10 @@ a division that named neither half for what it contained.
 | File | Contents |
 |------|----------|
 | `Eigensolvers.jl` | `AbstractEigensolver` and its subtypes, the `eigensolve` / `eigensolve_left` interface, `generalised_eigenpairs`, the `Spectrum` container, sorting/normalisation, and left-block reconstruction |
+| `TriangularLinearDynamics.jl` | an upper-triangular master linear dynamics: `master_right_blocks` (the right blocks that follow it) and `conjugate_master_frame` |
 | `SpectralData.jl` | `ModeBundle` and `SpectralData` — the selected, model-reconciled bundle a parametrisation consumes |
 | `ConjugatePermutation.jl` | the conjugate involution derived from a spectrum and an external system |
+| `DualLeftBasis.jl` | `master_left_basis` — the left blocks the orthogonality rows need for any upper-triangular master block |
 
 ## Two layers, deliberately
 
@@ -43,8 +45,11 @@ Solvers producing only the physical left slice can reconstruct the rest with
 and the names are chosen to keep room. A master set need not consist of eigenpairs: for a
 defective eigenvalue the invariant subspace is spanned by a **Jordan chain** of
 generalised eigenvectors, and such a chain would sit in exactly these fields alongside
-its eigenvalue. Nothing here implements Jordan chains today, but nothing here assumes
-their absence either — the block layout and the accessors carry over unchanged.
+its eigenvalue. The master block of the reduced linear dynamics is then upper triangular
+rather than diagonal, and `SpectralData(; upper_triangular = Λ̃, …)` carries it
+([`master_linear_dynamics`](@ref)): [`master_right_blocks`](@ref) builds the right blocks of
+such a block, and [`master_left_basis`](@ref) the left blocks the solve needs, which a
+Jordan block's left eigenvectors alone cannot supply.
 """
 module SpectralDecomposition
 
@@ -76,8 +81,14 @@ export ModeBundle, SpectralData,
 export detect_conjugate_permutation, external_conjugate_permutation,
        full_conjugate_permutation
 
+# ── Upper-triangular master blocks ───────────────────────────────────────────
+export master_linear_dynamics, master_right_blocks, conjugate_master_frame,
+       master_left_basis
+
 include("Eigensolvers.jl")
 include("ConjugatePermutation.jl")
+include("TriangularLinearDynamics.jl")
 include("SpectralData.jl")
+include("DualLeftBasis.jl")
 
 end # module

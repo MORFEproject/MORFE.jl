@@ -37,6 +37,7 @@ should_run(group) = GROUP == "all" || GROUP == group
                 include("ParametrisationMethod/test_parametrise_unified.jl")
                 include("ParametrisationMethod/test_parametrise_entry.jl")
                 include("ParametrisationMethod/test_parametric_mass.jl")
+                include("ParametrisationMethod/test_triangular_master.jl")
             end
             include("ParametrisationMethod/test_bordered_solver.jl")
             include("ParametrisationMethod/test_cohomological_backends.jl")

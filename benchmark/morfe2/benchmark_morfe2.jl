@@ -143,7 +143,7 @@ end
 # mirrored right/left block convention.
 left_modes_derivatives = left_eigenmode_orders_from_slice(
     model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end - 1), :]
-spectral = SpectralData(; eigenvalues = master_eigenvalues,
+spectral = SpectralData(; diagonal = master_eigenvalues,
     right_modes = master_modes, right_derivatives = master_modes_derivatives,
     left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 

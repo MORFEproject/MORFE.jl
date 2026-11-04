@@ -23,7 +23,7 @@ using ..Polynomials: DensePolynomial, evaluate
 using ..ParametrisationMethod: Parametrisation, ReducedDynamics
 using ..FullOrderModel: NthOrderModel, evaluate_nonlinear_terms!
 using ..ExternalSystems: to_physical_external
-using ..SpectralDecomposition: SpectralData, left_modes, left_mode_blocks,
+using ..SpectralDecomposition: SpectralData, master_bundle, master_left_basis,
                                external_conjugate_permutation,
                                master_conjugate_permutation
 using ..InvarianceEquation: precompute_master_column_polynomials, evaluate_column!
@@ -424,9 +424,12 @@ the reduced dynamics, through `δf`, as at a resonant monomial, and is not a sta
 is also what keeps the system regular when `s̄` lies on a master eigenvalue, where `L(s̄)`
 alone is singular.
 
-The right modes and eigenvalues are read from `W` and `R`, so validating in rescaled
-coordinates stays consistent; only the left modes come from `spectral`. Rescaling the right
-modes rescales `δf` alone, never `δx`.
+The right modes and the master block are read from `W` and `R`, so validating in rescaled
+coordinates stays consistent. Rescaling the right modes rescales `δf` alone, never `δx`.
+The left blocks come from [`master_left_basis`](@ref), exactly as in the solve: the left
+eigenvectors of `spectral` for a diagonal master block, the dual left basis otherwise
+(Schur or Jordan coordinates, where the left eigenvectors are not the basis the rows
+need, and for a Jordan block would make the bordered matrix singular).
 """
 function _state_error_factorisation(model::NthOrderModel{ORD}, W::Parametrisation,
         R::ReducedDynamics, spectral::SpectralData, s̄) where {ORD}
@@ -439,8 +442,11 @@ function _state_error_factorisation(model::NthOrderModel{ORD}, W::Parametrisatio
     master, external = units[1:ROM], units[(ROM + 1):NVAR]
     right_blocks = W.poly.coefficients[:, :, master]
     Λ = T.(R.poly.coefficients[:, units])
-    J_coeffs = precompute_orthogonality_operator_coefficients(
-        linear_terms, left_modes(spectral), left_mode_blocks(spectral))
+    left = master_left_basis(model, right_blocks, view(Λ, 1:ROM, 1:ROM),
+        master_bundle(spectral).left_blocks;
+        conjugate_permutation = master_conjugate_permutation(spectral))
+    J_coeffs = precompute_orthogonality_operator_coefficients(linear_terms,
+        left[:, ORD, :], ORD == 1 ? nothing : view(left, :, 1:(ORD - 1), :))
     column_coeffs, _ = precompute_master_column_polynomials(
         linear_terms, right_blocks[:, 1, :], Λ[1:ROM, 1:ROM])
     corner_coeffs, _ = precompute_orthogonality_column_polynomials(
@@ -597,8 +603,9 @@ To validate a physical parameter point, pass its exact reduced external coordina
 reduced dynamics, and full-order model are all evaluated at that same external point.
 `r_magnitudes` must remain `[0.0]` in fixed-target mode.
 
-`spectral` is the `SpectralData` the parametrisation was solved with; the state error reads
-its left master modes, which define the orthogonality rows.
+`spectral` is the `SpectralData` the parametrisation was solved with; the state error builds
+the orthogonality rows from its left master modes, or from the dual left basis when the
+master block is not diagonal (see `_state_error_factorisation`).
 """
 function invariance_error_convergence(
         model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT},

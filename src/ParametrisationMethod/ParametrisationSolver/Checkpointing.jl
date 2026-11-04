@@ -99,6 +99,24 @@ function _fingerprint_value!(ctx, value)
 end
 
 """
+	_fingerprint_value!(ctx, spectral::SpectralData)
+
+The generic field traversal, except that a `Diagonal` master block is skipped: it is the
+master eigenvalues, already digested with the master bundle. The field joined `SpectralData`
+after checkpoints existed, so a diagonal problem keeps the fingerprint it always had, while
+an upper-triangular block tells a problem apart from its diagonal counterpart.
+"""
+function _fingerprint_value!(ctx, spectral::SpectralData)
+    _digest_text!(ctx, typeof(spectral))
+    for field in fieldnames(SpectralData)
+        value = getfield(spectral, field)
+        field === :master_linear_dynamics && value isa Diagonal && continue
+        _fingerprint_value!(ctx, value)
+    end
+    return nothing
+end
+
+"""
 	_problem_fingerprint(model, spectral, resonance_set, mset, conjugate_permutation,
 		options) -> String
 

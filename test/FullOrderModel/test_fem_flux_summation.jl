@@ -343,13 +343,21 @@ function MORFE.contract_qp!(Fe, flux, element, q, dΩ, t::_LoopStubTerm)
 end
 
 "Bytes allocated by the right-hand side of monomial `l`, after a warm-up call."
+# Measured behind a function barrier. The cache's type depends on run-time data, so calling
+# from the function that built it is a dynamic dispatch, which Julia 1.10 and 1.11 count as
+# allocations of the call itself (128 bytes here) although the assembly allocates nothing.
+function _flux_rhs_allocated(result, model, l, W, cache)
+    @allocated compute_multilinear_terms!(result, model, l, W, cache)
+end
+
 function _rhs_allocations(terms, l, W)
     K = zeros(ComplexF64, _FLUX_FOM, _FLUX_FOM)
     model = NthOrderModel((K, K, K), terms)
     cache = build_multilinear_terms_cache(model, W)
     result = zeros(ComplexF64, _FLUX_FOM)
     compute_multilinear_terms!(result, model, l, W, cache)
-    return @allocated compute_multilinear_terms!(result, model, l, W, cache)
+    _flux_rhs_allocated(result, model, l, W, cache)
+    return _flux_rhs_allocated(result, model, l, W, cache)
 end
 
 @testset "FEM terms on different element loops" begin

@@ -149,6 +149,79 @@ function _prepare_shared_resources(
 end
 
 """
+	_check_master_linear_dynamics(model, W, Λ, conjugate_permutation, unit_offset, ROM)
+
+Validate a non-diagonal master block `Λ` (read back from `R`) against the master columns
+stored in `W`, raising an `ArgumentError` that names the failing condition:
+
+- **conjugate frame** (with an involution): the master columns are conjugate pairs on every
+  derivative level and `Λ[σ, σ] = conj(Λ)`, which conjugate filling assumes;
+- **levels**: `W⁽ᵏ⁺¹⁾ = W⁽ᵏ⁾ Λ` on the master columns, so the invariance columns (built from
+  level one and powers of `Λ`) and the stored levels describe the same modes;
+- **right invariance**: `Σₖ Bₖ Φ Λᵏ = 0`, so the coupling belongs to these modes. This is
+  checked to `1e-8`, the accuracy of eigensolver data; the others to `1e-10`.
+
+Runs after storage and restoration, so it also covers a supplied `initial_solution`.
+"""
+function _check_master_linear_dynamics(model, W, Λ, permutation, unit_offset::Int, ROM::Int)
+    coefficients = W.poly.coefficients
+    master = (unit_offset + 1):(unit_offset + ROM)
+    if permutation !== nothing
+        σ = view(permutation, 1:ROM)
+        for r in 1:ROM
+            column = view(coefficients, :, :, unit_offset + r)
+            partner = view(coefficients, :, :, unit_offset + σ[r])
+            norm(partner - conj.(column)) <= 1e-10 * norm(column) || throw(ArgumentError(
+                "conjugate symmetry needs the master columns in conjugate pairs on every " *
+                "derivative level, but column $(σ[r]) is not the conjugate of column $r"))
+        end
+        isapprox(Λ[σ, σ], conj.(Λ); rtol = 1e-10) || throw(ArgumentError(
+            "conjugate symmetry needs Λ̃[σ, σ] = conj(Λ̃) on the master block"))
+    end
+    for k in 1:(size(coefficients, 2) - 1)
+        next = view(coefficients, :, k + 1, master)
+        mismatch = norm(next - view(coefficients, :, k, master) * Λ) / norm(next)
+        mismatch <= 1e-10 || throw(ArgumentError(
+            "derivative level $(k + 1) of the master columns is not level $k times the " *
+            "master block (relative mismatch $mismatch); build the right blocks of a " *
+            "coupled master block with `master_right_blocks`"))
+    end
+    power = Matrix(view(coefficients, :, 1, master))
+    residual = model.linear_terms[1] * power
+    scale = norm(residual)
+    for k in 2:length(model.linear_terms)
+        power = power * Λ
+        term = model.linear_terms[k] * power
+        residual += term
+        scale += norm(term)
+    end
+    norm(residual) <= 1e-8 * scale || throw(ArgumentError(
+        "the master block does not belong to the master columns: Σₖ Bₖ Φ Λ̃ᵏ has " *
+        "relative norm $(norm(residual) / scale) instead of 0. Check the master block " *
+        "(SpectralData's `linear_dynamics`) against the right modes."))
+    return nothing
+end
+
+"""
+	_master_left_blocks(model, W, Λ, spectral, conjugate_permutation, unit_offset, ROM)
+	-> (master_left_modes, master_left_mode_blocks)
+
+The left physical slice and lower-order left blocks the orthogonality rows are built from,
+for the master columns stored in `W` and the master block `Λ` read from `R`. They come from
+[`master_left_basis`](@ref): the spectral left eigenvectors as they are when `Λ` is
+diagonal, and the dual left basis otherwise or when `spectral` carries no left blocks.
+"""
+function _master_left_blocks(model, W, Λ, spectral, permutation, unit_offset::Int,
+        ROM::Int)
+    σ = permutation === nothing ? nothing : view(permutation, 1:ROM)
+    left = master_left_basis(model,
+        view(W.poly.coefficients, :, :, (unit_offset + 1):(unit_offset + ROM)), Λ,
+        master_bundle(spectral).left_blocks; conjugate_permutation = σ)
+    ORD = size(left, 2)
+    return left[:, ORD, :], (ORD == 1 ? nothing : view(left, :, 1:(ORD - 1), :))
+end
+
+"""
 	_prepare_master_operators(linear_terms, W, R, master modes and blocks,
 		unit_offset, ROM)
 

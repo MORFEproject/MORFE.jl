@@ -59,7 +59,7 @@ const _left_modes_derivatives = MORFE.SpectralDecomposition.left_eigenmode_order
     (_K, _C, _M), _left_eigenmodes, [_λ₁, _λ₂])[:, 1:1, :]
 
 # The bundle the solve consumes: physical slices plus their companion blocks.
-const _spectral = SpectralData(; eigenvalues = _master_eigenvalues,
+const _spectral = SpectralData(; diagonal = _master_eigenvalues,
     right_modes = _master_modes, right_derivatives = _master_modes_derivatives,
     left_modes = _left_eigenmodes, left_blocks = _left_modes_derivatives)
 

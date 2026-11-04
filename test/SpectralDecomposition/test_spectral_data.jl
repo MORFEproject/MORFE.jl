@@ -136,7 +136,7 @@ end
         Ψna = ComplexF64[1 0 1 0; 0 1 0 1; 1 1 1 1]
         Ψna[:, 3] .= conj.(Ψna[:, 1])
         Ψna[:, 4] .= conj.(Ψna[:, 2])
-        sd = SpectralData(; eigenvalues = λna[1:2], right_modes = Ψna[:, 1:2],
+        sd = SpectralData(; diagonal = λna[1:2], right_modes = Ψna[:, 1:2],
             left_modes = Ψna[:, 1:2], outer_eigenvalues = λna[3:4],
             conjugate_permutation = nothing)
 
@@ -242,7 +242,7 @@ end
         n = 3
         Ψ1 = ComplexF64[1 0; 0 1; 1 1]
         ℓ1 = ComplexF64[1 0; 0 1; 0 0]
-        sd = SpectralData(; eigenvalues = ComplexF64[1 + 2im, 1 - 2im],
+        sd = SpectralData(; diagonal = ComplexF64[1 + 2im, 1 - 2im],
             right_modes = Ψ1, left_modes = ℓ1,
             outer_eigenvalues = ComplexF64[-3.0],
             conjugate_permutation = [2, 1])

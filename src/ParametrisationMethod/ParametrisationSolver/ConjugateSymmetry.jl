@@ -7,6 +7,13 @@
 # where P is an involutory permutation on mode indices that swaps conjugate pairs.
 # This module encapsulates the bookkeeping and fill logic so that
 # CohomologicalContext and CohomologicalBuffers are completely unchanged.
+#
+# An upper-triangular master block couples pairs to one another (a Jordan block at a
+# complex eigenvalue), never a pair to itself: the master columns are conjugate pairs, so
+# Λ[σ, σ] = conj(Λ), and an entry Λ[r, σr] would need its conjugate below the diagonal.
+# Couplings between pairs stay causal with the fill. A primary γ reads γ + eᵢ − eⱼ
+# (i < j), which is earlier in GrLex; if that one is a secondary, its own primary is
+# earlier still, so it has already been filled.
 
 # =============================================================================
 # Sentinel: inactive path

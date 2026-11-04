@@ -10,6 +10,10 @@
 Pre-compute the polynomial coefficient arrays for the orthogonality row operators
 `J_r(s)` directly from the left-eigenvector order-blocks. No eigenvalue is used.
 
+For an upper-triangular, non-diagonal master block the blocks passed are those of the dual
+left basis rather than left eigenvectors (see [`master_left_basis`](@ref)); the
+construction is the same.
+
 ## Mathematical origin
 
 The orthogonality condition for master mode `r` at a monomial with superharmonic

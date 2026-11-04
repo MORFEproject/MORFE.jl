@@ -63,7 +63,7 @@ const _EC_left_modes_derivatives = MORFE.SpectralDecomposition.left_eigenmode_or
 
 # Physical slices plus their companion blocks; `SpectralData` applies the mirrored
 # convention that used to be re-stated at every call site.
-const _EC_spectral = SpectralData(; eigenvalues = _EC_master_eigenvalues,
+const _EC_spectral = SpectralData(; diagonal = _EC_master_eigenvalues,
     right_modes = _EC_master_modes,
     right_derivatives = _EC_master_modes_derivatives,
     left_modes = _EC_left_eigenmodes,

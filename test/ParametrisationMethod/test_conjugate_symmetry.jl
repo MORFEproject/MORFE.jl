@@ -53,7 +53,7 @@ _left_modes_derivatives = left_eigenmode_orders_from_slice(
 
 # The bundle the solve consumes: physical slices plus their companion blocks, which is
 # exactly what this file already had. `SpectralData` applies the mirrored convention.
-_spectral = SpectralData(; eigenvalues = _master_eigenvalues,
+_spectral = SpectralData(; diagonal = _master_eigenvalues,
     right_modes = _master_modes, right_derivatives = _master_modes_derivatives,
     left_modes = _left_eigenmodes, left_blocks = _left_modes_derivatives)
 

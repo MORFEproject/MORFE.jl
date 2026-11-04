@@ -69,24 +69,25 @@ function _linear_monomial_indices(mset::MultiindexSet{NVAR}) where {NVAR}
 end
 
 """
-    _initialise_waveform!(W, R, master_right_modes, master_eigenvalues,
+    _initialise_waveform!(W, R, master_right_modes, master_linear_dynamics,
                           master_right_mode_derivatives, unit_offset, model)
 
 Initialise the linear-monomial coefficients of `W` and `R` from spectral data:
 
 - `W[:, 1, eᵣ] = master_right_modes[:, r]` and, for `ORD > 1`,
   `W[:, k, eᵣ] = master_right_mode_derivatives[:, k-1, r]`.
-- `R[r, eᵣ] = master_eigenvalues[r]`.
+- `R[1:r, eᵣ] = master_linear_dynamics[1:r, r]`: the upper-triangular master block `Λ̃`,
+  whose diagonal is the master eigenvalues (`Diagonal(eigenvalues)` for eigenvectors).
 
 Also embeds the external-system linear dynamics into the external rows of `R` via
 `_embed_external_dynamics!` when `model.external_system !== nothing`.
 """
 function _initialise_waveform!(
         W::Parametrisation, R::ReducedDynamics,
-        master_right_modes, master_eigenvalues,
+        master_right_modes, master_linear_dynamics,
         master_right_mode_derivatives, unit_offset::Int, model
 )
-    ROM = length(master_eigenvalues)
+    ROM = size(master_linear_dynamics, 1)
     ORD_W = size(W.poly.coefficients, 2)
     for r in 1:ROM
         idx_er = r + unit_offset
@@ -98,7 +99,9 @@ function _initialise_waveform!(
                                                       1, r)
             end
         end
-        R.poly.coefficients[r, idx_er] = master_eigenvalues[r]
+        for i in 1:r
+            R.poly.coefficients[i, idx_er] = master_linear_dynamics[i, r]
+        end
     end
     if model.external_system !== nothing
         _embed_external_dynamics!(R, model.external_system.first_order_dynamics, multiindex_set(W))
@@ -108,7 +111,7 @@ end
 
 """
 	_prepare_solution_storage(initial_solution, mset, model, master_right_modes,
-		master_eigenvalues, master_right_mode_derivatives, dimensions, unit_offset, T)
+		master_linear_dynamics, master_right_mode_derivatives, dimensions, unit_offset, T)
 
 Return `(W, R, supplied)`. Supplied objects are returned unchanged and by identity. When
 no storage is supplied, allocate zeroed coefficient arrays and initialise their known
@@ -116,7 +119,7 @@ linear coefficients from the spectral and external-system data.
 """
 function _prepare_solution_storage(
         initial_solution, mset, model,
-        master_right_modes, master_eigenvalues, master_right_mode_derivatives,
+        master_right_modes, master_linear_dynamics, master_right_mode_derivatives,
         dimensions::NTuple{5, Int}, unit_offset::Int, ::Type{T}
 ) where {T}
     ORD, FOM, ROM, N_EXT, _ = dimensions
@@ -130,7 +133,7 @@ function _prepare_solution_storage(
         Supply a FOM × (ORD-1) × ROM array whose slice [:, k, r] = W^(k+1)[e_r].
         """
     W, R = create_parametrisation_method_objects(mset, ORD, FOM, ROM, N_EXT, T)
-    _initialise_waveform!(W, R, master_right_modes, master_eigenvalues,
+    _initialise_waveform!(W, R, master_right_modes, master_linear_dynamics,
         master_right_mode_derivatives, unit_offset, model)
     return W, R, false
 end

@@ -28,7 +28,7 @@ end
         R.poly.coefficients[1, i1] = im
         R.poly.coefficients[2, i2] = -im
 
-        spectral = SpectralData(; eigenvalues = ComplexF64[im, -im],
+        spectral = SpectralData(; diagonal = ComplexF64[im, -im],
             right_modes = Matrix{ComplexF64}(I, 2, 2),
             left_modes = Matrix{ComplexF64}(I, 2, 2), conjugate_permutation = [2, 1])
         result = only(invariance_error_convergence(
@@ -88,7 +88,7 @@ end
         mset = all_multiindices_up_to(2, 1; min_degree = 1)
         i1, i2 = _unit_index(mset, 1), _unit_index(mset, 2)
         modes = Matrix{ComplexF64}(I, 3, 2)
-        spectral = SpectralData(; eigenvalues = ComplexF64[im, -im], right_modes = modes,
+        spectral = SpectralData(; diagonal = ComplexF64[im, -im], right_modes = modes,
             left_modes = modes, conjugate_permutation = [2, 1])
         function state_error_of(dof; spectral = spectral)
             force = MultilinearMap(
@@ -114,7 +114,7 @@ end
         @test slave.state_errors ≈ slave.force_errors ./ sqrt(5) rtol=1e-12
 
         # Without a conjugate permutation, the pair is found by its eigenvalues.
-        unpaired = SpectralData(; eigenvalues = ComplexF64[im, -im], right_modes = modes,
+        unpaired = SpectralData(; diagonal = ComplexF64[im, -im], right_modes = modes,
             left_modes = modes)
         @test state_error_of(3; spectral = unpaired).s_bar == im
 

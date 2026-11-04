@@ -146,7 +146,7 @@ println("JIT warm-up…")
 W,
 left_modes_derivatives = left_eigenmode_orders_from_slice(
 	model.linear_terms, left_eigenmodes, collect(master_eigenvalues))[:, 1:(end-1), :]
-spectral = SpectralData(; eigenvalues = master_eigenvalues,
+spectral = SpectralData(; diagonal = master_eigenvalues,
 	right_modes = master_modes, right_derivatives = mmd,
 	left_modes = left_eigenmodes, left_blocks = Array(left_modes_derivatives))
 R = solve_cohomological_problem(model, mset, spectral, resonance_set)
