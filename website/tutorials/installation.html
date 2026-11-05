@@ -45,6 +45,11 @@
 <pre class="code">using Pkg
 Pkg.add("MORFE")
 using MORFE</pre>
+    <div class="adm warn">
+      <div class="adm-head">Julia 1.12.0 to 1.12.6</div>
+      <div class="adm-body"><p>On Julia 1.12.0 to 1.12.6 a fresh install gets KLU 0.6.1, and sparse solves that use it,
+      as incompressible flow models do, fail with <code class="nolink">UndefVarError: init_suitesparse</code> (<a class="inline" href="https://github.com/JuliaSparse/KLU.jl/issues/62" target="_blank" rel="noopener">KLU.jl#62</a>). Use Julia 1.13, or pin KLU 0.6.0 with <code class="nolink">Pkg.add(name = "KLU", version = "0.6.0"); Pkg.pin("KLU")</code>.</p></div>
+    </div>
 
     <h2 id="development-version">Development version</h2>
     <p>To install the latest development version from GitHub instead of the registered release, run:</p>
@@ -60,17 +65,16 @@ Pkg.add(url = "https://github.com/MORFEproject/MORFEFerrite.jl.git")</pre>
     <p>
       The runnable notebooks are not part of this package: they live in
       <a class="inline" href="https://github.com/MORFEproject/MORFEExamples" target="_blank" rel="noopener">MORFEExamples</a>,
-      where all five tutorials share one Julia environment and one Jupyter kernel. Clone it and run
+      where all seven tutorials share one Julia environment and one Jupyter kernel. Clone it and run
       the setup script once from the repository root:
     </p>
 <pre class="code">git clone https://github.com/MORFEproject/MORFEExamples.git
 cd MORFEExamples
 julia setup.jl</pre>
     <p>
-      <code>setup.jl</code> activates the repository's own environment, installs MORFE and
-      MORFEFerrite from their GitHub main branches (the notebooks use post-processing functions the
-      registered release does not carry yet) together with IJulia, CairoMakie, Symbolics and the
-      rest, and registers a Jupyter kernel named <code>MORFEExamples</code> pointing at that
+      <code>setup.jl</code> activates the repository's own environment, installs the registered MORFE
+      release and MORFEFerrite from its GitHub main branch (MORFEFerrite is not registered),
+      together with IJulia, CairoMakie, Symbolics and the rest, and registers a Jupyter kernel named <code>MORFEExamples</code> pointing at that
       environment. It only needs to run
       once; the generated <code>Manifest.toml</code> stays local to your machine.
     </p>

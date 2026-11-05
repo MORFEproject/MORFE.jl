@@ -119,8 +119,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="adm-body">
         <p>Every line on this page comes from
         <a href="https://github.com/MORFEproject/MORFEExamples/tree/main/monomials_and_multiindices" target="_blank" rel="noopener"><code>monomials_and_multiindices</code></a>.
-        It needs no FEM backend and runs in a couple of seconds:</p>
-        <pre class="code" style="margin-top:10px;">julia --project -e 'include("examples/internals/multiindex_sets/main.jl")'</pre>
+        It needs no FEM backend and runs in a couple of seconds, from the root of MORFEExamples:</p>
+        <pre class="code" style="margin-top:10px;">julia --project monomials_and_multiindices/main.jl</pre>
       </div>
     </div>
 
@@ -411,11 +411,11 @@ document.addEventListener('DOMContentLoaded', function () {
         </p>
 <pre class="code"><span class="fn">validate_multiindex_set</span>(<span class="var">band</span>, <span class="num">3</span>, <span class="num">3</span>)
 <span class="cm"># ArgumentError: custom mset is not downward closed: [2, 1, 0] is a member</span>
-<span class="cm"># but its factor [2, 0, 0] is not. The graded solve reads W[α - β + eᵢ] and</span>
-<span class="cm"># factorises α over members of mset, so a missing factor is read as zero</span>
+<span class="cm"># but its divisor [2, 0, 0] is not. The graded solve reads W[α - β + eᵢ] and</span>
+<span class="cm"># factorises α over members of mset, so a missing divisor is read as zero</span>
 <span class="cm"># and silently corrupts the right-hand side.</span></pre>
         <p>
-            Pass <code>validate_mset = false</code> to skip the check if you have already done it yourself. 
+            Pass <code>options = <a class="doc-link" href="../documentation.html#ParametrisationSolver-ParametrisationOptions">ParametrisationOptions</a>(validate_mset = false)</code> to skip the check if you have already done it yourself. 
             Then hand it over to <a class="doc-link" href="../documentation.html#ParametrisationMethod-parametrise"><code>parametrise</code></a> to get the reduced order model:
         </p>
 <pre class="code"><span class="var">W</span>, <span class="var">R</span> <span class="op">=</span> <span class="fn">parametrise</span>(<span class="var">model</span>, <span class="var">spectral_data</span>, <span class="var">mset</span>)</pre>

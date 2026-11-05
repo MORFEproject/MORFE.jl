@@ -222,7 +222,9 @@ def backbone_home_limits(points):
                 hi["amplitude_ratio"] - lo["amplitude_ratio"]
             )
             physical = 100.0 * ratio
-            assert math.isclose(radius, 59.9418323, rel_tol=1e-3)
+            # The radius depends on how the eigensolver normalises the master mode; the
+            # physical amplitude does not. A change of normalisation moves only the first.
+            assert math.isclose(radius, 57.8178488, rel_tol=1e-3)
             assert math.isclose(physical, 73.2501101, rel_tol=1e-3)
             return {"modal": radius, "physical": physical}
     raise AssertionError(
