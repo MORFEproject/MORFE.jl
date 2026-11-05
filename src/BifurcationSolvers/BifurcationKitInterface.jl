@@ -15,6 +15,9 @@ The reduced dynamics ż = R(z, p) is split into master-mode coordinates `z`
 `external_system_size` variables).  `bifparam_index` selects which component
 of `p` is the continuation parameter.
 
+The state BifurcationKit continues is the real form `x = [Re z; Im z]` (length `2ROM`):
+BifurcationKit works with real states, and the equilibria and branches are the same.
+
 Requires BifurcationKit.jl.  Load it with `using BifurcationKit` to activate
 the MORFE extension.
 """

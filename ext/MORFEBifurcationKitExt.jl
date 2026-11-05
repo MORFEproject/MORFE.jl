@@ -16,7 +16,12 @@ The reduced ODE ż = R(z, p) is split into master-mode coordinates `z` (first
 `ROM` entries) and external parameters `p` (the remaining `N_EXT` entries).
 `bifparam_index` selects which component of `p` is the continuation parameter.
 
-`z0` defaults to `zeros(ComplexF64, ROM)` and `p0` defaults to
+BifurcationKit continues real states, so the problem is posed for the real form of the same
+dynamics, `x = [Re z; Im z]` (length `2ROM`) with `ẋ = [Re R(z, p); Im R(z, p)]`. Its
+equilibria and branches are those of `ż = R(z, p)`; read the master coordinates back as
+`z = complex.(x[1:ROM], x[ROM+1:end])`.
+
+`z0` (complex, length `ROM`) defaults to `zeros(ComplexF64, ROM)` and `p0` defaults to
 `zeros(Float64, N_EXT)`.
 """
 function MORFE.BifurcationKitInterface.make_bk_problem(
@@ -31,15 +36,15 @@ function MORFE.BifurcationKitInterface.make_bk_problem(
     z0_ = isnothing(z0) ? zeros(ComplexF64, ROM) : complex.(float.(z0))
     p0_ = isnothing(p0) ? zeros(Float64, N_EXT) : float.(p0)
 
-    function F(z, p)
-        zp = vcat(z, p)
-        rz = evaluate(R.poly, zp)
-        return rz[1:ROM]
+    function F(x, p)
+        z = complex.(x[1:ROM], x[(ROM + 1):(2ROM)])
+        rz = evaluate(R.poly, vcat(z, p))[1:ROM]
+        return vcat(real.(rz), imag.(rz))
     end
 
     lens = BifurcationKit.@optic _[bifparam_index]
 
-    return BifurcationKit.BifurcationProblem(F, z0_, p0_, lens)
+    return BifurcationKit.BifurcationProblem(F, vcat(real.(z0_), imag.(z0_)), p0_, lens)
 end
 
 end # module MORFEBifurcationKitExt

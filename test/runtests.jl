@@ -90,6 +90,9 @@ should_run(group) = GROUP == "all" || GROUP == group
         @testset "MORFEPlotsExt" begin
             include("Extensions/test_plots.jl")
         end
+        @testset "MORFEBifurcationKitExt" begin
+            include("Extensions/test_bifurcationkit.jl")
+        end
     end
     if should_run("aqua")
         include("Quality/aqua.jl")

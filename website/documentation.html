@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="markdown"><pre><code>make_bk_problem&#40;R::ReducedDynamics; bifparam_index&#61;1, z0&#61;nothing, p0&#61;nothing&#41;</code></pre>
 <p>Wrap the reduced dynamics <code>R</code> as a <code>BifurcationKit.BifurcationProblem</code> for continuation and bifurcation analysis.</p>
 <p>The reduced dynamics ż &#61; R&#40;z, p&#41; is split into master-mode coordinates <code>z</code> &#40;first <code>ROM</code> variables&#41; and external parameters <code>p</code> &#40;the remaining <code>external_system_size</code> variables&#41;.  <code>bifparam_index</code> selects which component of <code>p</code> is the continuation parameter.</p>
+<p>The state BifurcationKit continues is the real form <code>x &#61; &#91;Re z; Im z&#93;</code> &#40;length <code>2ROM</code>&#41;: BifurcationKit works with real states, and the equilibria and branches are the same.</p>
 <p>Requires BifurcationKit.jl.  Load it with <code>using BifurcationKit</code> to activate the MORFE extension.</p>
 </div>
   </div>
