@@ -44,7 +44,8 @@ if !isdefined(Main, :MORFE_DOC_CONFIG)
                 (MORFE.InvarianceError, "InvarianceError"),
                 (MORFE.RomIO, "RomIO"),
                 (MORFE.RomComparison, "RomComparison"),
-                (SymbolicsExt, "SymbolicsExtension")
+                (SymbolicsExt, "SymbolicsExtension"),
+                (MORFE.TimeIntegrationInterface, "TimeIntegrationInterface")
             ],
             by = x -> x[2])
     )
