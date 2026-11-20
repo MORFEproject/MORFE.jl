@@ -50,18 +50,17 @@ sol  = solve(prob, Rodas5P())
 
 module TimeIntegrationInterface
 
-
 using LinearAlgebra
 using SparseArrays
- 
+
 using ..FullOrderModel: NthOrderModel
 using ..MultilinearMaps: evaluate_term!
 using ..ExternalSystems: ExternalSystem, external_basis
 using ..Polynomials: DensePolynomial, coefficients, multiindex_set, compose_linear
- 
+
 export FirstOrderSystem, mass_matrix,
        pack_state, unpack_state, state_dimension, physical_external_dynamics
- 
+
 """
 	FirstOrderSystem
  
@@ -85,7 +84,7 @@ struct FirstOrderSystem{ORD, M <: NthOrderModel, P}
     integrated::Vector{Int}
     ext_dynamics::P               # Nothing or DensePolynomial (physical coordinates)
 end
- 
+
 """
 	FirstOrderSystem(model::NthOrderModel; input = Int[])
  
@@ -105,7 +104,7 @@ function FirstOrderSystem(model::NthOrderModel{ORD, ORDP1, N_NL, N_EXT};
     return FirstOrderSystem{ORD, typeof(model), typeof(g)}(
         model, n, ORD * n, N_EXT, collect(Int, input), integrated, g)
 end
- 
+
 """
 	physical_external_dynamics(ext) -> DensePolynomial | Nothing
  
@@ -131,16 +130,16 @@ function physical_external_dynamics(ext::ExternalSystem)
     end
     return DensePolynomial(C, multiindex_set(composed))
 end
- 
+
 """
 	state_dimension(sys)
  
 Length of `u = [X; r_S]`.
 """
 state_dimension(sys::FirstOrderSystem) = sys.nX + length(sys.integrated)
- 
+
 _block(x, k, n) = view(x, ((k - 1) * n + 1):(k * n))
- 
+
 # y = L x on the mechanical block X: shifts, plus last row -[B₀ … B_{ORD-1}] X.
 function _apply_linear!(y, model::NthOrderModel{ORD}, x) where {ORD}
     n = model.n_fom
@@ -154,7 +153,7 @@ function _apply_linear!(y, model::NthOrderModel{ORD}, x) where {ORD}
     end
     return y
 end
- 
+
 # y = M x (mechanical part): identities, with B_ORD in the last block. Not used by the
 # rhs (the solver applies M itself); kept as the matrix-free counterpart of `mass_matrix`.
 function _apply_mass!(y, model::NthOrderModel{ORD}, x) where {ORD}
@@ -165,7 +164,7 @@ function _apply_mass!(y, model::NthOrderModel{ORD}, x) where {ORD}
     mul!(_block(y, ORD, n), model.linear_terms[end], _block(x, ORD, n))
     return y
 end
- 
+
 """
 	mass_matrix(sys) -> SparseMatrixCSC
  
@@ -180,7 +179,7 @@ function mass_matrix(sys::FirstOrderSystem{ORD}) where {ORD}
     return blockdiag(idpart, sparse(sys.model.linear_terms[end]),
         sparse(one(T) * I, nS, nS))
 end
- 
+
 """
 	pack_state(sys, xs::Tuple, r_integrated = ()) -> Vector
  
@@ -190,17 +189,18 @@ in increasing index order. The element type is promoted to that of the model and
 external dynamics, so a complex system yields a complex `u₀`.
 """
 function pack_state(sys::FirstOrderSystem{ORD}, xs::Tuple, r = ()) where {ORD}
-    length(xs) == ORD || throw(ArgumentError("expected $ORD state vectors (x, …, x^($(ORD-1)))"))
+    length(xs) == ORD ||
+        throw(ArgumentError("expected $ORD state vectors (x, …, x^($(ORD-1)))"))
     length(r) == length(sys.integrated) ||
         throw(ArgumentError("expected $(length(sys.integrated)) integrated external values"))
     T = promote_type(eltype(sys.model.linear_terms[1]), map(eltype, xs)...,
         eltype(collect(r)), _coeff_eltype(sys.ext_dynamics))
     return convert(Vector{T}, vcat(xs..., collect(r)))
 end
- 
+
 _coeff_eltype(::Nothing) = Bool          # neutral element for promote_type
 _coeff_eltype(g::DensePolynomial) = eltype(coefficients(g))
- 
+
 """
 	unpack_state(sys, u) -> (xs::NTuple{ORD}, r_integrated)
  
@@ -210,16 +210,16 @@ function unpack_state(sys::FirstOrderSystem{ORD}, u) where {ORD}
     xs = ntuple(k -> _block(u, k, sys.n), Val(ORD))
     return xs, view(u, (sys.nX + 1):length(u))
 end
- 
+
 # ---- external system ------------------------------------------------------------
- 
+
 # Values of the input variables at time t from `p`: a vector, any callable `t -> vector`
 # (functions, interpolation objects, …), or nothing. Anything else (e.g.
 # `SciMLBase.NullParameters()` when no `p` was passed to the ODEProblem) counts as missing.
 _input_values(::Nothing, t) = nothing
 _input_values(p::Union{AbstractVector, Tuple}, t) = p
 _input_values(p, t) = applicable(p, t) ? p(t) : nothing
- 
+
 # Full stored external vector r′ from integrated part and inputs.
 function _assemble_external(sys::FirstOrderSystem, u, p, t)
     r = Vector{eltype(u)}(undef, sys.n_ext)
@@ -238,7 +238,7 @@ function _assemble_external(sys::FirstOrderSystem, u, p, t)
     end
     return r
 end
- 
+
 # Evaluate component `i` of the external polynomial g at r, for i in `rows`, into out.
 # Uses only `coefficients` (N_EXT × n_monomials) and `multiindex_set(...).exponents`.
 function _external_dynamics!(out, poly::DensePolynomial, rows, r)
@@ -257,9 +257,9 @@ function _external_dynamics!(out, poly::DensePolynomial, rows, r)
     end
     return out
 end
- 
+
 # ---- right-hand side ------------------------------------------------------------
- 
+
 """
 	(sys::FirstOrderSystem)(du, u, p, t)
  
@@ -280,13 +280,13 @@ function (sys::FirstOrderSystem{ORD})(du, u, p, t) where {ORD}
     N = state_dimension(sys)
     @assert length(du) == N "Size of `du` must be $N"
     @assert length(u) == N "Size of `u` must be $N"
- 
+
     # apply linear part: du_X = L u_X
     _apply_linear!(view(du, 1:nX), model, view(u, 1:nX))
- 
+
     # physical external state r (integrated part from u, inputs from p)
     r = ext === nothing ? nothing : _assemble_external(sys, u, p, t)
- 
+
     # nonlinear part: accumulate F into the last block
     if !isempty(model.nonlinear_terms)
         xs = ntuple(k -> _block(u, k, n), Val(ORD))
@@ -295,7 +295,7 @@ function (sys::FirstOrderSystem{ORD})(du, u, p, t) where {ORD}
             evaluate_term!(F_last, term, xs, r)
         end
     end
- 
+
     # integrated external dynamics: ṙ_S = g_S(r)
     if sys.ext_dynamics !== nothing && !isempty(sys.integrated)
         _external_dynamics!(view(du, (nX + 1):length(du)), sys.ext_dynamics,
