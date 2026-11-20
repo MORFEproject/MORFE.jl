@@ -34,6 +34,7 @@ function ext_polynomial(N, maxdeg, coeff)
     deleteat!(ms.exponents, 1)                       # drop the constant monomial
     C = zeros(Float64, N, length(ms.exponents))
     for (m, e) in enumerate(ms.exponents), i in 1:N
+
         C[i, m] = coeff(i, Tuple(e))
     end
     return DensePolynomial(C, ms)
@@ -56,12 +57,18 @@ g2(r) = [λ1 * r[1] + cq * r[1]^2, λ2 * r[2] + dq * r[1] * r[2]]
 struct NoParams end
 
 # nonlinear terms (all accumulate into `res`)
-duffing(γ) = MultilinearMap((res, a, b, c) -> (res .-= γ .* a .* b .* c), (3, 0), 0;
-    fully_asymmetric = false)
-forcing(b) = MultilinearMap((res, r) -> (res .+= b .* r[1]), (0, 0), 1;
-    fully_asymmetric = false)
-coupling(c) = MultilinearMap((res, r1, r2) -> (res .+= c .* r1[1] .* r2[2]), (0, 0), 2;
-    fully_asymmetric = false)
+function duffing(γ)
+    MultilinearMap((res, a, b, c) -> (res .-= γ .* a .* b .* c), (3, 0), 0;
+        fully_asymmetric = false)
+end
+function forcing(b)
+    MultilinearMap((res, r) -> (res .+= b .* r[1]), (0, 0), 1;
+        fully_asymmetric = false)
+end
+function coupling(c)
+    MultilinearMap((res, r1, r2) -> (res .+= c .* r1[1] .* r2[2]), (0, 0), 2;
+        fully_asymmetric = false)
+end
 
 # ----------------------------------------------------------------------------------
 # tests
@@ -113,6 +120,7 @@ coupling(c) = MultilinearMap((res, r1, r2) -> (res .+= c .* r1[1] .* r2[2]), (0,
 
     @testset "linear operators vs linear_first_order_matrices" begin
         for ord in 1:3, sp in (false, true)
+
             Bs = linear_terms(n, ord; sparse_mats = sp, seed = 10 + ord)
             model = NthOrderModel(Bs)
             sys = FirstOrderSystem(model)
