@@ -183,14 +183,17 @@ _finish_observer!(::_CheckpointSolveObserver) = nothing
 
 """
 	_fill_job_conjugate!(W, R, job, sym) -> nothing
-
-Reconstruct a job's conjugate secondary after its primary coefficients are final. This is
-a compile-time no-op when conjugate symmetry is disabled.
+Reconstruct a job's conjugate secondary after its primary coefficients are final, or, for a
+self-conjugate monomial (`P·γ == γ`), project its coefficients onto the conjugate-symmetric
+subspace. This is a compile-time no-op when conjugate symmetry is disabled.
 """
 _fill_job_conjugate!(W, R, job, ::ConjugateSymmetryData{NoConjugatePermutation}) = nothing
 function _fill_job_conjugate!(W, R, job, sym::ConjugateSymmetryData{<:SVector})
-    job.conjugate_target == 0 ||
+    if job.conjugate_target != 0
         fill_conjugate_monomial!(W, R, job.conjugate_target, job.index, sym)
+    elseif @inbounds sym.monomial_map[job.index] == job.index
+        symmetrise_self_conjugate_monomial!(W, R, job.index, sym)
+    end
     return nothing
 end
 
