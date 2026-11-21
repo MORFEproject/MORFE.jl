@@ -185,3 +185,48 @@ function fill_conjugate_monomial!(
     end
     return nothing
 end
+
+# =============================================================================
+# symmetrise_self_conjugate_monomial!
+# =============================================================================
+
+"""
+	symmetrise_self_conjugate_monomial!(W, R, idx, sym)
+
+Project the solved coefficients of a self-conjugate monomial (`P·γ == γ`) onto the
+conjugate-symmetric subspace required by a real-valued FOM:
+
+	W_γ    ← (W_γ + conj(W_γ)) / 2 = real(W_γ)
+	f_γ[r] ← (f_γ[r] + conj(f_γ[perm[r]])) / 2      (master-mode rows only)
+
+Such a monomial has no partner to fill, so it is solved directly. The bordered system is
+exactly conjugation-equivariant, but it can be ill-conditioned in the antisymmetric
+direction; round-off in the right-hand side is then amplified into a spurious non-real
+component (observed: 1e-13 in the RHS → 8e-2 in the solution, with a backward error of
+1e-17). Because the operator is equivariant, this projection equals the solution of the
+symmetrised RHS and leaves the residual at round-off.
+
+External rows of R are left untouched, as in [`fill_conjugate_monomial!`](@ref).
+
+**Precondition**: all ORD time-derivative orders of W and master-mode rows (1:ROM) of R
+at `idx` must be finalised before this is called.
+"""
+function symmetrise_self_conjugate_monomial!(
+        W::Parametrisation{ORD, NVAR, T},
+        R::ReducedDynamics{ROM, NVAR, T},
+        idx::Int,
+        sym::ConjugateSymmetryData{SVector{NVAR, Int}}
+) where {ORD, NVAR, T, ROM}
+    Wc = W.poly.coefficients   # FOM × ORD × L
+    Rc = R.poly.coefficients   # NVAR × L
+
+    @inbounds @views Wc[:, :, idx] .= real.(Wc[:, :, idx])
+
+    # Read every master row before writing any: row r and row perm[r] update each other.
+    perm = sym.permutation
+    f = ntuple(r -> @inbounds(Rc[r, idx]), Val(ROM))
+    @inbounds for r in 1:ROM
+        Rc[r, idx] = (f[r] + conj(f[perm[r]])) / 2
+    end
+    return nothing
+end
