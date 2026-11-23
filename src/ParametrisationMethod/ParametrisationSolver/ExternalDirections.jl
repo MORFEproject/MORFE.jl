@@ -6,10 +6,11 @@
 
 Solve external forcing directions in increasing variable order. Partial contexts contain
 only directions already solved, as required by upper-triangular external dynamics.
-Conjugate secondaries are reconstructed immediately, and every external linear monomial is
-marked skipped before the nonlinear schedule is built. A direction whose bordered matrix
-equals that of the direction solved before it reuses its numeric factorisation
-([`_solve_external_direction!`](@ref)).
+Conjugate secondaries are reconstructed immediately, self-conjugate directions (real
+external variables) are projected by [`symmetrise_self_conjugate_monomial!`](@ref), and
+every external linear monomial is marked skipped before the nonlinear schedule is built. A
+direction whose bordered matrix equals that of the direction solved before it reuses its
+numeric factorisation ([`_solve_external_direction!`](@ref)).
 """
 function _solve_external_directions!(
         W, R, partial_ctx_for, model, ml_cache,
@@ -41,6 +42,11 @@ function _solve_external_directions!(
         else
             previous = _solve_external_direction!(
                 W, R, idx, partial_ctx_for(e), model, ml_cache, sym, previous, ROM)
+			# A real external variable is its own conjugate. Project it as the nonlinear
+            # schedule projects every self-conjugate monomial, before later directions and
+            # monomials read it.
+            @inbounds sym.monomial_map[idx] == idx &&
+                      symmetrise_self_conjugate_monomial!(W, R, idx, sym)
         end
     end
     for e in 1:N_EXT
