@@ -42,7 +42,7 @@ function _solve_external_directions!(
         else
             previous = _solve_external_direction!(
                 W, R, idx, partial_ctx_for(e), model, ml_cache, sym, previous, ROM)
-			# A real external variable is its own conjugate. Project it as the nonlinear
+            # A real external variable is its own conjugate. Project it as the nonlinear
             # schedule projects every self-conjugate monomial, before later directions and
             # monomials read it.
             @inbounds sym.monomial_map[idx] == idx &&
