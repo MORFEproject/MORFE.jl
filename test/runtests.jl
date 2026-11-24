@@ -18,6 +18,7 @@ should_run(group) = GROUP == "all" || GROUP == group
             include("FullOrderModel/test_multilinear_reference.jl")
             include("FullOrderModel/test_fem_external_arguments.jl")
             include("FullOrderModel/test_fem_flux_summation.jl")
+            include("FullOrderModel/test_time_integration_interface.jl")
         end
     end
     if should_run("parametrisation_method")

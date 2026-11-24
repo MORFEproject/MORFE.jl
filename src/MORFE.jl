@@ -5,6 +5,7 @@ include("Polynomials.jl")
 include("FullOrderModel/MultilinearMaps.jl")
 include("FullOrderModel/ExternalSystems.jl")
 include("FullOrderModel/FullOrderModel.jl")
+include("FullOrderModel/TimeIntegrationInterface.jl")
 include("SpectralDecomposition/SpectralDecomposition.jl")
 include("Realification.jl")
 include("ParametrisationMethod/Resonance.jl")
@@ -32,6 +33,7 @@ using .Polynomials: DensePolynomial, evaluate, extract_component
 using .MultilinearMaps
 using .ExternalSystems
 using .FullOrderModel
+using .TimeIntegrationInterface
 using .SpectralDecomposition
 using .Realification
 using .Resonance
@@ -78,6 +80,8 @@ export fem_elements, fem_n_qp, fem_ndofs_per_cell,
 # FullOrderModel
 export FullOrderModel, NthOrderModel,
        linear_first_order_matrices, evaluate_nonlinear_terms!
+# TimeIntegrationInterface
+export FirstOrderSystem
 
 # SpectralDecomposition
 export AbstractEigensolver, DefaultEigensolver, ArpackEigensolver, MorfeEigensolver,
